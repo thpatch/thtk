@@ -73,6 +73,7 @@ extern FILE* yyin;
     struct list_t* list;
 }
 
+%token <integer> INSTRUCTION "instruction"
 %token <string> IDENTIFIER "identifier"
 %token <string> TEXT "text"
 %token <bytes> CTEXT "encrypted text"
@@ -158,8 +159,8 @@ instruction:
         }
         timer = $1;
     }
-    | INTEGER RANK params SEMICOLON { instr_add($1, $2, $3); }
-    | INTEGER params SEMICOLON { instr_add($1, 0xff, $2); }
+    | INSTRUCTION RANK params SEMICOLON { instr_add($1, $2, $3); }
+    | INSTRUCTION params SEMICOLON { instr_add($1, 0xff, $2); }
     ;
 
 params:

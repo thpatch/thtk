@@ -75,6 +75,10 @@
     yylval.floating = strtof(yytext, NULL);
     return FLOATING;
 }
+ins_[0-9]+ {
+    yylval.integer = strtol(yytext + 4, NULL, 10);
+    return INSTRUCTION;
+}
 -?[0-9]+ {
     yylval.integer = strtol(yytext, NULL, 10);
     return INTEGER;

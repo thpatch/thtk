@@ -396,7 +396,7 @@ ecldump_translate_print(ecl_t* ecl)
                 }
             }
 
-            fprintf(out, "    %u", instr->id);
+            fprintf(out, "    ins_%u", instr->id);
 
             if (instr->rank_mask != 0xff) {
                 fprintf(out, " +");
