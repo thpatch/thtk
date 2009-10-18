@@ -620,6 +620,7 @@ main(int argc, char* argv[])
     }
 
     ecldump_free(&ecl);
+    fclose(out);
 
     return 0;
 }
