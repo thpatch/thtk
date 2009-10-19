@@ -95,8 +95,8 @@ extern FILE* yyin;
 %token END_OF_FILE 0 "end of file"
 
 %type <list> params
-%type <list> cast_params
-%type <list> square_params
+%type <list> cast_param
+%type <list> square_param
 %type <list> param
 %type <list> includes
 
@@ -165,12 +165,12 @@ instruction:
 
 params:
       { $$ = NULL; }
-    | cast_params params { $$ = $1; $$->next = $2; }
+    | cast_param params { $$ = $1; $$->next = $2; }
     ;
 
-cast_params:
-      "(int)" square_params {
-          int integer;
+cast_param:
+      "(int)" square_param {
+        int integer;
         $$ = $2;
         if ($$->param->type != 'i') {
             yyerror("integer expected");
@@ -181,7 +181,7 @@ cast_params:
         $$->param->value.D[0] = 0x6969;
         $$->param->value.D[1] = integer;
     }
-    | "(float)" square_params {
+    | "(float)" square_param {
         float floating;
         int integer;
         $$ = $2;
@@ -199,10 +199,10 @@ cast_params:
         }
         $$->param->type = 'D';
     }
-    | square_params
+    | square_param
     ;
 
-square_params:
+square_param:
       "[" param "]" {
         $$ = $2;
         $$->param->stack = 1;
