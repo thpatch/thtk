@@ -101,6 +101,7 @@ typedef struct {
 #endif
     param_t* params;
     uint32_t offset;
+    unsigned int label;
 } PACK_ATTRIBUTE instr_t;
 
 typedef struct {

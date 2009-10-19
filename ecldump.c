@@ -370,12 +370,12 @@ ecldump_display_param(const sub_t* sub, const instr_t* instr,
                     argv0, current_input, param->value.i);
                 abort();
             }
-            fprintf(out, " [%d]", param->value.i);
+            fprintf(out, "[%d]", param->value.i);
         } else
-            fprintf(out, " %d", param->value.i);
+            fprintf(out, "%d", param->value.i);
         break;
     case 'o':
-        fprintf(out, " %s_%u",
+        fprintf(out, "%s_%u",
             sub->name, instr->offset + param->value.i);
         break;
     case 'f':
@@ -390,32 +390,32 @@ ecldump_display_param(const sub_t* sub, const instr_t* instr,
                 fprintf(stderr, "%s:%s: strange stack offset: %s\n",
                     argv0, current_input, floatb);
             }
-            fprintf(out, " [%sf]", floatb);
+            fprintf(out, "[%sf]", floatb);
         } else
-            fprintf(out, " %sf", floatb);
+            fprintf(out, "%sf", floatb);
         break;
     case 's':
-        fprintf(out, " \"%s\"", param->value.s.data);
+        fprintf(out, "\"%s\"", param->value.s.data);
         break;
     case 'c':
-        fprintf(out, " C\"%s\"", param->value.s.data);
+        fprintf(out, "C\"%s\"", param->value.s.data);
         break;
     case 'D':
         memcpy(&newparam, param, sizeof(param_t));
         if (param->value.D[0] == 0x6666) {
-            fprintf(out, " (float)");
+            fprintf(out, "(float)");
             newparam.type = 'f';
             memcpy(&newparam.value.f,
                    &param->value.D[1],
                    sizeof(float));
         } else if (param->value.D[0] == 0x6669) {
-            fprintf(out, " (float)");
+            fprintf(out, "(float)");
             newparam.type = 'i';
             memcpy(&newparam.value.i,
                    &param->value.D[1],
                    sizeof(int32_t));
         } else if (param->value.D[0] == 0x6969) {
-            fprintf(out, " (int)");
+            fprintf(out, "(int)");
             newparam.type = 'i';
             memcpy(&newparam.value.i,
                    &param->value.D[1],
@@ -452,47 +452,68 @@ ecldump_translate_print(ecl_t* ecl, unsigned int version)
     }
 
     for (i = 0; i < ecl->sub_cnt; ++i) {
-        unsigned int j, k, m;
-        unsigned int time = 0;
-
-        fprintf(out, "\nsub %s\n{\n", ecl->subs[i].name);
+        unsigned int j, k;
+        unsigned int time;
+        unsigned int stack_top = 0;
+        instr_t** stack = malloc(ecl->subs[i].instr_cnt * sizeof(instr_t*));
 
         for (j = 0; j < ecl->subs[i].instr_cnt; ++j) {
+            unsigned int m;
             instr_t* instr = &ecl->subs[i].instrs[j];
-
-            if (instr->time != time) {
-                time = instr->time;
-                fprintf(out, "%u:\n", time);
-            }
-
-            /* If there is a reference to this instruction, print a label. */
+            instr->label = 0;
             for (k = 0; k < ecl->subs[i].instr_cnt; ++k) {
                 for (m = 0; m < ecl->subs[i].instrs[k].param_cnt; ++m) {
                     if (ecl->subs[i].instrs[k].params[m].type == 'o' &&
                         instr->offset == ecl->subs[i].instrs[k].offset + ecl->subs[i].instrs[k].params[m].value.i) {
-                        fprintf(out, "%s_%u:\n",
-                            ecl->subs[i].name, instr->offset);
+                        instr->label = 1;
+
                         k = ecl->subs[i].instr_cnt;
                         break;
                     }
                 }
             }
-
-            fprintf(out, "    ins_%u", instr->id);
-
-            if (instr->rank_mask != 0xff) {
-                fprintf(out, " +");
-                if (instr->rank_mask & RANK_EASY)    fputc('E', out);
-                if (instr->rank_mask & RANK_NORMAL)  fputc('N', out);
-                if (instr->rank_mask & RANK_HARD)    fputc('H', out);
-                if (instr->rank_mask & RANK_LUNATIC) fputc('L', out);
-            }
-
-            for (k = 0; k < instr->param_cnt; ++k) {
-                ecldump_display_param(&ecl->subs[i], instr, k, &instr->params[k], version);
-            }
-            fprintf(out, ";\n");
         }
+
+        for (j = 0; j < ecl->subs[i].instr_cnt; ++j) {
+            instr_t* instr = &ecl->subs[i].instrs[j];
+
+            ++stack_top;
+            stack[stack_top - 1] = instr;
+        }
+
+        fprintf(out, "\nsub %s\n{\n", ecl->subs[i].name);
+
+        time = 0;
+        for (j = 0; j < stack_top; ++j) {
+            if (stack[j]->time != time) {
+                time = stack[j]->time;
+                fprintf(out, "%u:\n", time);
+            }
+
+            if (stack[j]->label) {
+                fprintf(out, "%s_%u:\n",
+                    ecl->subs[i].name, stack[j]->offset);
+            }
+
+            fprintf(out, "    ins_%u", stack[j]->id);
+
+            if (stack[j]->rank_mask != 0xff) {
+                fputs(" +", out);
+                if (stack[j]->rank_mask & RANK_EASY)    fputc('E', out);
+                if (stack[j]->rank_mask & RANK_NORMAL)  fputc('N', out);
+                if (stack[j]->rank_mask & RANK_HARD)    fputc('H', out);
+                if (stack[j]->rank_mask & RANK_LUNATIC) fputc('L', out);
+            }
+
+            for (k = 0; k < stack[j]->param_cnt; ++k) {
+                fputc(' ', out);
+                ecldump_display_param(&ecl->subs[i], stack[j], k, NULL, version);
+            }
+
+            fputs(";\n", out);
+        }
+        free(stack);
+
         fprintf(out, "}\n");
     }
 }
