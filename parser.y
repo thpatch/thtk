@@ -470,7 +470,7 @@ yyerror(const char* str)
 static void
 print_usage()
 {
-    printf("Usage: %s [OPTION]... [FILE]\n"
+    printf("Usage: %s -v {10,11,12} [OPTION]... [FILE]\n"
            "OPTION can be:\n"
            "  -o  write output to the specified file\n"
            "  -h  display this help and exit\n"
@@ -488,6 +488,7 @@ main(int argc, char* argv[])
     int j;
     FILE* out;
     const uint32_t zero = 0;
+    unsigned int version = 0;
     header_scpt_t header;
     header_eclh_t eclh;
 
@@ -503,6 +504,13 @@ main(int argc, char* argv[])
         } else if (strcmp(argv[j], "-V") == 0) {
             util_print_version("eclc", PACKAGE_THECL_VERSION);
             return 0;
+        } else if (strcmp(argv[j], "-v") == 0) {
+            ++j;
+            if (j == argc) {
+                print_usage();
+                return 1;
+            }
+            version = strtol(argv[j], NULL, 10);
         } else if (strcmp(argv[j], "-o") == 0) {
             ++j;
             if (j == argc) {
@@ -517,6 +525,11 @@ main(int argc, char* argv[])
         } else {
             break;
         }
+    }
+
+    if (version != 10 && version != 11 && version != 12) {
+        print_usage();
+        return 1;
     }
 
     if (j != argc) {
