@@ -472,9 +472,9 @@ print_usage()
 {
     printf("Usage: %s -v {10,11,12} [OPTION]... [FILE]\n"
            "OPTION can be:\n"
-           "  -o  write output to the specified file\n"
-           "  -h  display this help and exit\n"
-           "  -V  display version information and exit\n\n"
+           "  -o FILE  write output to the specified file\n"
+           "  -h       display this help and exit\n"
+           "  -V       display version information and exit\n\n"
            "Additional documentation might be available at <" PACKAGE_URL ">.\n"
            "Report bugs to <" PACKAGE_BUGREPORT ">.\n", argv0);
 }
