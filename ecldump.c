@@ -351,6 +351,88 @@ ecldump_translate(ecl_t* ecl, unsigned int version)
 }
 
 static void
+ecldump_display_param(const sub_t* sub, const instr_t* instr,
+                      unsigned int i, const param_t* param,
+                      unsigned int version)
+{
+    const char* floatb;
+    param_t newparam;
+
+    if (param == NULL)
+        param = &instr->params[i];
+
+    switch (param->type) {
+    case 'i':
+        if (instr->param_mask & (1 << i)) {
+            if (param->value.i >= 0 &&
+                param->value.i % 4) {
+                fprintf(stderr, "%s:%s: strange stack offset: %d\n",
+                    argv0, current_input, param->value.i);
+                abort();
+            }
+            fprintf(out, " [%d]", param->value.i);
+        } else
+            fprintf(out, " %d", param->value.i);
+        break;
+    case 'o':
+        fprintf(out, " %s_%u",
+            sub->name, instr->offset + param->value.i);
+        break;
+    case 'f':
+        floatb = util_printfloat(&param->value.f);
+        if (instr->param_mask & (1 << i)) {
+            int tempint = param->value.f;
+            /* XXX: Exactly how well does this work? */
+            if (floor(param->value.f) != param->value.f)
+                fprintf(stderr, "%s:%s: non-integral float: %s\n",
+                    argv0, current_input, floatb);
+            if (tempint >= 0 && tempint % 4) {
+                fprintf(stderr, "%s:%s: strange stack offset: %s\n",
+                    argv0, current_input, floatb);
+            }
+            fprintf(out, " [%sf]", floatb);
+        } else
+            fprintf(out, " %sf", floatb);
+        break;
+    case 's':
+        fprintf(out, " \"%s\"", param->value.s.data);
+        break;
+    case 'c':
+        fprintf(out, " C\"%s\"", param->value.s.data);
+        break;
+    case 'D':
+        memcpy(&newparam, param, sizeof(param_t));
+        if (param->value.D[0] == 0x6666) {
+            fprintf(out, " (float)");
+            newparam.type = 'f';
+            memcpy(&newparam.value.f,
+                   &param->value.D[1],
+                   sizeof(float));
+        } else if (param->value.D[0] == 0x6669) {
+            fprintf(out, " (float)");
+            newparam.type = 'i';
+            memcpy(&newparam.value.i,
+                   &param->value.D[1],
+                   sizeof(int32_t));
+        } else if (param->value.D[0] == 0x6969) {
+            fprintf(out, " (int)");
+            newparam.type = 'i';
+            memcpy(&newparam.value.i,
+                   &param->value.D[1],
+                   sizeof(int32_t));
+        } else {
+            fprintf(stderr, "%s:%s: unknown value: %u\n",
+                argv0, current_input, param->value.D[0]);
+            abort();
+        }
+        ecldump_display_param(sub, instr, i, &newparam, version);
+        break;
+    default:
+        break;
+    }
+}
+
+static void
 ecldump_translate_print(ecl_t* ecl, unsigned int version)
 {
     unsigned int i;
@@ -407,76 +489,7 @@ ecldump_translate_print(ecl_t* ecl, unsigned int version)
             }
 
             for (k = 0; k < instr->param_cnt; ++k) {
-                const char* floatb;
-retry:
-                switch (instr->params[k].type) {
-                case 'i':
-                    if (instr->param_mask & (1 << k)) {
-                        if (instr->params[k].value.i >= 0 &&
-                            instr->params[k].value.i % 4) {
-                            fprintf(stderr, "%s:%s: strange stack offset: %d\n",
-                                argv0, current_input, instr->params[k].value.i);
-                            abort();
-                        }
-                        fprintf(out, " [%d]", instr->params[k].value.i);
-                    } else
-                        fprintf(out, " %d", instr->params[k].value.i);
-                    break;
-                case 'o':
-                    fprintf(out, " %s_%u",
-                        ecl->subs[i].name, instr->offset + instr->params[k].value.i);
-                    break;
-                case 'f':
-                    floatb = util_printfloat(&instr->params[k].value.f);
-                    if (instr->param_mask & (1 << k)) {
-                        int tempint = instr->params[k].value.f;
-                        /* XXX: Exactly how well does this work? */
-                        if (floor(instr->params[k].value.f) != instr->params[k].value.f)
-                            fprintf(stderr, "%s:%s: non-integral float: %s\n",
-                                argv0, current_input, floatb);
-                        if (tempint >= 0 && tempint % 4) {
-                            fprintf(stderr, "%s:%s: strange stack offset: %s\n",
-                                argv0, current_input, floatb);
-                        }
-                        fprintf(out, " [%sf]", floatb);
-                    } else
-                        fprintf(out, " %sf", floatb);
-                    break;
-                case 's':
-                    fprintf(out, " \"%s\"", instr->params[k].value.s.data);
-                    break;
-                case 'c':
-                    fprintf(out, " C\"%s\"", instr->params[k].value.s.data);
-                    break;
-                case 'D':
-                    if (instr->params[k].value.D[0] == 0x6666) {
-                        fprintf(out, " (float)");
-                        instr->params[k].type = 'f';
-                        memcpy(&instr->params[k].value.f,
-                               &instr->params[k].value.D[1],
-                               sizeof(float));
-                    } else if (instr->params[k].value.D[0] == 0x6669) {
-                        fprintf(out, " (float)");
-                        instr->params[k].type = 'i';
-                        memcpy(&instr->params[k].value.i,
-                               &instr->params[k].value.D[1],
-                               sizeof(int32_t));
-                    } else if (instr->params[k].value.D[0] == 0x6969) {
-                        fprintf(out, " (int)");
-                        instr->params[k].type = 'i';
-                        memcpy(&instr->params[k].value.i,
-                               &instr->params[k].value.D[1],
-                               sizeof(int32_t));
-                    } else {
-                        fprintf(stderr, "%s:%s: unknown value: %u\n",
-                            argv0, current_input, instr->params[k].value.D[0]);
-                        abort();
-                    }
-                    goto retry;
-                    break;
-                default:
-                    break;
-                }
+                ecldump_display_param(&ecl->subs[i], instr, k, &instr->params[k], version);
             }
             fprintf(out, ";\n");
         }
