@@ -351,7 +351,7 @@ ecldump_translate(ecl_t* ecl, unsigned int version)
 }
 
 static void
-ecldump_translate_print(ecl_t* ecl)
+ecldump_translate_print(ecl_t* ecl, unsigned int version)
 {
     unsigned int i;
 
@@ -608,7 +608,7 @@ main(int argc, char* argv[])
     switch (mode) {
     case ECLDUMP_MODE_NORMAL:
         ecldump_translate(&ecl, version);
-        ecldump_translate_print(&ecl);
+        ecldump_translate_print(&ecl, version);
         break;
     case ECLDUMP_MODE_PARAMETERS:
         ecldump_list_params(&ecl);
