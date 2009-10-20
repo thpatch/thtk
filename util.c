@@ -150,8 +150,7 @@ util_basename(char* dst, size_t dstlen, const char* src)
     _snprintf(dst, dstlen, "%s%s", filename, ext);
 #else
     char* tmp = strdup(src);
-    tmp = basename(tmp);
-    strncpy(dst, tmp, dstlen);
+    strncpy(dst, basename(tmp), dstlen);
     free(tmp);
 #endif
 }
