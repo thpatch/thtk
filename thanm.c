@@ -612,8 +612,8 @@ anm_read_file(const char* filename)
 
                     /* This shouldn't happen. */
                     if (tempinstr.length == 0) {
-                        fprintf(stderr, "%s:%s:%s:%d: instruction length is zero: %u %u %u\n",
-                            argv0, current_input, entry->name, entry->scripts[i].id, tempinstr.type, tempinstr.length, tempinstr.time);
+                        fprintf(stderr, "%s:%s:%s:%d: instruction length is zero: %hu %hu %hu %hu\n",
+                            argv0, current_input, entry->name, entry->scripts[i].id, tempinstr.type, tempinstr.length, tempinstr.time, tempinstr.param_mask);
                         if (!option_force) abort();
                         break;
                     }
@@ -631,6 +631,7 @@ anm_read_file(const char* filename)
                     instr->type = tempinstr.type;
                     instr->length = tempinstr.length;
                     instr->time = tempinstr.time;
+                    instr->param_mask = tempinstr.param_mask;
 
                     if (instr->length > ANM_INSTR_SIZE) {
                         instr->data = malloc(instr->length - ANM_INSTR_SIZE);
@@ -967,7 +968,7 @@ anm_dump(FILE* stream, const anm_t* anm)
             for (iter_instrs = 0; iter_instrs < scr->instr_count; ++iter_instrs) {
                 int done = 0;
                 anm_instr_t* instr = &scr->instrs[iter_instrs];
-                fprintf(stream, "Instruction: %u %hu\n", instr->time, instr->type);
+                fprintf(stream, "Instruction: %hu %hu %hu\n", instr->time, instr->param_mask, instr->type);
                 for (iter_formats = 0; iter_formats < format_count; ++iter_formats) {
                     if (formats[iter_formats].type == instr->type) {
                         for (iter_params = 0; iter_params < strlen(formats[iter_formats].format); ++iter_params) {
@@ -1062,7 +1063,7 @@ anm_create(const char* spec)
             instr = &script->instrs[script->instr_count - 1];
             instr->data = NULL;
             instr->length = ANM_INSTR_SIZE;
-            if (2 != sscanf(linep, "Instruction: %u %hu", &instr->time, &instr->type)) {
+            if (3 != sscanf(linep, "Instruction: %hu %hu %hu", &instr->time, &instr->param_mask, &instr->type)) {
                 fprintf(stderr, "%s: Instruction parsing failed\n", argv0);
                 abort();
             }
@@ -1140,7 +1141,7 @@ anm_write(anm_t* anm, const char* filename)
 
         for (j = 0; j < entry->script_count; ++j) {
             unsigned int k;
-            const anm_instr_t sentinel = { 0xffff, 0, 0, NULL };
+            const anm_instr_t sentinel = { 0xffff, 0, 0, 0, NULL };
 
             entry->scripts[j].offset = ftell(stream) - base;
             for (k = 0; k < entry->scripts[j].instr_count; ++k) {

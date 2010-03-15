@@ -64,7 +64,9 @@ typedef struct {
 #endif
     uint16_t type;
     uint16_t length;
-    uint32_t time;
+    uint16_t time;
+    /* TODO: Implement this, it works similarly to that one in ECL files. */
+    uint16_t param_mask;
 #ifdef PACK_PRAGMA
 #pragma pack(pop)
 #endif
