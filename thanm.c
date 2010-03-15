@@ -60,11 +60,11 @@ format_Bpp(format_t format)
     }
 }
 
-static char*
+static unsigned char*
 rgba_to_fmt(const uint32_t* data, unsigned int pixels, format_t format)
 {
     unsigned int i;
-    char* out = NULL;
+    unsigned char* out = NULL;
 
     if (format == FORMAT_GRAY8) {
         out = malloc(pixels);
@@ -72,7 +72,7 @@ rgba_to_fmt(const uint32_t* data, unsigned int pixels, format_t format)
             out[i] = data[i] & 0xff;
         }
     } else if (format == FORMAT_BGRA8888) {
-        const char* data8 = (const char*)data;
+        const unsigned char* data8 = (const unsigned char*)data;
         out = malloc(sizeof(uint32_t) * pixels);
         memcpy(out, data, pixels * sizeof(uint32_t));
         for (i = 0; i < pixels; ++i) {
