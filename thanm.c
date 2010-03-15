@@ -46,6 +46,7 @@ static unsigned int
 format_Bpp(format_t format)
 {
     switch (format) {
+    case FORMAT_RGBA8888:
     case FORMAT_BGRA8888:
         return 4;
     case FORMAT_BGRA4444:
@@ -746,154 +747,179 @@ util_total_entry_size(const anm_t* anm, const char* name, unsigned int* widthptr
 }
 
 #ifdef HAVE_LIBPNG
-static void
-anm_replace(const anm_t* anm, const char* name, const char* filename)
-{
-    unsigned int i;
-    unsigned int y;
-    unsigned int width = 0, height = 0;
-    char* image_data = NULL;
 
-    unsigned char header[8] = { 0 };
-    FILE* pngfd;
+typedef struct {
+    char* data;
+    unsigned int width;
+    unsigned int height;
+    format_t format;
+} image_t;
+
+static image_t*
+png_read(FILE* stream, format_t format)
+{
+    unsigned int y;
+    image_t* image;
     png_structp png_ptr;
     png_infop info_ptr;
     png_bytepp row_pointers;
 
-    pngfd = fopen(filename, "rb");
-    if (!pngfd) {
-        fprintf(stderr, "%s: couldn't open %s for reading: %s\n", argv0, filename, strerror(errno));
-        exit(1);
-    }
-
-    if (fread(header, 8, 1, pngfd) != 1) {
-        fprintf(stderr, "%s: couldn't read from %s: %s\n", argv0, filename, strerror(errno));
-        exit(1);
-    }
-
-    if (png_sig_cmp(header, 0, 8) != 0) {
-        fprintf(stderr, "%s: invalid PNG signature for %s\n", argv0, filename);
-        exit(1);
-    }
-
     png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
     info_ptr = png_create_info_struct(png_ptr);
+    png_init_io(png_ptr, stream);
+    png_read_png(png_ptr, info_ptr, PNG_TRANSFORM_IDENTITY, NULL);
 
-    png_init_io(png_ptr, pngfd);
-    png_set_sig_bytes(png_ptr, 8);
-
-    png_read_png(png_ptr, info_ptr, 0, NULL);
+    /* XXX: Consider just converting everything ... */
+    if (png_get_color_type(png_ptr, info_ptr) != PNG_COLOR_TYPE_RGB_ALPHA) {
+        /* XXX: current_input? exit(1)? */
+        fprintf(stderr, "%s: %s must be RGBA\n", argv0, current_input);
+        exit(1);
+    }
 
     row_pointers = png_get_rows(png_ptr, info_ptr);
-    fclose(pngfd);
 
-    util_total_entry_size(anm, name, &width, &height);
+    image = malloc(sizeof(image_t));
+    image->width = png_get_image_width(png_ptr, info_ptr);
+    image->height = png_get_image_height(png_ptr, info_ptr);
+    image->format = format;
+    image->data = malloc(image->width * image->height * format_Bpp(image->format));
 
-    if (width != png_get_image_width(png_ptr, info_ptr) || height != png_get_image_height(png_ptr, info_ptr)) {
-        fprintf(stderr, "%s:%s:%s: wrong image dimensions for %s: %u, %u instead of %u, %u\n", argv0, current_input, name, filename, (unsigned int)png_get_image_width(png_ptr, info_ptr), (unsigned int)png_get_image_height(png_ptr, info_ptr), width, height);
-        exit(1);
-    }
-
-    if (png_get_color_type(png_ptr, info_ptr) != PNG_COLOR_TYPE_RGB_ALPHA) {
-        fprintf(stderr, "%s: %s must be RGBA\n", argv0, filename);
-        exit(1);
-    }
-
-    image_data = malloc(width * height * 4);
-    for (y = 0; y < png_get_image_height(png_ptr, info_ptr); ++y)
-        memcpy(image_data + y * png_get_image_width(png_ptr, info_ptr) * 4, row_pointers[y], png_get_image_width(png_ptr, info_ptr) * 4);
-
-    for (i = 0; i < anm->entry_count; ++i) {
-        /* TODO: Try to avoid doing the conversion for every part. */
-        if (anm->entries[i].name == name && anm->entries[i].header.hasdata) {
-            char* converted_data = rgba_to_fmt((uint32_t*)image_data, width * height, anm->entries[i].header.format);
-
-            for (y = anm->entries[i].header.y; y < anm->entries[i].header.y + anm->entries[i].thtx.h; ++y) {
-                memcpy(anm->entries[i].data + (y - anm->entries[i].header.y) * anm->entries[i].thtx.w * format_Bpp(anm->entries[i].header.format),
-                       converted_data + y * width * format_Bpp(anm->entries[i].header.format) + anm->entries[i].header.x * format_Bpp(anm->entries[i].header.format),
-                       anm->entries[i].thtx.w * format_Bpp(anm->entries[i].header.format));
-            }
-
+    for (y = 0; y < image->height; ++y) {
+        if (format == FORMAT_RGBA8888) {
+            memcpy(image->data + y * image->width * format_Bpp(image->format), row_pointers[y], image->width * format_Bpp(image->format));
+        } else {
+            unsigned char* converted_data = rgba_to_fmt((uint32_t*)row_pointers[y], image->width, image->format);
+            memcpy(image->data + y * image->width * format_Bpp(image->format), converted_data, image->width * format_Bpp(image->format));
             free(converted_data);
         }
     }
 
-    free(image_data);
-
     png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
+
+    return image;
+}
+
+static void
+png_write(FILE* stream, image_t* image)
+{
+    unsigned int y;
+    png_structp png_ptr;
+    png_infop info_ptr;
+    png_bytepp imagep;
+
+    png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+    info_ptr = png_create_info_struct(png_ptr);
+    png_init_io(png_ptr, stream);
+    png_set_IHDR(png_ptr, info_ptr,
+        image->width, image->height, 8, PNG_COLOR_TYPE_RGB_ALPHA,
+        PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
+    png_write_info(png_ptr, info_ptr);
+
+    imagep = malloc(sizeof(png_byte*) * image->height);
+    for (y = 0; y < image->height; ++y)
+        imagep[y] = (png_byte*)(image->data + y * image->width * 4);
+
+    png_write_image(png_ptr, imagep);
+    free(imagep);
+    png_write_end(png_ptr, info_ptr);
+    png_destroy_write_struct(&png_ptr, &info_ptr);
+}
+
+static void
+anm_replace(const anm_t* anm, const char* name, const char* filename)
+{
+    const format_t formats[] = { FORMAT_BGRA8888, FORMAT_BGR565, FORMAT_BGRA4444, FORMAT_GRAY8 };
+    unsigned int f, i, y;
+    unsigned int width = 0;
+    unsigned int height = 0;
+    FILE* stream;
+    image_t* image;
+
+    util_total_entry_size(anm, name, &width, &height);
+    if (width == 0 || height == 0) {
+        /* There's nothing to do. */
+        return;
+    }
+
+    stream = fopen(filename, "rb");
+    image = png_read(stream, FORMAT_RGBA8888);
+    fclose(stream);
+
+    if (width != image->width || height != image->height) {
+        fprintf(stderr, "%s:%s:%s: wrong image dimensions for %s: %u, %u instead of %u, %u\n", argv0, current_input, name, filename, image->width, image->height, width, height);
+        exit(1);
+    }
+
+    for (f = 0; f < sizeof(formats) / sizeof(formats[0]); ++f) {
+        unsigned char* converted_data = NULL;
+        for (i = 0; i < anm->entry_count; ++i) {
+            if (anm->entries[i].name == name &&
+                anm->entries[i].header.format == formats[f] &&
+                anm->entries[i].header.hasdata) {
+
+                if (!converted_data)
+                    converted_data = rgba_to_fmt((uint32_t*)image->data, width * height, formats[f]);
+
+                for (y = anm->entries[i].header.y; y < anm->entries[i].header.y + anm->entries[i].thtx.h; ++y) {
+                    memcpy(anm->entries[i].data + (y - anm->entries[i].header.y) * anm->entries[i].thtx.w * format_Bpp(formats[f]),
+                           converted_data + y * width * format_Bpp(formats[f]) + anm->entries[i].header.x * format_Bpp(formats[f]),
+                           anm->entries[i].thtx.w * format_Bpp(formats[f]));
+                }
+            }
+        }
+        free(converted_data);
+    }
+
+    free(image->data);
+    free(image);
 }
 
 static void
 anm_extract(const anm_t* anm, const char* name)
 {
-    png_structp png_ptr;
-    png_infop info_ptr;
-    png_byte** imagep;
-    unsigned int i;
-    unsigned int y;
-    char* data;
-    FILE* fp;
-    unsigned int width = 0;
-    unsigned int height = 0;
+    const format_t formats[] = { FORMAT_GRAY8, FORMAT_BGRA4444, FORMAT_BGR565, FORMAT_BGRA8888 };
+    FILE* stream;
+    image_t image;
 
-    util_total_entry_size(anm, name, &width, &height);
+    unsigned int f, i, y;
 
-    if (width == 0 || height == 0) {
-        fprintf(stderr, "%s: calculated width or height is zero\n", argv0);
-        if (!option_force) abort();
+    image.width = 0;
+    image.height = 0;
+    image.format = FORMAT_RGBA8888;
+
+    util_total_entry_size(anm, name, &image.width, &image.height);
+
+    if (image.width == 0 || image.height == 0) {
+        /* Then there's nothing to extract. */
         return;
     }
 
-    util_makepath(name);
+    image.data = malloc(image.width * image.height * 4);
+    /* XXX: Why 0xff? */
+    memset(image.data, 0xff, image.width * image.height * 4);
 
-    fp = fopen(name, "wb");
-    if (!fp) {
-        fprintf(stderr, "%s: couldn't open %s for writing: %s\n", argv0, name, strerror(errno));
-        return;
-    }
-
-    png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
-    if (!png_ptr) {
-        fprintf(stderr, "%s: png_create_write_struct failed\n", argv0);
-        abort();
-    }
-    info_ptr = png_create_info_struct(png_ptr);
-    if (!info_ptr) {
-        fprintf(stderr, "%s: png_create_info_struct failed\n", argv0);
-        abort();
-    }
-    png_init_io(png_ptr, fp);
-
-    data = malloc(width * height * 4);
-    memset(data, 0xff, width * height * 4);
-
-    for (i = 0; i < anm->entry_count; ++i) {
-        if (anm->entries[i].header.hasdata && anm->entries[i].name == name) {
-            for (y = anm->entries[i].header.y; y < anm->entries[i].header.y + anm->entries[i].thtx.h; ++y) {
-                memcpy(data + y * width * 4 + anm->entries[i].header.x * 4,
-                       anm->entries[i].data + (y - anm->entries[i].header.y) * anm->entries[i].thtx.w * 4,
-                       anm->entries[i].thtx.w * 4);
+    for (f = 0; f < sizeof(formats) / sizeof(formats[0]); ++f) {
+        for (i = 0; i < anm->entry_count; ++i) {
+            if (anm->entries[i].header.hasdata && anm->entries[i].name == name && formats[f] == anm->entries[i].header.format) {
+                for (y = anm->entries[i].header.y; y < anm->entries[i].header.y + anm->entries[i].thtx.h; ++y) {
+                    memcpy(image.data + y * image.width * 4 + anm->entries[i].header.x * 4,
+                           anm->entries[i].data + (y - anm->entries[i].header.y) * anm->entries[i].thtx.w * 4,
+                           anm->entries[i].thtx.w * 4);
+                }
             }
         }
     }
 
-    png_set_IHDR(png_ptr, info_ptr,
-        width, height, 8, PNG_COLOR_TYPE_RGB_ALPHA,
-        PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
-    png_write_info(png_ptr, info_ptr);
+    util_makepath(name);
+    stream = fopen(name, "wb");
+    if (!stream) {
+        fprintf(stderr, "%s: couldn't open %s for writing: %s\n", argv0, name, strerror(errno));
+        return;
+    }
+    png_write(stream, &image);
+    fclose(stream);
 
-    imagep = malloc(sizeof(png_byte*) * height);
-    for (y = 0; y < height; ++y)
-        imagep[y] = (png_byte*)(data + y * width * 4);
-
-    png_write_image(png_ptr, imagep);
-    png_write_end(png_ptr, info_ptr);
-    png_destroy_write_struct(&png_ptr, &info_ptr);
-
-    free(imagep);
-    free(data);
-
-    fclose(fp);
+    free(image.data);
 }
 
 static void

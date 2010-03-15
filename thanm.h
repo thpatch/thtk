@@ -40,6 +40,7 @@ enum {
 };
 
 typedef enum {
+    FORMAT_RGBA8888 = 0, /* XXX: Only used internally. */
     FORMAT_BGRA8888 = 1,
     FORMAT_BGR565   = 3,
     FORMAT_BGRA4444 = 5,
