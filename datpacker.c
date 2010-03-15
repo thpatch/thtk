@@ -49,7 +49,7 @@ print_usage()
 {
     printf("Usage: %s [OPTION]... ARCHIVE FILE...\n"
            "OPTION can be:\n"
-           "  -v VERSION  can be 2, 6, 7, 75, 8, 9, 95, 10, 11, or 12, defaults to 12\n"
+           "  -v VERSION  can be 2, 6, 7, 75, 8, 9, 95, 10, 11, 12, or 125, defaults to 125\n"
            "  -h          display this help and exit\n"
            "  -V          display version information and exit\n\n"
            "Additional documentation might be available at <" PACKAGE_URL ">.\n"
@@ -116,7 +116,7 @@ main(int argc, char* argv[])
     FILE* archive;
     archive_t* private;
     const archive_module_t* archive_module = NULL;
-    unsigned int version = 12;
+    unsigned int version = 125;
     int i;
     int argstart;
 
@@ -165,6 +165,7 @@ main(int argc, char* argv[])
     case 10:
     case 11:
     case 12:
+    case 125:
         archive_module = &archive_th95;
         break;
     }
