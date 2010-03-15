@@ -41,8 +41,7 @@
 
 static unsigned int option_force;
 static unsigned int option_verbose;
-static unsigned int option_filemap;
-filemap_t filemap;
+static filemap_t* filemap;
 
 static unsigned int
 format_Bpp(format_t format)
@@ -407,10 +406,10 @@ anm_read_file(const char* filename)
     anm->entry_count = 0;
     anm->entries = NULL;
 
-    if (option_filemap) {
-        filemap.data = malloc(filesize);
-        memset(filemap.data, ' ', filesize);
-        filemap.pos = 0;
+    if (filemap) {
+        filemap->data = malloc(filesize);
+        memset(filemap->data, ' ', filesize);
+        filemap->pos = 0;
     }
 
     for (;;) {
@@ -431,8 +430,8 @@ anm_read_file(const char* filename)
         entry->data_size = 0;
         entry->data = NULL;
 
-        util_seek(f, offset, NULL);
-        util_read(f, &entry->header, sizeof(anm_header_t), 'H', NULL);
+        util_seek(f, offset, filemap);
+        util_read(f, &entry->header, sizeof(anm_header_t), 'H', filemap);
 
         /* XXX: This is not a particularly good way of detecting this. */
         if (entry->header.zero1 != 0)
@@ -490,11 +489,11 @@ anm_read_file(const char* filename)
 
         /* Lengths, including padding, observed are: 16, 32, 48. */
         entry->name = NULL;
-        util_seek(f, offset + entry->header.nameoffset, NULL);
+        util_seek(f, offset + entry->header.nameoffset, filemap);
         fgets(name, 256, f);
-        if (option_filemap) {
-            memset(filemap.data + filemap.pos, 'N', strlen(name) + 1);
-            filemap.pos += strlen(name) + 1;
+        if (filemap) {
+            memset(filemap->data + filemap->pos, 'N', strlen(name) + 1);
+            filemap->pos += strlen(name) + 1;
         }
 
         for (i = 0; i < anm->name_count; ++i) {
@@ -510,7 +509,7 @@ anm_read_file(const char* filename)
             entry->name = anm->names[anm->name_count - 1];
         }
 
-        util_seek(f, offset + sizeof(anm_header_t), NULL);
+        util_seek(f, offset + sizeof(anm_header_t), filemap);
 
         /* Parse any sprites in the entry. */
         if (entry->header.sprites) {
@@ -520,7 +519,7 @@ anm_read_file(const char* filename)
             offsets = malloc(sizeof(uint32_t) * entry->header.sprites);
             entry->sprites = malloc(sizeof(sprite_t) * entry->header.sprites);
             entry->sprite_count = entry->header.sprites;
-            util_read(f, offsets, sizeof(uint32_t) * entry->header.sprites, 'o', NULL);
+            util_read(f, offsets, sizeof(uint32_t) * entry->header.sprites, 'o', filemap);
 
             /* Check that the sprites are stored packed. */
             for (i = 1; i < entry->header.sprites; ++i) {
@@ -532,12 +531,12 @@ anm_read_file(const char* filename)
             }
 
             if (sequential) {
-                util_seek(f, offset + offsets[0], NULL);
-                util_read(f, entry->sprites, sizeof(sprite_t) * entry->header.sprites, 'R', NULL);
+                util_seek(f, offset + offsets[0], filemap);
+                util_read(f, entry->sprites, sizeof(sprite_t) * entry->header.sprites, 'R', filemap);
             } else {
                 for (i = 0; i < entry->header.sprites; ++i) {
-                    util_seek(f, offset + offsets[i], NULL);
-                    util_read(f, &entry->sprites[i], sizeof(sprite_t), 'R', NULL);
+                    util_seek(f, offset + offsets[i], filemap);
+                    util_read(f, &entry->sprites[i], sizeof(sprite_t), 'R', filemap);
                 }
             }
 
@@ -548,11 +547,11 @@ anm_read_file(const char* filename)
         /* XXX: TH06 is not yet supported. */
         if (entry->header.animations && entry->header.version != 0) {
             animation_offset_t* offsets;
+            util_seek(f, offset + sizeof(anm_header_t) + sizeof(uint32_t) * entry->header.sprites, filemap);
 
-            util_seek(f, offset + sizeof(anm_header_t) + sizeof(uint32_t) * entry->header.sprites, NULL);
 
             offsets = malloc(sizeof(animation_offset_t) * entry->header.animations);
-            util_read(f, offsets, sizeof(animation_offset_t) * entry->header.animations, 'O', NULL);
+            util_read(f, offsets, sizeof(animation_offset_t) * entry->header.animations, 'O', filemap);
 
             entry->animations = NULL;
             entry->animation_count = 0;
@@ -560,7 +559,7 @@ anm_read_file(const char* filename)
             for (i = 0; i < entry->header.animations; ++i) {
                 long limit = 0;
 
-                util_seek(f, offset + offsets[i].offset, NULL);
+                util_seek(f, offset + offsets[i].offset, filemap);
 
                 if (i < entry->header.animations - 1)
                     limit = offset + offsets[i + 1].offset;
@@ -578,7 +577,7 @@ anm_read_file(const char* filename)
                         break;
                     }
 
-                    util_read(f, &anim, 8, 'a', NULL);
+                    util_read(f, &anim, 8, 'a', filemap);
 
                     /* End of this animation. */
                     if (anim.type == 0xffff)
@@ -608,7 +607,7 @@ anm_read_file(const char* filename)
                     entry->animations[entry->animation_count - 1].id = offsets[i].id;
                     if (anim.length > 8) {
                         entry->animations[entry->animation_count - 1].data = malloc(anim.length - 8);
-                        util_read(f, entry->animations[entry->animation_count - 1].data, anim.length - 8, 'A', NULL);
+                        util_read(f, entry->animations[entry->animation_count - 1].data, anim.length - 8, 'A', filemap);
                     } else {
                         entry->animations[entry->animation_count - 1].data = NULL;
                     }
@@ -623,16 +622,16 @@ anm_read_file(const char* filename)
             char* data = NULL;
             char magic[5] = { 0 };
 
-            util_seek(f, offset + entry->header.thtxoffset, NULL);
+            util_seek(f, offset + entry->header.thtxoffset, filemap);
 
-            util_read(f, magic, 4, 't', NULL);
+            util_read(f, magic, 4, 't', filemap);
             if (strcmp(magic, "THTX") != 0) {
                 fprintf(stderr, "%s:%s:%s: unknown thtx magic: %s\n",
                     argv0, current_input, entry->name, magic);
                 if (!option_force) abort();
             }
 
-            util_read(f, &entry->thtx, sizeof(thtx_header_t), 'T', NULL);
+            util_read(f, &entry->thtx, sizeof(thtx_header_t), 'T', filemap);
             if (entry->thtx.zero != 0) {
                 fprintf(stderr, "%s:%s:%s: unknown value for zero: %u\n",
                     argv0, current_input, entry->name, entry->thtx.zero);
@@ -665,7 +664,7 @@ anm_read_file(const char* filename)
                 fprintf(stderr, "%s: %u != %u\n", entry->name, entry->thtx.w * entry->thtx.h * format_Bpp(entry->thtx.format), entry->thtx.size); */
 
             data = malloc(entry->thtx.size);
-            util_read(f, data, entry->thtx.w * entry->thtx.h * format_Bpp(entry->thtx.format), 'D', NULL);
+            util_read(f, data, entry->thtx.w * entry->thtx.h * format_Bpp(entry->thtx.format), 'D', filemap);
 
             entry->data_size = entry->thtx.w * entry->thtx.h * 4;
             entry->data = fmt_to_rgba(data, entry->thtx.w * entry->thtx.h, entry->thtx.format);
@@ -681,14 +680,14 @@ anm_read_file(const char* filename)
 
     fclose(f);
 
-    if (option_filemap) {
+    if (filemap) {
         f = fopen("filemap.dat", "wb");
         if (!f) {
             fprintf(stderr, "%s: couldn't open filemap.dat for writing: %s\n", argv0, strerror(errno));
         } else {
-            if (fwrite(filemap.data, filesize, 1, f) != 1)
+            if (fwrite(filemap->data, filesize, 1, f) != 1)
                 fprintf(stderr, "%s: couldn't write to filemap.dat: %s\n", argv0, strerror(errno));
-            free(filemap.data);
+            free(filemap->data);
             fclose(f);
         }
     }
@@ -1057,7 +1056,11 @@ main(int argc, char* argv[])
             }
             option_verbose = strtol(argv[i], NULL, 10);
         } else if (strcmp(argv[i], "-d") == 0) {
-            option_filemap = 1;
+            if (!filemap) {
+                filemap = malloc(sizeof(filemap_t));
+                filemap->data = NULL;
+                filemap->pos = 0;
+            }
         } else if (strcmp(argv[i], "-f") == 0) {
             option_force = 1;
 #ifdef HAVE_LIBPNG
@@ -1152,6 +1155,9 @@ replace_done:
         print_usage();
         exit(1);
     }
+
+    if (filemap)
+        free(filemap);
 
     exit(0);
 }
