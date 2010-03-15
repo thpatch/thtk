@@ -168,6 +168,39 @@ fmt_to_rgba(const char* data, unsigned int pixels, format_t format)
     return (char*)out;
 }
 
+static const opcode_fmt_t formats_v0[] = {
+    { 0, "" },
+    { 1, "i" },
+    { 2, "ff" },
+    { 3, "i" },
+    { 4, "i" },
+    { 5, "i" },
+    { 7, "" },
+    { 9, "fff" },
+    { 10, "fif" },
+    { 11, "ff" },
+    { 12, "ii" },
+    { 13, "" },
+    { 14, "" },
+    { 15, "" },
+    { 16, "ii" },
+    { 17, "fff" },
+    { 18, "ffii" },
+    { 19, "ffii" },
+    { 20, "fffi" },
+    { 21, "" },
+    { 22, "i" },
+    { 23, "" },
+    { 24, "" },
+    { 25, "i" },
+    { 26, "i" },
+    { 27, "f" },
+    { 28, "f" },
+    { 29, "i" },
+    { 30, "ffi" },
+    { 31, "i" },
+};
+
 static const opcode_fmt_t formats_v2[] = {
     { 0, "" },
     { 1, "" },
@@ -463,6 +496,7 @@ anm_read_file(const char* filename)
         entry = &anm->entries[anm->entry_count - 1];
         memset(&entry->thtx, 0, sizeof(thtx_header_t));
         entry->name = NULL;
+        entry->name2 = NULL;
         entry->sprite_count = 0;
         entry->sprites = NULL;
         entry->script_count = 0;
@@ -538,6 +572,17 @@ anm_read_file(const char* filename)
 
         entry->name = anm_get_name(anm, name);
 
+        if (entry->header.version == 0 && entry->header.y != 0) {
+            util_seek(f, offset + entry->header.y, filemap);
+            fgets(name, 256, f);
+            if (filemap) {
+                memset(filemap->data + filemap->pos, 'M', strlen(name) + 1);
+                filemap->pos += strlen(name) + 1;
+            }
+
+            entry->name2 = strdup(name);
+        }
+
         util_seek(f, offset + sizeof(anm_header_t), filemap);
 
         /* Parse any sprites in the entry. */
@@ -572,9 +617,7 @@ anm_read_file(const char* filename)
             free(offsets);
         }
 
-        /* Read in all the animation scripts. */
-        /* XXX: TH06 is not yet supported. */
-        if (entry->header.scripts && entry->header.version != 0) {
+        if (entry->header.scripts) {
             util_seek(f, offset + sizeof(anm_header_t) + sizeof(uint32_t) * entry->header.sprites, filemap);
 
             entry->script_count = entry->header.scripts;
@@ -595,53 +638,64 @@ anm_read_file(const char* filename)
                     limit = offset + entry->scripts[i + 1].offset;
                 else if (entry->header.thtxoffset)
                     limit = offset + entry->header.thtxoffset;
+                else if (entry->header.nextoffset)
+                    limit = offset + entry->header.nextoffset;
                 else
                     limit = filesize;
 
                 for (;;) {
-                    anm_instr_t tempinstr;
                     anm_instr_t* instr;
+                    if (entry->header.version == 0) {
+                        anm_instr0_t tempinstr;
 
-                    if (ftell(f) + ANM_INSTR_SIZE > limit)
-                        break;
-
-                    util_read(f, &tempinstr, ANM_INSTR_SIZE, 'a', filemap);
-
-                    /* End of this script. */
-                    if (tempinstr.type != 0xffff) {
-                        /* This shouldn't happen. */
-                        if (tempinstr.length == 0) {
-                            fprintf(stderr, "%s:%s:%s:%d: instruction length is zero: %hu %hu %hu %hu\n",
-                                argv0, current_input, entry->name, entry->scripts[i].id, tempinstr.type, tempinstr.length, tempinstr.time, tempinstr.param_mask);
-                            if (!option_force) abort();
+                        if (ftell(f) + ANM_INSTR0_SIZE > limit)
                             break;
+
+                        util_read(f, &tempinstr, ANM_INSTR0_SIZE, 'a', filemap);
+
+                        ++entry->scripts[i].instr_count;
+                        entry->scripts[i].instrs = realloc(entry->scripts[i].instrs, entry->scripts[i].instr_count * sizeof(anm_instr_t));
+                        instr = &entry->scripts[i].instrs[entry->scripts[i].instr_count - 1];
+                        instr->type = tempinstr.type;
+                        instr->length = tempinstr.length;
+                        instr->time = tempinstr.time;
+                        instr->param_mask = 0;
+
+                        if (instr->length) {
+                            instr->data = malloc(instr->length);
+                            util_read(f, instr->data, instr->length, 'A', filemap);
+                        } else {
+                            instr->data = NULL;
                         }
 
-                        if (tempinstr.length % 4 != 0) {
-                            fprintf(stderr, "%s:%s:%s:%d: length is not a multiple of four: %u\n",
-                                argv0, current_input, entry->name, entry->scripts[i].id, tempinstr.length);
-                            if (!option_force) abort();
+                        if (instr->type == 0 && instr->time == 0)
                             break;
-                        }
-                    }
-
-                    ++entry->scripts[i].instr_count;
-                    entry->scripts[i].instrs = realloc(entry->scripts[i].instrs, entry->scripts[i].instr_count * sizeof(anm_instr_t));
-                    instr = &entry->scripts[i].instrs[entry->scripts[i].instr_count - 1];
-                    instr->type = tempinstr.type;
-                    instr->length = tempinstr.length;
-                    instr->time = tempinstr.time;
-                    instr->param_mask = tempinstr.param_mask;
-
-                    if (instr->length > ANM_INSTR_SIZE) {
-                        instr->data = malloc(instr->length - ANM_INSTR_SIZE);
-                        util_read(f, instr->data, instr->length - ANM_INSTR_SIZE, 'A', filemap);
                     } else {
-                        instr->data = NULL;
-                    }
+                        anm_instr_t tempinstr;
 
-                    if (tempinstr.type == 0xffff)
-                        break;
+                        if (ftell(f) + ANM_INSTR_SIZE > limit)
+                            break;
+
+                        util_read(f, &tempinstr, ANM_INSTR_SIZE, 'a', filemap);
+
+                        ++entry->scripts[i].instr_count;
+                        entry->scripts[i].instrs = realloc(entry->scripts[i].instrs, entry->scripts[i].instr_count * sizeof(anm_instr_t));
+                        instr = &entry->scripts[i].instrs[entry->scripts[i].instr_count - 1];
+                        instr->type = tempinstr.type;
+                        instr->length = tempinstr.length;
+                        instr->time = tempinstr.time;
+                        instr->param_mask = tempinstr.param_mask;
+
+                        if (instr->length > ANM_INSTR_SIZE) {
+                            instr->data = malloc(instr->length - ANM_INSTR_SIZE);
+                            util_read(f, instr->data, instr->length - ANM_INSTR_SIZE, 'A', filemap);
+                        } else {
+                            instr->data = NULL;
+                        }
+
+                        if (tempinstr.type == 0xffff)
+                            break;
+                    }
                 }
             }
         }
@@ -923,7 +977,10 @@ anm_dump(FILE* stream, const anm_t* anm)
         unsigned int format_count = 0;
         entry_t* entry = &anm->entries[i];
 
-        if (entry->header.version == 2) {
+        if (entry->header.version == 0) {
+            formats = formats_v0;
+            format_count = sizeof(formats_v0) / sizeof(formats_v0[0]);
+        } else if (entry->header.version == 2) {
             formats = formats_v2;
             format_count = sizeof(formats_v2) / sizeof(formats_v2[0]);
         } else if (entry->header.version == 3) {
@@ -939,12 +996,14 @@ anm_dump(FILE* stream, const anm_t* anm)
 
         fprintf(stream, "ENTRY %u\n", entry->header.version);
         fprintf(stream, "Name: %s\n", entry->name);
+        if (entry->name2)
+            fprintf(stream, "Name2: %s\n", entry->name2);
         fprintf(stream, "Format: %u\n", entry->header.format);
         fprintf(stream, "Width: %u\n", entry->header.w);
         fprintf(stream, "Height: %u\n", entry->header.h);
         if (entry->header.x != 0)
             fprintf(stream, "X-Offset: %u\n", entry->header.x);
-        if (entry->header.y != 0)
+        if (!entry->name2 && entry->header.y != 0)
             fprintf(stream, "Y-Offset: %u\n", entry->header.y);
         if (entry->header.zero1 != 0)
             fprintf(stream, "Zero1: %u\n", entry->header.zero1);
@@ -1052,6 +1111,10 @@ anm_create(const char* spec)
             char name[256];
             sscanf(linep, "Name: %s", name);
             entry->name = anm_get_name(anm, name);
+        } else if (strncmp(linep, "Name2: ", 6) == 0) {
+            char name[256];
+            sscanf(linep, "Name2: %s", name);
+            entry->name2 = strdup(name);
         } else if (strncmp(linep, "Sprite: ", 8) == 0) {
             sprite_t* sprite;
             entry->sprite_count++;
@@ -1155,6 +1218,17 @@ anm_write(anm_t* anm, const char* filename)
         fwrite(padding, namepad, 1, stream);
         free(padding);
 
+        if (entry->name2 && entry->header.version == 0) {
+            namepad = (16 - strlen(entry->name2) % 16);
+
+            entry->header.y = ftell(stream) - base;
+            fwrite(entry->name2, strlen(entry->name2), 1, stream);
+
+            padding = calloc(1, namepad);
+            fwrite(padding, namepad, 1, stream);
+            free(padding);
+        }
+
         spriteoffset = ftell(stream) - base;
         fwrite(entry->sprites, sizeof(sprite_t), entry->sprite_count, stream);
 
@@ -1163,11 +1237,20 @@ anm_write(anm_t* anm, const char* filename)
 
             entry->scripts[j].offset = ftell(stream) - base;
             for (k = 0; k < entry->scripts[j].instr_count; ++k) {
-                fwrite(&entry->scripts[j].instrs[k], ANM_INSTR_SIZE, 1, stream);
-                if (entry->scripts[j].instrs[k].data)
-                    fwrite(entry->scripts[j].instrs[k].data, entry->scripts[j].instrs[k].length - ANM_INSTR_SIZE, 1, stream);
+                if (entry->header.version == 0) {
+                    anm_instr0_t instr;
+                    instr.time = entry->scripts[j].instrs[k].time;
+                    instr.type = entry->scripts[j].instrs[k].type;
+                    instr.length = entry->scripts[j].instrs[k].length - ANM_INSTR_SIZE;
+                    fwrite(&instr, ANM_INSTR0_SIZE, 1, stream);
+                    if (entry->scripts[j].instrs[k].data)
+                        fwrite(entry->scripts[j].instrs[k].data, entry->scripts[j].instrs[k].length - ANM_INSTR_SIZE, 1, stream);
+                } else {
+                    fwrite(&entry->scripts[j].instrs[k], ANM_INSTR_SIZE, 1, stream);
+                    if (entry->scripts[j].instrs[k].data)
+                        fwrite(entry->scripts[j].instrs[k].data, entry->scripts[j].instrs[k].length - ANM_INSTR_SIZE, 1, stream);
+                }
             }
-
         }
 
         if (entry->header.hasdata) {
@@ -1224,6 +1307,8 @@ anm_free(anm_t* anm)
 
     if (anm->entries) {
         for (i = 0; i < anm->entry_count; ++i) {
+            if (anm->entries[i].name2)
+                free(anm->entries[i].name2);
             if (anm->entries[i].sprites)
                 free(anm->entries[i].sprites);
             if (anm->entries[i].scripts) {

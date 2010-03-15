@@ -58,6 +58,19 @@ typedef struct {
 #endif
 } PACK_ATTRIBUTE sprite_t;
 
+#define ANM_INSTR0_SIZE 4
+typedef struct {
+#ifdef PACK_PRAGMA
+#pragma pack(push,1)
+#endif
+    uint16_t time;
+    uint8_t type;
+    uint8_t length;
+#ifdef PACK_PRAGMA
+#pragma pack(pop)
+#endif
+} PACK_ATTRIBUTE anm_instr0_t;
+
 #define ANM_INSTR_SIZE 8
 typedef struct {
 #ifdef PACK_PRAGMA
@@ -104,7 +117,9 @@ typedef struct {
     uint32_t format;
     uint32_t zero2; /* XXX: A few are 0xff000000. */
     uint32_t nameoffset;
-    uint32_t x, y; /* Not used until TH11. */
+    /* XXX: X is unused here. */
+    /* XXX: Y stores the secondary name offset for TH06. There is no secondary name when it is zero. */
+    uint32_t x, y;
     /* 0: TH06
      * 2: TH07
      * 3: TH08, TH09
@@ -165,6 +180,7 @@ typedef struct {
     anm_header_t header;
     thtx_header_t thtx;
     char* name;
+    char* name2;
     unsigned int sprite_count;
     sprite_t* sprites;
     unsigned int script_count;
