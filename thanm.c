@@ -407,6 +407,21 @@ convert_header_to_11(anm_header_t* oldheader)
     th11->nextoffset = header.nextoffset;
 }
 
+static char*
+anm_get_name(anm_t* anm, const char* name)
+{
+    unsigned int i;
+    for (i = 0; i < anm->name_count; ++i) {
+        if (strcmp(name, anm->names[i]) == 0) {
+            return anm->names[i];
+        }
+    }
+
+    ++anm->name_count;
+    anm->names = realloc(anm->names, sizeof(char*) * anm->name_count);
+    return anm->names[anm->name_count - 1] = strdup(name);
+}
+
 static anm_t*
 anm_read_file(const char* filename)
 {
@@ -517,18 +532,7 @@ anm_read_file(const char* filename)
             filemap->pos += strlen(name) + 1;
         }
 
-        for (i = 0; i < anm->name_count; ++i) {
-            if (strcmp(name, anm->names[i]) == 0) {
-                entry->name = anm->names[i];
-            }
-        }
-
-        if (!entry->name) {
-            ++anm->name_count;
-            anm->names = realloc(anm->names, sizeof(char*) * anm->name_count);
-            anm->names[anm->name_count - 1] = strdup(name);
-            entry->name = anm->names[anm->name_count - 1];
-        }
+        entry->name = anm_get_name(anm, name);
 
         util_seek(f, offset + sizeof(anm_header_t), filemap);
 
@@ -1028,22 +1032,9 @@ anm_create(const char* spec)
             memset(entry, 0, sizeof(entry_t));
             sscanf(linep, "ENTRY %u", &entry->header.version);
         } else if (strncmp(linep, "Name: ", 6) == 0) {
-            unsigned int i;
             char name[256];
             sscanf(linep, "Name: %s", name);
-
-            for (i = 0; i < anm->name_count; ++i) {
-                if (strcmp(name, anm->names[i]) == 0) {
-                    entry->name = anm->names[i];
-                }
-            }
-
-            if (!entry->name) {
-                ++anm->name_count;
-                anm->names = realloc(anm->names, sizeof(char*) * anm->name_count);
-                anm->names[anm->name_count - 1] = strdup(name);
-                entry->name = anm->names[anm->name_count - 1];
-            }
+            entry->name = anm_get_name(anm, name);
         } else if (strncmp(linep, "Sprite: ", 8) == 0) {
             sprite_t* sprite;
             entry->sprite_count++;
