@@ -678,20 +678,8 @@ anm_read_file(const char* filename)
                 if (!option_force) abort();
             }
 
-            /* XXX: There are three known entries which don't match.
-             *      What they have in common is that their sizes are odd,
-             *      and that the extra data makes up two rows.
-             *
-             *      09/pl02.anm  : data/pl/pl02/eff09sk1.png
-             *      09/pl02b.anm : data/pl/pl02b/eff09sk1.png
-             *      95/enm11.anm : data/cdbg/cdbg11.png
-             *
-             *      The extra lines are neither written out nor read in. */
-            /* if (entry->thtx.w * entry->thtx.h * format_Bpp(entry->thtx.format) != entry->thtx.size)
-                fprintf(stderr, "%s: %u != %u\n", entry->name, entry->thtx.w * entry->thtx.h * format_Bpp(entry->thtx.format), entry->thtx.size); */
-
             data = malloc(entry->thtx.size);
-            util_read(f, data, entry->thtx.w * entry->thtx.h * format_Bpp(entry->thtx.format), 'D', filemap);
+            util_read(f, data, entry->thtx.size, 'D', filemap);
 
             entry->data_size = entry->thtx.w * entry->thtx.h * 4;
             entry->data = fmt_to_rgba(data, entry->thtx.w * entry->thtx.h, entry->thtx.format);
@@ -1398,7 +1386,7 @@ replace_done:
             unsigned int nextoffset = anm->entries[i].header.nextoffset;
             if (strcmp(argv[filestart + 1], anm->entries[i].name) == 0 && anm->entries[i].header.hasdata) {
                 fseek(anmfp, offset + anm->entries[i].header.thtxoffset + 4 + sizeof(thtx_header_t), SEEK_SET);
-                fwrite(anm->entries[i].data, anm->entries[i].thtx.w * anm->entries[i].thtx.h * format_Bpp(anm->entries[i].thtx.format), 1, anmfp);
+                fwrite(anm->entries[i].data, anm->entries[i].thtx.size, 1, anmfp);
             }
             offset += nextoffset;
         }
@@ -1411,10 +1399,13 @@ replace_done:
 
         anm = anm_create(archive_spec_file);
 
+        /* Allocate enough space for the THTX data. */
         for (i = 0; i < (int)anm->entry_count; ++i) {
             if (anm->entries[i].header.hasdata) {
-                anm->entries[i].data_size = anm->entries[i].header.w * anm->entries[i].header.h * format_Bpp(anm->entries[i].header.format);
-                anm->entries[i].data = malloc(anm->entries[i].data_size);
+                anm->entries[i].data_size = anm->entries[i].thtx.size;;
+                /* XXX: There are a few entries with a thtx.size greater than
+                 *      w*h*Bpp.  The extra data appears to be all zeroes. */
+                anm->entries[i].data = calloc(1, anm->entries[i].data_size);
             }
         }
 
