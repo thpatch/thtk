@@ -84,10 +84,13 @@ rgba_to_fmt(const uint32_t* data, unsigned int pixels, format_t format)
     } else if (format == FORMAT_BGRA4444) {
         out = malloc(sizeof(uint16_t) * pixels);
         for (i = 0; i < pixels; ++i) {
-            out[i * sizeof(uint16_t) + 0] = ((data[i] &   0xf00000) >> 20)
-                                          | ((data[i] &     0xf000) >> 8);
-            out[i * sizeof(uint16_t) + 1] = ((data[i] &       0xf0) >> 4)
-                                          | ((data[i] & 0xf0000000) >> 24);
+            const unsigned char r = (((data[i] & 0xff000000) >> 24) + 8) / 17;
+            const unsigned char g = (((data[i] &   0xff0000) >> 16) + 8) / 17;
+            const unsigned char b = (((data[i] &     0xff00) >>  8) + 8) / 17;
+            const unsigned char a = (((data[i] &       0xff)      ) + 8) / 17;
+
+            out[i * sizeof(uint16_t) + 0] = (b << 4) | g;
+            out[i * sizeof(uint16_t) + 1] = (r << 4) | a;
         }
     } else if (format == FORMAT_BGR565) {
         uint16_t* out16;
