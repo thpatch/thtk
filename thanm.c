@@ -40,7 +40,6 @@
 #include "util.h"
 
 static unsigned int option_force;
-static unsigned int option_verbose;
 static filemap_t* filemap;
 
 static unsigned int
@@ -369,7 +368,7 @@ convert_header(anm_header_t* header)
 {
     anm_header11_t th11 = *(anm_header11_t*)header;
     header->sprites = th11.sprites;
-    header->animations = th11.animations;
+    header->scripts = th11.scripts;
     header->zero1 = th11.zero1;
     header->w = th11.w;
     header->h = th11.h;
@@ -425,8 +424,8 @@ anm_read_file(const char* filename)
         entry->name = NULL;
         entry->sprite_count = 0;
         entry->sprites = NULL;
-        entry->animation_count = 0;
-        entry->animations = NULL;
+        entry->script_count = 0;
+        entry->scripts = NULL;
         entry->data_size = 0;
         entry->data = NULL;
 
@@ -545,76 +544,76 @@ anm_read_file(const char* filename)
 
         /* Read in all the animation scripts. */
         /* XXX: TH06 is not yet supported. */
-        if (entry->header.animations && entry->header.version != 0) {
-            animation_offset_t* offsets;
+        if (entry->header.scripts && entry->header.version != 0) {
             util_seek(f, offset + sizeof(anm_header_t) + sizeof(uint32_t) * entry->header.sprites, filemap);
 
+            entry->script_count = entry->header.scripts;
+            entry->scripts = malloc(entry->script_count * sizeof(anm_script_t));
 
-            offsets = malloc(sizeof(animation_offset_t) * entry->header.animations);
-            util_read(f, offsets, sizeof(animation_offset_t) * entry->header.animations, 'O', filemap);
+            for (i = 0; i < entry->script_count; ++i) {
+                util_read(f, &entry->scripts[i], 8, 'O', filemap);
+                entry->scripts[i].instr_count = 0;
+                entry->scripts[i].instrs = NULL;
+            }
 
-            entry->animations = NULL;
-            entry->animation_count = 0;
-
-            for (i = 0; i < entry->header.animations; ++i) {
+            for (i = 0; i < entry->header.scripts; ++i) {
                 long limit = 0;
 
-                util_seek(f, offset + offsets[i].offset, filemap);
+                util_seek(f, offset + entry->scripts[i].offset, filemap);
 
-                if (i < entry->header.animations - 1)
-                    limit = offset + offsets[i + 1].offset;
+                if (i < entry->header.scripts - 1)
+                    limit = offset + entry->scripts[i + 1].offset;
                 else if (entry->header.thtxoffset)
                     limit = offset + entry->header.thtxoffset;
                 else
                     limit = filesize;
 
                 for (;;) {
-                    animation_t anim;
+                    anm_instr_t tempinstr;
+                    anm_instr_t* instr;
 
                     if (ftell(f) + 8 > limit) {
                         fprintf(stderr, "%s:%s:%s:%d: would read past limit\n",
-                            argv0, current_input, entry->name, offsets[i].id);
+                            argv0, current_input, entry->name, entry->scripts[i].id);
                         break;
                     }
 
-                    util_read(f, &anim, 8, 'a', filemap);
+                    util_read(f, &tempinstr, 8, 'a', filemap);
 
-                    /* End of this animation. */
-                    if (anim.type == 0xffff)
+                    /* End of this script. */
+                    if (tempinstr.type == 0xffff)
                         break;
 
                     /* This shouldn't happen. */
-                    if (anim.length == 0) {
-                        fprintf(stderr, "%s:%s:%s:%d: animation length is zero: %u %u %u\n",
-                            argv0, current_input, entry->name, offsets[i].id, anim.type, anim.length, anim.time);
+                    if (tempinstr.length == 0) {
+                        fprintf(stderr, "%s:%s:%s:%d: instruction length is zero: %u %u %u\n",
+                            argv0, current_input, entry->name, entry->scripts[i].id, tempinstr.type, tempinstr.length, tempinstr.time);
                         if (!option_force) abort();
                         break;
                     }
 
-                    if (anim.length % 4 != 0) {
+                    if (tempinstr.length % 4 != 0) {
                         fprintf(stderr, "%s:%s:%s:%d: length is not a multiple of four: %u\n",
-                            argv0, current_input, entry->name, offsets[i].id, anim.length);
+                            argv0, current_input, entry->name, entry->scripts[i].id, tempinstr.length);
                         if (!option_force) abort();
                         break;
                     }
 
-                    ++entry->animation_count;
-                    entry->animations = realloc(entry->animations, sizeof(animation_t) * entry->animation_count);
+                    ++entry->scripts[i].instr_count;
+                    entry->scripts[i].instrs = realloc(entry->scripts[i].instrs, entry->scripts[i].instr_count * sizeof(anm_instr_t));
+                    instr = &entry->scripts[i].instrs[entry->scripts[i].instr_count - 1];
+                    instr->type = tempinstr.type;
+                    instr->length = tempinstr.length;
+                    instr->time = tempinstr.time;
 
-                    entry->animations[entry->animation_count - 1].time = anim.time;
-                    entry->animations[entry->animation_count - 1].type = anim.type;
-                    entry->animations[entry->animation_count - 1].length = anim.length;
-                    entry->animations[entry->animation_count - 1].id = offsets[i].id;
-                    if (anim.length > 8) {
-                        entry->animations[entry->animation_count - 1].data = malloc(anim.length - 8);
-                        util_read(f, entry->animations[entry->animation_count - 1].data, anim.length - 8, 'A', filemap);
+                    if (instr->length > 8) {
+                        instr->data = malloc(instr->length - 8);
+                        util_read(f, instr->data, instr->length - 8, 'A', filemap);
                     } else {
-                        entry->animations[entry->animation_count - 1].data = NULL;
+                        instr->data = NULL;
                     }
                 }
             }
-
-            free(offsets);
         }
 
         /* TH06 doesn't store entry data. */
@@ -695,109 +694,6 @@ anm_read_file(const char* filename)
     qsort(anm->names, anm->name_count, sizeof(char*), util_strpcmp);
 
     return anm;
-}
-
-static void
-anm_list(const anm_t* anm)
-{
-    unsigned int i;
-
-    if (!option_verbose) {
-        for (i = 0; i < anm->name_count; ++i)
-            puts(anm->names[i]);
-    } else {
-        for (i = 0; i < anm->entry_count; ++i) {
-            unsigned int j;
-            printf("%s %ux%u+%u+%u %ux%u %u %u %u %u\n",
-                anm->entries[i].name,
-                anm->entries[i].header.w, anm->entries[i].header.h, anm->entries[i].header.x, anm->entries[i].header.y,
-                anm->entries[i].thtx.w, anm->entries[i].thtx.h,
-                anm->entries[i].header.version,
-                anm->entries[i].header.format,
-                anm->entries[i].header.unknown1,
-                anm->entries[i].header.unknown2);
-
-            if (option_verbose > 1) {
-                for (j = 0; j < anm->entries[i].sprite_count; ++j) {
-                    printf("  Sprite #%u: %.fx%.f+%.f+%.f\n",
-                        anm->entries[i].sprites[j].id,
-                        anm->entries[i].sprites[j].w,
-                        anm->entries[i].sprites[j].h,
-                        anm->entries[i].sprites[j].x,
-                        anm->entries[i].sprites[j].y);
-                }
-            }
-
-            if (option_verbose > 2 && anm->entries[i].animation_count) {
-                const opcode_fmt_t* formats = NULL;
-                unsigned int format_count = 0;
-                if (anm->entries[i].header.version == 2) {
-                    formats = formats_v2;
-                    format_count = sizeof(formats_v2) / sizeof(formats_v2[0]);
-                } else if (anm->entries[i].header.version == 3) {
-                    formats = formats_v3;
-                    format_count = sizeof(formats_v3) / sizeof(formats_v3[0]);
-                } else if (anm->entries[i].header.version == 4 || anm->entries[i].header.version == 7) {
-                    formats = formats_v4p;
-                    format_count = sizeof(formats_v4p) / sizeof(formats_v4p[0]);
-                } else {
-                    fprintf(stderr, "%s:%s:%s: unknown version: %u\n", argv0, current_input, anm->entries[i].name, anm->entries[i].header.version);
-                    continue;
-                }
-                for (j = 0; j < anm->entries[i].animation_count; ++j) {
-                    unsigned int k;
-                    unsigned int done = 0;
-
-                    if (j == 0 || anm->entries[i].animations[j].id != anm->entries[i].animations[j - 1].id)
-                        printf("  Animation #%i:\n", anm->entries[i].animations[j].id);
-
-                    printf("    @%-5u %-5u", anm->entries[i].animations[j].time, anm->entries[i].animations[j].type);
-
-                    for (k = 0; k < format_count; ++k) {
-                        if (formats[k].type == anm->entries[i].animations[j].type && formats[k].format) {
-                            unsigned int m;
-                            if ((int)strlen(formats[k].format) * 4 != anm->entries[i].animations[j].length - 8) {
-                                fprintf(stderr, "%s:%s:%d: animation format length does not match data length: %lu != %u\n",
-                                    argv0,
-                                    current_input,
-                                    anm->entries[i].animations[j].id,
-                                    (long unsigned int)strlen(formats[k].format) * 4,
-                                    anm->entries[i].animations[j].length - 8);
-                                break;
-                            }
-                            for (m = 0; m < strlen(formats[k].format); ++m) {
-                                int32_t int1;
-                                switch (formats[k].format[m]) {
-                                case 'i':
-                                    memcpy(&int1, anm->entries[i].animations[j].data + m * sizeof(int32_t), sizeof(int32_t));
-                                    printf(" %i", int1);
-                                    break;
-                                case 'f':
-                                    printf(" %sf", util_printfloat(anm->entries[i].animations[j].data + m * sizeof(int32_t)));
-                                    break;
-                                default:
-                                    fprintf(stderr, "%s: unknown animation format specifier: %c\n", argv0, formats[k].format[m]);
-                                    if (!option_force) abort();
-                                    break;
-                                }
-                            }
-                            printf("\n");
-                            done = 1;
-                            break;
-                        }
-                    }
-                    if (!done) {
-                        uint32_t* array = (uint32_t*)anm->entries[i].animations[j].data;
-                        printf("  ? @%-5u %-5u", anm->entries[i].animations[j].time, anm->entries[i].animations[j].type);
-                        for (k = 0; (int)k < (anm->entries[i].animations[j].length - 8) >> 2; ++k) {
-                            printf(" 0x%08x", *(array + k));
-                        }
-                        printf("\n");
-                    }
-                }
-            }
-        }
-    }
 }
 
 static void
@@ -972,12 +868,117 @@ anm_extract(const anm_t* anm, const char* name)
 
     fclose(fp);
 }
+
+static void
+anm_dump(FILE* stream, const anm_t* anm)
+{
+    unsigned int i;
+
+    for (i = 0; i < anm->entry_count; ++i) {
+        unsigned int j;
+        const opcode_fmt_t* formats = NULL;
+        unsigned int format_count = 0;
+        entry_t* entry = &anm->entries[i];
+
+        if (entry->header.version == 2) {
+            formats = formats_v2;
+            format_count = sizeof(formats_v2) / sizeof(formats_v2[0]);
+        } else if (entry->header.version == 3) {
+            formats = formats_v3;
+            format_count = sizeof(formats_v3) / sizeof(formats_v3[0]);
+        } else if (entry->header.version == 4 || entry->header.version == 7) {
+            formats = formats_v4p;
+            format_count = sizeof(formats_v4p) / sizeof(formats_v4p[0]);
+        } else {
+            fprintf(stderr, "%s:%s: could not find a format description for version %u\n", argv0, current_input, entry->header.version);
+            abort();
+        }
+
+        fprintf(stream, "ENTRY %u\n", entry->header.version);
+        fprintf(stream, "Name: %s\n", entry->name);
+        fprintf(stream, "Format: %u\n", entry->header.format);
+        fprintf(stream, "Width: %u\n", entry->header.w);
+        fprintf(stream, "Height: %u\n", entry->header.h);
+        if (entry->header.x != 0)
+            fprintf(stream, "X-Offset: %u\n", entry->header.x);
+        if (entry->header.y != 0)
+            fprintf(stream, "Y-Offset: %u\n", entry->header.y);
+        if (entry->header.zero1 != 0)
+            fprintf(stream, "Zero1: %u\n", entry->header.zero1);
+        if (entry->header.zero2 != 0)
+            fprintf(stream, "Zero2: %u\n", entry->header.zero2);
+        if (entry->header.zero3 != 0)
+            fprintf(stream, "Zero3: %u\n", entry->header.zero3);
+        if (entry->header.unknown1 != 0)
+            fprintf(stream, "Unknown1: %u\n", entry->header.unknown1);
+        if (entry->header.unknown2) {
+            fprintf(stream, "Unknown2: %u\n", entry->header.unknown2);
+            fprintf(stream, "THTX-Size: %u\n", entry->thtx.size);
+            fprintf(stream, "THTX-Format: %u\n", entry->thtx.format);
+            fprintf(stream, "THTX-Width: %u\n", entry->thtx.w);
+            fprintf(stream, "THTX-Height: %u\n", entry->thtx.h);
+            fprintf(stream, "THTX-Zero: %u\n", entry->thtx.zero);
+        }
+
+        fprintf(stream, "\n");
+
+        for (j = 0; j < entry->sprite_count; ++j) {
+            sprite_t* sprite = &entry->sprites[j];
+            fprintf(stream, "Sprite: %u %.f*%.f+%.f+%.f\n",
+                sprite->id,
+                sprite->w, sprite->h,
+                sprite->x, sprite->y);
+        }
+
+        fprintf(stream, "\n");
+
+        for (j = 0; j < entry->script_count; ++j) {
+            unsigned int iter_instrs, iter_formats, iter_params;
+            anm_script_t* scr = &entry->scripts[j];
+
+            fprintf(stream, "Script: %d\n", scr->id);
+
+            for (iter_instrs = 0; iter_instrs < scr->instr_count; ++iter_instrs) {
+                int done = 0;
+                anm_instr_t* instr = &scr->instrs[iter_instrs];
+                fprintf(stream, "Instruction: %u %hu\n", instr->time, instr->type);
+                for (iter_formats = 0; iter_formats < format_count; ++iter_formats) {
+                    if (formats[iter_formats].type == instr->type) {
+                        for (iter_params = 0; iter_params < strlen(formats[iter_formats].format); ++iter_params) {
+                            switch (formats[iter_formats].format[iter_params]) {
+                            case 'i':
+                                fprintf(stream, "Parami: %i\n", *(int32_t*)(instr->data + iter_params * 4));
+                                break;
+                            case 'f':
+                                fprintf(stream, "Paramf: %s\n", util_printfloat(instr->data + iter_params * 4));
+                                break;
+                            default:
+                                fprintf(stderr, "%s: invalid format descriptor `%c'\n", argv0, formats[iter_formats].format[iter_params]);
+                                abort();
+                            }
+                        }
+                        done = 1;
+                        break;
+                    }
+                }
+                if (!done) {
+                    fprintf(stderr, "%s: no format descriptor found for %d\n", argv0, instr->type);
+                    abort();
+                }
+            }
+
+            fprintf(stream, "\n");
+        }
+
+        fprintf(stream, "\n");
+    }
+}
 #endif
 
 static void
 anm_free(anm_t* anm)
 {
-    unsigned int i, j;
+    unsigned int i, j, k;
 
     if (!anm)
         return;
@@ -986,12 +987,17 @@ anm_free(anm_t* anm)
         for (i = 0; i < anm->entry_count; ++i) {
             if (anm->entries[i].sprites)
                 free(anm->entries[i].sprites);
-            if (anm->entries[i].animations) {
-                for (j = 0; j < anm->entries[i].animation_count; ++j) {
-                    if (anm->entries[i].animations[j].data)
-                        free(anm->entries[i].animations[j].data);
+            if (anm->entries[i].scripts) {
+                for (j = 0; j < anm->entries[i].script_count; ++j) {
+                    if (anm->entries[i].scripts[j].instrs) {
+                        for (k = 0; k < anm->entries[i].scripts[j].instr_count; ++k) {
+                            if (anm->entries[i].scripts[j].instrs[k].data)
+                                free(anm->entries[i].scripts[j].instrs[k].data);
+                        }
+                        free(anm->entries[i].scripts[j].instrs);
+                    }
                 }
-                free(anm->entries[i].animations);
+                free(anm->entries[i].scripts);
             }
             if (anm->entries[i].data)
                 free(anm->entries[i].data);
@@ -1020,7 +1026,6 @@ print_usage()
            "  -r    replace entries in archive\n"
 #endif
            "OPTION can be:\n"
-           "  -v N  verbosity level\n"
            "  -f    ignore errors when possible\n"
            "  -d    write filemap.dat\n"
            "  -h    display this help and exit\n"
@@ -1048,13 +1053,6 @@ main(int argc, char* argv[])
         } else if (strcmp(argv[i], "-V") == 0) {
             util_print_version("thanm", PACKAGE_THANM_VERSION);
             exit(0);
-        } else if (strcmp(argv[i], "-v") == 0) {
-            ++i;
-            if (i >= argc) {
-                print_usage();
-                exit(1);
-            }
-            option_verbose = strtol(argv[i], NULL, 10);
         } else if (strcmp(argv[i], "-d") == 0) {
             if (!filemap) {
                 filemap = malloc(sizeof(filemap_t));
@@ -1086,7 +1084,7 @@ main(int argc, char* argv[])
 
     if (mode == MODE_LIST) {
         anm_t* anm = anm_read_file(argv[filestart]);
-        anm_list(anm);
+        anm_dump(stdout, anm);
         anm_free(anm);
 #ifdef HAVE_LIBPNG
     } else if (mode == MODE_EXTRACT) {

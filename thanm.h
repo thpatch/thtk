@@ -60,26 +60,27 @@ typedef struct {
 #ifdef PACK_PRAGMA
 #pragma pack(push,1)
 #endif
-    int32_t id;
-    uint32_t offset;
+    uint16_t type;
+    uint16_t length;
+    uint32_t time;
 #ifdef PACK_PRAGMA
 #pragma pack(pop)
 #endif
-} PACK_ATTRIBUTE animation_offset_t;
+    char* data;
+} PACK_ATTRIBUTE anm_instr_t;
 
 typedef struct {
 #ifdef PACK_PRAGMA
 #pragma pack(push,1)
 #endif
-    uint16_t type;
-    uint16_t length;
-    uint32_t time;
     int32_t id;
+    uint32_t offset;
 #ifdef PACK_PRAGMA
 #pragma pack(pop)
 #endif
-    char* data;
-} PACK_ATTRIBUTE animation_t;
+    unsigned int instr_count;
+    anm_instr_t* instrs;
+} PACK_ATTRIBUTE anm_script_t;
 
 typedef struct {
     uint16_t type;
@@ -91,7 +92,7 @@ typedef struct {
 #pragma pack(push,1)
 #endif
     uint32_t sprites;
-    uint32_t animations;
+    uint32_t scripts;
     uint32_t zero1;
     uint32_t w, h;
     uint32_t format;
@@ -125,7 +126,7 @@ typedef struct {
 #endif
     uint32_t version;
     uint16_t sprites;
-    uint16_t animations;
+    uint16_t scripts;
     uint16_t zero1;
     uint16_t w, h;
     uint16_t format;
@@ -161,9 +162,8 @@ typedef struct {
     char* name;
     unsigned int sprite_count;
     sprite_t* sprites;
-    /* TODO: Rename this, or enclose it. */
-    unsigned int animation_count;
-    animation_t* animations;
+    unsigned int script_count;
+    anm_script_t* scripts;
     unsigned int data_size;
     char* data;
 } entry_t;
