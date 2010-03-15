@@ -116,8 +116,7 @@ typedef struct {
     /* 11 - Used mainly for backgrounds and ascii.png. */
     uint32_t unknown1;
     uint32_t thtxoffset;
-    /* Always zero when thtxoffset is zero.  Otherwise 1. */
-    uint32_t unknown2;
+    uint32_t hasdata;
     uint32_t nextoffset;
     uint32_t zero3;
 #ifdef PACK_PRAGMA
@@ -139,7 +138,7 @@ typedef struct {
     uint16_t x, y;
     uint32_t unknown1;
     uint32_t thtxoffset;
-    uint32_t unknown2;
+    uint32_t hasdata;
     uint32_t nextoffset;
     uint32_t zero2[6];
 #ifdef PACK_PRAGMA

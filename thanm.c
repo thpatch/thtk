@@ -380,7 +380,7 @@ convert_header_to_old(anm_header_t* header)
     header->version = th11.version;
     header->unknown1 = th11.unknown1;
     header->thtxoffset = th11.thtxoffset;
-    header->unknown2 = th11.unknown2;
+    header->hasdata = th11.hasdata;
     header->nextoffset = th11.nextoffset;
     header->zero3 = 0;
 }
@@ -403,7 +403,7 @@ convert_header_to_11(anm_header_t* oldheader)
     th11->version = header.version;
     th11->unknown1 = header.unknown1;
     th11->thtxoffset = header.thtxoffset;
-    th11->unknown2 = header.unknown2;
+    th11->hasdata = header.hasdata;
     th11->nextoffset = header.nextoffset;
 }
 
@@ -500,16 +500,16 @@ anm_read_file(const char* filename)
                 argv0, current_input, anm->entry_count, entry->header.unknown1);
             if (!option_force) abort();
         }
-        if (entry->header.unknown2 == 0 &&
+        if (entry->header.hasdata == 0 &&
             entry->header.thtxoffset != 0) {
-            fprintf(stderr, "%s:%s:%u: unknown2 and thtxoffset do not match: %u, %u\n",
-                argv0, current_input, anm->entry_count, entry->header.unknown2, entry->header.thtxoffset);
+            fprintf(stderr, "%s:%s:%u: hasdata and thtxoffset do not match: %u, %u\n",
+                argv0, current_input, anm->entry_count, entry->header.hasdata, entry->header.thtxoffset);
             if (!option_force) abort();
         }
-        if (entry->header.unknown2 != 0 &&
-            entry->header.unknown2 != 1) {
-            fprintf(stderr, "%s:%s:%u: unknown value for unknown2: %u\n",
-                argv0, current_input, anm->entry_count, entry->header.unknown2);
+        if (entry->header.hasdata != 0 &&
+            entry->header.hasdata != 1) {
+            fprintf(stderr, "%s:%s:%u: unknown value for hasdata: %u\n",
+                argv0, current_input, anm->entry_count, entry->header.hasdata);
             if (!option_force) abort();
         }
         if (entry->header.zero1 != 0) {
@@ -644,7 +644,7 @@ anm_read_file(const char* filename)
         }
 
         /* TH06 doesn't store entry data. */
-        if (entry->header.thtxoffset) {
+        if (entry->header.hasdata) {
             char* data = NULL;
             char magic[5] = { 0 };
 
@@ -732,7 +732,7 @@ util_total_entry_size(const anm_t* anm, const char* name, unsigned int* widthptr
 
     for (i = 0; i < anm->entry_count; ++i) {
         if (anm->entries[i].name == name) {
-            if (!anm->entries[i].header.thtxoffset)
+            if (!anm->entries[i].header.hasdata)
                 return;
             if (anm->entries[i].header.x + anm->entries[i].thtx.w > width)
                 width = anm->entries[i].header.x + anm->entries[i].thtx.w;
@@ -804,8 +804,8 @@ anm_replace(const anm_t* anm, const char* name, const char* filename)
         memcpy(image_data + y * png_get_image_width(png_ptr, info_ptr) * 4, row_pointers[y], png_get_image_width(png_ptr, info_ptr) * 4);
 
     for (i = 0; i < anm->entry_count; ++i) {
-        /* XXX: Try to avoid doing the conversion for every part. */
-        if (anm->entries[i].name == name && anm->entries[i].header.thtxoffset) {
+        /* TODO: Try to avoid doing the conversion for every part. */
+        if (anm->entries[i].name == name && anm->entries[i].header.hasdata) {
             char* converted_data = rgba_to_fmt((uint32_t*)image_data, width * height, anm->entries[i].header.format);
 
             for (y = anm->entries[i].header.y; y < anm->entries[i].header.y + anm->entries[i].thtx.h; ++y) {
@@ -868,7 +868,7 @@ anm_extract(const anm_t* anm, const char* name)
     memset(data, 0xff, width * height * 4);
 
     for (i = 0; i < anm->entry_count; ++i) {
-        if (anm->entries[i].name == name) {
+        if (anm->entries[i].header.hasdata && anm->entries[i].name == name) {
             for (y = anm->entries[i].header.y; y < anm->entries[i].header.y + anm->entries[i].thtx.h; ++y) {
                 memcpy(data + y * width * 4 + anm->entries[i].header.x * 4,
                        anm->entries[i].data + (y - anm->entries[i].header.y) * anm->entries[i].thtx.w * 4,
@@ -938,8 +938,8 @@ anm_dump(FILE* stream, const anm_t* anm)
             fprintf(stream, "Zero3: %u\n", entry->header.zero3);
         if (entry->header.unknown1 != 0)
             fprintf(stream, "Unknown1: %u\n", entry->header.unknown1);
-        if (entry->header.unknown2) {
-            fprintf(stream, "Unknown2: %u\n", entry->header.unknown2);
+        if (entry->header.hasdata) {
+            fprintf(stream, "HasData: %u\n", entry->header.hasdata);
             fprintf(stream, "THTX-Size: %u\n", entry->thtx.size);
             fprintf(stream, "THTX-Format: %u\n", entry->thtx.format);
             fprintf(stream, "THTX-Width: %u\n", entry->thtx.w);
@@ -1091,7 +1091,7 @@ anm_create(const char* spec)
             sscanf(linep, "Zero2: %u", &entry->header.zero2);
             sscanf(linep, "Zero3: %u", &entry->header.zero3);
             sscanf(linep, "Unknown1: %u", &entry->header.unknown1);
-            sscanf(linep, "Unknown2: %u", &entry->header.unknown2);
+            sscanf(linep, "HasData: %u", &entry->header.hasdata);
             sscanf(linep, "THTX-Size: %u", &entry->thtx.size);
             sscanf(linep, "THTX-Format: %hu", &entry->thtx.format);
             sscanf(linep, "THTX-Width: %hu", &entry->thtx.w);
@@ -1152,12 +1152,14 @@ anm_write(anm_t* anm, const char* filename)
             fwrite(&sentinel, ANM_INSTR_SIZE, 1, stream);
         }
 
-        entry->header.thtxoffset = ftell(stream) - base;
+        if (entry->header.hasdata) {
+            entry->header.thtxoffset = ftell(stream) - base;
 
-        fputs("THTX", stream);
-        fwrite(&entry->thtx, sizeof(thtx_header_t), 1, stream);
+            fputs("THTX", stream);
+            fwrite(&entry->thtx, sizeof(thtx_header_t), 1, stream);
 
-        fwrite(entry->data, entry->data_size, 1, stream);
+            fwrite(entry->data, entry->data_size, 1, stream);
+        }
 
         if (i == anm->entry_count - 1)
             entry->header.nextoffset = 0;
@@ -1368,7 +1370,7 @@ replace_done:
 
         for (i = 0; i < (int)anm->entry_count; ++i) {
             unsigned int nextoffset = anm->entries[i].header.nextoffset;
-            if (strcmp(argv[filestart + 1], anm->entries[i].name) == 0 && anm->entries[i].header.thtxoffset) {
+            if (strcmp(argv[filestart + 1], anm->entries[i].name) == 0 && anm->entries[i].header.hasdata) {
                 fseek(anmfp, offset + anm->entries[i].header.thtxoffset + 4 + sizeof(thtx_header_t), SEEK_SET);
                 fwrite(anm->entries[i].data, anm->entries[i].thtx.w * anm->entries[i].thtx.h * format_Bpp(anm->entries[i].thtx.format), 1, anmfp);
             }
@@ -1384,8 +1386,10 @@ replace_done:
         anm = anm_create(archive_spec_file);
 
         for (i = 0; i < (int)anm->entry_count; ++i) {
-            anm->entries[i].data_size = anm->entries[i].header.w * anm->entries[i].header.h * format_Bpp(anm->entries[i].header.format);
-            anm->entries[i].data = malloc(anm->entries[i].data_size);
+            if (anm->entries[i].header.hasdata) {
+                anm->entries[i].data_size = anm->entries[i].header.w * anm->entries[i].header.h * format_Bpp(anm->entries[i].header.format);
+                anm->entries[i].data = malloc(anm->entries[i].data_size);
+            }
         }
 
         for (i = 0; i < (int)anm->name_count; ++i)
