@@ -81,8 +81,10 @@ th09_crypt_params[] = {
 static void
 tolowerstr(char* str)
 {
-    while (*str)
-        *str++ = tolower(*str);
+    while (*str) {
+        *str = tolower(*str);
+        ++str;
+    }
 }
 
 static archive_t*
