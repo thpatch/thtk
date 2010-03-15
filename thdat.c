@@ -38,13 +38,13 @@
 #include "thlzss.h"
 
 archive_t*
-archive_open(FILE* fd, uint32_t version, uint32_t offset, unsigned int count)
+archive_open(FILE* stream, uint32_t version, uint32_t offset, unsigned int count)
 {
     archive_t* archive;
 
     /* Reserve some space for the header. */
     /* TODO: Use a seek wrapper. */
-    if (fseek(fd, offset, SEEK_SET) == -1) {
+    if (fseek(stream, offset, SEEK_SET) == -1) {
         snprintf(library_error, LIBRARY_ERROR_SIZE, "couldn't seek: %s", strerror(errno));
         return NULL;
     }
@@ -53,7 +53,7 @@ archive_open(FILE* fd, uint32_t version, uint32_t offset, unsigned int count)
     archive->entries = malloc(count * sizeof(entry_t));
 
     archive->version = version;
-    archive->fd = fd;
+    archive->stream = stream;
     archive->offset = offset;
     archive->count = 0;
 
@@ -61,11 +61,11 @@ archive_open(FILE* fd, uint32_t version, uint32_t offset, unsigned int count)
 }
 
 unsigned char*
-thdat_read_file(entry_t* entry, FILE* fd)
+thdat_read_file(entry_t* entry, FILE* stream)
 {
     unsigned char* data = malloc(entry->size);
 
-    if (fread(data, entry->size, 1, fd) != 1) {
+    if (fread(data, entry->size, 1, stream) != 1) {
         snprintf(library_error, LIBRARY_ERROR_SIZE, "couldn't read: %s", strerror(errno));
         free(data);
         return NULL;
@@ -75,9 +75,9 @@ thdat_read_file(entry_t* entry, FILE* fd)
 }
 
 unsigned char*
-thdat_read_file_lzss(entry_t* entry, FILE* fd)
+thdat_read_file_lzss(entry_t* entry, FILE* stream)
 {
-    return th_lz_fd(fd, &entry->zsize);
+    return th_lz_file(stream, &entry->zsize);
 }
 
 unsigned char*
@@ -103,7 +103,7 @@ thdat_write_entry(archive_t* archive, entry_t* entry, unsigned char* data)
 
 #pragma omp critical
 {
-    ret = fwrite(data, entry->zsize, 1, archive->fd);
+    ret = fwrite(data, entry->zsize, 1, archive->stream);
     entry->offset = archive->offset;
     archive->offset += entry->zsize;
 }

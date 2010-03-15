@@ -32,7 +32,7 @@
 #include <config.h>
 #include <stdio.h>
 
-unsigned char* th_lz_fd(
+unsigned char* th_lz_file(
     FILE* stream,
     unsigned int* outsize);
 

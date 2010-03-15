@@ -73,7 +73,7 @@ th02_close(archive_t* archive)
     unsigned int i;
     unsigned int list_size = 32 * (archive->count + 1);
 
-    if (!util_seek(archive->fd, 0, NULL))
+    if (!util_seek(archive->stream, 0, NULL))
         return -1;
 
     buffer = malloc(list_size);
@@ -99,7 +99,7 @@ th02_close(archive_t* archive)
         buffer_ptr += 4;
     }
 
-    if (fwrite(buffer, list_size, 1, archive->fd) != 1) {
+    if (fwrite(buffer, list_size, 1, archive->stream) != 1) {
         snprintf(library_error, LIBRARY_ERROR_SIZE, "couldn't write: %s", strerror(errno));
         free(buffer);
         return -1;

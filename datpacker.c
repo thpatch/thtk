@@ -57,7 +57,7 @@ print_usage()
 }
 
 static entry_t*
-archive_add_entry(archive_t* archive, FILE* fd, const char* filename, unsigned int flags)
+archive_add_entry(archive_t* archive, FILE* stream, const char* filename, unsigned int flags)
 {
     entry_t* e;
 
@@ -66,7 +66,7 @@ archive_add_entry(archive_t* archive, FILE* fd, const char* filename, unsigned i
     e = &archive->entries[archive->count++];
 
     memset(e->name, 0, 256);
-    e->size = util_fsize(fd);
+    e->size = util_fsize(stream);
     e->zsize = 0;
     e->offset = 0;
     e->extra = 0;
@@ -192,8 +192,8 @@ main(int argc, char* argv[])
 #pragma omp for
     for (i = argstart; i < argc; ++i) {
         entry_t* entry;
-        FILE* fd = fopen(argv[i], "rb");
-        if (!fd) {
+        FILE* stream = fopen(argv[i], "rb");
+        if (!stream) {
             fprintf(stderr, "%s: couldn't open %s for reading\n", argv0, argv[i]);
             fclose(archive);
             exit(1);
@@ -205,16 +205,16 @@ main(int argc, char* argv[])
         fflush(stdout);
 }
 
-        entry = archive_add_entry(private, fd, argv[i], archive_module->flags);
-        if (!entry || archive_module->write(private, entry, fd) == -1) {
+        entry = archive_add_entry(private, stream, argv[i], archive_module->flags);
+        if (!entry || archive_module->write(private, entry, stream) == -1) {
             fprintf(stderr, "%s: %s\n", argv0, library_error);
-            fclose(fd);
+            fclose(stream);
             fclose(archive);
             archive_free(private);
             exit(1);
         }
 
-        fclose(fd);
+        fclose(stream);
     }
 
     if (archive_check_duplicates(private) || archive_module->close(private) == -1) {

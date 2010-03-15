@@ -35,17 +35,17 @@
 #include "datpacker.h"
 
 /* TODO: Rename functions. */
-archive_t* archive_open(FILE* fd, uint32_t version, uint32_t offset, unsigned int count);
+archive_t* archive_open(FILE* stream, uint32_t version, uint32_t offset, unsigned int count);
 
 /* All of these functions set library_error on error. */
 
 /* Reads entry->size bytes from the passed file descriptor.  Returns a newly
  * allocated buffer with the read data.  Returns NULL on error. */
-unsigned char* thdat_read_file(entry_t* entry, FILE* fd);
+unsigned char* thdat_read_file(entry_t* entry, FILE* stream);
 /* Reads entry->size bytes from the passed file descriptor.  Returns a newly
  * allocated buffer containing an LZSS compressed version of the read data.
  * Returns NULL on error. */
-unsigned char* thdat_read_file_lzss(entry_t* entry, FILE* fd);
+unsigned char* thdat_read_file_lzss(entry_t* entry, FILE* stream);
 /* Performs RLE on the passed buffer.  Frees the passed buffer.  Updates
  * entry->zsize.  Returns a newly allocated buffer containing the RLE data.
  * Returns NULL on error. */

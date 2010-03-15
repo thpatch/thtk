@@ -47,7 +47,7 @@ typedef struct {
 
 typedef struct {
     unsigned int version;
-    FILE* fd;
+    FILE* stream;
     uint32_t offset;
     uint32_t count;
     entry_t* entries;

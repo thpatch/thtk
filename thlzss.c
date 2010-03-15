@@ -206,7 +206,7 @@ th_lz_mem(const unsigned char* in, unsigned int insize, unsigned int* outsize)
 }
 
 static int
-read_byte_fd(FILE* stream)
+read_byte_file(FILE* stream)
 {
     int c = fgetc(stream);
 
@@ -217,7 +217,7 @@ read_byte_fd(FILE* stream)
 }
 
 unsigned char*
-th_lz_fd(FILE* stream, unsigned int* outsize)
+th_lz_file(FILE* stream, unsigned int* outsize)
 {
-    return th_lz(outsize, (read_byte_fptr)read_byte_fd, stream);
+    return th_lz(outsize, (read_byte_fptr)read_byte_file, stream);
 }

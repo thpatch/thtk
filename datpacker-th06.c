@@ -143,7 +143,7 @@ th06_close(archive_t* archive)
     if (archive->version == 6) {
         bitstream_finish(&b);
 
-        if (fwrite(b.buffer, b.used_bytes, 1, archive->fd) != 1) {
+        if (fwrite(b.buffer, b.used_bytes, 1, archive->stream) != 1) {
             snprintf(library_error, LIBRARY_ERROR_SIZE, "couldn't write: %s", strerror(errno));
             free(b.buffer);
             return -1;
@@ -156,7 +156,7 @@ th06_close(archive_t* archive)
         zbuffer = th_lz_mem(buffer, list_size, &list_zsize);
         free(buffer);
 
-        if (fwrite(zbuffer, list_zsize, 1, archive->fd) != 1) {
+        if (fwrite(zbuffer, list_zsize, 1, archive->stream) != 1) {
             snprintf(library_error, LIBRARY_ERROR_SIZE, "couldn't write: %s", strerror(errno));
             free(zbuffer);
             return -1;
@@ -164,10 +164,10 @@ th06_close(archive_t* archive)
         free(zbuffer);
     }
 
-    if (!util_seek(archive->fd, 0, NULL))
+    if (!util_seek(archive->stream, 0, NULL))
         return -1;
 
-    if (fwrite(magic, 4, 1, archive->fd) != 1) {
+    if (fwrite(magic, 4, 1, archive->stream) != 1) {
         snprintf(library_error, LIBRARY_ERROR_SIZE, "couldn't write: %s", strerror(errno));
         return -1;
     }
@@ -180,7 +180,7 @@ th06_close(archive_t* archive)
 
         bitstream_finish(&b);
 
-        if (fwrite(b.buffer, b.used_bytes, 1, archive->fd) != 1) {
+        if (fwrite(b.buffer, b.used_bytes, 1, archive->stream) != 1) {
             snprintf(library_error, LIBRARY_ERROR_SIZE, "couldn't write: %s", strerror(errno));
             free(b.buffer);
             return -1;
@@ -192,7 +192,7 @@ th06_close(archive_t* archive)
         header[1] = archive->offset;
         header[2] = list_size;
 
-        if (fwrite(&header, sizeof(header), 1, archive->fd) != 1) {
+        if (fwrite(&header, sizeof(header), 1, archive->stream) != 1) {
             snprintf(library_error, LIBRARY_ERROR_SIZE, "couldn't write: %s", strerror(errno));
             return -1;
         }

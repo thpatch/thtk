@@ -227,7 +227,7 @@ th08_close(archive_t* archive)
         return -1;
     }
 
-    if (fwrite(zbuffer, list_zsize, 1, archive->fd) != 1) {
+    if (fwrite(zbuffer, list_zsize, 1, archive->stream) != 1) {
         snprintf(library_error, LIBRARY_ERROR_SIZE, "couldn't write: %s", strerror(errno));
         free(zbuffer);
         return -1;
@@ -243,10 +243,10 @@ th08_close(archive_t* archive)
         return -1;
     }
 
-    if (!util_seek(archive->fd, 0, NULL))
+    if (!util_seek(archive->stream, 0, NULL))
         return -1;
 
-    if (fwrite(&header, sizeof(header), 1, archive->fd) != 1) {
+    if (fwrite(&header, sizeof(header), 1, archive->stream) != 1) {
         snprintf(library_error, LIBRARY_ERROR_SIZE, "couldn't write: %s", strerror(errno));
         return -1;
     }
