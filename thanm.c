@@ -867,19 +867,19 @@ anm_replace(const anm_t* anm, const char* name, const char* filename)
 
     util_total_entry_size(anm, name, &width, &height);
 
-    if (width != info_ptr->width || height != info_ptr->height) {
-        fprintf(stderr, "%s:%s:%s: wrong image dimensions for %s: %u, %u instead of %u, %u\n", argv0, current_input, name, filename, (unsigned int)info_ptr->width, (unsigned int)info_ptr->height, width, height);
+    if (width != png_get_image_width(png_ptr, info_ptr) || height != png_get_image_height(png_ptr, info_ptr)) {
+        fprintf(stderr, "%s:%s:%s: wrong image dimensions for %s: %u, %u instead of %u, %u\n", argv0, current_input, name, filename, (unsigned int)png_get_image_width(png_ptr, info_ptr), (unsigned int)png_get_image_height(png_ptr, info_ptr), width, height);
         exit(1);
     }
 
-    if (info_ptr->color_type != PNG_COLOR_TYPE_RGB_ALPHA) {
+    if (png_get_color_type(png_ptr, info_ptr) != PNG_COLOR_TYPE_RGB_ALPHA) {
         fprintf(stderr, "%s: %s must be RGBA\n", argv0, filename);
         exit(1);
     }
 
     image_data = malloc(width * height * 4);
-    for (y = 0; y < info_ptr->height; ++y)
-        memcpy(image_data + y * info_ptr->width * 4, row_pointers[y], info_ptr->width * 4);
+    for (y = 0; y < png_get_image_height(png_ptr, info_ptr); ++y)
+        memcpy(image_data + y * png_get_image_width(png_ptr, info_ptr) * 4, row_pointers[y], png_get_image_width(png_ptr, info_ptr) * 4);
 
     for (i = 0; i < anm->entry_count; ++i) {
         /* XXX: Try to avoid doing the conversion for every part. */
