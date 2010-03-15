@@ -44,7 +44,7 @@ static FILE* out;
 static void
 print_usage()
 {
-    printf("Usage: %s -v {10,11,12} [OPTION]... FILE\n"
+    printf("Usage: %s -v {10,11,12,125} [OPTION]... FILE\n"
            "OPTION can be:\n"
            "  -o FILE  write output to the specified file\n"
            "  -r       raw dump\n"
@@ -414,6 +414,12 @@ ecldump_display_param(const sub_t* sub, const instr_t* instr,
             memcpy(&newparam.value.i,
                    &param->value.D[1],
                    sizeof(int32_t));
+        } else if (param->value.D[0] == 0x6966) {
+            fprintf(out, "(int)");
+            newparam.type = 'f';
+            memcpy(&newparam.value.f,
+                   &param->value.D[1],
+                   sizeof(float));
         } else if (param->value.D[0] == 0x6969) {
             fprintf(out, "(int)");
             newparam.type = 'i';
@@ -618,7 +624,7 @@ main(int argc, char* argv[])
         }
     }
 
-    if (version != 10 && version != 11 && version != 12) {
+    if (version != 10 && version != 11 && version != 12 && version != 125) {
         print_usage();
         exit(1);
     }

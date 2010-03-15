@@ -170,16 +170,22 @@ params:
 
 cast_param:
       "(int)" square_param {
+        float floating;
         int integer;
         $$ = $2;
-        if ($$->param->type != 'i') {
-            yyerror("integer expected");
+        if ($$->param->type == 'f') {
+            floating = $$->param->value.f;
+            $$->param->value.D[0] = 0x6966;
+            memcpy(&$$->param->value.D[1], &floating, sizeof(float));
+        } else if ($$->param->type == 'i') {
+            integer = $$->param->value.i;
+            $$->param->value.D[0] = 0x6969;
+            $$->param->value.D[1] = integer;
+        } else {
+            yyerror("integer or float expected");
             YYABORT;
         }
         $$->param->type = 'D';
-        integer = $$->param->value.i;
-        $$->param->value.D[0] = 0x6969;
-        $$->param->value.D[1] = integer;
     }
     | "(float)" square_param {
         float floating;
@@ -470,7 +476,7 @@ yyerror(const char* str)
 static void
 print_usage()
 {
-    printf("Usage: %s -v {10,11,12} [OPTION]... [FILE]\n"
+    printf("Usage: %s -v {10,11,12,125} [OPTION]... [FILE]\n"
            "OPTION can be:\n"
            "  -o FILE  write output to the specified file\n"
            "  -h       display this help and exit\n"
@@ -527,7 +533,7 @@ main(int argc, char* argv[])
         }
     }
 
-    if (version != 10 && version != 11 && version != 12) {
+    if (version != 10 && version != 11 && version != 12 && version != 125) {
         print_usage();
         return 1;
     }
