@@ -330,6 +330,7 @@ static const opcode_fmt_t formats_v4p[] = {
     { 77, "i" },
     { 78, "iiiii" },
     { 79, "iii" },
+    { 80, "i" },
     { 81, "" },
     { 82, "i" },
     { 83, "" },
@@ -355,7 +356,9 @@ static const opcode_fmt_t formats_v4p[] = {
     { 106, "fi" },
     { 107, "iiff" },
     { 108, "ff" },
-    { 110, "ff" }
+    { 110, "ff" },
+    { 111, "i" },
+    { 112, "i" }
 };
 
 /* The order and sizes of fields changed for TH11. */

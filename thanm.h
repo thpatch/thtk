@@ -102,7 +102,7 @@ typedef struct {
      * 2: TH07
      * 3: TH08, TH09
      * 4: TH95, TH10
-     * 7: TH11, TH12 */
+     * 7: TH11, TH12, TH125 */
     uint32_t version;
     /* 0  - Random things, everything in TH06. */
     /* 1  - data/ascii/loading.png for TH08 and TH09. */
