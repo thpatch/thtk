@@ -31,6 +31,13 @@
 #include <stdlib.h>
 #include "bits.h"
 
+static void
+bitstream_grow(bitstream_t* b)
+{
+    b->buffer_size <<= 1;
+    b->buffer = realloc(b->buffer, b->buffer_size);
+}
+
 void
 bitstream_init(bitstream_t* b, unsigned int size)
 {
@@ -47,13 +54,6 @@ bitstream_finish(bitstream_t* b)
 {
     while (b->used_bits)
         bitstream_write1(b, 0);
-}
-
-void
-bitstream_grow(bitstream_t* b)
-{
-    b->buffer_size <<= 1;
-    b->buffer = realloc(b->buffer, b->buffer_size);
 }
 
 void

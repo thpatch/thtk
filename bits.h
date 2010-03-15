@@ -44,7 +44,6 @@ typedef struct {
 /* Size is multiplied by two right away. */
 void bitstream_init(bitstream_t* b, unsigned int size);
 void bitstream_finish(bitstream_t* b);
-void bitstream_grow(bitstream_t* b);
 void bitstream_write(bitstream_t* b, unsigned int bits, uint32_t data);
 void bitstream_write1(bitstream_t* b, unsigned int bit);
 
