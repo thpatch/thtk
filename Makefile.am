@@ -1,4 +1,4 @@
-AM_YFLAGS = -d
+AM_YFLAGS = -d -r all
 AM_CFLAGS = -pedantic -Wall -Wextra
 LDADD = @iconv_LIBS@
 BUILT_SOURCES = parser.h parser.c lexer.c
