@@ -22,7 +22,7 @@ AC_PROG_YACC
 
 dnl check for libraries
 
-PKG_CHECK_MODULES([libpng], [libpng12], [AC_DEFINE([HAVE_LIBPNG], [1])])
+PKG_CHECK_MODULES([libpng], [libpng], [AC_DEFINE([HAVE_LIBPNG], [1])])
 
 dnl check for header files
 
