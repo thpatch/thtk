@@ -215,7 +215,8 @@ static const opcode_fmt_t formats_v2[] = {
     { 60, "ff" },
     { 69, "iiii" },
     { 79, "i" },
-    { 80, "i" }
+    { 80, "i" },
+    { 0xffff, "" }
 };
 
 static const opcode_fmt_t formats_v3[] = {
@@ -275,7 +276,8 @@ static const opcode_fmt_t formats_v3[] = {
     { 85, "i" },
     { 86, "iiiii" },
     { 87, "iii" },
-    { 89, "" }
+    { 89, "" },
+    { 0xffff, "" }
 };
 
 static const opcode_fmt_t formats_v4p[] = {
@@ -360,7 +362,8 @@ static const opcode_fmt_t formats_v4p[] = {
     { 108, "ff" },
     { 110, "ff" },
     { 111, "i" },
-    { 112, "i" }
+    { 112, "i" },
+    { 0xffff, "" }
 };
 
 /* The order and sizes of fields changed for TH11. */
@@ -599,31 +602,27 @@ anm_read_file(const char* filename)
                     anm_instr_t tempinstr;
                     anm_instr_t* instr;
 
-                    if (ftell(f) + ANM_INSTR_SIZE > limit) {
-                        fprintf(stderr, "%s:%s:%s:%d: would read past limit\n",
-                            argv0, current_input, entry->name, entry->scripts[i].id);
+                    if (ftell(f) + ANM_INSTR_SIZE > limit)
                         break;
-                    }
 
                     util_read(f, &tempinstr, ANM_INSTR_SIZE, 'a', filemap);
 
                     /* End of this script. */
-                    if (tempinstr.type == 0xffff)
-                        break;
+                    if (tempinstr.type != 0xffff) {
+                        /* This shouldn't happen. */
+                        if (tempinstr.length == 0) {
+                            fprintf(stderr, "%s:%s:%s:%d: instruction length is zero: %hu %hu %hu %hu\n",
+                                argv0, current_input, entry->name, entry->scripts[i].id, tempinstr.type, tempinstr.length, tempinstr.time, tempinstr.param_mask);
+                            if (!option_force) abort();
+                            break;
+                        }
 
-                    /* This shouldn't happen. */
-                    if (tempinstr.length == 0) {
-                        fprintf(stderr, "%s:%s:%s:%d: instruction length is zero: %hu %hu %hu %hu\n",
-                            argv0, current_input, entry->name, entry->scripts[i].id, tempinstr.type, tempinstr.length, tempinstr.time, tempinstr.param_mask);
-                        if (!option_force) abort();
-                        break;
-                    }
-
-                    if (tempinstr.length % 4 != 0) {
-                        fprintf(stderr, "%s:%s:%s:%d: length is not a multiple of four: %u\n",
-                            argv0, current_input, entry->name, entry->scripts[i].id, tempinstr.length);
-                        if (!option_force) abort();
-                        break;
+                        if (tempinstr.length % 4 != 0) {
+                            fprintf(stderr, "%s:%s:%s:%d: length is not a multiple of four: %u\n",
+                                argv0, current_input, entry->name, entry->scripts[i].id, tempinstr.length);
+                            if (!option_force) abort();
+                            break;
+                        }
                     }
 
                     ++entry->scripts[i].instr_count;
@@ -640,6 +639,9 @@ anm_read_file(const char* filename)
                     } else {
                         instr->data = NULL;
                     }
+
+                    if (tempinstr.type == 0xffff)
+                        break;
                 }
             }
         }
@@ -1081,6 +1083,9 @@ anm_create(const char* spec)
                 fprintf(stderr, "%s: Instruction parsing failed\n", argv0);
                 abort();
             }
+
+            if (instr->type == 0xffff)
+                instr->length = 0;
         } else if (strncmp(linep, "Parami: ", 8) == 0) {
             instr->length += sizeof(int32_t);
             instr->data = realloc(instr->data, instr->length - ANM_INSTR_SIZE);
@@ -1155,15 +1160,14 @@ anm_write(anm_t* anm, const char* filename)
 
         for (j = 0; j < entry->script_count; ++j) {
             unsigned int k;
-            const anm_instr_t sentinel = { 0xffff, 0, 0, 0, NULL };
 
             entry->scripts[j].offset = ftell(stream) - base;
             for (k = 0; k < entry->scripts[j].instr_count; ++k) {
                 fwrite(&entry->scripts[j].instrs[k], ANM_INSTR_SIZE, 1, stream);
-                fwrite(entry->scripts[j].instrs[k].data, entry->scripts[j].instrs[k].length - ANM_INSTR_SIZE, 1, stream);
+                if (entry->scripts[j].instrs[k].data)
+                    fwrite(entry->scripts[j].instrs[k].data, entry->scripts[j].instrs[k].length - ANM_INSTR_SIZE, 1, stream);
             }
 
-            fwrite(&sentinel, ANM_INSTR_SIZE, 1, stream);
         }
 
         if (entry->header.hasdata) {
