@@ -91,10 +91,8 @@ archive_check_duplicates(archive_t* archive)
         for (j = 0; j < archive->count; ++j) {
             if (i == j)
                 continue;
-            if (strcmp(archive->entries[i].name, archive->entries[j].name) == 0) {
+            if (strcmp(archive->entries[i].name, archive->entries[j].name) == 0)
                 snprintf(library_error, LIBRARY_ERROR_SIZE, "duplicate filename ``%s''", archive->entries[i].name);
-                return 1;
-            }
         }
     }
 
