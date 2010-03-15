@@ -57,6 +57,7 @@ typedef struct {
 #endif
 } PACK_ATTRIBUTE sprite_t;
 
+#define ANM_INSTR_SIZE 8
 typedef struct {
 #ifdef PACK_PRAGMA
 #pragma pack(push,1)
@@ -70,6 +71,7 @@ typedef struct {
     char* data;
 } PACK_ATTRIBUTE anm_instr_t;
 
+#define ANM_SCRIPT_SIZE 8
 typedef struct {
 #ifdef PACK_PRAGMA
 #pragma pack(push,1)

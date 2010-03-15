@@ -577,7 +577,7 @@ anm_read_file(const char* filename)
             entry->scripts = malloc(entry->script_count * sizeof(anm_script_t));
 
             for (i = 0; i < entry->script_count; ++i) {
-                util_read(f, &entry->scripts[i], 8, 'O', filemap);
+                util_read(f, &entry->scripts[i], ANM_SCRIPT_SIZE, 'O', filemap);
                 entry->scripts[i].instr_count = 0;
                 entry->scripts[i].instrs = NULL;
             }
@@ -598,13 +598,13 @@ anm_read_file(const char* filename)
                     anm_instr_t tempinstr;
                     anm_instr_t* instr;
 
-                    if (ftell(f) + 8 > limit) {
+                    if (ftell(f) + ANM_INSTR_SIZE > limit) {
                         fprintf(stderr, "%s:%s:%s:%d: would read past limit\n",
                             argv0, current_input, entry->name, entry->scripts[i].id);
                         break;
                     }
 
-                    util_read(f, &tempinstr, 8, 'a', filemap);
+                    util_read(f, &tempinstr, ANM_INSTR_SIZE, 'a', filemap);
 
                     /* End of this script. */
                     if (tempinstr.type == 0xffff)
@@ -632,9 +632,9 @@ anm_read_file(const char* filename)
                     instr->length = tempinstr.length;
                     instr->time = tempinstr.time;
 
-                    if (instr->length > 8) {
-                        instr->data = malloc(instr->length - 8);
-                        util_read(f, instr->data, instr->length - 8, 'A', filemap);
+                    if (instr->length > ANM_INSTR_SIZE) {
+                        instr->data = malloc(instr->length - ANM_INSTR_SIZE);
+                        util_read(f, instr->data, instr->length - ANM_INSTR_SIZE, 'A', filemap);
                     } else {
                         instr->data = NULL;
                     }
@@ -1061,22 +1061,22 @@ anm_create(const char* spec)
             script->instrs = realloc(script->instrs, script->instr_count * sizeof(anm_instr_t));
             instr = &script->instrs[script->instr_count - 1];
             instr->data = NULL;
-            instr->length = 8;
+            instr->length = ANM_INSTR_SIZE;
             if (2 != sscanf(linep, "Instruction: %u %hu", &instr->time, &instr->type)) {
                 fprintf(stderr, "%s: Instruction parsing failed\n", argv0);
                 abort();
             }
         } else if (strncmp(linep, "Parami: ", 8) == 0) {
             instr->length += sizeof(int32_t);
-            instr->data = realloc(instr->data, instr->length - 8);
-            if (1 != sscanf(linep, "Parami: %d", (int32_t*)(instr->data + instr->length - 8 - sizeof(int32_t)))) {
+            instr->data = realloc(instr->data, instr->length - ANM_INSTR_SIZE);
+            if (1 != sscanf(linep, "Parami: %d", (int32_t*)(instr->data + instr->length - ANM_INSTR_SIZE - sizeof(int32_t)))) {
                 fprintf(stderr, "%s: Parami parsing failed\n", argv0);
                 abort();
             }
         } else if (strncmp(linep, "Paramf: ", 8) == 0) {
             instr->length += sizeof(float);
-            instr->data = realloc(instr->data, instr->length - 8);
-            if (1 != sscanf(linep, "Paramf: %ff", (float*)(instr->data + instr->length - 8 - sizeof(float)))) {
+            instr->data = realloc(instr->data, instr->length - ANM_INSTR_SIZE);
+            if (1 != sscanf(linep, "Paramf: %ff", (float*)(instr->data + instr->length - ANM_INSTR_SIZE - sizeof(float)))) {
                 fprintf(stderr, "%s: Paramf parsing failed\n", argv0);
                 abort();
             }
@@ -1126,7 +1126,7 @@ anm_write(anm_t* anm, const char* filename)
 
         fseek(stream, sizeof(anm_header_t), SEEK_CUR);
         fseek(stream, entry->sprite_count * sizeof(uint32_t), SEEK_CUR);
-        fseek(stream, entry->script_count * 8, SEEK_CUR);
+        fseek(stream, entry->script_count * ANM_SCRIPT_SIZE, SEEK_CUR);
 
         entry->header.nameoffset = ftell(stream) - base;
         fwrite(entry->name, strlen(entry->name), 1, stream);
@@ -1144,11 +1144,11 @@ anm_write(anm_t* anm, const char* filename)
 
             entry->scripts[j].offset = ftell(stream) - base;
             for (k = 0; k < entry->scripts[j].instr_count; ++k) {
-                fwrite(&entry->scripts[j].instrs[k], 8, 1, stream);
-                fwrite(entry->scripts[j].instrs[k].data, entry->scripts[j].instrs[k].length - 8, 1, stream);
+                fwrite(&entry->scripts[j].instrs[k], ANM_INSTR_SIZE, 1, stream);
+                fwrite(entry->scripts[j].instrs[k].data, entry->scripts[j].instrs[k].length - ANM_INSTR_SIZE, 1, stream);
             }
 
-            fwrite(&sentinel, 8, 1, stream);
+            fwrite(&sentinel, ANM_INSTR_SIZE, 1, stream);
         }
 
         entry->header.thtxoffset = ftell(stream) - base;
@@ -1182,7 +1182,7 @@ anm_write(anm_t* anm, const char* filename)
         }
 
         for (j = 0; j < entry->script_count; ++j) {
-            fwrite(&entry->scripts[j], 8, 1, stream);
+            fwrite(&entry->scripts[j], ANM_SCRIPT_SIZE, 1, stream);
         }
 
         fseek(stream, base + entry->header.nextoffset, SEEK_SET);
