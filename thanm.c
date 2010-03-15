@@ -364,7 +364,7 @@ static const opcode_fmt_t formats_v4p[] = {
 
 /* The order and sizes of fields changed for TH11. */
 static void
-convert_header(anm_header_t* header)
+convert_header_to_old(anm_header_t* header)
 {
     anm_header11_t th11 = *(anm_header11_t*)header;
     header->sprites = th11.sprites;
@@ -383,6 +383,28 @@ convert_header(anm_header_t* header)
     header->unknown2 = th11.unknown2;
     header->nextoffset = th11.nextoffset;
     header->zero3 = 0;
+}
+
+static void
+convert_header_to_11(anm_header_t* oldheader)
+{
+    anm_header_t header = *oldheader;
+    anm_header11_t* th11 = (anm_header11_t*)oldheader;
+    memset(th11, 0, sizeof(anm_header11_t));
+    th11->sprites = header.sprites;
+    th11->scripts = header.scripts;
+    th11->zero1 = header.zero1;
+    th11->w = header.w;
+    th11->h = header.h;
+    th11->format = header.format;
+    th11->nameoffset = header.nameoffset;
+    th11->x = header.x;
+    th11->y = header.y;
+    th11->version = header.version;
+    th11->unknown1 = header.unknown1;
+    th11->thtxoffset = header.thtxoffset;
+    th11->unknown2 = header.unknown2;
+    th11->nextoffset = header.nextoffset;
 }
 
 static anm_t*
@@ -434,7 +456,7 @@ anm_read_file(const char* filename)
 
         /* XXX: This is not a particularly good way of detecting this. */
         if (entry->header.zero1 != 0)
-            convert_header(&entry->header);
+            convert_header_to_old(&entry->header);
 
         if (entry->header.version != 0 &&
             entry->header.version != 2 &&
@@ -973,6 +995,211 @@ anm_dump(FILE* stream, const anm_t* anm)
         fprintf(stream, "\n");
     }
 }
+
+static anm_t*
+anm_create(const char* spec)
+{
+    FILE* f;
+    char line[4096];
+    anm_t* anm;
+    entry_t* entry = NULL;
+    anm_script_t* script = NULL;
+    anm_instr_t* instr = NULL;
+
+    f = fopen(spec, "r");
+    if (!f) {
+        fprintf(stderr, "%s:%s: couldn't open for reading: %s\n", argv0, spec, strerror(errno));
+        abort();
+    }
+
+    anm = malloc(sizeof(anm_t));
+    anm->name_count = 0;
+    anm->names = NULL;
+    anm->entry_count = 0;
+    anm->entries = NULL;
+
+    while (fgets(line, 4096, f)) {
+        const char* linep = line;
+
+        if (strncmp(linep, "ENTRY ", 6) == 0) {
+            anm->entry_count++;
+            anm->entries = realloc(anm->entries, anm->entry_count * sizeof(entry_t));
+            entry = &anm->entries[anm->entry_count - 1];
+            memset(entry, 0, sizeof(entry_t));
+            sscanf(linep, "ENTRY %u", &entry->header.version);
+        } else if (strncmp(linep, "Name: ", 6) == 0) {
+            unsigned int i;
+            char name[256];
+            sscanf(linep, "Name: %s", name);
+
+            for (i = 0; i < anm->name_count; ++i) {
+                if (strcmp(name, anm->names[i]) == 0) {
+                    entry->name = anm->names[i];
+                }
+            }
+
+            if (!entry->name) {
+                ++anm->name_count;
+                anm->names = realloc(anm->names, sizeof(char*) * anm->name_count);
+                anm->names[anm->name_count - 1] = strdup(name);
+                entry->name = anm->names[anm->name_count - 1];
+            }
+        } else if (strncmp(linep, "Sprite: ", 8) == 0) {
+            sprite_t* sprite;
+            entry->sprite_count++;
+            entry->sprites = realloc(entry->sprites, entry->sprite_count * sizeof(sprite_t));
+            sprite = &entry->sprites[entry->sprite_count - 1];
+
+            if (5 != sscanf(linep, "Sprite: %u %f*%f+%f+%f", &sprite->id, &sprite->w, &sprite->h, &sprite->x, &sprite->y)) {
+                fprintf(stderr, "%s: Sprite parsing failed for %s\n", argv0, linep);
+                abort();
+            }
+        } else if (strncmp(linep, "Script: ", 8) == 0) {
+            entry->script_count++;
+            entry->scripts = realloc(entry->scripts, entry->script_count * sizeof(anm_script_t));
+            script = &entry->scripts[entry->script_count - 1];
+            script->offset = 0;
+            script->instr_count = 0;
+            script->instrs = NULL;
+            if (1 != sscanf(linep, "Script: %d", &script->id)) {
+                fprintf(stderr, "%s: Script parsing failed\n", argv0);
+                abort();
+            }
+        } else if (strncmp(linep, "Instruction: ", 13) == 0) {
+            script->instr_count++;
+            script->instrs = realloc(script->instrs, script->instr_count * sizeof(anm_instr_t));
+            instr = &script->instrs[script->instr_count - 1];
+            instr->data = NULL;
+            instr->length = 8;
+            if (2 != sscanf(linep, "Instruction: %u %hu", &instr->time, &instr->type)) {
+                fprintf(stderr, "%s: Instruction parsing failed\n", argv0);
+                abort();
+            }
+        } else if (strncmp(linep, "Parami: ", 8) == 0) {
+            instr->length += sizeof(int32_t);
+            instr->data = realloc(instr->data, instr->length - 8);
+            if (1 != sscanf(linep, "Parami: %d", (int32_t*)(instr->data + instr->length - 8 - sizeof(int32_t)))) {
+                fprintf(stderr, "%s: Parami parsing failed\n", argv0);
+                abort();
+            }
+        } else if (strncmp(linep, "Paramf: ", 8) == 0) {
+            instr->length += sizeof(float);
+            instr->data = realloc(instr->data, instr->length - 8);
+            if (1 != sscanf(linep, "Paramf: %ff", (float*)(instr->data + instr->length - 8 - sizeof(float)))) {
+                fprintf(stderr, "%s: Paramf parsing failed\n", argv0);
+                abort();
+            }
+        } else {
+            sscanf(linep, "Format: %u", &entry->header.format);
+            sscanf(linep, "Width: %u", &entry->header.w);
+            sscanf(linep, "Height: %u", &entry->header.h);
+            sscanf(linep, "X-Offset: %u", &entry->header.x);
+            sscanf(linep, "Y-Offset: %u", &entry->header.y);
+            sscanf(linep, "Zero1: %u", &entry->header.zero1);
+            sscanf(linep, "Zero2: %u", &entry->header.zero2);
+            sscanf(linep, "Zero3: %u", &entry->header.zero3);
+            sscanf(linep, "Unknown1: %u", &entry->header.unknown1);
+            sscanf(linep, "Unknown2: %u", &entry->header.unknown2);
+            sscanf(linep, "THTX-Size: %u", &entry->thtx.size);
+            sscanf(linep, "THTX-Format: %hu", &entry->thtx.format);
+            sscanf(linep, "THTX-Width: %hu", &entry->thtx.w);
+            sscanf(linep, "THTX-Height: %hu", &entry->thtx.h);
+            sscanf(linep, "THTX-Zero: %hu", &entry->thtx.zero);
+        }
+    }
+
+    fclose(f);
+
+    return anm;
+}
+
+static void
+anm_write(anm_t* anm, const char* filename)
+{
+    FILE* stream;
+    unsigned int i;
+
+    stream = fopen(filename, "wb");
+
+    for (i = 0; i < anm->entry_count; ++i) {
+        unsigned int base = ftell(stream);
+        unsigned int namepad = 0;
+        entry_t* entry = &anm->entries[i];
+        char* padding;
+        unsigned int j;
+        unsigned int spriteoffset;
+
+        namepad = (16 - strlen(entry->name) % 16);
+
+        /* TODO: Make sure the correct header version is written, convert when needed. */
+
+        fseek(stream, sizeof(anm_header_t), SEEK_CUR);
+        fseek(stream, entry->sprite_count * sizeof(uint32_t), SEEK_CUR);
+        fseek(stream, entry->script_count * 8, SEEK_CUR);
+
+        entry->header.nameoffset = ftell(stream) - base;
+        fwrite(entry->name, strlen(entry->name), 1, stream);
+
+        padding = calloc(1, namepad);
+        fwrite(padding, namepad, 1, stream);
+        free(padding);
+
+        spriteoffset = ftell(stream) - base;
+        fwrite(entry->sprites, sizeof(sprite_t), entry->sprite_count, stream);
+
+        for (j = 0; j < entry->script_count; ++j) {
+            unsigned int k;
+            const anm_instr_t sentinel = { 0xffff, 0, 0, NULL };
+
+            entry->scripts[j].offset = ftell(stream) - base;
+            for (k = 0; k < entry->scripts[j].instr_count; ++k) {
+                fwrite(&entry->scripts[j].instrs[k], 8, 1, stream);
+                fwrite(entry->scripts[j].instrs[k].data, entry->scripts[j].instrs[k].length - 8, 1, stream);
+            }
+
+            fwrite(&sentinel, 8, 1, stream);
+        }
+
+        entry->header.thtxoffset = ftell(stream) - base;
+
+        fputs("THTX", stream);
+        fwrite(&entry->thtx, sizeof(thtx_header_t), 1, stream);
+
+        fwrite(entry->data, entry->data_size, 1, stream);
+
+        if (i == anm->entry_count - 1)
+            entry->header.nextoffset = 0;
+        else
+            entry->header.nextoffset = ftell(stream) - base;
+
+        entry->header.sprites = entry->sprite_count;
+        entry->header.scripts = entry->script_count;
+
+        fseek(stream, base, SEEK_SET);
+
+        if (entry->header.version >= 7) {
+            convert_header_to_11(&entry->header);
+            fwrite(&entry->header, sizeof(anm_header_t), 1, stream);
+            convert_header_to_old(&entry->header);
+        } else {
+            fwrite(&entry->header, sizeof(anm_header_t), 1, stream);
+        }
+
+        for (j = 0; j < entry->sprite_count; ++j) {
+            uint32_t ofs = spriteoffset + j * sizeof(sprite_t);
+            fwrite(&ofs, sizeof(uint32_t), 1, stream);
+        }
+
+        for (j = 0; j < entry->script_count; ++j) {
+            fwrite(&entry->scripts[j], 8, 1, stream);
+        }
+
+        fseek(stream, base + entry->header.nextoffset, SEEK_SET);
+    }
+
+    fclose(stream);
+}
+
 #endif
 
 static void
@@ -1024,6 +1251,7 @@ print_usage()
 #ifdef HAVE_LIBPNG
            "  -x    extract archive\n"
            "  -r    replace entries in archive\n"
+           "  -c F  create archive from F\n"
 #endif
            "OPTION can be:\n"
            "  -f    ignore errors when possible\n"
@@ -1041,6 +1269,9 @@ main(int argc, char* argv[])
     int i;
     int filestart = 0;
     int mode = 0;
+#ifdef HAVE_LIBPNG
+    const char* archive_spec_file = NULL;
+#endif
 
     argv0 = util_shortname(argv[0]);
     if (!argv0)
@@ -1066,6 +1297,14 @@ main(int argc, char* argv[])
             mode = MODE_EXTRACT;
         } else if (strcmp(argv[i], "-r") == 0) {
             mode = MODE_REPLACE;
+        } else if (strcmp(argv[i], "-c") == 0) {
+            ++i;
+            if (i >= argc) {
+                print_usage();
+                exit(1);
+            }
+            archive_spec_file = argv[i];
+            mode = MODE_CREATE;
 #endif
         } else if (strcmp(argv[i], "-l") == 0) {
             mode = MODE_LIST;
@@ -1145,6 +1384,22 @@ replace_done:
         }
 
         fclose(anmfp);
+
+        anm_free(anm);
+    } else if (mode == MODE_CREATE) {
+        anm_t* anm;
+
+        anm = anm_create(archive_spec_file);
+
+        for (i = 0; i < (int)anm->entry_count; ++i) {
+            anm->entries[i].data_size = anm->entries[i].header.w * anm->entries[i].header.h * format_Bpp(anm->entries[i].header.format);
+            anm->entries[i].data = malloc(anm->entries[i].data_size);
+        }
+
+        for (i = 0; i < (int)anm->name_count; ++i)
+            anm_replace(anm, anm->names[i], anm->names[i]);
+
+        anm_write(anm, argv[filestart]);
 
         anm_free(anm);
 #endif

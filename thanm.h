@@ -35,7 +35,8 @@
 enum {
     MODE_EXTRACT = 1,
     MODE_REPLACE = 2,
-    MODE_LIST    = 3
+    MODE_LIST    = 3,
+    MODE_CREATE  = 4
 };
 
 typedef enum {
