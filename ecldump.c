@@ -282,7 +282,7 @@ ecldump_list_params(ecl_t* ecl)
                             (strcmp("nan", buffer) == 0) ||
                             (integer != 0 && strcmp("0.000000000", buffer) == 0))
                             instr_params[rins->id][k + 1] = 'i';
-                        else 
+                        else
                             instr_params[rins->id][k + 1] = 'f';
                     }
                 }
