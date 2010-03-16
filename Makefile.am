@@ -11,16 +11,16 @@ am_ecldump_OBJECTS = ecldump.o
 am_thanm_OBJECTS = thanm.o
 
 datpacker.o: $(datpacker_SOURCES)
-	$(COMPILE) $(datpacker_CFLAGS) @combine_CFLAGS@ -c -o $@ $(filter %.c,$(datpacker_SOURCES))
+	$(COMPILE) $(datpacker_CFLAGS) @combine_CFLAGS@ -c -o $@ $(filter %.c,$^)
 
 eclc.o: $(eclc_SOURCES)
-	$(COMPILE) $(eclc_CFLAGS) @combine_CFLAGS@ -c -o $@ $(filter %.c,$(eclc_SOURCES)) parser.c lexer.c
+	$(COMPILE) $(eclc_CFLAGS) @combine_CFLAGS@ -c -o $@ $(filter %.c,$^) parser.c lexer.c
 
 ecldump.o: $(ecldump_SOURCES)
-	$(COMPILE) $(ecldump_CFLAGS) @combine_CFLAGS@ -c -o $@ $(filter %.c,$(ecldump_SOURCES))
+	$(COMPILE) $(ecldump_CFLAGS) @combine_CFLAGS@ -c -o $@ $(filter %.c,$^)
 
 thanm.o: $(thanm_SOURCES)
-	$(COMPILE) $(thanm_CFLAGS) @combine_CFLAGS@ -c -o $@ $(filter %.c,$(thanm_SOURCES))
+	$(COMPILE) $(thanm_CFLAGS) @combine_CFLAGS@ -c -o $@ $(filter %.c,$^)
 endif
 
 util_SOURCES = \
