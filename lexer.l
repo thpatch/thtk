@@ -123,7 +123,7 @@ C\" {
 }
 <CSTRING>\" {
     size_t length = 0;
-    yylval.bytes.data = util_iconv("SHIFT_JIS", "UTF-8", (unsigned char*)yylval.bytes.data, yylval.bytes.length, &length);
+    yylval.bytes.data = util_iconv("CP932", "UTF-8", (unsigned char*)yylval.bytes.data, yylval.bytes.length, &length);
     yylval.bytes.length = length;
     yylval.bytes.data = realloc(yylval.bytes.data, yylval.bytes.length + 4);
     memset(yylval.bytes.data + yylval.bytes.length, 0, 4);

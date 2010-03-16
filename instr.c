@@ -621,7 +621,7 @@ instr_parse(raw_instr_t* rinstr, instr_t* instr, unsigned int version)
                 if (format[i] == 'c') {
                     size_t outsize;
                     util_sillyxor((unsigned char*)param->value.s.data, (unsigned char*)param->value.s.data, param->value.s.length, 119, 7, 16);
-                    param->value.s.data = (char*)util_iconv("UTF-8", "SHIFT_JIS", (unsigned char*)param->value.s.data, param->value.s.length, &outsize);
+                    param->value.s.data = (char*)util_iconv("UTF-8", "CP932", (unsigned char*)param->value.s.data, param->value.s.length, &outsize);
                 }
             } else if (format[i] == 'D') {
                 if (data_offset + 4 > rinstr->data_size) {
