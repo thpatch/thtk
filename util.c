@@ -73,7 +73,7 @@ util_tell(FILE* stream)
 {
     long pos = ftell(stream);
     if (pos == -1)
-        fprintf(stderr, "argv0: ftell failed: %s\n", strerror(errno));
+        fprintf(stderr, "%s: ftell failed: %s\n", argv0, strerror(errno));
     return pos;
 }
 
