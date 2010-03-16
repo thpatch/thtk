@@ -63,7 +63,7 @@ ecldump_SOURCES = \
 	instr.h \
 	$(util_SOURCES)
 
-thanm_CFLAGS = $(libpng_CFAGS)
+thanm_CFLAGS = $(libpng_CFLAGS)
 thanm_LDADD = $(LDADD) $(libpng_LIBS)
 thanm_SOURCES = \
 	thanm.c \
