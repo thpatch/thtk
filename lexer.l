@@ -149,7 +149,7 @@ C\" {
 <COMMENT>\*[^*/]*  ;
 <COMMENT>"*/"      BEGIN(INITIAL);
 
-[\t\n ]+ ;
+[\t\n\r ]+ ;
 . {
     char buf[256];
     snprintf(buf, 256, "illegal token: %s", yytext);
