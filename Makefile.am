@@ -1,6 +1,6 @@
 AM_YFLAGS = -d -r all
 AM_CFLAGS = -pedantic -Wall -Wextra
-LDADD = @iconv_LIBS@
+LDADD = @mb_LIBS@
 BUILT_SOURCES = parser.h parser.c lexer.c
 bin_PROGRAMS = datpacker eclc ecldump thanm
 

@@ -45,7 +45,7 @@ AC_C_INLINE
 AC_OPENMP
 
 AC_CHECK_DECL([WIN32],
-              [AC_SUBST([iconv_LIBS], [-liconv])])
+              [AC_SUBST([mb_LIBS], [-lkernel32])])
 
 AC_MSG_CHECKING([whether CC supports -fwhole-program -combine])
 enable_combine="no"
