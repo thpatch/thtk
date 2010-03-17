@@ -35,11 +35,34 @@
 #include "program.h"
 #include "ecl.h"
 #include "util.h"
+#include "instr.h"
+#include "parser.h"
 
 typedef struct {
     int id;
     const char* format;
 } instr_fmt_t;
+
+static const stackinstr_t th10_stackinstrs[] = {
+    { 0,        0,   NULL, NULL, 0  }
+};
+
+static const stackinstr_t th12_stackinstrs[] = {
+    { 0,        0,   NULL, NULL, 0  }
+};
+
+const stackinstr_t*
+get_stackinstrs(unsigned int version)
+{
+    if (version == 10 || version == 11) {
+        return th10_stackinstrs;
+    } else if (version == 12 || version == 125) {
+        return th12_stackinstrs;
+    } else {
+        fprintf(stderr, "not implemented\n");
+        return NULL;
+    }
+}
 
 static const instr_fmt_t th10_fmts[] = {
     { 0, "" },

@@ -32,6 +32,15 @@
 #include <config.h>
 #include "ecl.h"
 
+typedef struct {
+    int type;
+    int value;
+    const char* stack;
+    const char* params;
+    int instr;
+} stackinstr_t;
+
 instr_t* instr_parse(raw_instr_t* rinstr, instr_t* instr, unsigned int version);
+const stackinstr_t* get_stackinstrs();
 
 #endif
