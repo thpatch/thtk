@@ -36,6 +36,7 @@
 #include "ecl.h"
 #include "program.h"
 #include "util.h"
+#include "instr.h"
 
 static int timer = 0;
 
@@ -53,6 +54,7 @@ typedef struct list_t {
 static void instr_add(int id, int rank_mask, list_t* list);
 static void label_create(char* label);
 static int32_t label_find(sub_t* sub, const char* label);
+static int make_stackinstr(int type, char stack1, char stack2, list_t* params);
 
 int yylex();
 extern FILE* yyin;
@@ -89,18 +91,41 @@ extern FILE* yyin;
 %token ANIM "anim"
 %token ECLI "ecli"
 %token SUB "sub"
+%token IF "if"
+%token UNLESS "unless"
 %token GOTO "goto"
 %token AT "@"
 %token BRACE_OPEN "{"
 %token BRACE_CLOSE "}"
+%token PARENTHESIS_OPEN "("
+%token PARENTHESIS_CLOSE ")"
 %token ILLEGAL_TOKEN "illegal token"
 %token END_OF_FILE 0 "end of file"
+
+%token LOAD
+%token ADD "+"
+%token SUBTRACT "-"
+%token MULTIPLY "*"
+%token DIVIDE "/"
+%token MODULO "%"
+%token LT "<"
+%token LTEQ "<="
+%token GT ">"
+%token GTEQ ">="
+%token EQUAL "=="
+%token INEQUAL "!="
+%token ASSIGN "="
+%token NOT "!"
+%token AND "&"
+%token OR "|"
+%token XOR "^"
 
 %type <list> params
 %type <list> cast_param
 %type <list> square_param
 %type <list> param
 %type <list> includes
+%type <integer> expression
 
 %%
 
@@ -164,6 +189,25 @@ instructions:
 instruction:
       INSTRUCTION RANK params { instr_add($1, $2, $3); }
     | INSTRUCTION params { instr_add($1, 0xff, $2); }
+    | "if" expression "goto" square_param "@" square_param {
+        if ($4->param->stack || $6->param->stack)
+            yyerror("stack reference passed to goto");
+        if ($4->param->type != 'o' || $6->param->type != 'i')
+            yyerror("wrong parameter types for goto");
+        $6->next = NULL;
+        $4->next = $6;
+        /* TODO: Use make_stackinstr or something here. */
+        instr_add(14, 0xff, $4);
+    }
+    | "unless" expression "goto" square_param "@" square_param {
+        if ($4->param->stack || $6->param->stack)
+            yyerror("stack reference passed to goto");
+        if ($4->param->type != 'o' || $6->param->type != 'i')
+            yyerror("wrong parameter types for goto");
+        $6->next = NULL;
+        $4->next = $6;
+        instr_add(13, 0xff, $4);
+    }
     | "goto" square_param "@" square_param {
         if ($2->param->stack || $4->param->stack)
             yyerror("stack reference passed to goto");
@@ -173,6 +217,36 @@ instruction:
         $2->next = $4;
         instr_add(12, 0xff, $2);
     }
+    | square_param "=" expression {
+        /* TODO: Error if 1 isn't a stack reference. */
+        if (!$1->param->stack)
+            yyerror("parameter is not a stack reference");
+        $1->next = NULL;
+        make_stackinstr(ASSIGN, $3, 0, $1);
+    }
+    | expression
+    ;
+
+expression:
+      square_param {
+        $1->next = NULL;
+        $$ = make_stackinstr(LOAD, 0, 0, $1);
+    }
+    | "(" "!" expression ")"             { $$ = make_stackinstr(NOT,      $3, 0,  NULL); }
+    | "(" expression "&"  expression ")" { $$ = make_stackinstr(AND,      $2, $4, NULL); }
+    | "(" expression "|"  expression ")" { $$ = make_stackinstr(OR,       $2, $4, NULL); }
+    | "(" expression "^"  expression ")" { $$ = make_stackinstr(XOR,      $2, $4, NULL); }
+    | "(" expression "+"  expression ")" { $$ = make_stackinstr(ADD,      $2, $4, NULL); }
+    | "(" expression "-"  expression ")" { $$ = make_stackinstr(SUBTRACT, $2, $4, NULL); }
+    | "(" expression "*"  expression ")" { $$ = make_stackinstr(MULTIPLY, $2, $4, NULL); }
+    | "(" expression "/"  expression ")" { $$ = make_stackinstr(DIVIDE,   $2, $4, NULL); }
+    | "(" expression "%"  expression ")" { $$ = make_stackinstr(MODULO,   $2, $4, NULL); }
+    | "(" expression "==" expression ")" { $$ = make_stackinstr(EQUAL,    $2, $4, NULL); }
+    | "(" expression "!=" expression ")" { $$ = make_stackinstr(INEQUAL,  $2, $4, NULL); }
+    | "(" expression "<"  expression ")" { $$ = make_stackinstr(LT,       $2, $4, NULL); }
+    | "(" expression "<=" expression ")" { $$ = make_stackinstr(LTEQ,     $2, $4, NULL); }
+    | "(" expression ">"  expression ")" { $$ = make_stackinstr(GT,       $2, $4, NULL); }
+    | "(" expression ">=" expression ")" { $$ = make_stackinstr(GTEQ,     $2, $4, NULL); }
     ;
 
 params:
@@ -277,6 +351,63 @@ static char** ecli_list;
 static unsigned int sub_cnt;
 static sub_t* subs;
 static sub_t* current_sub;
+
+static int
+make_stackinstr(int type, char stack1, char stack2, list_t* params)
+{
+    const stackinstr_t* i;
+
+    for (i = get_stackinstrs(10); i->type; ++i) {
+        int ok = 1;
+
+        if (i->type == type) {
+            list_t* p;
+            unsigned int j = 0;
+
+            switch (strlen(i->stack)) {
+            case 2:
+                if (i->stack[1] != stack2)
+                    ok = 0;
+            case 1:
+                if (i->stack[0] != stack1)
+                    ok = 0;
+            case 0:
+                break;
+            default:
+                fprintf(stderr, "error wrong strlen\n");
+                ok = 0;
+                /* Error. */
+                break;
+            }
+
+            for (p = params; p; p = p->next) {
+                if (j > strlen(i->params))
+                    ok = 0;
+                if (i->params[j] != p->param->type)
+                    ok = 0;
+                j++;
+            }
+
+            if (ok)
+                break;
+        }
+    }
+
+    if (!i->type) {
+        list_t* p;
+        char buf[256];
+        sprintf(buf, "no match found for %d, %c, %c", type, stack1, stack2);
+        for (p = params; p; p = p->next) {
+            fprintf(stderr, "  %c\n", p->param->type);
+        }
+        yyerror(buf);
+        return 0;
+    }
+
+    instr_add(i->instr, 0xff, params);
+
+    return i->value;
+}
 
 static void
 add_eclh(char* arg)

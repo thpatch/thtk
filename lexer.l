@@ -66,11 +66,15 @@
 "]"        return SQUARE_CLOSE;
 "{"        return BRACE_OPEN;
 "}"        return BRACE_CLOSE;
+"("        return PARENTHESIS_OPEN;
+")"        return PARENTHESIS_CLOSE;
 "(float)"  return CAST_FLOAT;
 "(int)"    return CAST_INT;
 "anim"     return ANIM;
 "ecli"     return ECLI;
 "sub"      return SUB;
+"if"       return IF;
+"unless"   return UNLESS;
 "goto"     return GOTO;
 "@"        return AT;
 
@@ -98,6 +102,24 @@ ins_[0-9]+ {
     if (strchr(yytext, 'L')) yylval.integer |= RANK_LUNATIC;
     return RANK;
 }
+
+"=="       return EQUAL;
+"="        return ASSIGN;
+"!="       return INEQUAL;
+"<="       return LTEQ;
+"<"        return LT;
+">="       return GTEQ;
+">"        return GT;
+"%"        return MODULO;
+"*"        return MULTIPLY;
+"/"        return DIVIDE;
+"-"        return SUBTRACT;
+"+"        return ADD;
+"!"        return NOT;
+"&"        return AND;
+"|"        return OR;
+"^"        return XOR;
+
 [a-zA-Z][a-zA-Z0-9\._]* {
     yylval.string = strdup(yytext);
     return IDENTIFIER;

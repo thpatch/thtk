@@ -41,6 +41,6 @@ typedef struct {
 } stackinstr_t;
 
 instr_t* instr_parse(raw_instr_t* rinstr, instr_t* instr, unsigned int version);
-const stackinstr_t* get_stackinstrs();
+const stackinstr_t* get_stackinstrs(unsigned int version);
 
 #endif

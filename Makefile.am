@@ -51,6 +51,8 @@ datpacker_SOURCES = \
 	$(util_SOURCES)
 
 eclc_SOURCES = \
+	instr.c \
+	instr.h \
 	parser.h \
 	lexer.l \
 	parser.y \
@@ -61,6 +63,7 @@ ecldump_SOURCES = \
 	ecldump.c \
 	instr.c \
 	instr.h \
+	parser.h \
 	$(util_SOURCES)
 
 thanm_CFLAGS = $(libpng_CFLAGS)

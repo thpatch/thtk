@@ -474,11 +474,29 @@ ecldump_render_instr(const sub_t* sub, instr_t* instr, instr_t** stack, unsigned
             if (strlen(i->stack) && (instr->label || ((*stack_top > 1) && (stack[*stack_top - 2]->time != instr->time))))
                 continue;
 
+            switch (i->type) {
+            case ADD:      format = "(%s + %s)";  break;
+            case SUBTRACT: format = "(%s - %s)";  break;
+            case MULTIPLY: format = "(%s * %s)";  break;
+            case DIVIDE:   format = "(%s / %s)";  break;
+            case MODULO:   format = "(%s %% %s)"; break;
+            case EQUAL:    format = "(%s == %s)"; break;
+            case INEQUAL:  format = "(%s != %s)"; break;
+            case LT:       format = "(%s < %s)";  break;
+            case LTEQ:     format = "(%s <= %s)"; break;
+            case GT:       format = "(%s > %s)";  break;
+            case GTEQ:     format = "(%s >= %s)"; break;
+            case AND:      format = "(%s & %s)";  break;
+            case OR:       format = "(%s | %s)";  break;
+            case XOR:      format = "(%s ^ %s)";  break;
+            default: break;
+            }
+
             /* TODO: Make 1024 a constant. */
             if (format) {
                 snprintf(instr->string, 1024, format, stack[*stack_top - 3]->string, stack[*stack_top - 2]->string);
             } else {
-                if (i->type == GOTO) {
+                if (i->type == GOTO || i->type == UNLESS || i->type == IF) {
                     char target[256];
                     char newtime[256];
                     ecldump_display_param(target, 256, sub, instr, 0, NULL, version);
@@ -486,7 +504,34 @@ ecldump_render_instr(const sub_t* sub, instr_t* instr, instr_t** stack, unsigned
                     if (i->type == GOTO) {
                         snprintf(instr->string, 1024, "goto %s @ %s",
                             target, newtime);
+                    } else if (i->type == UNLESS) {
+                        snprintf(instr->string, 1024, "unless %s goto %s @ %s",
+                            stack[*stack_top - 2]->string, target, newtime);
+                    } else if (i->type == IF) {
+                        snprintf(instr->string, 1024, "if %s goto %s @ %s",
+                            stack[*stack_top - 2]->string, target, newtime);
                     }
+                } else if (i->type == LOAD || i->type == ASSIGN) {
+                    /* ecldump_display_param(instr->string + strlen(instr->string), 1024 - strlen(instr->string), &ecl->subs[i], instr, k, NULL, version); */
+                    if (instr->params[0].type == 'i') {
+                        if (instr->param_mask & 1) {
+                            snprintf(instr->string, 1024, "[%d]", instr->params[0].value.i);
+                        } else {
+                            snprintf(instr->string, 1024, "%d", instr->params[0].value.i);
+                        }
+                    } else if (instr->params[0].type == 'f') {
+                        const char* floatb = util_printfloat(&instr->params[0].value.f);
+                        if (instr->param_mask & 1) {
+                            snprintf(instr->string, 1024, "[%sf]", floatb);
+                        } else
+                            snprintf(instr->string, 1024, "%sf", floatb);
+                    }
+
+                    if (i->type == ASSIGN) {
+                        snprintf(instr->string + strlen(instr->string), 1024 - strlen(instr->string), " = %s", stack[*stack_top - 2]->string);
+                    }
+                } else if (i->type == NOT) {
+                    snprintf(instr->string, 1024, "(!%s)", stack[*stack_top - 2]->string);
                 }
             }
 
