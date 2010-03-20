@@ -71,6 +71,9 @@
 "anim"     return ANIM;
 "ecli"     return ECLI;
 "sub"      return SUB;
+"goto"     return GOTO;
+"@"        return AT;
+
 -?[0-9]+(\.[0-9]+)?f {
     yylval.floating = strtof(yytext, NULL);
     return FLOATING;

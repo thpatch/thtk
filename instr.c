@@ -44,6 +44,7 @@ typedef struct {
 } instr_fmt_t;
 
 static const stackinstr_t th10_stackinstrs[] = {
+    { GOTO,     0,   "",   "oi", 12 },
     { 0,        0,   NULL, NULL, 0  }
 };
 

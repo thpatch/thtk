@@ -38,6 +38,7 @@
 #include "ecl.h"
 #include "instr.h"
 #include "util.h"
+#include "parser.h"
 
 static FILE* out;
 
@@ -351,7 +352,8 @@ ecldump_translate(ecl_t* ecl, unsigned int version)
 }
 
 static void
-ecldump_display_param(const sub_t* sub, const instr_t* instr,
+ecldump_display_param(char* output, unsigned int output_length,
+                      const sub_t* sub, const instr_t* instr,
                       unsigned int i, const param_t* param,
                       unsigned int version)
 {
@@ -370,12 +372,12 @@ ecldump_display_param(const sub_t* sub, const instr_t* instr,
                     argv0, current_input, param->value.i);
                 abort();
             }
-            fprintf(out, "[%d]", param->value.i);
+            snprintf(output, output_length, "[%d]", param->value.i);
         } else
-            fprintf(out, "%d", param->value.i);
+            snprintf(output, output_length, "%d", param->value.i);
         break;
     case 'o':
-        fprintf(out, "%s_%u",
+        snprintf(output, output_length, "%s_%u",
             sub->name, instr->offset + param->value.i);
         break;
     case 'f':
@@ -390,38 +392,38 @@ ecldump_display_param(const sub_t* sub, const instr_t* instr,
                 fprintf(stderr, "%s:%s: strange stack offset: %s\n",
                     argv0, current_input, floatb);
             }
-            fprintf(out, "[%sf]", floatb);
+            snprintf(output, output_length, "[%sf]", floatb);
         } else
-            fprintf(out, "%sf", floatb);
+            snprintf(output, output_length, "%sf", floatb);
         break;
     case 's':
-        fprintf(out, "\"%s\"", param->value.s.data);
+        snprintf(output, output_length, "\"%s\"", param->value.s.data);
         break;
     case 'c':
-        fprintf(out, "C\"%s\"", param->value.s.data);
+        snprintf(output, output_length, "C\"%s\"", param->value.s.data);
         break;
     case 'D':
         memcpy(&newparam, param, sizeof(param_t));
         if (param->value.D[0] == 0x6666) {
-            fprintf(out, "(float)");
+            snprintf(output, output_length, "(float)");
             newparam.type = 'f';
             memcpy(&newparam.value.f,
                    &param->value.D[1],
                    sizeof(float));
         } else if (param->value.D[0] == 0x6669) {
-            fprintf(out, "(float)");
+            snprintf(output, output_length, "(float)");
             newparam.type = 'i';
             memcpy(&newparam.value.i,
                    &param->value.D[1],
                    sizeof(int32_t));
         } else if (param->value.D[0] == 0x6966) {
-            fprintf(out, "(int)");
+            snprintf(output, output_length, "(int)");
             newparam.type = 'f';
             memcpy(&newparam.value.f,
                    &param->value.D[1],
                    sizeof(float));
         } else if (param->value.D[0] == 0x6969) {
-            fprintf(out, "(int)");
+            snprintf(output, output_length, "(int)");
             newparam.type = 'i';
             memcpy(&newparam.value.i,
                    &param->value.D[1],
@@ -431,10 +433,73 @@ ecldump_display_param(const sub_t* sub, const instr_t* instr,
                 argv0, current_input, param->value.D[0]);
             abort();
         }
-        ecldump_display_param(sub, instr, i, &newparam, version);
+        ecldump_display_param(output + strlen(output), output_length - strlen(output), sub, instr, i, &newparam, version);
         break;
     default:
         break;
+    }
+}
+
+static void
+ecldump_render_instr(const sub_t* sub, instr_t* instr, instr_t** stack, unsigned int* stack_top, unsigned int version)
+{
+    const stackinstr_t* i;
+    unsigned int j;
+
+    for (i = get_stackinstrs(version); i->type; ++i) {
+        if (i->instr == instr->id &&
+            strlen(i->params) == instr->param_cnt &&
+            *stack_top > strlen(i->stack)) {
+            int skip = 0;
+            const char* format = NULL;
+
+            for (j = 0; j < strlen(i->stack); ++j) {
+                if (stack[*stack_top - strlen(i->stack) - 1 + j]->type != i->stack[j])
+                    skip = 1;
+                if (instr->time != stack[*stack_top - strlen(i->stack) - 1 + j]->time)
+                    skip = 1;
+                if (j != 0 && stack[*stack_top - strlen(i->stack) - 1 + j]->label)
+                    skip = 1;
+            }
+
+            for (j = 0; j < instr->param_cnt; ++j) {
+                if (instr->params[j].type != i->params[j])
+                    skip = 1;
+            }
+
+            if (skip)
+                continue;
+
+            /* Make sure the label and its offset is maintained. */
+            if (strlen(i->stack) && (instr->label || ((*stack_top > 1) && (stack[*stack_top - 2]->time != instr->time))))
+                continue;
+
+            /* TODO: Make 1024 a constant. */
+            if (format) {
+                snprintf(instr->string, 1024, format, stack[*stack_top - 3]->string, stack[*stack_top - 2]->string);
+            } else {
+                if (i->type == GOTO) {
+                    char target[256];
+                    char newtime[256];
+                    ecldump_display_param(target, 256, sub, instr, 0, NULL, version);
+                    ecldump_display_param(newtime, 256, sub, instr, 1, NULL, version);
+                    if (i->type == GOTO) {
+                        snprintf(instr->string, 1024, "goto %s @ %s",
+                            target, newtime);
+                    }
+                }
+            }
+
+            if (strlen(i->stack)) {
+                instr->label = stack[*stack_top - strlen(i->stack) - 1]->label;
+                instr->offset = stack[*stack_top - strlen(i->stack) - 1]->offset;
+            }
+
+            instr->type = i->value;
+            *stack_top -= strlen(i->stack);
+            stack[*stack_top - 1] = instr;
+            return;
+        }
     }
 }
 
@@ -466,6 +531,9 @@ ecldump_translate_print(ecl_t* ecl, unsigned int version)
         for (j = 0; j < ecl->subs[i].instr_cnt; ++j) {
             unsigned int m;
             instr_t* instr = &ecl->subs[i].instrs[j];
+            instr->string = malloc(1024);
+            instr->string[0] = '\0';
+            instr->type = 0;
             instr->label = 0;
             for (k = 0; k < ecl->subs[i].instr_cnt; ++k) {
                 for (m = 0; m < ecl->subs[i].instrs[k].param_cnt; ++m) {
@@ -485,6 +553,30 @@ ecldump_translate_print(ecl_t* ecl, unsigned int version)
 
             ++stack_top;
             stack[stack_top - 1] = instr;
+
+            if (instr->rank_mask == 0xff)
+                ecldump_render_instr(&ecl->subs[i], instr, stack, &stack_top, version);
+
+            if (!instr->string[0]) {
+                snprintf(instr->string, 1024, "ins_%u", instr->id);
+
+                if (instr->rank_mask != 0xff) {
+                    snprintf(instr->string + strlen(instr->string), 1024 - strlen(instr->string), " +");
+                    if (instr->rank_mask & RANK_EASY)
+                        snprintf(instr->string + strlen(instr->string), 1024 - strlen(instr->string), "E");
+                    if (instr->rank_mask & RANK_NORMAL)
+                        snprintf(instr->string + strlen(instr->string), 1024 - strlen(instr->string), "N");
+                    if (instr->rank_mask & RANK_HARD)
+                        snprintf(instr->string + strlen(instr->string), 1024 - strlen(instr->string), "H");
+                    if (instr->rank_mask & RANK_LUNATIC)
+                        snprintf(instr->string + strlen(instr->string), 1024 - strlen(instr->string), "L");
+                }
+
+                for (k = 0; k < instr->param_cnt; ++k) {
+                    snprintf(instr->string + strlen(instr->string), 1024 - strlen(instr->string), " ");
+                    ecldump_display_param(instr->string + strlen(instr->string), 1024 - strlen(instr->string), &ecl->subs[i], instr, k, &instr->params[k], version);
+                }
+            }
         }
 
         fprintf(out, "\nsub %s\n{\n", ecl->subs[i].name);
@@ -501,22 +593,7 @@ ecldump_translate_print(ecl_t* ecl, unsigned int version)
                     ecl->subs[i].name, stack[j]->offset);
             }
 
-            fprintf(out, "    ins_%u", stack[j]->id);
-
-            if (stack[j]->rank_mask != 0xff) {
-                fputs(" +", out);
-                if (stack[j]->rank_mask & RANK_EASY)    fputc('E', out);
-                if (stack[j]->rank_mask & RANK_NORMAL)  fputc('N', out);
-                if (stack[j]->rank_mask & RANK_HARD)    fputc('H', out);
-                if (stack[j]->rank_mask & RANK_LUNATIC) fputc('L', out);
-            }
-
-            for (k = 0; k < stack[j]->param_cnt; ++k) {
-                fputc(' ', out);
-                ecldump_display_param(&ecl->subs[i], stack[j], k, NULL, version);
-            }
-
-            fputs(";\n", out);
+            fprintf(out, "    %s;\n", stack[j]->string);
         }
         free(stack);
 
@@ -559,6 +636,9 @@ ecldump_free(ecl_t* ecl)
 
                     free(ecl->subs[i].instrs[j].params);
                 }
+
+                if (ecl->subs[i].instrs && ecl->subs[i].instrs[j].string)
+                    free(ecl->subs[i].instrs[j].string);
             }
 
             free(ecl->subs[i].raw_instrs);

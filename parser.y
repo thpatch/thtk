@@ -89,6 +89,8 @@ extern FILE* yyin;
 %token ANIM "anim"
 %token ECLI "ecli"
 %token SUB "sub"
+%token GOTO "goto"
+%token AT "@"
 %token BRACE_OPEN "{"
 %token BRACE_CLOSE "}"
 %token ILLEGAL_TOKEN "illegal token"
@@ -162,6 +164,15 @@ instructions:
 instruction:
       INSTRUCTION RANK params { instr_add($1, $2, $3); }
     | INSTRUCTION params { instr_add($1, 0xff, $2); }
+    | "goto" square_param "@" square_param {
+        if ($2->param->stack || $4->param->stack)
+            yyerror("stack reference passed to goto");
+        if ($2->param->type != 'o' || $4->param->type != 'i')
+            yyerror("wrong parameter types for goto");
+        $4->next = NULL;
+        $2->next = $4;
+        instr_add(12, 0xff, $2);
+    }
     ;
 
 params:
