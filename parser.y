@@ -134,7 +134,7 @@ statement:
 
 includes:
       { $$ = NULL; }
-    | TEXT SEMICOLON includes {
+    | TEXT ";" includes {
         $$ = malloc(sizeof(list_t));
         $$->param = malloc(sizeof(param_t));
         $$->param->type = 's';
@@ -144,23 +144,24 @@ includes:
     ;
 
 instructions:
-    | instructions instruction
+    | instructions ";"
+    | instructions IDENTIFIER ":" { label_create($2); }
+    | instructions INTEGER ":" {
+        if ($2 == timer || (timer > 0 && $2 < timer)) {
+            char buf[256];
+            snprintf(buf, 256, "illegal timer change: %d to %d", timer, $2);
+            yyerror(buf);
+        }
+        timer = $2;
+    }
+    | instructions instruction ";"
     ;
 
 /* TODO: Check the given parameters against the parameters expected for the
  *       instruction.  This requires passing a version parameter to eclc. */
 instruction:
-      IDENTIFIER ":" { label_create($1); }
-    | INTEGER ":" {
-        if ($1 == timer || (timer > 0 && $1 < timer)) {
-            char buf[256];
-            snprintf(buf, 256, "illegal timer change: %d to %d", timer, $1);
-            yyerror(buf);
-        }
-        timer = $1;
-    }
-    | INSTRUCTION RANK params SEMICOLON { instr_add($1, $2, $3); }
-    | INSTRUCTION params SEMICOLON { instr_add($1, 0xff, $2); }
+      INSTRUCTION RANK params { instr_add($1, $2, $3); }
+    | INSTRUCTION params { instr_add($1, 0xff, $2); }
     ;
 
 params:
