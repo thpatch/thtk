@@ -299,11 +299,14 @@ label_create(char* name)
 static int32_t
 label_find(sub_t* sub, const char* name)
 {
+    char buf[256];
     unsigned int i;
     for (i = 0; i < sub->label_cnt; ++i) {
         if (strcmp(sub->labels[i].name, name) == 0)
             return sub->labels[i].offset;
     }
+    snprintf(buf, 256, "label not found: %s", name);
+    yyerror(buf);
     return 0;
 }
 
