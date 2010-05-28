@@ -886,6 +886,10 @@ anm_replace(const anm_t* anm, const char* name, const char* filename)
     }
 
     stream = fopen(filename, "rb");
+    if (!stream) {
+        fprintf(stderr, "%s: couldn't open %s for reading\n", argv0, filename);
+        exit(1);
+    }
     image = png_read(stream, FORMAT_RGBA8888);
     fclose(stream);
 
