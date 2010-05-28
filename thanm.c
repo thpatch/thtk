@@ -467,7 +467,7 @@ anm_read_file(const char* filename)
     long filesize;
     FILE* f = fopen(filename, "rb");
     if (!f) {
-        fprintf(stderr, "%s: couldn't open %s: %s\n", argv0, filename, strerror(errno));
+        fprintf(stderr, "%s: couldn't open %s for reading: %s\n", argv0, filename, strerror(errno));
         exit(1);
     }
 
@@ -887,7 +887,7 @@ anm_replace(const anm_t* anm, const char* name, const char* filename)
 
     stream = fopen(filename, "rb");
     if (!stream) {
-        fprintf(stderr, "%s: couldn't open %s for reading\n", argv0, filename);
+        fprintf(stderr, "%s: couldn't open %s for reading: %s\n", argv0, filename, strerror(errno));
         exit(1);
     }
     image = png_read(stream, FORMAT_RGBA8888);
@@ -1097,8 +1097,8 @@ anm_create(const char* spec)
 
     f = fopen(spec, "r");
     if (!f) {
-        fprintf(stderr, "%s:%s: couldn't open for reading: %s\n", argv0, spec, strerror(errno));
-        abort();
+        fprintf(stderr, "%s: couldn't open %s for reading: %s\n", argv0, spec, strerror(errno));
+        exit(1);
     }
 
     anm = malloc(sizeof(anm_t));
@@ -1132,7 +1132,7 @@ anm_create(const char* spec)
 
             if (5 != sscanf(linep, "Sprite: %u %f*%f+%f+%f", &sprite->id, &sprite->w, &sprite->h, &sprite->x, &sprite->y)) {
                 fprintf(stderr, "%s: Sprite parsing failed for %s\n", argv0, linep);
-                abort();
+                exit(1);
             }
         } else if (strncmp(linep, "Script: ", 8) == 0) {
             entry->script_count++;
@@ -1142,8 +1142,8 @@ anm_create(const char* spec)
             script->instr_count = 0;
             script->instrs = NULL;
             if (1 != sscanf(linep, "Script: %d", &script->id)) {
-                fprintf(stderr, "%s: Script parsing failed\n", argv0);
-                abort();
+                fprintf(stderr, "%s: Script parsing failed for %s\n", argv0, linep);
+                exit(1);
             }
         } else if (strncmp(linep, "Instruction: ", 13) == 0) {
             char* tmp = linep + 13;
@@ -1495,8 +1495,8 @@ replace_done:
 
         anmfp = fopen(argv[filestart], "rb+");
         if (!anmfp) {
-            fprintf(stderr, "%s:%s: couldn't open for writing: %s\n", argv0, current_input, strerror(errno));
-            abort();
+            fprintf(stderr, "%s: couldn't open %s for writing: %s\n", argv0, current_input, strerror(errno));
+            exit(1);
         }
 
         for (i = 0; i < (int)anm->entry_count; ++i) {
