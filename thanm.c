@@ -1039,30 +1039,37 @@ anm_dump(FILE* stream, const anm_t* anm)
         fprintf(stream, "\n");
 
         for (j = 0; j < entry->script_count; ++j) {
-            unsigned int iter_instrs, iter_formats, iter_params;
+            unsigned int iter_instrs, iter_formats;
             anm_script_t* scr = &entry->scripts[j];
 
             fprintf(stream, "Script: %d\n", scr->id);
 
+            /* TODO: Compare format length to data length. */
             for (iter_instrs = 0; iter_instrs < scr->instr_count; ++iter_instrs) {
                 int done = 0;
                 anm_instr_t* instr = &scr->instrs[iter_instrs];
-                fprintf(stream, "Instruction: %hu %hu %hu\n", instr->time, instr->param_mask, instr->type);
+                fprintf(stream, "Instruction: %hu %hu %hu", instr->time, instr->param_mask, instr->type);
                 for (iter_formats = 0; iter_formats < format_count; ++iter_formats) {
                     if (formats[iter_formats].type == instr->type) {
-                        for (iter_params = 0; iter_params < strlen(formats[iter_formats].format); ++iter_params) {
-                            switch (formats[iter_formats].format[iter_params]) {
+                        const char* data = instr->data;
+                        const char* format = formats[iter_formats].format;
+                        while (*format) {
+                            switch (*format) {
                             case 'i':
-                                fprintf(stream, "Parami: %i\n", *(int32_t*)(instr->data + iter_params * 4));
+                                fprintf(stream, " %i", *(int32_t*)data);
+                                data += sizeof(int32_t);
                                 break;
                             case 'f':
-                                fprintf(stream, "Paramf: %s\n", util_printfloat(instr->data + iter_params * 4));
+                                fprintf(stream, " %sf", util_printfloat(data));
+                                data += sizeof(float);
                                 break;
                             default:
-                                fprintf(stderr, "%s: invalid format descriptor `%c'\n", argv0, formats[iter_formats].format[iter_params]);
+                                fprintf(stderr, "%s: invalid format descriptor `%c'\n", argv0, *format);
                                 abort();
                             }
+                            ++format;
                         }
+                        fprintf(stream, "\n");
                         done = 1;
                         break;
                     }
@@ -1072,8 +1079,6 @@ anm_dump(FILE* stream, const anm_t* anm)
                     abort();
                 }
             }
-
-            fprintf(stream, "\n");
         }
 
         fprintf(stream, "\n");
@@ -1103,7 +1108,7 @@ anm_create(const char* spec)
     anm->entries = NULL;
 
     while (fgets(line, 4096, f)) {
-        const char* linep = line;
+        char* linep = line;
 
         if (strncmp(linep, "ENTRY ", 6) == 0) {
             anm->entry_count++;
@@ -1141,32 +1146,47 @@ anm_create(const char* spec)
                 abort();
             }
         } else if (strncmp(linep, "Instruction: ", 13) == 0) {
+            char* tmp = linep + 13;
+            char* before;
+            char* after = NULL;
+
             script->instr_count++;
             script->instrs = realloc(script->instrs, script->instr_count * sizeof(anm_instr_t));
             instr = &script->instrs[script->instr_count - 1];
             instr->data = NULL;
             instr->length = ANM_INSTR_SIZE;
-            if (3 != sscanf(linep, "Instruction: %hu %hu %hu", &instr->time, &instr->param_mask, &instr->type)) {
-                fprintf(stderr, "%s: Instruction parsing failed\n", argv0);
-                abort();
+
+            instr->time = strtol(tmp, &tmp, 10);
+            instr->param_mask = strtol(tmp, &tmp, 10);
+            instr->type = strtol(tmp, &tmp, 10);
+
+            before = tmp;
+
+            for (;;) {
+                int32_t i;
+                float f;
+
+                i = strtol(before, &after, 10);
+                if (after == before) {
+                    break;
+                } else {
+                    instr->length += sizeof(int32_t);
+                    instr->data = realloc(instr->data, instr->length - ANM_INSTR_SIZE);
+                    if (*after == 'f' || *after == '.') {
+                        f = strtof(before, &after);
+                        memcpy(instr->data + instr->length - ANM_INSTR_SIZE - sizeof(float), &f, sizeof(float));
+                        /* Skip 'f'. */
+                        ++after;
+                    } else {
+                        memcpy(instr->data + instr->length - ANM_INSTR_SIZE - sizeof(int32_t), &i, sizeof(int32_t));
+                    }
+                }
+
+                before = after;
             }
 
             if (instr->type == 0xffff)
                 instr->length = 0;
-        } else if (strncmp(linep, "Parami: ", 8) == 0) {
-            instr->length += sizeof(int32_t);
-            instr->data = realloc(instr->data, instr->length - ANM_INSTR_SIZE);
-            if (1 != sscanf(linep, "Parami: %d", (int32_t*)(instr->data + instr->length - ANM_INSTR_SIZE - sizeof(int32_t)))) {
-                fprintf(stderr, "%s: Parami parsing failed\n", argv0);
-                abort();
-            }
-        } else if (strncmp(linep, "Paramf: ", 8) == 0) {
-            instr->length += sizeof(float);
-            instr->data = realloc(instr->data, instr->length - ANM_INSTR_SIZE);
-            if (1 != sscanf(linep, "Paramf: %ff", (float*)(instr->data + instr->length - ANM_INSTR_SIZE - sizeof(float)))) {
-                fprintf(stderr, "%s: Paramf parsing failed\n", argv0);
-                abort();
-            }
         } else {
             sscanf(linep, "Format: %u", &entry->header.format);
             sscanf(linep, "Width: %u", &entry->header.w);
