@@ -1218,6 +1218,10 @@ anm_write(anm_t* anm, const char* filename)
     unsigned int i;
 
     stream = fopen(filename, "wb");
+    if (!stream) {
+        fprintf(stderr, "%s: couldn't open %s for writing: %s\n", argv0, filename, strerror(errno));
+        exit(1);
+    }
 
     for (i = 0; i < anm->entry_count; ++i) {
         unsigned int base = ftell(stream);
