@@ -24,6 +24,8 @@ thanm.o: $(thanm_SOURCES)
 endif
 
 util_SOURCES = \
+	args.c \
+	args.h \
 	program.c \
 	program.h \
 	util.c \
