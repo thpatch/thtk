@@ -29,6 +29,7 @@
 #include <config.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 static unsigned char*
 buffer_add(unsigned char* buffer, unsigned int* buffer_pos, unsigned int* buffer_size, unsigned char b)
@@ -75,4 +76,35 @@ th_rle(const unsigned char* in, unsigned int insize, unsigned int* outsize)
         buffer = buffer_add(buffer, outsize, &buffer_size, rl - 1);
 
     return buffer;
+}
+
+void
+th_unrle(const unsigned char* in, unsigned int insize, FILE* stream)
+{
+    unsigned int i;
+    if (insize < 3) {
+        for (i = 0; i < insize; ++i)
+            fputc(in[i], stream);
+    } else if (insize >= 3) {
+        const unsigned char* iend = in + insize;
+        unsigned char prev, cur;
+        prev = *in++;
+        fputc(prev, stream);
+        cur = *in++;
+        fputc(cur, stream);
+        while (in < iend) {
+            if (prev == cur) {
+                unsigned char count = *in++;
+                for (i = 0; i < count; ++i)
+                    fputc(cur, stream);
+
+                if (in == iend)
+                    break;
+            }
+
+            prev = cur;
+            cur = *in++;
+            fputc(cur, stream);
+        }
+    }
 }
