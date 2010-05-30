@@ -27,18 +27,98 @@
  * DAMAGE.
  */
 #include <config.h>
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <errno.h>
 #include <string.h>
 #include "datpacker.h"
+#include "program.h"
 #include "thdat.h"
+#include "thrle.h"
 #include "util.h"
+
+typedef struct {
+#ifdef PACK_PRAGMA
+#pragma pack(push,1)
+#endif
+    uint16_t magic;
+    uint8_t key;
+    char name[13];
+    uint32_t zsize;
+    uint32_t size;
+    uint32_t offset;
+    uint32_t zero;
+#ifdef PACK_PRAGMA
+#pragma pack(pop)
+#endif
+} PACK_ATTRIBUTE th02_entry_header_t;
+
+static archive_t*
+th02_open(FILE* stream, unsigned int version)
+{
+    archive_t* archive = thdat_open(stream, version);
+    th02_entry_header_t fe;
+    entry_t* e;
+    unsigned int i;
+
+    for (;;) {
+        if (!util_read(stream, &fe, sizeof(th02_entry_header_t), 'h', NULL))
+            return NULL;
+
+        if (!fe.magic)
+            break;
+
+        e = thdat_add_entry(archive);
+        e->size = fe.size;
+        e->zsize = fe.zsize;
+        e->offset = fe.offset;
+        /* XXX: Does not appear to be used. */
+        e->extra = fe.key;
+        for (i = 0; i < 13 && fe.name[i]; ++i)
+            fe.name[i] ^= 0xff;
+        memcpy(e->name, fe.name, 13);
+    }
+
+    return archive;
+}
+
+static int
+th02_extract(archive_t* archive, entry_t* entry, FILE* stream)
+{
+    unsigned int i;
+    if (!util_seek(archive->stream, entry->offset, NULL))
+        return -1;
+
+    if (entry->size == entry->zsize) {
+        for (i = 0; i < entry->zsize; ++i) {
+            int c = fgetc(archive->stream);
+            if (c == EOF) {
+                fprintf(stderr, "%s: error while reading from archive: %s\n", argv0, strerror(errno));
+                return -1;
+            }
+            fputc(c ^ 0x12, stream);
+        }
+    } else {
+        unsigned char* zbuf = malloc(entry->zsize);
+
+        if (!util_read(archive->stream, zbuf, entry->zsize, 'e', NULL))
+            return -1;
+
+        for (i = 0; i < entry->zsize; ++i)
+            zbuf[i] ^= 0x12;
+
+        th_unrle(zbuf, entry->zsize, stream);
+
+        free(zbuf);
+    }
+
+    return 0;
+}
 
 static archive_t*
 th02_create(FILE* stream, unsigned int version, unsigned int count)
 {
-    return archive_create(stream, version, (count + 1) * 32, count);
+    return archive_create(stream, version, (count + 1) * sizeof(th02_entry_header_t), count);
 }
 
 /* TODO: Check that filenames are 8.3, make it a THDAT_ flag. */
@@ -71,7 +151,10 @@ th02_close(archive_t* archive)
     unsigned char* buffer;
     unsigned char* buffer_ptr;
     unsigned int i;
-    unsigned int list_size = 32 * (archive->count + 1);
+    unsigned int list_size = (archive->count + 1) * sizeof(th02_entry_header_t);
+    th02_entry_header_t fe;
+    fe.key = 3;
+    fe.zero = 0;
 
     if (!util_seek(archive->stream, 0, NULL))
         return -1;
@@ -81,22 +164,15 @@ th02_close(archive_t* archive)
 
     buffer_ptr = buffer;
     for (i = 0; i < archive->count; ++i) {
-        const uint16_t magic1 = 0xf388;
-        const uint16_t magic2 = 0x9595;
         entry_t* entry = &archive->entries[i];
 
-        if (entry->zsize == entry->size)
-            buffer_ptr = mempcpy(buffer_ptr, &magic1, sizeof(uint16_t));
-        else
-            buffer_ptr = mempcpy(buffer_ptr, &magic2, sizeof(uint16_t));
+        fe.magic = entry->zsize == entry->size ? 0xf388 : 0x9595;
+        memcpy(fe.name, entry->name, 13);
+        fe.zsize = entry->zsize;
+        fe.size = entry->size;
+        fe.offset = entry->offset;
 
-        *buffer_ptr++ = 3;
-
-        buffer_ptr = mempcpy(buffer_ptr, entry->name, 13);
-        buffer_ptr = mempcpy(buffer_ptr, &entry->zsize, sizeof(uint32_t));
-        buffer_ptr = mempcpy(buffer_ptr, &entry->size, sizeof(uint32_t));
-        buffer_ptr = mempcpy(buffer_ptr, &entry->offset, sizeof(uint32_t));
-        buffer_ptr += 4;
+        buffer_ptr = mempcpy(buffer_ptr, &fe, sizeof(th02_entry_header_t));
     }
 
     if (fwrite(buffer, list_size, 1, archive->stream) != 1) {
@@ -114,6 +190,6 @@ const archive_module_t archive_th02 = {
     th02_create,
     th02_write,
     th02_close,
-    NULL,
-    NULL
+    th02_open,
+    th02_extract
 };
