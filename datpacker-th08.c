@@ -88,9 +88,9 @@ tolowerstr(char* str)
 }
 
 static archive_t*
-th08_open(FILE* stream, unsigned int version, unsigned int count)
+th08_create(FILE* stream, unsigned int version, unsigned int count)
 {
-    return archive_open(stream, version, 16, count);
+    return archive_create(stream, version, 16, count);
 }
 
 static unsigned char*
@@ -255,8 +255,10 @@ th08_close(archive_t* archive)
 }
 
 const archive_module_t archive_th08 = {
-    th08_open,
+    THDAT_BASENAME,
+    th08_create,
     th08_write,
     th08_close,
-    THDAT_BASENAME
+    NULL,
+    NULL
 };

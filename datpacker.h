@@ -57,17 +57,24 @@ typedef struct {
 #define THDAT_BASENAME 1
 
 typedef struct {
+    /* THDAT_ flags. */
+    uint32_t flags;
     /* Takes a truncated file opened for writing, archive version, and an
      * estimated file count.  Returns private data, or NULL upon error. */
-    archive_t* (*open)(FILE*, unsigned int, unsigned int);
+    archive_t* (*create)(FILE*, unsigned int, unsigned int);
     /* Takes private data, a file opened for reading, and a filename.  Returns
      * 0, or -1 upon error.  Private data is freed upon error. */
     int (*write)(archive_t*, entry_t*, FILE*);
     /* Takes private data. Returns 0, or -1 upon error.  Private data is always
      * freed. */
     int (*close)(archive_t*);
-    /* THDAT_ flags. */
-    uint32_t flags;
+
+    /* Takes a stream, and an archive version. */
+    archive_t* (*open)(FILE*, unsigned int);
+    /* Takes private data, the entry to extract, and the stream to write the
+     * data to.  Returns 0, or -1 upon error. */
+    int (*extract)(archive_t*, entry_t*, FILE*);
+    /* XXX: Maybe something to clean up. */
 } archive_module_t;
 
 #endif

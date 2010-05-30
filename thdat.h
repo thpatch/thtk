@@ -34,8 +34,9 @@
 #include <stdio.h>
 #include "datpacker.h"
 
+archive_t* thdat_open(FILE* stream, unsigned int version);
 /* TODO: Rename functions. */
-archive_t* archive_open(FILE* stream, uint32_t version, uint32_t offset, unsigned int count);
+archive_t* archive_create(FILE* stream, uint32_t version, uint32_t offset, unsigned int count);
 
 /* All of these functions set library_error on error. */
 
@@ -50,6 +51,7 @@ unsigned char* thdat_read_file_lzss(entry_t* entry, FILE* stream);
  * entry->zsize.  Returns a newly allocated buffer containing the RLE data.
  * Returns NULL on error. */
 unsigned char* thdat_rle(entry_t* entry, unsigned char* data);
+entry_t* thdat_add_entry(archive_t* archive);
 /* Writes the entry->zsize bytes from the passed buffer to the archive.  Frees
  * the passed buffer.  Updates the archive offset.  Returns -1 on error. */
 int thdat_write_entry(archive_t* archive, entry_t* entry, unsigned char* data);

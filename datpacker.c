@@ -180,7 +180,7 @@ main(int argc, char* argv[])
     }
     current_output = argv[i];
 
-    private = archive_module->open(archive, version, argc - i - 1);
+    private = archive_module->create(archive, version, argc - i - 1);
     if (!private) {
         fprintf(stderr, "%s: %s\n", argv0, library_error);
         fclose(archive);

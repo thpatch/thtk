@@ -37,9 +37,9 @@
 #include "thdat.h"
 
 static archive_t*
-th75_open(FILE* stream, unsigned int version, unsigned int count)
+th75_create(FILE* stream, unsigned int version, unsigned int count)
 {
-    return archive_open(stream, version, 2 + 108 * count, count);
+    return archive_create(stream, version, 2 + 108 * count, count);
 }
 
 static void
@@ -120,8 +120,10 @@ th75_close(archive_t* archive)
 }
 
 const archive_module_t archive_th75 = {
-    th75_open,
+    0,
+    th75_create,
     th75_write,
     th75_close,
-    0
+    NULL,
+    NULL
 };

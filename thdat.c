@@ -38,7 +38,21 @@
 #include "thlzss.h"
 
 archive_t*
-archive_open(FILE* stream, uint32_t version, uint32_t offset, unsigned int count)
+thdat_open(FILE* stream, unsigned int version)
+{
+    archive_t* archive = malloc(sizeof(archive_t));
+
+    archive->version = version;
+    archive->stream = stream;
+    archive->offset = 0;
+    archive->count = 0;
+    archive->entries = NULL;
+
+    return archive;
+}
+
+archive_t*
+archive_create(FILE* stream, uint32_t version, uint32_t offset, unsigned int count)
 {
     archive_t* archive;
 
@@ -94,6 +108,25 @@ thdat_rle(entry_t* entry, unsigned char* data)
     }
 
     return zdata;
+}
+
+entry_t*
+thdat_add_entry(archive_t* archive)
+{
+    entry_t* e;
+
+    archive->count++;
+    archive->entries = realloc(archive->entries, archive->count * sizeof(entry_t));
+
+    e = &archive->entries[archive->count - 1];
+
+    memset(e->name, 0, 255);
+    e->size = 0;
+    e->zsize = 0;
+    e->offset = 0;
+    e->extra = 0;
+
+    return e;
 }
 
 int

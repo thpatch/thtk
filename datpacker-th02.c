@@ -36,9 +36,9 @@
 #include "util.h"
 
 static archive_t*
-th02_open(FILE* stream, unsigned int version, unsigned int count)
+th02_create(FILE* stream, unsigned int version, unsigned int count)
 {
-    return archive_open(stream, version, (count + 1) * 32, count);
+    return archive_create(stream, version, (count + 1) * 32, count);
 }
 
 /* TODO: Check that filenames are 8.3, make it a THDAT_ flag. */
@@ -110,8 +110,10 @@ th02_close(archive_t* archive)
 }
 
 const archive_module_t archive_th02 = {
-    th02_open,
+    THDAT_BASENAME,
+    th02_create,
     th02_write,
     th02_close,
-    THDAT_BASENAME
+    NULL,
+    NULL
 };

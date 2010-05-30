@@ -65,11 +65,11 @@ th06_write_string(bitstream_t* b, unsigned int length, unsigned char* data)
 }
 
 static archive_t*
-th06_open(FILE* stream, unsigned int version, unsigned int count)
+th06_create(FILE* stream, unsigned int version, unsigned int count)
 {
     /* 13 is the largest size the header can have, so some bytes might be
      * wasted. */
-    return archive_open(stream, version, version == 6 ? 13 : 16, count);
+    return archive_create(stream, version, version == 6 ? 13 : 16, count);
 }
 
 static int
@@ -202,8 +202,10 @@ th06_close(archive_t* archive)
 }
 
 const archive_module_t archive_th06 = {
-    th06_open,
+    THDAT_BASENAME,
+    th06_create,
     th06_write,
     th06_close,
-    THDAT_BASENAME
+    NULL,
+    NULL
 };

@@ -78,9 +78,9 @@ static const crypt_params_t th12_crypt_params[] = {
 };
 
 static archive_t*
-th95_open(FILE* stream, unsigned int version, unsigned int count)
+th95_create(FILE* stream, unsigned int version, unsigned int count)
 {
-    return archive_open(stream, version, 16, count);
+    return archive_create(stream, version, 16, count);
 }
 
 static int
@@ -190,8 +190,10 @@ th95_close(archive_t* archive)
 }
 
 const archive_module_t archive_th95 = {
-    th95_open,
+    THDAT_BASENAME,
+    th95_create,
     th95_write,
     th95_close,
-    THDAT_BASENAME
+    NULL,
+    NULL
 };
