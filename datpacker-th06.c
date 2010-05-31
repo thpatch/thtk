@@ -38,6 +38,13 @@
 #include "thdat.h"
 #include "thlzss.h"
 
+static uint32_t
+th06_read_uint32(struct bitstream* b)
+{
+    uint32_t size = bitstream_read(b, 2);
+    return bitstream_read(b, (size + 1) * 8);
+}
+
 static void
 th06_write_uint32(struct bitstream* b, uint32_t value)
 {
@@ -57,11 +64,121 @@ th06_write_uint32(struct bitstream* b, uint32_t value)
 }
 
 static void
-th06_write_string(struct bitstream* b, unsigned int length, unsigned char* data)
+th06_read_string(struct bitstream* b, unsigned int length, char* data)
+{
+    while (length) {
+        *data = bitstream_read(b, 8);
+        if (!*data)
+            break;
+        data++;
+        length--;
+    }
+}
+
+static void
+th06_write_string(struct bitstream* b, unsigned int length, char* data)
 {
     unsigned int i;
     for (i = 0; i < length; ++i)
         bitstream_write(b, 8, data[i]);
+}
+
+typedef struct {
+#ifdef PACK_PRAGMA
+#pragma pack(push,1)
+#endif
+    uint32_t count;
+    uint32_t offset;
+    uint32_t size;
+#ifdef PACK_PRAGMA
+#pragma pack(pop)
+#endif
+} PACK_ATTRIBUTE th07_header_t;
+
+static archive_t*
+th06_open(FILE* stream, unsigned int version)
+{
+    archive_t* archive = thdat_open(stream, version);
+    char magic[4];
+    entry_t* e;
+    unsigned int i;
+
+    if (!util_read(stream, magic, 4, 'M', NULL))
+        return NULL;
+
+    if (strncmp(magic, "PBG3", 4) == 0) {
+        struct bitstream b;
+        uint32_t count;
+        bitstream_init_stream(&b, stream);
+        archive->version = 6;
+        count = th06_read_uint32(&b);
+        archive->offset = th06_read_uint32(&b);
+
+        if (!util_seek(stream, archive->offset, NULL))
+            return NULL;
+        bitstream_init_stream(&b, stream);
+        for (i = 0; i < count; ++i) {
+            e = thdat_add_entry(archive);
+            th06_read_uint32(&b);
+            th06_read_uint32(&b);
+            e->extra = th06_read_uint32(&b);
+            e->offset = th06_read_uint32(&b);
+            e->size = th06_read_uint32(&b);
+            th06_read_string(&b, 255, e->name);
+        }
+    } else if (strncmp(magic, "PBG4", 4) == 0) {
+        char* data;
+        char* ptr;
+        th07_header_t h;
+        archive->version = 7;
+        if (!util_read(stream, &h, sizeof(th07_header_t), 'h', NULL))
+            return NULL;
+
+        data = malloc(h.size);
+
+        if (!util_seek(stream, h.offset, NULL))
+            return NULL;
+        th_unlz_file(stream, (unsigned char*)data, h.size);
+
+        ptr = data;
+        for (i = 0; i < h.count; ++i) {
+            e = thdat_add_entry(archive);
+            strcpy(e->name, ptr);
+            ptr += strlen(e->name) + 1;
+            memcpy(&e->offset, ptr, sizeof(uint32_t));
+            ptr += sizeof(uint32_t);
+            memcpy(&e->size, ptr, sizeof(uint32_t));
+            ptr += sizeof(uint32_t);
+            ptr += sizeof(uint32_t);
+        }
+
+        free(data);
+    } else {
+        abort();
+    }
+
+    return archive;
+}
+
+static int
+th06_extract(archive_t* archive, entry_t* entry, FILE* stream)
+{
+    unsigned char* data = malloc(entry->size);
+
+    if (!util_seek(archive->stream, entry->offset, NULL))
+        return -1;
+
+    th_unlz_file(archive->stream, data, entry->size);
+
+    if (fwrite(data, entry->size, 1, stream) != 1) {
+        snprintf(library_error, LIBRARY_ERROR_SIZE, "couldn't write: %s", strerror(errno));
+        free(data);
+        return -1;
+    }
+
+    free(data);
+
+    return 0;
 }
 
 static archive_t*
@@ -131,7 +248,7 @@ th06_close(archive_t* archive)
             th06_write_uint32(&b, entry->extra);
             th06_write_uint32(&b, entry->offset);
             th06_write_uint32(&b, entry->size);
-            th06_write_string(&b, strlen(entry->name) + 1, (unsigned char*)entry->name);
+            th06_write_string(&b, strlen(entry->name) + 1, entry->name);
         } else {
             buffer_ptr = mempcpy(buffer_ptr, entry->name, strlen(entry->name) + 1);
             buffer_ptr = mempcpy(buffer_ptr, &entry->offset, sizeof(uint32_t));
@@ -206,6 +323,6 @@ const archive_module_t archive_th06 = {
     th06_create,
     th06_write,
     th06_close,
-    NULL,
-    NULL
+    th06_open,
+    th06_extract
 };
