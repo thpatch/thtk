@@ -221,3 +221,52 @@ th_lz_file(FILE* stream, unsigned int* outsize)
 {
     return th_lz(outsize, (read_byte_fptr)read_byte_file, stream);
 }
+
+static void
+th_unlz(struct bitstream* bs, unsigned char* out, unsigned int outsize)
+{
+    unsigned char* oend = out + outsize;
+    unsigned char dict[LZSS_DICTSIZE];
+    unsigned int dict_head = 1;
+    unsigned int i;
+
+    memset(dict, 0, sizeof(dict));
+
+    while (out < oend) {
+        if (bitstream_read1(bs)) {
+            char c = bitstream_read(bs, 8);
+            *out++ = c;
+            dict[dict_head] = c;
+            dict_head = (dict_head + 1) & LZSS_DICTSIZE_MASK;
+        } else {
+            unsigned int match_offset = bitstream_read(bs, 13);
+            unsigned int match_len = bitstream_read(bs, 4) + LZSS_MIN_MATCH;
+
+            if (!match_offset)
+                return;
+
+            for (i = 0; i < match_len; ++i) {
+                char c = dict[(match_offset + i) & LZSS_DICTSIZE_MASK];
+                *out++ = c;
+                dict[dict_head] = c;
+                dict_head = (dict_head + 1) & LZSS_DICTSIZE_MASK;
+            }
+        }
+    }
+}
+
+void
+th_unlz_mem(unsigned char* in, unsigned int insize, unsigned char* out, unsigned int outsize)
+{
+    struct bitstream bs;
+    bitstream_init_fixed(&bs, in, insize);
+    th_unlz(&bs, out, outsize);
+}
+
+void
+th_unlz_file(FILE* stream, unsigned char* out, unsigned int outsize)
+{
+    struct bitstream bs;
+    bitstream_init_stream(&bs, stream);
+    th_unlz(&bs, out, outsize);
+}

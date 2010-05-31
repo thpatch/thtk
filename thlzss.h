@@ -43,4 +43,15 @@ unsigned char* th_lz_mem(
     unsigned int insize,
     unsigned int* outsize);
 
+void th_unlz_file(
+    FILE* stream,
+    unsigned char* out,
+    unsigned int outsize);
+
+void th_unlz_mem(
+    unsigned char* in,
+    unsigned int insize,
+    unsigned char* out,
+    unsigned int outsize);
+
 #endif
