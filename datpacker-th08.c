@@ -38,6 +38,7 @@
 #include "thlzss.h"
 #include "util.h"
 #include "thdat.h"
+#include "program.h"
 
 typedef struct {
     unsigned char type;
@@ -86,6 +87,125 @@ tolowerstr(char* str)
         *str = tolower(*str);
         ++str;
     }
+}
+
+static archive_t*
+th08_open(FILE* stream, unsigned int version)
+{
+    archive_t* archive = thdat_open(stream, version);
+    char magic[4];
+    uint32_t header[3];
+    entry_t* e;
+    unsigned int i;
+    unsigned int count, offset, size;
+    unsigned char* ptr;
+    unsigned char* data;
+    unsigned char* zdata;
+    long filesize = util_fsize(stream);
+    unsigned int zsize;
+
+    if (!util_read(stream, magic, 4, 'M', NULL))
+        return NULL;
+
+    if (strncmp(magic, "PBGZ", 4)) {
+        fprintf(stderr, "%s: %s is not a PBGZ archive\n", argv0, current_input);
+        return NULL;
+    }
+
+    if (!util_read(stream, header, 3 * sizeof(uint32_t), 'H', NULL))
+        return NULL;
+
+    if (th_decrypt((unsigned char*)header, 3 * sizeof(uint32_t), 0x1b, 0x37, 3 * sizeof(uint32_t), 0x400) == -1)
+        return NULL;
+
+    count = header[0] - 123456;
+    offset = header[1] - 345678;
+    size = header[2] - 567891;
+
+    if (!util_seek(stream, offset, NULL))
+        return NULL;
+
+    zsize = filesize - offset;
+    zdata = malloc(zsize);
+    data = malloc(size);
+
+    if (!util_read(stream, zdata, zsize, 'L', NULL))
+        return NULL;
+
+    if (th_decrypt(zdata, zsize, 0x3e, 0x9b, 0x80, 0x400) == -1)
+        return NULL;
+
+    th_unlz_mem(zdata, zsize, data, size);
+    free(zdata);
+
+    ptr = data;
+    for (i = 0; i < count; ++i) {
+        e = thdat_add_entry(archive);
+
+        strcpy(e->name, (char*)ptr);
+        ptr += strlen(e->name) + 1;
+        memcpy(&e->offset, ptr, sizeof(uint32_t));
+        ptr += sizeof(uint32_t);
+        memcpy(&e->size, ptr, sizeof(uint32_t));
+        ptr += sizeof(uint32_t);
+        ptr += sizeof(uint32_t);
+    }
+
+    free(data);
+
+    return archive;
+}
+
+static int
+th08_extract(archive_t* archive, entry_t* entry, FILE* stream)
+{
+    const crypt_params* current_crypt_params = archive->version == 8 ? th08_crypt_params : th09_crypt_params;
+    unsigned char* data = malloc(entry->size);
+    unsigned int i;
+    int type = -1;
+
+    if (!util_seek(archive->stream, entry->offset, NULL))
+        return -1;
+    th_unlz_file(archive->stream, data, entry->size);
+
+    entry->size -= 4;
+
+    if (strncmp((char*)data, "edz", 3)) {
+        fprintf(stderr, "%s: entry did not start with \"edz\"\n", argv0);
+        return -1;
+    }
+
+    for (i = 0; i < 7; ++i) {
+        if (current_crypt_params[i].type == data[3]) {
+            type = i;
+            break;
+        }
+    }
+
+    if (type == -1) {
+        fprintf(stderr, "%s: unsupported entry key '%c'\n", argv0, data[3]);
+        return -1;
+    }
+
+    if (th_decrypt(data + 4,
+                   entry->size,
+                   current_crypt_params[type].key,
+                   current_crypt_params[type].step,
+                   current_crypt_params[type].block,
+                   current_crypt_params[type].limit) == -1) {
+        free(data);
+        return -1;
+    }
+
+    if (fwrite(data + 4, entry->size, 1, stream) != 1) {
+        snprintf(library_error, LIBRARY_ERROR_SIZE, "couldn't write: %s", strerror(errno));
+        free(data);
+        return -1;
+    }
+
+    free(data);
+
+    return 0;
 }
 
 static archive_t*
@@ -260,6 +380,6 @@ const archive_module_t archive_th08 = {
     th08_create,
     th08_write,
     th08_close,
-    NULL,
-    NULL
+    th08_open,
+    th08_extract
 };
