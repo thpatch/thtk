@@ -89,10 +89,7 @@ th95_encrypt_data(archive_t* archive, entry_t* entry, unsigned char* data)
     const unsigned int i = th95_get_crypt_param_index(entry->name);
     const crypt_params_t* crypt_params = archive->version >= 12 ? th12_crypt_params : th95_crypt_params;
 
-    if (th_encrypt(data, entry->zsize, crypt_params[i].key, crypt_params[i].step, crypt_params[i].block, crypt_params[i].limit) == -1) {
-        free(data);
-        return -1;
-    }
+    th_encrypt(data, entry->zsize, crypt_params[i].key, crypt_params[i].step, crypt_params[i].block, crypt_params[i].limit);
 
     return 0;
 }
@@ -157,10 +154,7 @@ th95_close(archive_t* archive)
     zbuffer = th_lz_mem(buffer, list_size, &list_zsize);
     free(buffer);
 
-    if (th_encrypt(zbuffer, list_zsize, 0x3e, 0x9b, 0x80, list_size) == -1) {
-        free(zbuffer);
-        return -1;
-    }
+    th_encrypt(zbuffer, list_zsize, 0x3e, 0x9b, 0x80, list_size);
 
     if (fwrite(zbuffer, list_zsize, 1, archive->stream) != 1) {
         snprintf(library_error, LIBRARY_ERROR_SIZE, "couldn't write: %s", strerror(errno));
@@ -177,9 +171,7 @@ th95_close(archive_t* archive)
     header[2] = list_zsize + 987654321;
     header[3] = archive->count - 0xf7e7f8ac;
 
-    if (th_encrypt((unsigned char*)&header, sizeof(header), 0x1b, 0x37, sizeof(header), sizeof(header)) == -1) {
-        return -1;
-    }
+    th_encrypt((unsigned char*)&header, sizeof(header), 0x1b, 0x37, sizeof(header), sizeof(header));
 
     if (fwrite(&header, sizeof(header), 1, archive->stream) != 1) {
         snprintf(library_error, LIBRARY_ERROR_SIZE, "couldn't write: %s", strerror(errno));

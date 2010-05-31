@@ -31,7 +31,7 @@
 
 #include <config.h>
 
-int th_encrypt(
+void th_encrypt(
     unsigned char* data,
     unsigned int size,
     unsigned char key,
@@ -39,7 +39,7 @@ int th_encrypt(
     unsigned int block,
     unsigned int limit);
 
-int th_decrypt(
+void th_decrypt(
     unsigned char* data,
     unsigned int size,
     unsigned char key,

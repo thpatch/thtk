@@ -115,8 +115,7 @@ th08_open(FILE* stream, unsigned int version)
     if (!util_read(stream, header, 3 * sizeof(uint32_t), 'H', NULL))
         return NULL;
 
-    if (th_decrypt((unsigned char*)header, 3 * sizeof(uint32_t), 0x1b, 0x37, 3 * sizeof(uint32_t), 0x400) == -1)
-        return NULL;
+    th_decrypt((unsigned char*)header, 3 * sizeof(uint32_t), 0x1b, 0x37, 3 * sizeof(uint32_t), 0x400);
 
     count = header[0] - 123456;
     offset = header[1] - 345678;
@@ -132,8 +131,7 @@ th08_open(FILE* stream, unsigned int version)
     if (!util_read(stream, zdata, zsize, 'L', NULL))
         return NULL;
 
-    if (th_decrypt(zdata, zsize, 0x3e, 0x9b, 0x80, 0x400) == -1)
-        return NULL;
+    th_decrypt(zdata, zsize, 0x3e, 0x9b, 0x80, 0x400);
 
     th_unlz_mem(zdata, zsize, data, size);
     free(zdata);
@@ -187,15 +185,12 @@ th08_extract(archive_t* archive, entry_t* entry, FILE* stream)
         return -1;
     }
 
-    if (th_decrypt(data + 4,
-                   entry->size,
-                   current_crypt_params[type].key,
-                   current_crypt_params[type].step,
-                   current_crypt_params[type].block,
-                   current_crypt_params[type].limit) == -1) {
-        free(data);
-        return -1;
-    }
+    th_decrypt(data + 4,
+               entry->size,
+               current_crypt_params[type].key,
+               current_crypt_params[type].step,
+               current_crypt_params[type].block,
+               current_crypt_params[type].limit);
 
     if (fwrite(data + 4, entry->size, 1, stream) != 1) {
         snprintf(library_error, LIBRARY_ERROR_SIZE, "couldn't write: %s", strerror(errno));
@@ -264,15 +259,12 @@ th08_encrypt(archive_t* archive, entry_t* entry, unsigned char* data)
     data[2] = 'z';
     data[3] = current_crypt_params[type].type;
 
-    if (th_encrypt(data + 4,
-                   entry->size,
-                   current_crypt_params[type].key,
-                   current_crypt_params[type].step,
-                   current_crypt_params[type].block,
-                   current_crypt_params[type].limit) == -1) {
-        free(data);
-        return -1;
-    }
+    th_encrypt(data + 4,
+               entry->size,
+               current_crypt_params[type].key,
+               current_crypt_params[type].step,
+               current_crypt_params[type].block,
+               current_crypt_params[type].limit);
 
     return 0;
 }
@@ -343,10 +335,7 @@ th08_close(archive_t* archive)
     zbuffer = th_lz_mem(buffer, list_size, &list_zsize);
     free(buffer);
 
-    if (th_encrypt(zbuffer, list_zsize, 0x3e, 0x9b, 0x80, 0x400) == -1) {
-        free(zbuffer);
-        return -1;
-    }
+    th_encrypt(zbuffer, list_zsize, 0x3e, 0x9b, 0x80, 0x400);
 
     if (fwrite(zbuffer, list_zsize, 1, archive->stream) != 1) {
         snprintf(library_error, LIBRARY_ERROR_SIZE, "couldn't write: %s", strerror(errno));
@@ -360,9 +349,7 @@ th08_close(archive_t* archive)
     header[2] = archive->offset + 345678;
     header[3] = list_size + 567891;
 
-    if (th_encrypt((unsigned char*)&header[1], sizeof(uint32_t) * 3, 0x1b, 0x37, sizeof(uint32_t) * 3, 0x400) == -1) {
-        return -1;
-    }
+    th_encrypt((unsigned char*)&header[1], sizeof(uint32_t) * 3, 0x1b, 0x37, sizeof(uint32_t) * 3, 0x400);
 
     if (!util_seek(archive->stream, 0, NULL))
         return -1;
