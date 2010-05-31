@@ -39,4 +39,12 @@ int th_encrypt(
     unsigned int block,
     unsigned int limit);
 
+int th_decrypt(
+    unsigned char* data,
+    unsigned int size,
+    unsigned char key,
+    unsigned char step,
+    unsigned int block,
+    unsigned int limit);
+
 #endif
