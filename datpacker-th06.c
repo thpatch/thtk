@@ -39,7 +39,7 @@
 #include "thlzss.h"
 
 static void
-th06_write_uint32(bitstream_t* b, uint32_t value)
+th06_write_uint32(struct bitstream* b, uint32_t value)
 {
     unsigned int size = 1;
     if (value & 0xffffff00) {
@@ -57,7 +57,7 @@ th06_write_uint32(bitstream_t* b, uint32_t value)
 }
 
 static void
-th06_write_string(bitstream_t* b, unsigned int length, unsigned char* data)
+th06_write_string(struct bitstream* b, unsigned int length, unsigned char* data)
 {
     unsigned int i;
     for (i = 0; i < length; ++i)
@@ -101,12 +101,12 @@ th06_close(archive_t* archive)
     unsigned char* zbuffer;
     unsigned int list_size = 0;
     unsigned int list_zsize = 0;
-    bitstream_t b;
+    struct bitstream b;
 
     thdat_sort(archive);
 
     if (archive->version == 6) {
-        bitstream_init(&b, 16);
+        bitstream_init_growing(&b, 1024);
     } else {
         for (i = 0; i < archive->count; ++i)
             list_size += strlen(archive->entries[i].name) + 1 + (sizeof(uint32_t) * 3);
@@ -143,13 +143,13 @@ th06_close(archive_t* archive)
     if (archive->version == 6) {
         bitstream_finish(&b);
 
-        if (fwrite(b.buffer, b.used_bytes, 1, archive->stream) != 1) {
+        if (fwrite(b.io.buffer.buffer, b.byte_count, 1, archive->stream) != 1) {
             snprintf(library_error, LIBRARY_ERROR_SIZE, "couldn't write: %s", strerror(errno));
-            free(b.buffer);
+            bitstream_free(&b);
             return -1;
         }
 
-        free(b.buffer);
+        bitstream_free(&b);
     } else {
         memset(buffer_ptr, 0, sizeof(uint32_t));
 
@@ -173,20 +173,20 @@ th06_close(archive_t* archive)
     }
 
     if (archive->version == 6) {
-        bitstream_init(&b, 8);
+        bitstream_init_fixed(&b, malloc(9), 9);
 
         th06_write_uint32(&b, archive->count);
         th06_write_uint32(&b, archive->offset);
 
         bitstream_finish(&b);
 
-        if (fwrite(b.buffer, b.used_bytes, 1, archive->stream) != 1) {
+        if (fwrite(b.io.buffer.buffer, b.byte_count, 1, archive->stream) != 1) {
             snprintf(library_error, LIBRARY_ERROR_SIZE, "couldn't write: %s", strerror(errno));
-            free(b.buffer);
+            bitstream_free(&b);
             return -1;
         }
 
-        free(b.buffer);
+        bitstream_free(&b);
     } else {
         header[0] = archive->count;
         header[1] = archive->offset;

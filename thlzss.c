@@ -101,7 +101,7 @@ typedef int (*read_byte_fptr)(void*);
 static unsigned char*
 th_lz(unsigned int* outsize, read_byte_fptr read_byte, void* data)
 {
-    bitstream_t bs;
+    struct bitstream bs;
     hash_t hash;
     unsigned char dict[LZSS_DICTSIZE];
     unsigned int dict_head = 1;
@@ -109,7 +109,7 @@ th_lz(unsigned int* outsize, read_byte_fptr read_byte, void* data)
     unsigned int i;
     int c;
 
-    bitstream_init(&bs, 2048);
+    bitstream_init_growing(&bs, 4096);
     memset(&hash, 0, sizeof(hash));
     memset(dict, 0, sizeof(dict));
 
@@ -183,8 +183,8 @@ th_lz(unsigned int* outsize, read_byte_fptr read_byte, void* data)
 
     bitstream_finish(&bs);
 
-    *outsize = bs.used_bytes;
-    return bs.buffer;
+    *outsize = bs.byte_count;
+    return bs.io.buffer.buffer;
 }
 
 static int

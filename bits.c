@@ -29,35 +29,134 @@
 #include <config.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <errno.h>
 #include "bits.h"
+#include "program.h"
 
-static void
-bitstream_grow(bitstream_t* b)
+void
+bitstream_init(struct bitstream* b)
 {
-    b->buffer_size <<= 1;
-    b->buffer = realloc(b->buffer, b->buffer_size);
+    b->byte_count = 0;
+    b->byte = 0;
+    b->bits = 0;
 }
 
 void
-bitstream_init(bitstream_t* b, unsigned int size)
+bitstream_init_stream(struct bitstream* b, FILE* stream)
 {
-    b->used_bytes = 0;
-    b->buffer = NULL;
-    b->buffer_size = size;
-    b->next_byte = 0;
-    b->used_bits = 0;
-    bitstream_grow(b);
+    bitstream_init(b);
+    b->type = BITSTREAM_STREAM;
+    b->io.stream = stream;
 }
 
 void
-bitstream_finish(bitstream_t* b)
+bitstream_init_fixed(struct bitstream* b, unsigned char* buffer, unsigned int size)
 {
-    while (b->used_bits)
-        bitstream_write1(b, 0);
+    bitstream_init(b);
+    b->type = BITSTREAM_BUFFER_FIXED;
+    b->io.buffer.buffer = buffer;
+    b->io.buffer.size = size;
 }
 
 void
-bitstream_write(bitstream_t* b, unsigned int bits, uint32_t data)
+bitstream_init_growing(struct bitstream* b, unsigned int size)
+{
+    bitstream_init_fixed(b, malloc(size), size);
+    b->type = BITSTREAM_BUFFER_GROW;
+}
+
+void
+bitstream_free(struct bitstream* b)
+{
+    if (b->type == BITSTREAM_STREAM) {
+        fclose(b->io.stream);
+    } else if (b->type == BITSTREAM_BUFFER_FIXED || b->type == BITSTREAM_BUFFER_GROW) {
+        free(b->io.buffer.buffer);
+    } else {
+        abort();
+    }
+}
+
+unsigned int
+bitstream_read1(struct bitstream* b)
+{
+    unsigned int ret = 0;
+
+    if (!b->bits) {
+        if (b->type == BITSTREAM_STREAM) {
+            int c = fgetc(b->io.stream);
+            if (c == EOF) {
+                fprintf(stderr, "%s: unexpected end of file\n", argv0);
+                abort();
+            }
+            b->byte = c;
+        } else if (b->type == BITSTREAM_BUFFER_FIXED) {
+            if (b->byte_count >= b->io.buffer.size) {
+                fprintf(stderr, "%s: buffer overflow\n", argv0);
+                abort();
+            }
+            b->byte = b->io.buffer.buffer[b->byte_count];
+        } else {
+            abort();
+        }
+
+        b->byte_count++;
+        b->bits = 8;
+    }
+
+    ret = (b->byte & 0x80) >> 7;
+    b->byte <<= 1;
+    b->bits--;
+    return ret & 1;
+}
+
+uint32_t
+bitstream_read(struct bitstream* b, unsigned int bits)
+{
+    uint32_t ret = 0;
+    for (; bits; --bits)
+        ret |= bitstream_read1(b) << (bits - 1);
+    return ret;
+}
+
+void
+bitstream_write1(struct bitstream* b, unsigned int bit)
+{
+    b->byte <<= 1;
+    b->byte |= (bit & 1);
+    b->bits++;
+
+    if (b->bits == 8) {
+        if (b->type == BITSTREAM_STREAM) {
+            if (fputc(b->byte, b->io.stream) == EOF) {
+                fprintf(stderr, "%s: error while writing: %s\n", argv0, strerror(errno));
+                abort();
+            }
+        } else if (b->type == BITSTREAM_BUFFER_FIXED) {
+            if (b->byte_count >= b->io.buffer.size) {
+                fprintf(stderr, "%s: buffer overflow\n", argv0);
+                abort();
+            }
+            b->io.buffer.buffer[b->byte_count] = b->byte;
+        } else if (b->type == BITSTREAM_BUFFER_GROW) {
+            if (b->byte_count >= b->io.buffer.size) {
+                b->io.buffer.size <<= 1;
+                b->io.buffer.buffer = realloc(b->io.buffer.buffer, b->io.buffer.size);
+            }
+            b->io.buffer.buffer[b->byte_count] = b->byte;
+        } else {
+            abort();
+        }
+
+        b->bits = 0;
+        b->byte = 0;
+        b->byte_count++;
+    }
+}
+
+void
+bitstream_write(struct bitstream* b, unsigned int bits, uint32_t data)
 {
     int i;
     if (bits > 32)
@@ -69,16 +168,8 @@ bitstream_write(bitstream_t* b, unsigned int bits, uint32_t data)
 }
 
 void
-bitstream_write1(bitstream_t* b, unsigned int bit)
+bitstream_finish(struct bitstream* b)
 {
-    b->next_byte |= bit << (7 - b->used_bits);
-    b->used_bits++;
-    if (b->used_bits >= 8) {
-        b->buffer[b->used_bytes] = b->next_byte;
-        b->used_bytes++;
-        if (b->used_bytes >= b->buffer_size)
-            bitstream_grow(b);
-        b->next_byte = 0;
-        b->used_bits = 0;
-    }
+    while (b->bits)
+        bitstream_write1(b, 0);
 }

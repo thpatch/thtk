@@ -30,21 +30,41 @@
 #define BITS_H_
 
 #include <config.h>
+#include <stdio.h>
 #include <inttypes.h>
 
-typedef struct {
-    unsigned char* buffer;
-    unsigned int buffer_size;
-    unsigned int used_bytes;
+enum io_type {
+    BITSTREAM_STREAM,
+    BITSTREAM_BUFFER_FIXED,
+    /* For writing only. */
+    BITSTREAM_BUFFER_GROW
+};
 
-    unsigned char next_byte;
-    unsigned char used_bits;
-} bitstream_t;
+struct bitstream {
+    enum io_type type;
+    union {
+        FILE* stream;
+        struct {
+            unsigned char* buffer;
+            unsigned int size;
+        } buffer;
+    } io;
+    unsigned int byte_count;
+    unsigned int byte;
+    unsigned int bits;
+};
 
-/* Size is multiplied by two right away. */
-void bitstream_init(bitstream_t* b, unsigned int size);
-void bitstream_finish(bitstream_t* b);
-void bitstream_write(bitstream_t* b, unsigned int bits, uint32_t data);
-void bitstream_write1(bitstream_t* b, unsigned int bit);
+void bitstream_init_stream(struct bitstream* b, FILE* stream);
+void bitstream_init_fixed(struct bitstream* b, unsigned char* buffer, unsigned int size);
+void bitstream_init_growing(struct bitstream* b, unsigned int size);
+/* Closes an FD or frees a buffer. */
+void bitstream_free(struct bitstream* b);
+
+unsigned int bitstream_read1(struct bitstream* b);
+uint32_t bitstream_read(struct bitstream* b, unsigned int bits);
+
+void bitstream_write1(struct bitstream* b, unsigned int bit);
+void bitstream_write(struct bitstream* b, unsigned int bits, uint32_t data);
+void bitstream_finish(struct bitstream* b);
 
 #endif
