@@ -45,7 +45,7 @@ extern const archive_module_t archive_th95;
 char library_error[LIBRARY_ERROR_SIZE] = { 0 };
 
 static void
-print_usage()
+print_usage(void)
 {
     printf("Usage: %s [OPTION]... ARCHIVE FILE...\n"
            "OPTION can be:\n"

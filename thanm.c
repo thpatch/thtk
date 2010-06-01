@@ -1368,7 +1368,7 @@ anm_free(anm_t* anm)
 }
 
 static void
-print_usage()
+print_usage(void)
 {
     printf("Usage: %s [OPTION]... MODE ARCHIVE [FILE]...\n"
            "MODE can be:\n"

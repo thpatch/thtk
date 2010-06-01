@@ -43,7 +43,7 @@
 static FILE* out;
 
 static void
-print_usage()
+print_usage(void)
 {
     printf("Usage: %s -v {10,11,12,125} [OPTION]... FILE\n"
            "OPTION can be:\n"

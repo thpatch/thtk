@@ -56,7 +56,7 @@ static void label_create(char* label);
 static int32_t label_find(sub_t* sub, const char* label);
 static int make_stackinstr(int type, char stack1, char stack2, list_t* params);
 
-int yylex();
+int yylex(void);
 extern FILE* yyin;
 
 %}
@@ -620,7 +620,7 @@ yyerror(const char* str)
 }
 
 static void
-print_usage()
+print_usage(void)
 {
     printf("Usage: %s -v {10,11,12,125} [OPTION]... [FILE]\n"
            "OPTION can be:\n"
