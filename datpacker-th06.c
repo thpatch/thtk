@@ -309,7 +309,7 @@ th06_close(archive_t* archive)
         header[1] = archive->offset;
         header[2] = list_size;
 
-        if (fwrite(&header, sizeof(header), 1, archive->stream) != 1) {
+        if (fwrite(header, sizeof(header), 1, archive->stream) != 1) {
             snprintf(library_error, LIBRARY_ERROR_SIZE, "couldn't write: %s", strerror(errno));
             return -1;
         }

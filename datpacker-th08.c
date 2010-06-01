@@ -246,7 +246,7 @@ th08_close(archive_t* archive)
     if (!util_seek(archive->stream, 0, NULL))
         return -1;
 
-    if (fwrite(&header, sizeof(header), 1, archive->stream) != 1) {
+    if (fwrite(header, sizeof(header), 1, archive->stream) != 1) {
         snprintf(library_error, LIBRARY_ERROR_SIZE, "couldn't write: %s", strerror(errno));
         return -1;
     }
