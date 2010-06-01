@@ -103,6 +103,7 @@ print_usage(void)
     printf("Usage: %s COMMAND[OPTION...] [ARCHIVE [FILE...]]\n"
            "COMMAND can be:\n"
            "  c  create an archive\n"
+           "  x  extract an archive\n"
            "  h  display this help and exit\n"
            "  V  display version information and exit\n"
            "OPTION can be:\n"
@@ -121,7 +122,7 @@ main(int argc, char* argv[])
     int i;
     int mode;
 
-    mode = parse_args(argc, argv, print_usage, "chV", "", &version);
+    mode = parse_args(argc, argv, print_usage, "cxhV", "", &version);
 
     if (!mode)
         return 1;
@@ -217,6 +218,59 @@ main(int argc, char* argv[])
             return 1;
         }
 
+        archive_free(private);
+        fclose(archive);
+        return 0;
+    case 'x':
+        if (argc < 3) {
+            print_usage();
+            return 1;
+        }
+        if (!archive_module->open || !archive_module->extract) {
+            fprintf(stderr, "%s: extraction not yet supported for this archive format\n", argv0);
+            return 1;
+        }
+        current_input = argv[2];
+        archive = fopen(current_input, "rb");
+        if (!archive) {
+            fprintf(stderr, "%s: couldn't open %s for reading\n", argv0, current_input);
+            return 1;
+        }
+        private = archive_module->open(archive, version);
+        if (!private)
+            return 1;
+        if (argc > 3) {
+            int j;
+            for (j = 3; j < argc; ++j) {
+                int extracted = 0;
+                for (i = 0; i < (int)private->count; ++i) {
+                    if (strcmp(argv[j], private->entries[i].name) == 0) {
+                        FILE* stream;
+                        stream = fopen(private->entries[i].name, "wb");
+                        current_output = private->entries[i].name;
+                        printf("%s\n", current_output);
+                        if (archive_module->extract(private, &private->entries[i], stream) == -1)
+                            return 1;
+                        fclose(stream);
+                        ++extracted;
+                        break;
+                    }
+                }
+
+                if (!extracted)
+                    fprintf(stderr, "%s: entry %s not found\n", argv0, argv[j]);
+            }
+        } else {
+            for (i = 0; i < (int)private->count; ++i) {
+                /* TODO: Secure the filenames first.  Don't need to do that when the user selects files to extract. */
+                FILE* stream = fopen(private->entries[i].name, "wb");
+                current_output = private->entries[i].name;
+                printf("%s\n", current_output);
+                if (archive_module->extract(private, &private->entries[i], stream) == -1)
+                    return 1;
+                fclose(stream);
+            }
+        }
         archive_free(private);
         fclose(archive);
         return 0;
