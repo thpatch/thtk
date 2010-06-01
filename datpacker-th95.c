@@ -37,6 +37,7 @@
 #include "thlzss.h"
 #include "util.h"
 #include "thdat.h"
+#include "program.h"
 
 static unsigned int
 th95_get_crypt_param_index(const char *name)
@@ -76,6 +77,121 @@ static const crypt_params_t th12_crypt_params[] = {
     { 0x35, 0x79, 0x400, 0x3c00 },
     { 0x99, 0x7d, 0x80,  0x2800 }
 };
+
+static archive_t*
+th95_open(FILE* stream, unsigned int version)
+{
+    archive_t* archive = thdat_open(stream, version);
+    uint32_t header[4];
+    unsigned int size, zsize, count;
+    long filesize = util_fsize(stream);
+    unsigned char* data;
+    unsigned char* zdata;
+    unsigned char* ptr;
+    unsigned int i;
+    entry_t* prev = NULL;
+
+    if (!util_read(stream, header, sizeof(header), 'h', NULL))
+        return NULL;
+
+    th_decrypt((unsigned char*)&header, sizeof(header), 0x1b, 0x37, sizeof(header), sizeof(header));
+
+    if (strncmp((const char*)&header[0], "THA1", 4)) {
+        fprintf(stderr, "%s: wrong magic for archive\n", argv0);
+        return NULL;
+    }
+
+    size = header[1] - 123456789;
+    zsize = header[2] - 987654321;
+    count = header[3] - 135792468;
+
+    if (!util_seek(stream, filesize - zsize, NULL))
+        return NULL;
+
+    zdata = malloc(zsize);
+    if (!util_read(stream, zdata, zsize, 'L', NULL))
+        return NULL;
+
+    th_decrypt(zdata, zsize, 0x3e, 0x9b, 0x80, zsize);
+ 
+    data = malloc(size);
+    th_unlz_mem(zdata, zsize, data, size);
+    free(zdata);
+
+    ptr = data;
+    for (i = 0; i < count; ++i) {
+        entry_t* e = thdat_add_entry(archive);
+
+        strcpy(e->name, (char*)ptr);
+        ptr += strlen(e->name) + (4 - strlen(e->name) % 4);
+        memcpy(&e->offset, ptr, sizeof(uint32_t));
+        ptr += sizeof(uint32_t);
+        memcpy(&e->size, ptr, sizeof(uint32_t));
+        ptr += sizeof(uint32_t);
+        ptr += sizeof(uint32_t);
+    }
+
+    for (i = 0; i < count; ++i) {
+        entry_t* e = &archive->entries[i];
+        if (prev)
+            prev->zsize = e->offset - prev->offset;
+        prev = e;
+    }
+    prev->zsize = (filesize - zsize) - prev->offset;
+
+    free(data);
+
+    return archive;
+}
+
+static int
+th95_decrypt_data(archive_t* archive, entry_t* entry, unsigned char* data)
+{
+    const unsigned int i = th95_get_crypt_param_index(entry->name);
+    const crypt_params_t* crypt_params;
+    if (archive->version == 95 || archive->version == 10 || archive->version == 11)
+        crypt_params = th95_crypt_params;
+    else
+        crypt_params = th12_crypt_params;
+
+    th_decrypt(data, entry->zsize, crypt_params[i].key, crypt_params[i].step, crypt_params[i].block, crypt_params[i].limit);
+
+    return 0;
+}
+
+static int
+th95_extract(archive_t* archive, entry_t* entry, FILE* stream)
+{
+    unsigned char* data;
+    unsigned char* zdata = malloc(entry->zsize);
+
+    if (!util_seek(archive->stream, entry->offset, NULL))
+        return -1;
+
+    if (!util_read(archive->stream, zdata, entry->zsize, 'e', NULL))
+        return -1;
+
+    th95_decrypt_data(archive, entry, zdata);
+
+    if (entry->zsize == entry->size) {
+        data = zdata;
+    } else {
+        data = malloc(entry->size);
+        th_unlz_mem(zdata, entry->zsize, data, entry->size);
+
+        free(zdata);
+    }
+
+    if (fwrite(data, entry->size, 1, stream) != 1) {
+        snprintf(library_error, LIBRARY_ERROR_SIZE, "couldn't write: %s", strerror(errno));
+        free(data);
+        return -1;
+    }
+
+    free(data);
+
+    return 0;
+}
 
 static archive_t*
 th95_create(FILE* stream, unsigned int version, unsigned int count)
@@ -190,6 +306,6 @@ const archive_module_t archive_th95 = {
     th95_create,
     th95_write,
     th95_close,
-    NULL,
-    NULL
+    th95_open,
+    th95_extract
 };
