@@ -87,7 +87,11 @@ static int
 th95_encrypt_data(archive_t* archive, entry_t* entry, unsigned char* data)
 {
     const unsigned int i = th95_get_crypt_param_index(entry->name);
-    const crypt_params_t* crypt_params = archive->version >= 12 ? th12_crypt_params : th95_crypt_params;
+    const crypt_params_t* crypt_params;
+    if (archive->version == 95 || archive->version == 10 || archive->version == 11)
+        crypt_params = th95_crypt_params;
+    else
+        crypt_params = th12_crypt_params;
 
     th_encrypt(data, entry->zsize, crypt_params[i].key, crypt_params[i].step, crypt_params[i].block, crypt_params[i].limit);
 
