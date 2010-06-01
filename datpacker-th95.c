@@ -173,7 +173,7 @@ th95_close(archive_t* archive)
     header[0] = 0x31414854;
     header[1] = list_size + 123456789;
     header[2] = list_zsize + 987654321;
-    header[3] = archive->count - 0xf7e7f8ac;
+    header[3] = archive->count + 135792468;
 
     th_encrypt((unsigned char*)&header, sizeof(header), 0x1b, 0x37, sizeof(header), sizeof(header));
 
