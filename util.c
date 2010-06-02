@@ -60,10 +60,8 @@ util_print_version(const char* name, const char* version)
 }
 
 int
-util_seek(FILE* stream, long offset, filemap_t* filemap)
+util_seek(FILE* stream, long offset)
 {
-    if (filemap)
-        filemap->pos = offset;
     if (fseek(stream, offset, SEEK_SET) != 0) {
         fprintf(stderr, "%s: failed seeking to %lu: %s\n", argv0, offset, strerror(errno));
         return 0;
@@ -99,22 +97,18 @@ util_fsize(FILE* stream)
     if ((end = util_tell(stream)) == -1)
         return -1;
 
-    if (!util_seek(stream, prev, NULL))
+    if (!util_seek(stream, prev))
         return -1;
 
     return end;
 }
 
 int
-util_read(FILE* stream, void* buffa, size_t size, int c, filemap_t* filemap)
+util_read(FILE* stream, void* buffa, size_t size)
 {
     if (size == 0) {
         fprintf(stderr, "%s: util_read called with size 0\n", argv0);
         abort();
-    }
-    if (filemap) {
-        memset(filemap->data + filemap->pos, c, size);
-        filemap->pos += size;
     }
     if (fread(buffa, size, 1, stream) != 1) {
         fprintf(stderr, "%s: failed reading %lu bytes: %s\n", argv0, (long unsigned int)size, strerror(errno));

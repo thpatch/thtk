@@ -85,7 +85,7 @@ th75_close(archive_t* archive)
     uint16_t count = archive->count;
     unsigned char k = 100, t = 100;
 
-    if (!util_seek(archive->stream, 0, NULL))
+    if (!util_seek(archive->stream, 0))
         return -1;
 
     if (fwrite(&count, sizeof(uint16_t), 1, archive->stream) != 1) {

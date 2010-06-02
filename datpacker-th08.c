@@ -104,7 +104,7 @@ th08_open(FILE* stream, unsigned int version)
     long filesize = util_fsize(stream);
     unsigned int zsize;
 
-    if (!util_read(stream, magic, 4, 'M', NULL))
+    if (!util_read(stream, magic, 4))
         return NULL;
 
     if (strncmp(magic, "PBGZ", 4)) {
@@ -112,7 +112,7 @@ th08_open(FILE* stream, unsigned int version)
         return NULL;
     }
 
-    if (!util_read(stream, header, 3 * sizeof(uint32_t), 'H', NULL))
+    if (!util_read(stream, header, 3 * sizeof(uint32_t)))
         return NULL;
 
     th_decrypt((unsigned char*)header, 3 * sizeof(uint32_t), 0x1b, 0x37, 3 * sizeof(uint32_t), 0x400);
@@ -121,14 +121,14 @@ th08_open(FILE* stream, unsigned int version)
     offset = header[1] - 345678;
     size = header[2] - 567891;
 
-    if (!util_seek(stream, offset, NULL))
+    if (!util_seek(stream, offset))
         return NULL;
 
     zsize = filesize - offset;
     zdata = malloc(zsize);
     data = malloc(size);
 
-    if (!util_read(stream, zdata, zsize, 'L', NULL))
+    if (!util_read(stream, zdata, zsize))
         return NULL;
 
     th_decrypt(zdata, zsize, 0x3e, 0x9b, 0x80, 0x400);
@@ -162,7 +162,7 @@ th08_extract(archive_t* archive, entry_t* entry, FILE* stream)
     unsigned int i;
     int type = -1;
 
-    if (!util_seek(archive->stream, entry->offset, NULL))
+    if (!util_seek(archive->stream, entry->offset))
         return -1;
     th_unlz_file(archive->stream, data, entry->size);
 
@@ -351,7 +351,7 @@ th08_close(archive_t* archive)
 
     th_encrypt((unsigned char*)&header[1], sizeof(uint32_t) * 3, 0x1b, 0x37, sizeof(uint32_t) * 3, 0x400);
 
-    if (!util_seek(archive->stream, 0, NULL))
+    if (!util_seek(archive->stream, 0))
         return -1;
 
     if (fwrite(header, sizeof(header), 1, archive->stream) != 1) {

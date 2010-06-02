@@ -41,11 +41,6 @@
 #  define MAX(a, b) ((a) > (b) ? (a) : (b))
 #endif
 
-typedef struct {
-    char* data;
-    long pos;
-} filemap_t;
-
 void util_print_version(const char* name, const char* version);
 
 /* Returns an unique string representation of a float. */
@@ -60,14 +55,12 @@ void util_makepath(const char* path);
 /* Writes the basename of src to dst. */
 void util_basename(char* dst, size_t dstlen, const char* src);
 
-/* A wrapper for fseek with SEEK_SET which prints an error message upon error.
- * The position in the filemap is updated. */
-int util_seek(FILE* stream, long offset, filemap_t* filemap);
+/* A wrapper for fseek with SEEK_SET which prints an error message upon error. */
+int util_seek(FILE* stream, long offset);
 /* A wrapper for ftell which prints an error message upon error. */
 long util_tell(FILE* stream);
-/* A wrapper for fread which prints an error message upon error.  The bytes
- * read are filled with c in the filemap. */
-int util_read(FILE* stream, void* buffa, size_t size, int c, filemap_t* filemap);
+/* A wrapper for fread which prints an error message upon error. */
+int util_read(FILE* stream, void* buffa, size_t size);
 /* Returns the filesize of the passed file stream, or -1 and an error message
  * upon error. */
 long util_fsize(FILE* stream);

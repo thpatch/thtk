@@ -103,7 +103,7 @@ th06_open(FILE* stream, unsigned int version)
     entry_t* e;
     unsigned int i;
 
-    if (!util_read(stream, magic, 4, 'M', NULL))
+    if (!util_read(stream, magic, 4))
         return NULL;
 
     if (strncmp(magic, "PBG3", 4) == 0) {
@@ -114,7 +114,7 @@ th06_open(FILE* stream, unsigned int version)
         count = th06_read_uint32(&b);
         archive->offset = th06_read_uint32(&b);
 
-        if (!util_seek(stream, archive->offset, NULL))
+        if (!util_seek(stream, archive->offset))
             return NULL;
         bitstream_init_stream(&b, stream);
         for (i = 0; i < count; ++i) {
@@ -131,12 +131,12 @@ th06_open(FILE* stream, unsigned int version)
         char* ptr;
         th07_header_t h;
         archive->version = 7;
-        if (!util_read(stream, &h, sizeof(th07_header_t), 'h', NULL))
+        if (!util_read(stream, &h, sizeof(th07_header_t)))
             return NULL;
 
         data = malloc(h.size);
 
-        if (!util_seek(stream, h.offset, NULL))
+        if (!util_seek(stream, h.offset))
             return NULL;
         th_unlz_file(stream, (unsigned char*)data, h.size);
 
@@ -165,7 +165,7 @@ th06_extract(archive_t* archive, entry_t* entry, FILE* stream)
 {
     unsigned char* data = malloc(entry->size);
 
-    if (!util_seek(archive->stream, entry->offset, NULL))
+    if (!util_seek(archive->stream, entry->offset))
         return -1;
 
     th_unlz_file(archive->stream, data, entry->size);
@@ -281,7 +281,7 @@ th06_close(archive_t* archive)
         free(zbuffer);
     }
 
-    if (!util_seek(archive->stream, 0, NULL))
+    if (!util_seek(archive->stream, 0))
         return -1;
 
     if (fwrite(magic, 4, 1, archive->stream) != 1) {

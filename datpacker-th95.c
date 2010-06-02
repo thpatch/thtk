@@ -91,7 +91,7 @@ th95_open(FILE* stream, unsigned int version)
     unsigned int i;
     entry_t* prev = NULL;
 
-    if (!util_read(stream, header, sizeof(header), 'h', NULL))
+    if (!util_read(stream, header, sizeof(header)))
         return NULL;
 
     th_decrypt((unsigned char*)&header, sizeof(header), 0x1b, 0x37, sizeof(header), sizeof(header));
@@ -105,11 +105,11 @@ th95_open(FILE* stream, unsigned int version)
     zsize = header[2] - 987654321;
     count = header[3] - 135792468;
 
-    if (!util_seek(stream, filesize - zsize, NULL))
+    if (!util_seek(stream, filesize - zsize))
         return NULL;
 
     zdata = malloc(zsize);
-    if (!util_read(stream, zdata, zsize, 'L', NULL))
+    if (!util_read(stream, zdata, zsize))
         return NULL;
 
     th_decrypt(zdata, zsize, 0x3e, 0x9b, 0x80, zsize);
@@ -165,10 +165,10 @@ th95_extract(archive_t* archive, entry_t* entry, FILE* stream)
     unsigned char* data;
     unsigned char* zdata = malloc(entry->zsize);
 
-    if (!util_seek(archive->stream, entry->offset, NULL))
+    if (!util_seek(archive->stream, entry->offset))
         return -1;
 
-    if (!util_read(archive->stream, zdata, entry->zsize, 'e', NULL))
+    if (!util_read(archive->stream, zdata, entry->zsize))
         return -1;
 
     th95_decrypt_data(archive, entry, zdata);
@@ -224,7 +224,7 @@ th95_write(archive_t* archive, entry_t* entry, FILE* stream)
     if (entry->zsize >= entry->size) {
         free(data);
 
-        if (!util_seek(stream, 0, NULL))
+        if (!util_seek(stream, 0))
             return -1;
 
         data = thdat_read_file(entry, stream);
@@ -283,7 +283,7 @@ th95_close(archive_t* archive)
     }
     free(zbuffer);
 
-    if (!util_seek(archive->stream, 0, NULL))
+    if (!util_seek(archive->stream, 0))
         return -1;
 
     header[0] = 0x31414854;

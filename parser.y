@@ -838,13 +838,13 @@ main(int argc, char* argv[])
         free(subs[i].instrs);
     }
 
-    util_seek(out, 4, NULL);
+    util_seek(out, 4);
     if (fwrite(&header, sizeof(header_scpt_t), 1, out) != 1) {
         fprintf(stderr, "%s: couldn't write: %s\n", argv0, strerror(errno));
         return 1;
     }
 
-    util_seek(out, header.include_offset + header.include_length, NULL);
+    util_seek(out, header.include_offset + header.include_length);
     for (i = 0; i < sub_cnt; ++i) {
         if (fwrite(&subs[i].offset, sizeof(uint32_t), 1, out) != 1) {
             fprintf(stderr, "%s: couldn't write: %s\n", argv0, strerror(errno));

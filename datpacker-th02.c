@@ -62,7 +62,7 @@ th02_open(FILE* stream, unsigned int version)
     unsigned int i;
 
     for (;;) {
-        if (!util_read(stream, &fe, sizeof(th02_entry_header_t), 'h', NULL))
+        if (!util_read(stream, &fe, sizeof(th02_entry_header_t)))
             return NULL;
 
         if (!fe.magic)
@@ -86,7 +86,7 @@ static int
 th02_extract(archive_t* archive, entry_t* entry, FILE* stream)
 {
     unsigned int i;
-    if (!util_seek(archive->stream, entry->offset, NULL))
+    if (!util_seek(archive->stream, entry->offset))
         return -1;
 
     if (entry->size == entry->zsize) {
@@ -101,7 +101,7 @@ th02_extract(archive_t* archive, entry_t* entry, FILE* stream)
     } else {
         unsigned char* zbuf = malloc(entry->zsize);
 
-        if (!util_read(archive->stream, zbuf, entry->zsize, 'e', NULL))
+        if (!util_read(archive->stream, zbuf, entry->zsize))
             return -1;
 
         for (i = 0; i < entry->zsize; ++i)
@@ -156,7 +156,7 @@ th02_close(archive_t* archive)
     fe.key = 3;
     fe.zero = 0;
 
-    if (!util_seek(archive->stream, 0, NULL))
+    if (!util_seek(archive->stream, 0))
         return -1;
 
     buffer = malloc(list_size);
