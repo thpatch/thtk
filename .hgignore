@@ -17,10 +17,10 @@ depcomp
 eclc
 ecldump
 install-sh
-lexer.c
 missing
-parser.c
-parser.h
+ecsparse.c
+ecsparse.h
+ecsscan.c
 stamp-h1
 thanm
 ylwrap

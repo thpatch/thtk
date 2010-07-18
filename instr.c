@@ -36,7 +36,7 @@
 #include "ecl.h"
 #include "util.h"
 #include "instr.h"
-#include "parser.h"
+#include "ecsparse.h"
 
 typedef struct {
     int id;

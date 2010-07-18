@@ -31,7 +31,7 @@
     #include <string.h>
     #include <stdio.h>
     #include <stdlib.h>
-    #include "parser.h"
+    #include "ecsparse.h"
     #include "ecl.h"
     #include "util.h"
     void yyerror(const char*);

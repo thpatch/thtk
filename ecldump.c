@@ -38,7 +38,7 @@
 #include "ecl.h"
 #include "instr.h"
 #include "util.h"
-#include "parser.h"
+#include "ecsparse.h"
 
 static FILE* out;
 

@@ -1,7 +1,7 @@
 AM_YFLAGS = -d -r all
 AM_CFLAGS = -pedantic -Wall -Wextra
 LDADD = @mb_LIBS@
-BUILT_SOURCES = parser.h parser.c lexer.c
+BUILT_SOURCES = ecsparse.h ecsparse.c ecsscan.c
 bin_PROGRAMS = datpacker eclc ecldump thanm
 
 if COMBINE
@@ -14,7 +14,7 @@ datpacker.o: $(datpacker_SOURCES)
 	$(COMPILE) $(datpacker_CFLAGS) @combine_CFLAGS@ -c -o $@ $(filter %.c,$^)
 
 eclc.o: $(eclc_SOURCES)
-	$(COMPILE) $(eclc_CFLAGS) @combine_CFLAGS@ -c -o $@ $(filter %.c,$^) parser.c lexer.c
+	$(COMPILE) $(eclc_CFLAGS) @combine_CFLAGS@ -c -o $@ $(filter %.c,$^) ecsparse.c ecsscan.c
 
 ecldump.o: $(ecldump_SOURCES)
 	$(COMPILE) $(ecldump_CFLAGS) @combine_CFLAGS@ -c -o $@ $(filter %.c,$^)
@@ -55,9 +55,9 @@ datpacker_SOURCES = \
 eclc_SOURCES = \
 	instr.c \
 	instr.h \
-	parser.h \
-	lexer.l \
-	parser.y \
+	ecsparse.h \
+	ecsscan.l \
+	ecsparse.y \
 	$(util_SOURCES)
 
 ecldump_LDADD = $(LDADD) -lm
@@ -65,7 +65,7 @@ ecldump_SOURCES = \
 	ecldump.c \
 	instr.c \
 	instr.h \
-	parser.h \
+	ecsparse.h \
 	$(util_SOURCES)
 
 thanm_CFLAGS = $(libpng_CFLAGS)
