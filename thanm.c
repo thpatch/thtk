@@ -30,11 +30,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <inttypes.h>
 #include <errno.h>
 #ifdef HAVE_LIBPNG
 #include <png.h>
 #endif
+#include "args.h"
 #include "thanm.h"
 #include "program.h"
 #include "util.h"
@@ -60,6 +60,7 @@ format_Bpp(format_t format)
     }
 }
 
+#ifdef HAVE_LIBPNG
 static unsigned char*
 rgba_to_fmt(const uint32_t* data, unsigned int pixels, format_t format)
 {
@@ -166,6 +167,7 @@ fmt_to_rgba(const char* data, unsigned int pixels, format_t format)
 
     return (char*)out;
 }
+#endif
 
 static const opcode_fmt_t formats_v0[] = {
     { 0, "" },
@@ -421,6 +423,7 @@ convert_header_to_old(anm_header_t* header)
     header->zero3 = 0;
 }
 
+#ifdef HAVE_LIBPNG
 static void
 convert_header_to_11(anm_header_t* oldheader)
 {
@@ -442,6 +445,7 @@ convert_header_to_11(anm_header_t* oldheader)
     th11->hasdata = header.hasdata;
     th11->nextoffset = header.nextoffset;
 }
+#endif
 
 static char*
 anm_get_name(anm_t* anm, const char* name)
@@ -687,7 +691,9 @@ anm_read_file(const char* filename)
 
         /* TH06 doesn't store entry data. */
         if (entry->header.hasdata) {
+#ifdef HAVE_LIBPNG
             char* data = NULL;
+#endif
             char magic[5] = { 0 };
 
             util_seek(f, offset + entry->header.thtxoffset);
@@ -719,13 +725,17 @@ anm_read_file(const char* filename)
                 if (!option_force) abort();
             }
 
+            entry->data_size = entry->thtx.w * entry->thtx.h * 4;
+
+#ifdef HAVE_LIBPNG
             data = malloc(entry->thtx.size);
             util_read(f, data, entry->thtx.size);
 
-            entry->data_size = entry->thtx.w * entry->thtx.h * 4;
             entry->data = fmt_to_rgba(data, entry->thtx.w * entry->thtx.h, entry->thtx.format);
-
             free(data);
+#else
+            entry->data = NULL;
+#endif
         }
 
         if (!entry->header.nextoffset)
@@ -739,208 +749,6 @@ anm_read_file(const char* filename)
     qsort(anm->names, anm->name_count, sizeof(char*), util_strpcmp);
 
     return anm;
-}
-
-static void
-util_total_entry_size(const anm_t* anm, const char* name, unsigned int* widthptr, unsigned int* heightptr)
-{
-    unsigned int i;
-    unsigned int width = 0;
-    unsigned int height = 0;
-
-    for (i = 0; i < anm->entry_count; ++i) {
-        if (anm->entries[i].name == name) {
-            if (!anm->entries[i].header.hasdata)
-                return;
-            if (anm->entries[i].header.x + anm->entries[i].thtx.w > width)
-                width = anm->entries[i].header.x + anm->entries[i].thtx.w;
-            if (anm->entries[i].header.y + anm->entries[i].thtx.h > height)
-                height = anm->entries[i].header.y + anm->entries[i].thtx.h;
-        }
-    }
-
-    *widthptr = width;
-    *heightptr = height;
-}
-
-#ifdef HAVE_LIBPNG
-
-typedef struct {
-    char* data;
-    unsigned int width;
-    unsigned int height;
-    format_t format;
-} image_t;
-
-static image_t*
-png_read(FILE* stream, format_t format)
-{
-    unsigned int y;
-    image_t* image;
-    png_structp png_ptr;
-    png_infop info_ptr;
-    png_bytepp row_pointers;
-
-    png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
-    info_ptr = png_create_info_struct(png_ptr);
-    png_init_io(png_ptr, stream);
-    png_read_png(png_ptr, info_ptr, PNG_TRANSFORM_IDENTITY, NULL);
-
-    /* XXX: Consider just converting everything ... */
-    if (png_get_color_type(png_ptr, info_ptr) != PNG_COLOR_TYPE_RGB_ALPHA) {
-        /* XXX: current_input? exit(1)? */
-        fprintf(stderr, "%s: %s must be RGBA\n", argv0, current_input);
-        exit(1);
-    }
-
-    row_pointers = png_get_rows(png_ptr, info_ptr);
-
-    image = malloc(sizeof(image_t));
-    image->width = png_get_image_width(png_ptr, info_ptr);
-    image->height = png_get_image_height(png_ptr, info_ptr);
-    image->format = format;
-    image->data = malloc(image->width * image->height * format_Bpp(image->format));
-
-    for (y = 0; y < image->height; ++y) {
-        if (format == FORMAT_RGBA8888) {
-            memcpy(image->data + y * image->width * format_Bpp(image->format), row_pointers[y], image->width * format_Bpp(image->format));
-        } else {
-            unsigned char* converted_data = rgba_to_fmt((uint32_t*)row_pointers[y], image->width, image->format);
-            memcpy(image->data + y * image->width * format_Bpp(image->format), converted_data, image->width * format_Bpp(image->format));
-            free(converted_data);
-        }
-    }
-
-    png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
-
-    return image;
-}
-
-static void
-png_write(FILE* stream, image_t* image)
-{
-    unsigned int y;
-    png_structp png_ptr;
-    png_infop info_ptr;
-    png_bytepp imagep;
-
-    png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
-    info_ptr = png_create_info_struct(png_ptr);
-    png_init_io(png_ptr, stream);
-    png_set_IHDR(png_ptr, info_ptr,
-        image->width, image->height, 8, PNG_COLOR_TYPE_RGB_ALPHA,
-        PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
-    png_write_info(png_ptr, info_ptr);
-
-    imagep = malloc(sizeof(png_byte*) * image->height);
-    for (y = 0; y < image->height; ++y)
-        imagep[y] = (png_byte*)(image->data + y * image->width * 4);
-
-    png_write_image(png_ptr, imagep);
-    free(imagep);
-    png_write_end(png_ptr, info_ptr);
-    png_destroy_write_struct(&png_ptr, &info_ptr);
-}
-
-static void
-anm_replace(const anm_t* anm, const char* name, const char* filename)
-{
-    const format_t formats[] = { FORMAT_BGRA8888, FORMAT_BGR565, FORMAT_BGRA4444, FORMAT_GRAY8 };
-    unsigned int f, i, y;
-    unsigned int width = 0;
-    unsigned int height = 0;
-    FILE* stream;
-    image_t* image;
-
-    util_total_entry_size(anm, name, &width, &height);
-    if (width == 0 || height == 0) {
-        /* There's nothing to do. */
-        return;
-    }
-
-    stream = fopen(filename, "rb");
-    if (!stream) {
-        fprintf(stderr, "%s: couldn't open %s for reading: %s\n", argv0, filename, strerror(errno));
-        exit(1);
-    }
-    image = png_read(stream, FORMAT_RGBA8888);
-    fclose(stream);
-
-    if (width != image->width || height != image->height) {
-        fprintf(stderr, "%s:%s:%s: wrong image dimensions for %s: %u, %u instead of %u, %u\n", argv0, current_input, name, filename, image->width, image->height, width, height);
-        exit(1);
-    }
-
-    for (f = 0; f < sizeof(formats) / sizeof(formats[0]); ++f) {
-        unsigned char* converted_data = NULL;
-        for (i = 0; i < anm->entry_count; ++i) {
-            if (anm->entries[i].name == name &&
-                anm->entries[i].header.format == formats[f] &&
-                anm->entries[i].header.hasdata) {
-
-                if (!converted_data)
-                    converted_data = rgba_to_fmt((uint32_t*)image->data, width * height, formats[f]);
-
-                for (y = anm->entries[i].header.y; y < anm->entries[i].header.y + anm->entries[i].thtx.h; ++y) {
-                    memcpy(anm->entries[i].data + (y - anm->entries[i].header.y) * anm->entries[i].thtx.w * format_Bpp(formats[f]),
-                           converted_data + y * width * format_Bpp(formats[f]) + anm->entries[i].header.x * format_Bpp(formats[f]),
-                           anm->entries[i].thtx.w * format_Bpp(formats[f]));
-                }
-            }
-        }
-        free(converted_data);
-    }
-
-    free(image->data);
-    free(image);
-}
-
-static void
-anm_extract(const anm_t* anm, const char* name)
-{
-    const format_t formats[] = { FORMAT_GRAY8, FORMAT_BGRA4444, FORMAT_BGR565, FORMAT_BGRA8888 };
-    FILE* stream;
-    image_t image;
-
-    unsigned int f, i, y;
-
-    image.width = 0;
-    image.height = 0;
-    image.format = FORMAT_RGBA8888;
-
-    util_total_entry_size(anm, name, &image.width, &image.height);
-
-    if (image.width == 0 || image.height == 0) {
-        /* Then there's nothing to extract. */
-        return;
-    }
-
-    image.data = malloc(image.width * image.height * 4);
-    /* XXX: Why 0xff? */
-    memset(image.data, 0xff, image.width * image.height * 4);
-
-    for (f = 0; f < sizeof(formats) / sizeof(formats[0]); ++f) {
-        for (i = 0; i < anm->entry_count; ++i) {
-            if (anm->entries[i].header.hasdata && anm->entries[i].name == name && formats[f] == anm->entries[i].header.format) {
-                for (y = anm->entries[i].header.y; y < anm->entries[i].header.y + anm->entries[i].thtx.h; ++y) {
-                    memcpy(image.data + y * image.width * 4 + anm->entries[i].header.x * 4,
-                           anm->entries[i].data + (y - anm->entries[i].header.y) * anm->entries[i].thtx.w * 4,
-                           anm->entries[i].thtx.w * 4);
-                }
-            }
-        }
-    }
-
-    util_makepath(name);
-    stream = fopen(name, "wb");
-    if (!stream) {
-        fprintf(stderr, "%s: couldn't open %s for writing: %s\n", argv0, name, strerror(errno));
-        return;
-    }
-    png_write(stream, &image);
-    fclose(stream);
-
-    free(image.data);
 }
 
 static void
@@ -1056,6 +864,207 @@ anm_dump(FILE* stream, const anm_t* anm)
 
         fprintf(stream, "\n");
     }
+}
+
+#ifdef HAVE_LIBPNG
+typedef struct {
+    char* data;
+    unsigned int width;
+    unsigned int height;
+    format_t format;
+} image_t;
+
+static image_t*
+png_read(FILE* stream, format_t format)
+{
+    unsigned int y;
+    image_t* image;
+    png_structp png_ptr;
+    png_infop info_ptr;
+    png_bytepp row_pointers;
+
+    png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+    info_ptr = png_create_info_struct(png_ptr);
+    png_init_io(png_ptr, stream);
+    png_read_png(png_ptr, info_ptr, PNG_TRANSFORM_IDENTITY, NULL);
+
+    /* XXX: Consider just converting everything ... */
+    if (png_get_color_type(png_ptr, info_ptr) != PNG_COLOR_TYPE_RGB_ALPHA) {
+        /* XXX: current_input? exit(1)? */
+        fprintf(stderr, "%s: %s must be RGBA\n", argv0, current_input);
+        exit(1);
+    }
+
+    row_pointers = png_get_rows(png_ptr, info_ptr);
+
+    image = malloc(sizeof(image_t));
+    image->width = png_get_image_width(png_ptr, info_ptr);
+    image->height = png_get_image_height(png_ptr, info_ptr);
+    image->format = format;
+    image->data = malloc(image->width * image->height * format_Bpp(image->format));
+
+    for (y = 0; y < image->height; ++y) {
+        if (format == FORMAT_RGBA8888) {
+            memcpy(image->data + y * image->width * format_Bpp(image->format), row_pointers[y], image->width * format_Bpp(image->format));
+        } else {
+            unsigned char* converted_data = rgba_to_fmt((uint32_t*)row_pointers[y], image->width, image->format);
+            memcpy(image->data + y * image->width * format_Bpp(image->format), converted_data, image->width * format_Bpp(image->format));
+            free(converted_data);
+        }
+    }
+
+    png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
+
+    return image;
+}
+
+static void
+png_write(FILE* stream, image_t* image)
+{
+    unsigned int y;
+    png_structp png_ptr;
+    png_infop info_ptr;
+    png_bytepp imagep;
+
+    png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+    info_ptr = png_create_info_struct(png_ptr);
+    png_init_io(png_ptr, stream);
+    png_set_IHDR(png_ptr, info_ptr,
+        image->width, image->height, 8, PNG_COLOR_TYPE_RGB_ALPHA,
+        PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
+    png_write_info(png_ptr, info_ptr);
+
+    imagep = malloc(sizeof(png_byte*) * image->height);
+    for (y = 0; y < image->height; ++y)
+        imagep[y] = (png_byte*)(image->data + y * image->width * 4);
+
+    png_write_image(png_ptr, imagep);
+    free(imagep);
+    png_write_end(png_ptr, info_ptr);
+    png_destroy_write_struct(&png_ptr, &info_ptr);
+}
+
+static void
+util_total_entry_size(const anm_t* anm, const char* name, unsigned int* widthptr, unsigned int* heightptr)
+{
+    unsigned int i;
+    unsigned int width = 0;
+    unsigned int height = 0;
+
+    for (i = 0; i < anm->entry_count; ++i) {
+        if (anm->entries[i].name == name) {
+            if (!anm->entries[i].header.hasdata)
+                return;
+            if (anm->entries[i].header.x + anm->entries[i].thtx.w > width)
+                width = anm->entries[i].header.x + anm->entries[i].thtx.w;
+            if (anm->entries[i].header.y + anm->entries[i].thtx.h > height)
+                height = anm->entries[i].header.y + anm->entries[i].thtx.h;
+        }
+    }
+
+    *widthptr = width;
+    *heightptr = height;
+}
+
+static void
+anm_replace(const anm_t* anm, const char* name, const char* filename)
+{
+    const format_t formats[] = { FORMAT_BGRA8888, FORMAT_BGR565, FORMAT_BGRA4444, FORMAT_GRAY8 };
+    unsigned int f, i, y;
+    unsigned int width = 0;
+    unsigned int height = 0;
+    FILE* stream;
+    image_t* image;
+
+    util_total_entry_size(anm, name, &width, &height);
+    if (width == 0 || height == 0) {
+        /* There's nothing to do. */
+        return;
+    }
+
+    stream = fopen(filename, "rb");
+    if (!stream) {
+        fprintf(stderr, "%s: couldn't open %s for reading: %s\n", argv0, filename, strerror(errno));
+        exit(1);
+    }
+    image = png_read(stream, FORMAT_RGBA8888);
+    fclose(stream);
+
+    if (width != image->width || height != image->height) {
+        fprintf(stderr, "%s:%s:%s: wrong image dimensions for %s: %u, %u instead of %u, %u\n", argv0, current_input, name, filename, image->width, image->height, width, height);
+        exit(1);
+    }
+
+    for (f = 0; f < sizeof(formats) / sizeof(formats[0]); ++f) {
+        unsigned char* converted_data = NULL;
+        for (i = 0; i < anm->entry_count; ++i) {
+            if (anm->entries[i].name == name &&
+                anm->entries[i].header.format == formats[f] &&
+                anm->entries[i].header.hasdata) {
+
+                if (!converted_data)
+                    converted_data = rgba_to_fmt((uint32_t*)image->data, width * height, formats[f]);
+
+                for (y = anm->entries[i].header.y; y < anm->entries[i].header.y + anm->entries[i].thtx.h; ++y) {
+                    memcpy(anm->entries[i].data + (y - anm->entries[i].header.y) * anm->entries[i].thtx.w * format_Bpp(formats[f]),
+                           converted_data + y * width * format_Bpp(formats[f]) + anm->entries[i].header.x * format_Bpp(formats[f]),
+                           anm->entries[i].thtx.w * format_Bpp(formats[f]));
+                }
+            }
+        }
+        free(converted_data);
+    }
+
+    free(image->data);
+    free(image);
+}
+
+static void
+anm_extract(const anm_t* anm, const char* name)
+{
+    const format_t formats[] = { FORMAT_GRAY8, FORMAT_BGRA4444, FORMAT_BGR565, FORMAT_BGRA8888 };
+    FILE* stream;
+    image_t image;
+
+    unsigned int f, i, y;
+
+    image.width = 0;
+    image.height = 0;
+    image.format = FORMAT_RGBA8888;
+
+    util_total_entry_size(anm, name, &image.width, &image.height);
+
+    if (image.width == 0 || image.height == 0) {
+        /* Then there's nothing to extract. */
+        return;
+    }
+
+    image.data = malloc(image.width * image.height * 4);
+    /* XXX: Why 0xff? */
+    memset(image.data, 0xff, image.width * image.height * 4);
+
+    for (f = 0; f < sizeof(formats) / sizeof(formats[0]); ++f) {
+        for (i = 0; i < anm->entry_count; ++i) {
+            if (anm->entries[i].header.hasdata && anm->entries[i].name == name && formats[f] == anm->entries[i].header.format) {
+                for (y = anm->entries[i].header.y; y < anm->entries[i].header.y + anm->entries[i].thtx.h; ++y) {
+                    memcpy(image.data + y * image.width * 4 + anm->entries[i].header.x * 4,
+                           anm->entries[i].data + (y - anm->entries[i].header.y) * anm->entries[i].thtx.w * 4,
+                           anm->entries[i].thtx.w * 4);
+                }
+            }
+        }
+    }
+
+    util_makepath(name);
+    stream = fopen(name, "wb");
+    if (!stream) {
+        fprintf(stderr, "%s: couldn't open %s for writing: %s\n", argv0, name, strerror(errno));
+        return;
+    }
+    png_write(stream, &image);
+    fclose(stream);
+
+    free(image.data);
 }
 
 static anm_t*
@@ -1295,7 +1304,6 @@ anm_write(anm_t* anm, const char* filename)
 
     fclose(stream);
 }
-
 #endif
 
 static void
@@ -1343,95 +1351,88 @@ anm_free(anm_t* anm)
 static void
 print_usage(void)
 {
-    printf("Usage: %s [OPTION]... MODE ARCHIVE [FILE]...\n"
-           "MODE can be:\n"
-           "  -l    list archive\n"
+    printf("Usage: %s COMMAND\n"
+           "COMMAND can be:\n"
+           "  l[OPTION...] ARCHIVE            list archive\n", argv0);
 #ifdef HAVE_LIBPNG
-           "  -x    extract archive\n"
-           "  -r    replace entries in archive\n"
-           "  -c F  create archive from F\n"
+    printf("  x[OPTION...] ARCHIVE [FILE...]  extract entries\n"
+           "  r[OPTION...] ARCHIVE NAME FILE  replace entry in archive\n"
+           "  c[OPTION...] ARCHIVE SPEC       create archive\n");
 #endif
+    printf("  h                               display this help and exit\n"
+           "  V                               display version information and exit\n"
            "OPTION can be:\n"
-           "  -f    ignore errors when possible\n"
-           "  -h    display this help and exit\n"
-           "  -V    display version information and exit\n\n"
+           "  f  ignore errors when possible\n"
            "Additional documentation might be available at <" PACKAGE_URL ">.\n"
-           "Report bugs to <" PACKAGE_BUGREPORT ">.\n"
-           , argv0);
+           "Report bugs to <" PACKAGE_BUGREPORT ">.\n");
 }
 
 int
 main(int argc, char* argv[])
 {
+    const char commands[] = "l"
+#ifdef HAVE_LIBPNG
+                            "xrc"
+#endif
+                            "hV";
+    char options[] = "f";
+    int command = 0;
+    anm_t* anm;
+#ifdef HAVE_LIBPNG
+    FILE* anmfp;
+    unsigned int offset = 0;
     int i;
-    int filestart = 0;
-    int mode = 0;
-#ifdef HAVE_LIBPNG
-    const char* archive_spec_file = NULL;
 #endif
 
-    argv0 = util_shortname(argv[0]);
-    if (!argv0)
-        argv0 = PACKAGE;
+    command = parse_args(argc, argv, print_usage, commands, options, NULL);
 
-    for (i = 1; i < argc; ++i) {
-        if (strcmp(argv[i], "-h") == 0) {
-            print_usage();
-            exit(0);
-        } else if (strcmp(argv[i], "-V") == 0) {
-            util_print_version("thanm", PACKAGE_THANM_VERSION);
-            exit(0);
-        } else if (strcmp(argv[i], "-f") == 0) {
-            option_force = 1;
-#ifdef HAVE_LIBPNG
-        } else if (strcmp(argv[i], "-x") == 0) {
-            mode = MODE_EXTRACT;
-        } else if (strcmp(argv[i], "-r") == 0) {
-            mode = MODE_REPLACE;
-        } else if (strcmp(argv[i], "-c") == 0) {
-            ++i;
-            if (i >= argc) {
-                print_usage();
-                exit(1);
-            }
-            archive_spec_file = argv[i];
-            mode = MODE_CREATE;
-#endif
-        } else if (strcmp(argv[i], "-l") == 0) {
-            mode = MODE_LIST;
-        } else {
-            filestart = i;
-            break;
-        }
-    }
-
-    if (!filestart) {
-        print_usage();
+    if (!command)
         exit(1);
-    }
 
-    current_input = util_shortname(argv[filestart]);
+    if (!strchr(options, 'f'))
+        option_force = 1;
 
-    if (mode == MODE_LIST) {
-        anm_t* anm = anm_read_file(argv[filestart]);
+    switch (command) {
+    case 'h':
+        print_usage();
+        exit(0);
+    case 'V':
+        util_print_version("thanm", PACKAGE_THANM_VERSION);
+        exit(0);
+    case 'l':
+        if (argc != 3) {
+            print_usage();
+            exit(1);
+        }
+        current_input = argv[2];
+        anm = anm_read_file(argv[2]);
         anm_dump(stdout, anm);
         anm_free(anm);
+        exit(0);
 #ifdef HAVE_LIBPNG
-    } else if (mode == MODE_EXTRACT) {
-        anm_t* anm = anm_read_file(argv[filestart]);
+    case 'x':
+        if (argc < 3) {
+            print_usage();
+            exit(1);
+        }
+        current_input = argv[2];
+        anm = anm_read_file(argv[2]);
 
-        if (argc == filestart + 1) {
+        if (argc == 3) {
             /* Extract all files. */
             for (i = 0; i < (int)anm->name_count; ++i) {
+                current_output = anm->names[i];
                 puts(anm->names[i]);
                 anm_extract(anm, anm->names[i]);
             }
         } else {
             /* Extract all listed files. */
-            for (i = filestart + 1; i < argc; ++i) {
+            for (i = 3; i < argc; ++i) {
                 unsigned int j;
                 for (j = 0; j < anm->name_count; ++j) {
                     if (strcmp(argv[i], anm->names[j]) == 0) {
+                        current_output = anm->names[i];
+                        puts(anm->names[i]);
                         anm_extract(anm, anm->names[j]);
                         goto extract_next;
                     }
@@ -1443,23 +1444,28 @@ extract_next:
         }
 
         anm_free(anm);
-    } else if (mode == MODE_REPLACE) {
-        FILE* anmfp;
-        unsigned int offset = 0;
-        anm_t* anm = anm_read_file(argv[filestart]);
+        exit(0);
+    case 'r':
+        if (argc != 5) {
+            print_usage();
+            exit(1);
+        }
+        current_output = argv[2];
+        current_input = argv[4];
+        anm = anm_read_file(argv[2]);
 
         for (i = 0; i < (int)anm->name_count; ++i) {
-            if (strcmp(argv[filestart + 1], anm->names[i]) == 0) {
-                anm_replace(anm, anm->names[i], argv[filestart + 2]);
+            if (strcmp(argv[3], anm->names[i]) == 0) {
+                anm_replace(anm, anm->names[i], argv[4]);
                 goto replace_done;
             }
         }
 
-        fprintf(stderr, "%s:%s: %s not found in archive\n", argv0, current_input, argv[filestart + 1]);
+        fprintf(stderr, "%s:%s: %s not found in archive\n", argv0, current_input, argv[3]);
 
 replace_done:
 
-        anmfp = fopen(argv[filestart], "rb+");
+        anmfp = fopen(argv[2], "rb+");
         if (!anmfp) {
             fprintf(stderr, "%s: couldn't open %s for writing: %s\n", argv0, current_input, strerror(errno));
             exit(1);
@@ -1467,7 +1473,7 @@ replace_done:
 
         for (i = 0; i < (int)anm->entry_count; ++i) {
             unsigned int nextoffset = anm->entries[i].header.nextoffset;
-            if (strcmp(argv[filestart + 1], anm->entries[i].name) == 0 && anm->entries[i].header.hasdata) {
+            if (strcmp(argv[3], anm->entries[i].name) == 0 && anm->entries[i].header.hasdata) {
                 fseek(anmfp, offset + anm->entries[i].header.thtxoffset + 4 + sizeof(thtx_header_t), SEEK_SET);
                 fwrite(anm->entries[i].data, anm->entries[i].thtx.size, 1, anmfp);
             }
@@ -1477,10 +1483,14 @@ replace_done:
         fclose(anmfp);
 
         anm_free(anm);
-    } else if (mode == MODE_CREATE) {
-        anm_t* anm;
-
-        anm = anm_create(archive_spec_file);
+        exit(0);
+    case 'c':
+        if (argc != 4) {
+            print_usage();
+            exit(1);
+        }
+        current_input = argv[3];
+        anm = anm_create(argv[3]);
 
         /* Allocate enough space for the THTX data. */
         for (i = 0; i < (int)anm->entry_count; ++i) {
@@ -1495,15 +1505,13 @@ replace_done:
         for (i = 0; i < (int)anm->name_count; ++i)
             anm_replace(anm, anm->names[i], anm->names[i]);
 
-        anm_write(anm, argv[filestart]);
+        current_output = argv[2];
+        anm_write(anm, argv[2]);
 
         anm_free(anm);
+        exit(0);
 #endif
-    } else {
-        fprintf(stderr, "%s: no MODE specified\n", argv0);
-        print_usage();
-        exit(1);
+    default:
+        abort();
     }
-
-    exit(0);
 }
