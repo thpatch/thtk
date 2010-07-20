@@ -32,7 +32,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
-#include "datpacker.h"
 #include "util.h"
 #include "bits.h"
 #include "thdat.h"

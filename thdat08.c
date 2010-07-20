@@ -33,7 +33,6 @@
 #include <string.h>
 #include <errno.h>
 #include <ctype.h>
-#include "datpacker.h"
 #include "thcrypt.h"
 #include "thlzss.h"
 #include "util.h"

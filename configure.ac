@@ -3,7 +3,7 @@ AC_PREREQ(2.62)
 AC_INIT([Touhou Toolkit], [0], [xarnonymous@gmail.com], [thtk], [http://code.google.com/p/thtk/])
 AM_INIT_AUTOMAKE([silent-rules foreign])
 AM_SILENT_RULES
-AC_CONFIG_SRCDIR([datpacker.c])
+AC_CONFIG_SRCDIR([thdat.c])
 AC_CONFIG_HEADERS([config.h])
 
 AC_DEFINE([PACKAGE_THDAT_VERSION], ["6"], [Define to the version of this package.])

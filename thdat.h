@@ -32,7 +32,50 @@
 #include <config.h>
 #include <inttypes.h>
 #include <stdio.h>
-#include "datpacker.h"
+
+extern char library_error[];
+#define LIBRARY_ERROR_SIZE 512
+
+typedef struct {
+    char name[256];
+    uint32_t size;
+    uint32_t zsize;
+    uint32_t offset;
+
+    uint32_t extra;
+} entry_t;
+
+typedef struct {
+    unsigned int version;
+    FILE* stream;
+    uint32_t offset;
+    uint32_t count;
+    entry_t* entries;
+} archive_t;
+
+/* Strip path names. */
+#define THDAT_BASENAME 1
+
+typedef struct {
+    /* THDAT_ flags. */
+    uint32_t flags;
+    /* Takes a truncated file opened for writing, archive version, and an
+     * estimated file count.  Returns private data, or NULL upon error. */
+    archive_t* (*create)(FILE*, unsigned int, unsigned int);
+    /* Takes private data, a file opened for reading, and a filename.  Returns
+     * 0, or -1 upon error.  Private data is freed upon error. */
+    int (*write)(archive_t*, entry_t*, FILE*);
+    /* Takes private data. Returns 0, or -1 upon error.  Private data is always
+     * freed. */
+    int (*close)(archive_t*);
+
+    /* Takes a stream, and an archive version. */
+    archive_t* (*open)(FILE*, unsigned int);
+    /* Takes private data, the entry to extract, and the stream to write the
+     * data to.  Returns 0, or -1 upon error. */
+    int (*extract)(archive_t*, entry_t*, FILE*);
+    /* XXX: Maybe something to clean up. */
+} archive_module_t;
 
 archive_t* thdat_open(FILE* stream, unsigned int version);
 /* TODO: Rename functions. */

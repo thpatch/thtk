@@ -31,7 +31,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "datpacker.h"
 #include "program.h"
 #include "thdat.h"
 #include "thrle.h"

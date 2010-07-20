@@ -12,7 +12,6 @@ config.h.in
 config.log
 config.status
 configure
-datpacker
 depcomp
 eclc
 ecldump
@@ -23,4 +22,5 @@ ecsparse.h
 ecsscan.c
 stamp-h1
 thanm
+thdat
 ylwrap
