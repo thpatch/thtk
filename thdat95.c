@@ -146,7 +146,7 @@ th95_open(FILE* stream, unsigned int version)
     return archive;
 }
 
-static int
+static void
 th95_decrypt_data(archive_t* archive, entry_t* entry, unsigned char* data)
 {
     const unsigned int i = th95_get_crypt_param_index(entry->name);
@@ -157,8 +157,6 @@ th95_decrypt_data(archive_t* archive, entry_t* entry, unsigned char* data)
         crypt_params = th12_crypt_params;
 
     th_decrypt(data, entry->zsize, crypt_params[i].key, crypt_params[i].step, crypt_params[i].block, crypt_params[i].limit);
-
-    return 1;
 }
 
 static int
@@ -204,7 +202,7 @@ th95_create(FILE* stream, unsigned int version, unsigned int count)
     return archive_create(stream, version, 16, count);
 }
 
-static int
+static void
 th95_encrypt_data(archive_t* archive, entry_t* entry, unsigned char* data)
 {
     const unsigned int i = th95_get_crypt_param_index(entry->name);
@@ -215,8 +213,6 @@ th95_encrypt_data(archive_t* archive, entry_t* entry, unsigned char* data)
         crypt_params = th12_crypt_params;
 
     th_encrypt(data, entry->zsize, crypt_params[i].key, crypt_params[i].step, crypt_params[i].block, crypt_params[i].limit);
-
-    return 1;
 }
 
 static int
@@ -239,10 +235,7 @@ th95_write(archive_t* archive, entry_t* entry, FILE* stream)
         entry->zsize = entry->size;
     }
 
-    if (!th95_encrypt_data(archive, entry, data)) {
-        free(data);
-        return 0;
-    }
+    th95_encrypt_data(archive, entry, data);
 
     return thdat_write_entry(archive, entry, data);
 }

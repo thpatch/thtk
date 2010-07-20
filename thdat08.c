@@ -228,7 +228,7 @@ th08_read_file(entry_t* entry, FILE* stream)
     return data;
 }
 
-static int
+static void
 th08_encrypt(archive_t* archive, entry_t* entry, unsigned char* data)
 {
     const crypt_params* current_crypt_params = archive->version == 8 ? th08_crypt_params : th09_crypt_params;
@@ -269,8 +269,6 @@ th08_encrypt(archive_t* archive, entry_t* entry, unsigned char* data)
                current_crypt_params[type].step,
                current_crypt_params[type].block,
                current_crypt_params[type].limit);
-
-    return 1;
 }
 
 static unsigned char*
@@ -291,11 +289,7 @@ th08_write(archive_t* archive, entry_t* entry, FILE* stream)
     if (!data)
         return 0;
 
-    /* XXX: Currently not possible. */
-    if (!th08_encrypt(archive, entry, data)) {
-        free(data);
-        return 0;
-    }
+    th08_encrypt(archive, entry, data);
 
     data = th08_lzss(entry, data);
 
