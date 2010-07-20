@@ -28,14 +28,12 @@
  */
 #include <config.h>
 #include <inttypes.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <errno.h>
-#include "util.h"
 #include "bits.h"
 #include "thdat.h"
 #include "thlzss.h"
+#include "util.h"
 
 static uint32_t
 th06_read_uint32(struct bitstream* b)
@@ -52,9 +50,8 @@ th06_write_uint32(struct bitstream* b, uint32_t value)
         size = 2;
         if (value & 0xffff0000) {
             size = 3;
-            if (value & 0xff000000) {
+            if (value & 0xff000000)
                 size = 4;
-            }
         }
     }
 
@@ -115,6 +112,7 @@ th06_open(FILE* stream, unsigned int version)
 
         if (!util_seek(stream, archive->offset))
             return NULL;
+
         bitstream_init_stream(&b, stream);
         for (i = 0; i < count; ++i) {
             e = thdat_add_entry(archive);
@@ -165,19 +163,18 @@ th06_extract(archive_t* archive, entry_t* entry, FILE* stream)
     unsigned char* data = malloc(entry->size);
 
     if (!util_seek(archive->stream, entry->offset))
-        return -1;
+        return 0;
 
     th_unlz_file(archive->stream, data, entry->size);
 
-    if (fwrite(data, entry->size, 1, stream) != 1) {
-        snprintf(library_error, LIBRARY_ERROR_SIZE, "couldn't write: %s", strerror(errno));
+    if (!util_write(stream, data, entry->size)) {
         free(data);
-        return -1;
+        return 0;
     }
 
     free(data);
 
-    return 0;
+    return 1;
 }
 
 static archive_t*
@@ -259,10 +256,9 @@ th06_close(archive_t* archive)
     if (archive->version == 6) {
         bitstream_finish(&b);
 
-        if (fwrite(b.io.buffer.buffer, b.byte_count, 1, archive->stream) != 1) {
-            snprintf(library_error, LIBRARY_ERROR_SIZE, "couldn't write: %s", strerror(errno));
+        if (!util_write(archive->stream, b.io.buffer.buffer, b.byte_count)) {
             bitstream_free(&b);
-            return -1;
+            return 0;
         }
 
         bitstream_free(&b);
@@ -272,21 +268,18 @@ th06_close(archive_t* archive)
         zbuffer = th_lz_mem(buffer, list_size, &list_zsize);
         free(buffer);
 
-        if (fwrite(zbuffer, list_zsize, 1, archive->stream) != 1) {
-            snprintf(library_error, LIBRARY_ERROR_SIZE, "couldn't write: %s", strerror(errno));
+        if (!util_write(archive->stream, zbuffer, list_zsize)) {
             free(zbuffer);
-            return -1;
+            return 0;
         }
         free(zbuffer);
     }
 
     if (!util_seek(archive->stream, 0))
-        return -1;
+        return 0;
 
-    if (fwrite(magic, 4, 1, archive->stream) != 1) {
-        snprintf(library_error, LIBRARY_ERROR_SIZE, "couldn't write: %s", strerror(errno));
-        return -1;
-    }
+    if (!util_write(archive->stream, magic, 4))
+        return 0;
 
     if (archive->version == 6) {
         bitstream_init_fixed(&b, malloc(9), 9);
@@ -296,10 +289,9 @@ th06_close(archive_t* archive)
 
         bitstream_finish(&b);
 
-        if (fwrite(b.io.buffer.buffer, b.byte_count, 1, archive->stream) != 1) {
-            snprintf(library_error, LIBRARY_ERROR_SIZE, "couldn't write: %s", strerror(errno));
+        if (!util_write(archive->stream, b.io.buffer.buffer, b.byte_count)) {
             bitstream_free(&b);
-            return -1;
+            return 0;
         }
 
         bitstream_free(&b);
@@ -308,13 +300,11 @@ th06_close(archive_t* archive)
         header[1] = archive->offset;
         header[2] = list_size;
 
-        if (fwrite(header, sizeof(header), 1, archive->stream) != 1) {
-            snprintf(library_error, LIBRARY_ERROR_SIZE, "couldn't write: %s", strerror(errno));
-            return -1;
-        }
+        if (util_write(archive->stream, header, sizeof(header)))
+            return 0;
     }
 
-    return 0;
+    return 1;
 }
 
 const archive_module_t archive_th06 = {

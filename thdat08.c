@@ -27,17 +27,16 @@
  * DAMAGE.
  */
 #include <config.h>
+#include <ctype.h>
 #include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <errno.h>
-#include <ctype.h>
+#include "program.h"
 #include "thcrypt.h"
+#include "thdat.h"
 #include "thlzss.h"
 #include "util.h"
-#include "thdat.h"
-#include "program.h"
 
 typedef struct {
     unsigned char type;
@@ -161,15 +160,18 @@ th08_extract(archive_t* archive, entry_t* entry, FILE* stream)
     unsigned int i;
     int type = -1;
 
-    if (!util_seek(archive->stream, entry->offset))
-        return -1;
+    if (!util_seek(archive->stream, entry->offset)) {
+        free(data);
+        return 0;
+    }
     th_unlz_file(archive->stream, data, entry->size);
 
     entry->size -= 4;
 
     if (strncmp((char*)data, "edz", 3)) {
         fprintf(stderr, "%s: entry did not start with \"edz\"\n", argv0);
-        return -1;
+        free(data);
+        return 0;
     }
 
     for (i = 0; i < 7; ++i) {
@@ -181,7 +183,8 @@ th08_extract(archive_t* archive, entry_t* entry, FILE* stream)
 
     if (type == -1) {
         fprintf(stderr, "%s: unsupported entry key '%c'\n", argv0, data[3]);
-        return -1;
+        free(data);
+        return 0;
     }
 
     th_decrypt(data + 4,
@@ -191,15 +194,14 @@ th08_extract(archive_t* archive, entry_t* entry, FILE* stream)
                current_crypt_params[type].block,
                current_crypt_params[type].limit);
 
-    if (fwrite(data + 4, entry->size, 1, stream) != 1) {
-        snprintf(library_error, LIBRARY_ERROR_SIZE, "couldn't write: %s", strerror(errno));
+    if (!util_write(stream, data + 4, entry->size)) {
         free(data);
-        return -1;
+        return 0;
     }
 
     free(data);
 
-    return 0;
+    return 1;
 }
 
 static archive_t*
@@ -213,8 +215,7 @@ th08_read_file(entry_t* entry, FILE* stream)
 {
     unsigned char* data = malloc(entry->size + 4);
 
-    if (fread(data + 4, entry->size, 1, stream) != 1) {
-        snprintf(library_error, LIBRARY_ERROR_SIZE, "couldn't read: %s", strerror(errno));
+    if (!util_read(stream, data + 4, entry->size)) {
         free(data);
         return NULL;
     }
@@ -230,28 +231,27 @@ th08_encrypt(archive_t* archive, entry_t* entry, unsigned char* data)
     char ext[5];
 
     /* TODO: Move all of this to one or two functions. */
-    if (strlen(entry->name) < 4) {
+    if (strlen(entry->name) < 4)
         strcpy(ext, "");
-    } else {
+    else
         strcpy(ext, entry->name + strlen(entry->name) - 4);
-    }
+
     tolowerstr(ext);
 
-    if (strcmp(ext, ".anm") == 0) {
+    if (strcmp(ext, ".anm") == 0)
         type = TYPE_ANM;
-    } else if (strcmp(ext, ".ecl") == 0) {
+    else if (strcmp(ext, ".ecl") == 0)
         type = TYPE_ECL;
-    } else if (strcmp(ext, ".jpg") == 0) {
+    else if (strcmp(ext, ".jpg") == 0)
         type = TYPE_JPG;
-    } else if (strcmp(ext, ".msg") == 0) {
+    else if (strcmp(ext, ".msg") == 0)
         type = TYPE_MSG;
-    } else if (strcmp(ext, ".txt") == 0) {
+    else if (strcmp(ext, ".txt") == 0)
         type = TYPE_TXT;
-    } else if (strcmp(ext, ".wav") == 0) {
+    else if (strcmp(ext, ".wav") == 0)
         type = TYPE_WAV;
-    } else {
+    else
         type = TYPE_ETC;
-    }
 
     data[0] = 'e';
     data[1] = 'd';
@@ -265,7 +265,7 @@ th08_encrypt(archive_t* archive, entry_t* entry, unsigned char* data)
                current_crypt_params[type].block,
                current_crypt_params[type].limit);
 
-    return 0;
+    return 1;
 }
 
 static unsigned char*
@@ -284,10 +284,10 @@ th08_write(archive_t* archive, entry_t* entry, FILE* stream)
 
     data = th08_read_file(entry, stream);
     if (!data)
-        return -1;
+        return 0;
 
     if (th08_encrypt(archive, entry, data) == -1)
-        return -1;
+        return 0;
 
     data = th08_lzss(entry, data);
 
@@ -336,10 +336,9 @@ th08_close(archive_t* archive)
 
     th_encrypt(zbuffer, list_zsize, 0x3e, 0x9b, 0x80, 0x400);
 
-    if (fwrite(zbuffer, list_zsize, 1, archive->stream) != 1) {
-        snprintf(library_error, LIBRARY_ERROR_SIZE, "couldn't write: %s", strerror(errno));
+    if (!util_write(archive->stream, zbuffer, list_zsize)) {
         free(zbuffer);
-        return -1;
+        return 0;
     }
     free(zbuffer);
 
@@ -351,14 +350,12 @@ th08_close(archive_t* archive)
     th_encrypt((unsigned char*)&header[1], sizeof(uint32_t) * 3, 0x1b, 0x37, sizeof(uint32_t) * 3, 0x400);
 
     if (!util_seek(archive->stream, 0))
-        return -1;
+        return 0;
 
-    if (fwrite(header, sizeof(header), 1, archive->stream) != 1) {
-        snprintf(library_error, LIBRARY_ERROR_SIZE, "couldn't write: %s", strerror(errno));
-        return -1;
-    }
+    if (!util_write(archive->stream, header, sizeof(header)))
+        return 0;
 
-    return 0;
+    return 1;
 }
 
 const archive_module_t archive_th08 = {

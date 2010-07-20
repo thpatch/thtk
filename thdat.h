@@ -33,9 +33,6 @@
 #include <inttypes.h>
 #include <stdio.h>
 
-extern char library_error[];
-#define LIBRARY_ERROR_SIZE 512
-
 typedef struct {
     char name[256];
     uint32_t size;
@@ -63,16 +60,16 @@ typedef struct {
      * estimated file count.  Returns private data, or NULL upon error. */
     archive_t* (*create)(FILE*, unsigned int, unsigned int);
     /* Takes private data, a file opened for reading, and a filename.  Returns
-     * 0, or -1 upon error.  Private data is freed upon error. */
+     * 1, or 0 upon error.  Private data is freed upon error. */
     int (*write)(archive_t*, entry_t*, FILE*);
-    /* Takes private data. Returns 0, or -1 upon error.  Private data is always
+    /* Takes private data. Returns 1, or 0 upon error.  Private data is always
      * freed. */
     int (*close)(archive_t*);
 
     /* Takes a stream, and an archive version. */
     archive_t* (*open)(FILE*, unsigned int);
     /* Takes private data, the entry to extract, and the stream to write the
-     * data to.  Returns 0, or -1 upon error. */
+     * data to.  Returns 1, or 0 upon error. */
     int (*extract)(archive_t*, entry_t*, FILE*);
     /* XXX: Maybe something to clean up. */
 } archive_module_t;
@@ -80,8 +77,6 @@ typedef struct {
 archive_t* thdat_open(FILE* stream, unsigned int version);
 /* TODO: Rename functions. */
 archive_t* archive_create(FILE* stream, uint32_t version, uint32_t offset, unsigned int count);
-
-/* All of these functions set library_error on error. */
 
 /* Reads entry->size bytes from the passed file descriptor.  Returns a newly
  * allocated buffer with the read data.  Returns NULL on error. */
@@ -96,7 +91,7 @@ unsigned char* thdat_read_file_lzss(entry_t* entry, FILE* stream);
 unsigned char* thdat_rle(entry_t* entry, unsigned char* data);
 entry_t* thdat_add_entry(archive_t* archive);
 /* Writes the entry->zsize bytes from the passed buffer to the archive.  Frees
- * the passed buffer.  Updates the archive offset.  Returns -1 on error. */
+ * the passed buffer.  Updates the archive offset.  Returns 0 on error. */
 int thdat_write_entry(archive_t* archive, entry_t* entry, unsigned char* data);
 /* Sorts the entries in the archive according to their offsets. */
 void thdat_sort(archive_t* archive);

@@ -86,14 +86,14 @@ th02_extract(archive_t* archive, entry_t* entry, FILE* stream)
 {
     unsigned int i;
     if (!util_seek(archive->stream, entry->offset))
-        return -1;
+        return 0;
 
     if (entry->size == entry->zsize) {
         for (i = 0; i < entry->zsize; ++i) {
             int c = fgetc(archive->stream);
             if (c == EOF) {
                 fprintf(stderr, "%s: error while reading from archive: %s\n", argv0, strerror(errno));
-                return -1;
+                return 0;
             }
             fputc(c ^ 0x12, stream);
         }
@@ -101,7 +101,7 @@ th02_extract(archive_t* archive, entry_t* entry, FILE* stream)
         unsigned char* zbuf = malloc(entry->zsize);
 
         if (!util_read(archive->stream, zbuf, entry->zsize))
-            return -1;
+            return 0;
 
         for (i = 0; i < entry->zsize; ++i)
             zbuf[i] ^= 0x12;
@@ -111,7 +111,7 @@ th02_extract(archive_t* archive, entry_t* entry, FILE* stream)
         free(zbuf);
     }
 
-    return 0;
+    return 1;
 }
 
 static archive_t*
@@ -134,7 +134,7 @@ th02_write(archive_t* archive, entry_t* entry, FILE* stream)
 
     data = thdat_read_file(entry, stream);
     if (!data)
-        return -1;
+        return 0;
 
     data = thdat_rle(entry, data);
 
@@ -156,7 +156,7 @@ th02_close(archive_t* archive)
     fe.zero = 0;
 
     if (!util_seek(archive->stream, 0))
-        return -1;
+        return 0;
 
     buffer = malloc(list_size);
     memset(buffer, 0, list_size);
@@ -174,14 +174,13 @@ th02_close(archive_t* archive)
         buffer_ptr = mempcpy(buffer_ptr, &fe, sizeof(th02_entry_header_t));
     }
 
-    if (fwrite(buffer, list_size, 1, archive->stream) != 1) {
-        snprintf(library_error, LIBRARY_ERROR_SIZE, "couldn't write: %s", strerror(errno));
+    if (!util_write(archive->stream, buffer, list_size)) {
         free(buffer);
-        return -1;
+        return 0;
     }
     free(buffer);
 
-    return 0;
+    return 1;
 }
 
 const archive_module_t archive_th02 = {

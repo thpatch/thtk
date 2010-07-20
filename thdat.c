@@ -44,8 +44,6 @@ extern const archive_module_t archive_th75;
 extern const archive_module_t archive_th08;
 extern const archive_module_t archive_th95;
 
-char library_error[LIBRARY_ERROR_SIZE] = { 0 };
-
 archive_t*
 thdat_open(FILE* stream, unsigned int version)
 {
@@ -67,10 +65,8 @@ archive_create(FILE* stream, uint32_t version, uint32_t offset, unsigned int cou
 
     /* Reserve some space for the header. */
     /* TODO: Use a seek wrapper. */
-    if (fseek(stream, offset, SEEK_SET) == -1) {
-        snprintf(library_error, LIBRARY_ERROR_SIZE, "couldn't seek: %s", strerror(errno));
+    if (!util_seek(stream, offset))
         return NULL;
-    }
 
     archive = malloc(sizeof(archive_t));
     archive->entries = malloc(count * sizeof(entry_t));
@@ -88,8 +84,7 @@ thdat_read_file(entry_t* entry, FILE* stream)
 {
     unsigned char* data = malloc(entry->size);
 
-    if (fread(data, entry->size, 1, stream) != 1) {
-        snprintf(library_error, LIBRARY_ERROR_SIZE, "couldn't read: %s", strerror(errno));
+    if (!util_read(stream, data, entry->size)) {
         free(data);
         return NULL;
     }
@@ -153,11 +148,11 @@ thdat_write_entry(archive_t* archive, entry_t* entry, unsigned char* data)
     free(data);
 
     if (ret != 1) {
-        snprintf(library_error, LIBRARY_ERROR_SIZE, "couldn't write: %s", strerror(errno));
+        fprintf(stderr, "%s: failed writing %lu bytes: %s\n", argv0, (long unsigned int)entry->zsize, strerror(errno));
         free(data);
-        return -1;
-    } else
         return 0;
+    } else
+        return 1;
 }
 
 static int
@@ -215,11 +210,11 @@ archive_check_duplicates(archive_t* archive)
             if (i == j)
                 continue;
             if (strcmp(archive->entries[i].name, archive->entries[j].name) == 0)
-                snprintf(library_error, LIBRARY_ERROR_SIZE, "duplicate filename ``%s''", archive->entries[i].name);
+                fprintf(stderr, "%s: duplicate entry: %s\n", argv0, archive->entries[i].name);
         }
     }
 
-    return 0;
+    return 1;
 }
 
 static void
@@ -311,7 +306,6 @@ main(int argc, char* argv[])
 
         private = archive_module->create(archive, version, argc - 3);
         if (!private) {
-            fprintf(stderr, "%s: %s\n", argv0, library_error);
             fclose(archive);
             return 1;
         }
@@ -334,8 +328,7 @@ main(int argc, char* argv[])
 }
 
             entry = archive_add_entry(private, stream, argv[i], archive_module->flags);
-            if (!entry || archive_module->write(private, entry, stream) == -1) {
-                fprintf(stderr, "%s: %s\n", argv0, library_error);
+            if (!entry || !archive_module->write(private, entry, stream)) {
                 fclose(stream);
                 fclose(archive);
                 archive_free(private);
@@ -345,8 +338,7 @@ main(int argc, char* argv[])
             fclose(stream);
         }
 
-        if (archive_check_duplicates(private) || archive_module->close(private) == -1) {
-            fprintf(stderr, "%s: %s\n", argv0, library_error);
+        if (!archive_check_duplicates(private) || !archive_module->close(private)) {
             fclose(archive);
             archive_free(private);
             return 1;
@@ -383,7 +375,7 @@ main(int argc, char* argv[])
                         stream = fopen(private->entries[i].name, "wb");
                         current_output = private->entries[i].name;
                         printf("%s\n", current_output);
-                        if (archive_module->extract(private, &private->entries[i], stream) == -1)
+                        if (!archive_module->extract(private, &private->entries[i], stream))
                             return 1;
                         fclose(stream);
                         ++extracted;
@@ -400,7 +392,7 @@ main(int argc, char* argv[])
                 FILE* stream = fopen(private->entries[i].name, "wb");
                 current_output = private->entries[i].name;
                 printf("%s\n", current_output);
-                if (archive_module->extract(private, &private->entries[i], stream) == -1)
+                if (!archive_module->extract(private, &private->entries[i], stream))
                     return 1;
                 fclose(stream);
             }

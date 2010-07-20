@@ -60,7 +60,9 @@ int util_seek(FILE* stream, long offset);
 /* A wrapper for ftell which prints an error message upon error. */
 long util_tell(FILE* stream);
 /* A wrapper for fread which prints an error message upon error. */
-int util_read(FILE* stream, void* buffa, size_t size);
+int util_read(FILE* stream, void* buffer, size_t size);
+/* A wrapper for fwrite which prints an error message upon error. */
+int util_write(FILE* stream, const void* buffer, size_t size);
 /* Returns the filesize of the passed file stream, or -1 and an error message
  * upon error. */
 long util_fsize(FILE* stream);

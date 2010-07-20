@@ -28,12 +28,10 @@
  */
 #include <config.h>
 #include <inttypes.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <errno.h>
-#include "util.h"
 #include "thdat.h"
+#include "util.h"
 
 static archive_t*
 th75_create(FILE* stream, unsigned int version, unsigned int count)
@@ -67,7 +65,7 @@ th75_write(archive_t* archive, entry_t* entry, FILE* stream)
 
     data = thdat_read_file(entry, stream);
     if (!data)
-        return -1;
+        return 0;
 
     entry->zsize = entry->size;
 
@@ -85,12 +83,10 @@ th75_close(archive_t* archive)
     unsigned char k = 100, t = 100;
 
     if (!util_seek(archive->stream, 0))
-        return -1;
+        return 0;
 
-    if (fwrite(&count, sizeof(uint16_t), 1, archive->stream) != 1) {
-        snprintf(library_error, LIBRARY_ERROR_SIZE, "couldn't write: %s", strerror(errno));
-        return -1;
-    }
+    if (!util_write(archive->stream, &count, sizeof(uint16_t)))
+        return 0;
 
     buffer = malloc(list_size);
 
@@ -108,14 +104,13 @@ th75_close(archive_t* archive)
         t += 77;
     }
 
-    if (fwrite(buffer, list_size, 1, archive->stream) != 1) {
-        snprintf(library_error, LIBRARY_ERROR_SIZE, "couldn't write: %s", strerror(errno));
+    if (!util_write(archive->stream, buffer, list_size)) {
         free(buffer);
-        return -1;
+        return 0;
     }
     free(buffer);
 
-    return 0;
+    return 1;
 }
 
 const archive_module_t archive_th75 = {
