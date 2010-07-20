@@ -50,6 +50,28 @@ typedef struct {
     entry_t* entries;
 } archive_t;
 
+archive_t* thdat_open(FILE* stream, unsigned int version);
+/* TODO: Rename functions. */
+archive_t* archive_create(FILE* stream, uint32_t version, uint32_t offset, unsigned int count);
+
+/* Reads entry->size bytes from the passed file descriptor.  Returns a newly
+ * allocated buffer with the read data.  Returns NULL on error. */
+unsigned char* thdat_read_file(entry_t* entry, FILE* stream);
+/* Reads entry->size bytes from the passed file descriptor.  Returns a newly
+ * allocated buffer containing an LZSS compressed version of the read data.
+ * Returns NULL on error. */
+unsigned char* thdat_read_file_lzss(entry_t* entry, FILE* stream);
+/* Performs RLE on the passed buffer.  Frees the passed buffer.  Updates
+ * entry->zsize.  Returns a newly allocated buffer containing the RLE data.
+ * Returns NULL on error. */
+unsigned char* thdat_rle(entry_t* entry, unsigned char* data);
+entry_t* thdat_add_entry(archive_t* archive);
+/* Writes the entry->zsize bytes from the passed buffer to the archive.  Frees
+ * the passed buffer.  Updates the archive offset.  Returns 0 on error. */
+int thdat_write_entry(archive_t* archive, entry_t* entry, unsigned char* data);
+/* Sorts the entries in the archive according to their offsets. */
+void thdat_sort(archive_t* archive);
+
 /* Strip path names. */
 #define THDAT_BASENAME 1
 
@@ -73,27 +95,5 @@ typedef struct {
     int (*extract)(archive_t*, entry_t*, FILE*);
     /* XXX: Maybe something to clean up. */
 } archive_module_t;
-
-archive_t* thdat_open(FILE* stream, unsigned int version);
-/* TODO: Rename functions. */
-archive_t* archive_create(FILE* stream, uint32_t version, uint32_t offset, unsigned int count);
-
-/* Reads entry->size bytes from the passed file descriptor.  Returns a newly
- * allocated buffer with the read data.  Returns NULL on error. */
-unsigned char* thdat_read_file(entry_t* entry, FILE* stream);
-/* Reads entry->size bytes from the passed file descriptor.  Returns a newly
- * allocated buffer containing an LZSS compressed version of the read data.
- * Returns NULL on error. */
-unsigned char* thdat_read_file_lzss(entry_t* entry, FILE* stream);
-/* Performs RLE on the passed buffer.  Frees the passed buffer.  Updates
- * entry->zsize.  Returns a newly allocated buffer containing the RLE data.
- * Returns NULL on error. */
-unsigned char* thdat_rle(entry_t* entry, unsigned char* data);
-entry_t* thdat_add_entry(archive_t* archive);
-/* Writes the entry->zsize bytes from the passed buffer to the archive.  Frees
- * the passed buffer.  Updates the archive offset.  Returns 0 on error. */
-int thdat_write_entry(archive_t* archive, entry_t* entry, unsigned char* data);
-/* Sorts the entries in the archive according to their offsets. */
-void thdat_sort(archive_t* archive);
 
 #endif
