@@ -64,7 +64,6 @@ archive_create(FILE* stream, uint32_t version, uint32_t offset, unsigned int cou
     archive_t* archive;
 
     /* Reserve some space for the header. */
-    /* TODO: Use a seek wrapper. */
     if (!util_seek(stream, offset))
         return NULL;
 
