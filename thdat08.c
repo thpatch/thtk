@@ -90,7 +90,7 @@ tolowerstr(char* str)
 static archive_t*
 th08_open(FILE* stream, unsigned int version)
 {
-    archive_t* archive = thdat_open(stream, version);
+    archive_t* archive;
     char magic[4];
     uint32_t header[3];
     entry_t* e;
@@ -102,21 +102,16 @@ th08_open(FILE* stream, unsigned int version)
     long filesize = util_fsize(stream);
     unsigned int zsize;
 
-    if (!util_read(stream, magic, 4)) {
-        free(archive);
+    if (!util_read(stream, magic, 4))
         return NULL;
-    }
 
     if (strncmp(magic, "PBGZ", 4)) {
         fprintf(stderr, "%s: %s is not a PBGZ archive\n", argv0, current_input);
-        free(archive);
         return NULL;
     }
 
-    if (!util_read(stream, header, 3 * sizeof(uint32_t))) {
-        free(archive);
+    if (!util_read(stream, header, 3 * sizeof(uint32_t)))
         return NULL;
-    }
 
     th_decrypt((unsigned char*)header, 3 * sizeof(uint32_t), 0x1b, 0x37, 3 * sizeof(uint32_t), 0x400);
 
@@ -124,10 +119,8 @@ th08_open(FILE* stream, unsigned int version)
     offset = header[1] - 345678;
     size = header[2] - 567891;
 
-    if (!util_seek(stream, offset)) {
-        free(archive);
+    if (!util_seek(stream, offset))
         return NULL;
-    }
 
     zsize = filesize - offset;
     zdata = malloc(zsize);
@@ -136,7 +129,6 @@ th08_open(FILE* stream, unsigned int version)
     if (!util_read(stream, zdata, zsize)) {
         free(data);
         free(zdata);
-        free(archive);
         return NULL;
     }
 
@@ -144,6 +136,8 @@ th08_open(FILE* stream, unsigned int version)
 
     th_unlz_mem(zdata, zsize, data, size);
     free(zdata);
+
+    archive = thdat_open(stream, version);
 
     ptr = data;
     for (i = 0; i < count; ++i) {

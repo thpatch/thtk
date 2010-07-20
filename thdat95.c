@@ -79,7 +79,7 @@ static const crypt_params_t th12_crypt_params[] = {
 static archive_t*
 th95_open(FILE* stream, unsigned int version)
 {
-    archive_t* archive = thdat_open(stream, version);
+    archive_t* archive;
     uint32_t header[4];
     unsigned int size, zsize, count;
     long filesize = util_fsize(stream);
@@ -89,16 +89,13 @@ th95_open(FILE* stream, unsigned int version)
     unsigned int i;
     entry_t* prev = NULL;
 
-    if (!util_read(stream, header, sizeof(header))) {
-        free(archive);
+    if (!util_read(stream, header, sizeof(header)))
         return NULL;
-    }
 
     th_decrypt((unsigned char*)&header, sizeof(header), 0x1b, 0x37, sizeof(header), sizeof(header));
 
     if (strncmp((const char*)&header[0], "THA1", 4)) {
         fprintf(stderr, "%s: wrong magic for archive\n", argv0);
-        free(archive);
         return NULL;
     }
 
@@ -106,15 +103,12 @@ th95_open(FILE* stream, unsigned int version)
     zsize = header[2] - 987654321;
     count = header[3] - 135792468;
 
-    if (!util_seek(stream, filesize - zsize)) {
-        free(archive);
+    if (!util_seek(stream, filesize - zsize))
         return NULL;
-    }
 
     zdata = malloc(zsize);
     if (!util_read(stream, zdata, zsize)) {
         free(zdata);
-        free(archive);
         return NULL;
     }
 
@@ -123,6 +117,8 @@ th95_open(FILE* stream, unsigned int version)
     data = malloc(size);
     th_unlz_mem(zdata, zsize, data, size);
     free(zdata);
+
+    archive = thdat_open(stream, version);
 
     ptr = data;
     for (i = 0; i < count; ++i) {

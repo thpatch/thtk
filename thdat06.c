@@ -94,15 +94,15 @@ typedef struct {
 static archive_t*
 th06_open(FILE* stream, unsigned int version)
 {
-    archive_t* archive = thdat_open(stream, version);
+    archive_t* archive;
     char magic[4];
     entry_t* e;
     unsigned int i;
 
-    if (!util_read(stream, magic, 4)) {
-        free(archive);
+    if (!util_read(stream, magic, 4))
         return NULL;
-    }
+
+    archive = thdat_open(stream, version);
 
     if (strncmp(magic, "PBG3", 4) == 0) {
         struct bitstream b;
