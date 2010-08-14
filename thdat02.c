@@ -61,8 +61,10 @@ th02_open(FILE* stream, unsigned int version)
     unsigned int i;
 
     for (;;) {
-        if (!util_read(stream, &fe, sizeof(th02_entry_header_t)))
+        if (!util_read(stream, &fe, sizeof(th02_entry_header_t))) {
+            free(archive);
             return NULL;
+        }
 
         if (!fe.magic)
             break;
@@ -100,8 +102,10 @@ th02_extract(archive_t* archive, entry_t* entry, FILE* stream)
     } else {
         unsigned char* zbuf = malloc(entry->zsize);
 
-        if (!util_read(archive->stream, zbuf, entry->zsize))
+        if (!util_read(archive->stream, zbuf, entry->zsize)) {
+            free(zbuf);
             return 0;
+        }
 
         for (i = 0; i < entry->zsize; ++i)
             zbuf[i] ^= 0x12;

@@ -102,16 +102,21 @@ th08_open(FILE* stream, unsigned int version)
     long filesize = util_fsize(stream);
     unsigned int zsize;
 
-    if (!util_read(stream, magic, 4))
-        return NULL;
-
-    if (strncmp(magic, "PBGZ", 4)) {
-        fprintf(stderr, "%s: %s is not a PBGZ archive\n", argv0, current_input);
+    if (!util_read(stream, magic, 4)) {
+        free(archive);
         return NULL;
     }
 
-    if (!util_read(stream, header, 3 * sizeof(uint32_t)))
+    if (strncmp(magic, "PBGZ", 4)) {
+        fprintf(stderr, "%s: %s is not a PBGZ archive\n", argv0, current_input);
+        free(archive);
         return NULL;
+    }
+
+    if (!util_read(stream, header, 3 * sizeof(uint32_t))) {
+        free(archive);
+        return NULL;
+    }
 
     th_decrypt((unsigned char*)header, 3 * sizeof(uint32_t), 0x1b, 0x37, 3 * sizeof(uint32_t), 0x400);
 
@@ -119,15 +124,21 @@ th08_open(FILE* stream, unsigned int version)
     offset = header[1] - 345678;
     size = header[2] - 567891;
 
-    if (!util_seek(stream, offset))
+    if (!util_seek(stream, offset)) {
+        free(archive);
         return NULL;
+    }
 
     zsize = filesize - offset;
     zdata = malloc(zsize);
     data = malloc(size);
 
-    if (!util_read(stream, zdata, zsize))
+    if (!util_read(stream, zdata, zsize)) {
+        free(data);
+        free(zdata);
+        free(archive);
         return NULL;
+    }
 
     th_decrypt(zdata, zsize, 0x3e, 0x9b, 0x80, 0x400);
 
@@ -286,8 +297,11 @@ th08_write(archive_t* archive, entry_t* entry, FILE* stream)
     if (!data)
         return 0;
 
-    if (th08_encrypt(archive, entry, data) == -1)
+    /* XXX: Currently not possible. */
+    if (!th08_encrypt(archive, entry, data)) {
+        free(data);
         return 0;
+    }
 
     data = th08_lzss(entry, data);
 

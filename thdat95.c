@@ -89,13 +89,16 @@ th95_open(FILE* stream, unsigned int version)
     unsigned int i;
     entry_t* prev = NULL;
 
-    if (!util_read(stream, header, sizeof(header)))
+    if (!util_read(stream, header, sizeof(header))) {
+        free(archive);
         return NULL;
+    }
 
     th_decrypt((unsigned char*)&header, sizeof(header), 0x1b, 0x37, sizeof(header), sizeof(header));
 
     if (strncmp((const char*)&header[0], "THA1", 4)) {
         fprintf(stderr, "%s: wrong magic for archive\n", argv0);
+        free(archive);
         return NULL;
     }
 
@@ -103,12 +106,15 @@ th95_open(FILE* stream, unsigned int version)
     zsize = header[2] - 987654321;
     count = header[3] - 135792468;
 
-    if (!util_seek(stream, filesize - zsize))
+    if (!util_seek(stream, filesize - zsize)) {
+        free(archive);
         return NULL;
+    }
 
     zdata = malloc(zsize);
     if (!util_read(stream, zdata, zsize)) {
         free(zdata);
+        free(archive);
         return NULL;
     }
 
@@ -165,11 +171,15 @@ th95_extract(archive_t* archive, entry_t* entry, FILE* stream)
     unsigned char* data;
     unsigned char* zdata = malloc(entry->zsize);
 
-    if (!util_seek(archive->stream, entry->offset))
+    if (!util_seek(archive->stream, entry->offset)) {
+        free(zdata);
         return 0;
+    }
 
-    if (!util_read(archive->stream, zdata, entry->zsize))
+    if (!util_read(archive->stream, zdata, entry->zsize)) {
+        free(zdata);
         return 0;
+    }
 
     th95_decrypt_data(archive, entry, zdata);
 
@@ -233,8 +243,10 @@ th95_write(archive_t* archive, entry_t* entry, FILE* stream)
         entry->zsize = entry->size;
     }
 
-    if (th95_encrypt_data(archive, entry, data) == -1)
+    if (!th95_encrypt_data(archive, entry, data)) {
+        free(data);
         return 0;
+    }
 
     return thdat_write_entry(archive, entry, data);
 }
