@@ -623,7 +623,6 @@ int
 compile_ecs(FILE* in, FILE* out, unsigned int version)
 {
     long pos;
-    int ret;
     unsigned int i;
     const uint32_t zero = 0;
     header_scpt_t header;
@@ -631,15 +630,13 @@ compile_ecs(FILE* in, FILE* out, unsigned int version)
 
     if (!util_seekable(out)) {
         fprintf(stderr, "%s: output is not seekable\n", argv0);
-        return -1;
+        return 0;
     }
 
     yyin = in;
 
-    ret = yyparse();
-
-    if (ret != 0)
-        return ret;
+    if (yyparse() != 0)
+        return 0;
 
     /* TODO: Use a memory buffer instead of writing many small chunks. */
 
@@ -655,29 +652,29 @@ compile_ecs(FILE* in, FILE* out, unsigned int version)
 
     if (fputs("SCPT", out) == EOF) {
         fprintf(stderr, "%s: couldn't write: %s\n", argv0, strerror(errno));
-        return 1;
+        return 0;
     }
     if (fwrite(&header, sizeof(header_scpt_t), 1, out) != 1) {
         fprintf(stderr, "%s: couldn't write: %s\n", argv0, strerror(errno));
-        return 1;
+        return 0;
     }
 
     header.include_offset = util_tell(out);
     if (header.include_offset == (uint32_t)-1) {
-        return 1;
+        return 0;
     }
     if (fputs("ANIM", out) == EOF) {
         fprintf(stderr, "%s: couldn't write: %s\n", argv0, strerror(errno));
-        return 1;
+        return 0;
     }
     if (fwrite(&anim_cnt, sizeof(uint32_t), 1, out) != 1) {
         fprintf(stderr, "%s: couldn't write: %s\n", argv0, strerror(errno));
-        return 1;
+        return 0;
     }
     for (i = 0; i < anim_cnt; ++i) {
         if (fwrite(anim_list[i], strlen(anim_list[i]) + 1, 1, out) != 1) {
             fprintf(stderr, "%s: couldn't write: %s\n", argv0, strerror(errno));
-            return 1;
+            return 0;
         }
         free(anim_list[i]);
     }
@@ -685,26 +682,26 @@ compile_ecs(FILE* in, FILE* out, unsigned int version)
 
     pos = util_tell(out);
     if (pos == -1)
-        return 1;
+        return 0;
     if (pos % 4 != 0) {
         if (fwrite(&zero, 4 - pos % 4, 1, out) != 1) {
             fprintf(stderr, "%s: couldn't write: %s\n", argv0, strerror(errno));
-            return 1;
+            return 0;
         }
     }
 
     if (fputs("ECLI", out) == EOF) {
         fprintf(stderr, "%s: couldn't write: %s\n", argv0, strerror(errno));
-        return 1;
+        return 0;
     }
     if (fwrite(&ecli_cnt, sizeof(uint32_t), 1, out) != 1) {
         fprintf(stderr, "%s: couldn't write: %s\n", argv0, strerror(errno));
-        return 1;
+        return 0;
     }
     for (i = 0; i < ecli_cnt; ++i) {
         if (fwrite(ecli_list[i], strlen(ecli_list[i]) + 1, 1, out) != 1) {
             fprintf(stderr, "%s: couldn't write: %s\n", argv0, strerror(errno));
-            return 1;
+            return 0;
         }
         free(ecli_list[i]);
     }
@@ -712,40 +709,40 @@ compile_ecs(FILE* in, FILE* out, unsigned int version)
 
     pos = util_tell(out);
     if (pos == -1)
-        return 1;
+        return 0;
     if (pos % 4 != 0) {
         if (fwrite(&zero, 4 - pos % 4, 1, out) != 1) {
             fprintf(stderr, "%s: couldn't write: %s\n", argv0, strerror(errno));
-            return 1;
+            return 0;
         }
     }
     pos = util_tell(out);
     if (pos == -1)
-        return 1;
+        return 0;
     header.include_length = pos - header.include_offset;
 
     for (i = 0; i < sub_cnt; ++i) {
         if (fwrite(&zero, sizeof(uint32_t), 1, out) != 1) {
             fprintf(stderr, "%s: couldn't write: %s\n", argv0, strerror(errno));
-            return 1;
+            return 0;
         }
     }
 
     for (i = 0; i < sub_cnt; ++i) {
         if (fwrite(subs[i].name, strlen(subs[i].name) + 1, 1, out) != 1) {
             fprintf(stderr, "%s: couldn't write: %s\n", argv0, strerror(errno));
-            return 1;
+            return 0;
         }
         free(subs[i].name);
     }
 
     pos = util_tell(out);
     if (pos == -1)
-        return 1;
+        return 0;
     if (pos % 4 != 0) {
         if (fwrite(&zero, 4 - pos % 4, 1, out) != 1) {
             fprintf(stderr, "%s: couldn't write: %s\n", argv0, strerror(errno));
-            return 1;
+            return 0;
         }
     }
 
@@ -757,20 +754,20 @@ compile_ecs(FILE* in, FILE* out, unsigned int version)
         unsigned int j;
         subs[i].offset = util_tell(out);
         if (subs[i].offset == (uint32_t)-1)
-            return 1;
+            return 0;
         if (fputs("ECLH", out) == EOF) {
             fprintf(stderr, "%s: couldn't write: %s\n", argv0, strerror(errno));
-            return 1;
+            return 0;
         }
         if (fwrite(&eclh, sizeof(header_eclh_t), 1, out) != 1) {
             fprintf(stderr, "%s: couldn't write: %s\n", argv0, strerror(errno));
-            return 1;
+            return 0;
         }
         for (j = 0; j < subs[i].instr_cnt; ++j) {
             char* data = instr_serialize(&subs[i], &subs[i].instrs[j]);
             if (fwrite(data, subs[i].instrs[j].size, 1, out) != 1) {
                 fprintf(stderr, "%s: couldn't write: %s\n", argv0, strerror(errno));
-                return 1;
+                return 0;
             }
             free(data);
         }
@@ -784,17 +781,17 @@ compile_ecs(FILE* in, FILE* out, unsigned int version)
     util_seek(out, 4);
     if (fwrite(&header, sizeof(header_scpt_t), 1, out) != 1) {
         fprintf(stderr, "%s: couldn't write: %s\n", argv0, strerror(errno));
-        return 1;
+        return 0;
     }
 
     util_seek(out, header.include_offset + header.include_length);
     for (i = 0; i < sub_cnt; ++i) {
         if (fwrite(&subs[i].offset, sizeof(uint32_t), 1, out) != 1) {
             fprintf(stderr, "%s: couldn't write: %s\n", argv0, strerror(errno));
-            return 1;
+            return 0;
         }
     }
     free(subs);
 
-    return 0;
+    return 1;
 }

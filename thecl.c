@@ -72,23 +72,23 @@ open_ecl(ecl_t* ecl, FILE* f)
 
     if (!util_seekable(f)) {
         fprintf(stderr, "%s: input is not seekable\n", argv0);
-        return -1;
+        return 0;
     }
 
     if (fread(magic, 4, 1, f) != 1) {
         fprintf(stderr, "%s:%s: couldn't read: %s\n",
             argv0, current_input, strerror(errno));
-        return -1;
+        return 0;
     }
     if (strncmp(magic, "SCPT", 4) != 0) {
         fprintf(stderr, "%s:%s: SCPT signature missing\n", argv0, current_input);
-        return -1;
+        return 0;
     }
 
     if (fread(&ecl->scpt, sizeof(header_scpt_t), 1, f) != 1) {
         fprintf(stderr, "%s:%s: couldn't read: %s\n",
             argv0, current_input, strerror(errno));
-        return -1;
+        return 0;
     }
     assert(ecl->scpt.unknown1 == 1);
     assert(ecl->scpt.include_offset == 0x24);
@@ -101,23 +101,23 @@ open_ecl(ecl_t* ecl, FILE* f)
     if (fseek(f, ecl->scpt.include_offset, SEEK_SET) == -1) {
         fprintf(stderr, "%s:%s: couldn't seek: %s\n",
             argv0, current_input, strerror(errno));
-        return -1;
+        return 0;
     }
 
     if (fread(magic, 4, 1, f) != 1) {
         fprintf(stderr, "%s:%s: couldn't read: %s\n",
             argv0, current_input, strerror(errno));
-        return -1;
+        return 0;
     }
     if (strncmp(magic, "ANIM", 4) != 0) {
         fprintf(stderr, "%s:%s: ANIM signature missing\n", argv0, current_input);
-        return -1;
+        return 0;
     }
 
     if (fread(&ecl->anim_cnt, sizeof(uint32_t), 1, f) != 1) {
         fprintf(stderr, "%s:%s: couldn't read: %s\n",
             argv0, current_input, strerror(errno));
-        return -1;
+        return 0;
     }
     ecl->anim = malloc(sizeof(char*) * ecl->anim_cnt);
     for (i = 0; i < ecl->anim_cnt; ++i) {
@@ -134,17 +134,17 @@ open_ecl(ecl_t* ecl, FILE* f)
     if (fread(magic, 4, 1, f) != 1) {
         fprintf(stderr, "%s:%s: couldn't read: %s\n",
             argv0, current_input, strerror(errno));
-        return -1;
+        return 0;
     }
     if (strncmp(magic, "ECLI", 4) != 0) {
         fprintf(stderr, "%s:%s: ECLI signature missing\n", argv0, current_input);
-        return -1;
+        return 0;
     }
 
     if (fread(&ecl->ecli_cnt, sizeof(uint32_t), 1, f) != 1) {
         fprintf(stderr, "%s:%s: couldn't read: %s\n",
             argv0, current_input, strerror(errno));
-        return -1;
+        return 0;
     }
     ecl->ecli = malloc(sizeof(char*) * ecl->ecli_cnt);
     for (i = 0; i < ecl->ecli_cnt; ++i) {
@@ -165,7 +165,7 @@ open_ecl(ecl_t* ecl, FILE* f)
         if (fread(&ecl->subs[i].offset, sizeof(uint32_t), 1, f) != 1) {
             fprintf(stderr, "%s:%s: couldn't read: %s\n",
                 argv0, current_input, strerror(errno));
-            return -1;
+            return 0;
         }
     }
 
@@ -183,24 +183,24 @@ open_ecl(ecl_t* ecl, FILE* f)
         if (fseek(f, ecl->subs[i].offset, SEEK_SET) == -1) {
             fprintf(stderr, "%s:%s: couldn't seek: %s\n",
                 argv0, current_input, strerror(errno));
-            return -1;
+            return 0;
         }
 
         if (fread(magic, 4, 1, f) != 1) {
             fprintf(stderr, "%s:%s: couldn't read: %s\n",
                 argv0, current_input, strerror(errno));
-            return -1;
+            return 0;
         }
         if (strncmp(magic, "ECLH", 4) != 0) {
             fprintf(stderr, "%s:%s: ECLH signature missing\n",
                 argv0, current_input);
-            return -1;
+            return 0;
         }
 
         if (fread(&eclh, sizeof(header_eclh_t), 1, f) != 1) {
             fprintf(stderr, "%s:%s: couldn't read: %s\n",
                 argv0, current_input, strerror(errno));
-            return -1;
+            return 0;
         }
 
         assert(eclh.unknown1 == 0x10);
@@ -233,7 +233,7 @@ open_ecl(ecl_t* ecl, FILE* f)
                 if (fread(rins.data, rins.data_size, 1, f) != 1) {
                     fprintf(stderr, "%s:%s: couldn't read: %s\n",
                         argv0, current_input, strerror(errno));
-                    return -1;
+                    return 0;
                 }
             }
 
@@ -244,7 +244,7 @@ open_ecl(ecl_t* ecl, FILE* f)
         }
     }
 
-    return 0;
+    return 1;
 }
 
 static void
@@ -749,14 +749,14 @@ main(int argc, char* argv[])
         util_print_version("thecl", PACKAGE_THECL_VERSION);
         exit(0);
     case 'c':
-        if (compile_ecs(in, out, version) != 0)
+        if (!compile_ecs(in, out, version))
             exit(0);
         fclose(in);
         fclose(out);
         exit(0);
     case 'd': {
         ecl_t ecl;
-        if (open_ecl(&ecl, in) == -1)
+        if (!open_ecl(&ecl, in))
             exit(1);
         fclose(in);
         ecldump_translate(&ecl, version);
@@ -767,7 +767,7 @@ main(int argc, char* argv[])
     }
     case 'p': {
         ecl_t ecl;
-        if (open_ecl(&ecl, in) == -1)
+        if (!open_ecl(&ecl, in))
             exit(1);
         fclose(in);
         ecldump_list_params(&ecl);
@@ -777,7 +777,7 @@ main(int argc, char* argv[])
     }
     case 'r': {
         ecl_t ecl;
-        if (open_ecl(&ecl, in) == -1)
+        if (!open_ecl(&ecl, in))
             exit(1);
         fclose(in);
         ecldump_rawdump(&ecl);
