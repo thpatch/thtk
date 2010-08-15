@@ -434,9 +434,11 @@ static void
 label_create(char* name)
 {
     current_sub->label_cnt++;
-    current_sub->labels = realloc(current_sub->labels, sizeof(label_t) * current_sub->label_cnt);
+    current_sub->labels =
+        realloc(current_sub->labels, sizeof(label_t) * current_sub->label_cnt);
     current_sub->labels[current_sub->label_cnt - 1].name = name;
-    current_sub->labels[current_sub->label_cnt - 1].offset = current_sub->offset;
+    current_sub->labels[current_sub->label_cnt - 1].offset =
+        current_sub->offset;
 }
 
 static int32_t
@@ -454,7 +456,8 @@ label_find(sub_t* sub, const char* name)
 }
 
 static void
-instr_create(instr_t* instr, uint32_t time, uint16_t id, uint16_t param_mask, uint8_t rank_mask, uint8_t param_cnt, param_t* params)
+instr_create(instr_t* instr, uint32_t time, uint16_t id, uint16_t param_mask,
+    uint8_t rank_mask, uint8_t param_cnt, param_t* params)
 {
     unsigned int i;
 
@@ -480,7 +483,8 @@ instr_create(instr_t* instr, uint32_t time, uint16_t id, uint16_t param_mask, ui
             break;
         case 's':
         case 'c':
-            padded_length = instr->params[i].value.s.length + (4 - instr->params[i].value.s.length % 4);
+            padded_length = instr->params[i].value.s.length +
+                (4 - instr->params[i].value.s.length % 4);
             instr->size += sizeof(uint32_t);
             instr->size += padded_length;
             break;
@@ -524,15 +528,18 @@ instr_serialize(sub_t* sub, instr_t* op)
             break;
         case 's':
         case 'c':
-            padded_length = op->params[i].value.s.length + (4 - op->params[i].value.s.length % 4);
+            padded_length = op->params[i].value.s.length +
+                (4 - op->params[i].value.s.length % 4);
 
             memcpy(data + offset, &padded_length, sizeof(uint32_t));
             offset += sizeof(uint32_t);
 
             if (op->params[i].type == 'c') {
-                memcpy(data + offset, op->params[i].value.s.data, padded_length);
+                memcpy(data + offset, op->params[i].value.s.data,
+                    padded_length);
             } else {
-                memcpy(data + offset, op->params[i].value.s.data, op->params[i].value.s.length);
+                memcpy(data + offset, op->params[i].value.s.data,
+                    op->params[i].value.s.length);
             }
             offset += padded_length;
 
@@ -556,7 +563,8 @@ instr_add(int id, int rank_mask, list_t* list)
     instr_t* op;
 
     current_sub->instr_cnt++;
-    current_sub->instrs = realloc(current_sub->instrs, current_sub->instr_cnt * sizeof(instr_t));
+    current_sub->instrs =
+        realloc(current_sub->instrs, current_sub->instr_cnt * sizeof(instr_t));
 
     op = &current_sub->instrs[current_sub->instr_cnt - 1];
 
@@ -606,16 +614,19 @@ yyerror(const char* str)
         if (yylloc.first_column == yylloc.last_column) {
             fprintf(stderr,
                     "%s:%s:%d,%d: %s\n",
-                    argv0, current_input, yylloc.first_line, yylloc.first_column, str);
+                    argv0, current_input,
+                    yylloc.first_line, yylloc.first_column, str);
         } else {
             fprintf(stderr,
                     "%s:%s:%d,%d-%d: %s\n",
-                    argv0, current_input, yylloc.first_line, yylloc.first_column, yylloc.last_column, str);
+                    argv0, current_input, yylloc.first_line,
+                    yylloc.first_column, yylloc.last_column, str);
         }
     } else {
         fprintf(stderr,
                 "%s:%s:%d,%d-%d,%d: %s\n",
-                argv0, current_input, yylloc.first_line, yylloc.first_column, yylloc.last_line, yylloc.last_column, str);
+                argv0, current_input, yylloc.first_line,
+                yylloc.first_column, yylloc.last_line, yylloc.last_column, str);
     }
 }
 
@@ -766,7 +777,8 @@ compile_ecs(FILE* in, FILE* out, unsigned int version)
         for (j = 0; j < subs[i].instr_cnt; ++j) {
             char* data = instr_serialize(&subs[i], &subs[i].instrs[j]);
             if (fwrite(data, subs[i].instrs[j].size, 1, out) != 1) {
-                fprintf(stderr, "%s: couldn't write: %s\n", argv0, strerror(errno));
+                fprintf(stderr, "%s: couldn't write: %s\n",
+                    argv0, strerror(errno));
                 return 0;
             }
             free(data);

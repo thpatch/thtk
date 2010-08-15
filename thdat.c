@@ -60,7 +60,8 @@ thdat_open(FILE* stream, unsigned int version)
 }
 
 archive_t*
-archive_create(FILE* stream, uint32_t version, uint32_t offset, unsigned int count)
+archive_create(FILE* stream, uint32_t version, uint32_t offset,
+    unsigned int count)
 {
     archive_t* archive;
 
@@ -120,7 +121,8 @@ thdat_add_entry(archive_t* archive)
     entry_t* e;
 
     archive->count++;
-    archive->entries = realloc(archive->entries, archive->count * sizeof(entry_t));
+    archive->entries =
+        realloc(archive->entries, archive->count * sizeof(entry_t));
 
     e = &archive->entries[archive->count - 1];
 
@@ -169,7 +171,8 @@ thdat_sort(archive_t* archive)
 }
 
 static entry_t*
-archive_add_entry(archive_t* archive, FILE* stream, const char* filename, unsigned int flags)
+archive_add_entry(archive_t* archive, FILE* stream, const char* filename,
+    unsigned int flags)
 {
     entry_t* e;
 
@@ -204,7 +207,8 @@ archive_check_duplicates(archive_t* archive)
             if (i == j)
                 continue;
             if (strcmp(archive->entries[i].name, archive->entries[j].name) == 0)
-                fprintf(stderr, "%s: duplicate entry: %s\n", argv0, archive->entries[i].name);
+                fprintf(stderr, "%s: duplicate entry: %s\n",
+                    argv0, archive->entries[i].name);
         }
     }
 
@@ -298,7 +302,8 @@ main(int argc, char* argv[])
         }
         archive = fopen(argv[2], "wb");
         if (!archive) {
-            fprintf(stderr, "%s: couldn't open %s for writing\n", argv0, argv[2]);
+            fprintf(stderr, "%s: couldn't open %s for writing\n",
+                argv0, argv[2]);
             return 1;
         }
         current_output = argv[2];
@@ -315,7 +320,8 @@ main(int argc, char* argv[])
             entry_t* entry;
             FILE* stream = fopen(argv[i], "rb");
             if (!stream) {
-                fprintf(stderr, "%s: couldn't open %s for reading\n", argv0, argv[i]);
+                fprintf(stderr, "%s: couldn't open %s for reading\n",
+                    argv0, argv[i]);
                 fclose(archive);
                 exit(1);
             }
@@ -352,13 +358,16 @@ main(int argc, char* argv[])
             return 1;
         }
         if (!archive_module->open || !archive_module->extract) {
-            fprintf(stderr, "%s: extraction not yet supported for this archive format\n", argv0);
+            fprintf(stderr,
+                "%s: extraction not yet supported for this archive format\n",
+                argv0);
             return 1;
         }
         current_input = argv[2];
         archive = fopen(current_input, "rb");
         if (!archive) {
-            fprintf(stderr, "%s: couldn't open %s for reading\n", argv0, current_input);
+            fprintf(stderr, "%s: couldn't open %s for reading\n",
+                argv0, current_input);
             return 1;
         }
         private = archive_module->open(archive, version);
@@ -387,7 +396,9 @@ main(int argc, char* argv[])
             }
         } else {
             for (i = 0; i < (int)private->count; ++i) {
-                /* TODO: Secure the filenames first.  Don't need to do that when the user selects files to extract. */
+                /* TODO: Secure the filenames first.
+                 *       Don't need to do that when the user selects files
+                 *       to extract. */
                 FILE* stream = fopen(private->entries[i].name, "wb");
                 current_output = private->entries[i].name;
                 printf("%s\n", current_output);

@@ -55,7 +55,7 @@ void util_makepath(const char* path);
 /* Writes the basename of src to dst. */
 void util_basename(char* dst, size_t dstlen, const char* src);
 
-/* A wrapper for fseek with SEEK_SET which prints an error message upon error. */
+/* A wrapper for fseek with SEEK_SET which prints an error message upon error.*/
 int util_seek(FILE* stream, long offset);
 /* Checks if a stream is seekable. */
 int util_seekable(FILE* stream);
@@ -79,9 +79,11 @@ int util_strpcmp(const void* a, const void* b);
 void* mempcpy(void* dest, const void* src, size_t n);
 
 /* Performs simple encryption. */
-void util_sillyxor(const unsigned char* in, unsigned char* out, int size, unsigned char key, unsigned char step, const unsigned char step2);
+void util_sillyxor(const unsigned char* in, unsigned char* out, int size,
+    unsigned char key, unsigned char step, const unsigned char step2);
 
 /* Converts a string from one character set to another. */
-unsigned char* util_iconv(const char* to, const char* from, unsigned char* in, size_t insize, size_t* outsize);
+unsigned char* util_iconv(const char* to, const char* from, unsigned char* in,
+    size_t insize, size_t* outsize);
 
 #endif

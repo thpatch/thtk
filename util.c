@@ -65,7 +65,8 @@ int
 util_seek(FILE* stream, long offset)
 {
     if (fseek(stream, offset, SEEK_SET) != 0) {
-        fprintf(stderr, "%s: failed seeking to %lu: %s\n", argv0, offset, strerror(errno));
+        fprintf(stderr, "%s: failed seeking to %lu: %s\n",
+            argv0, offset, strerror(errno));
         return 0;
     } else
         return 1;
@@ -98,7 +99,8 @@ util_fsize(FILE* stream)
         return -1;
 
     if (fseek(stream, 0, SEEK_END) == -1) {
-        fprintf(stderr, "%s: failed seeking to end: %s\n", argv0, strerror(errno));
+        fprintf(stderr, "%s: failed seeking to end: %s\n",
+            argv0, strerror(errno));
         return -1;
     }
 
@@ -116,9 +118,12 @@ util_read(FILE* stream, void* buffer, size_t size)
 {
     if (fread(buffer, size, 1, stream) != 1 && size != 0) {
         if (feof(stream)) {
-            fprintf(stderr, "%s: failed reading %lu bytes: unexpected end of file\n", argv0, (long unsigned int)size);
+            fprintf(stderr,
+                "%s: failed reading %lu bytes: unexpected end of file\n",
+                argv0, (long unsigned int)size);
         } else {
-            fprintf(stderr, "%s: failed reading %lu bytes: %s\n", argv0, (long unsigned int)size, strerror(errno));
+            fprintf(stderr, "%s: failed reading %lu bytes: %s\n",
+                argv0, (long unsigned int)size, strerror(errno));
         }
         return 0;
     } else
@@ -129,7 +134,8 @@ int
 util_write(FILE* stream, const void* buffer, size_t size)
 {
     if (fwrite(buffer, size, 1, stream) != 1 && size != 0) {
-        fprintf(stderr, "%s: failed writing %lu bytes: %s\n", argv0, (long unsigned int)size, strerror(errno));
+        fprintf(stderr, "%s: failed writing %lu bytes: %s\n",
+            argv0, (long unsigned int)size, strerror(errno));
         return 0;
     } else
         return 1;
@@ -220,7 +226,8 @@ util_makepath(const char* path)
             && errno != EEXIST
 #endif
             ) {
-            fprintf(stderr, "%s: couldn't create directory %s: %s\n", argv0, name, strerror(errno));
+            fprintf(stderr, "%s: couldn't create directory %s: %s\n",
+                argv0, name, strerror(errno));
             abort();
         }
 
@@ -241,7 +248,8 @@ mempcpy(void* dest, const void* src, size_t n)
 #endif
 
 void
-util_sillyxor(const unsigned char* in, unsigned char* out, int size, unsigned char key, unsigned char step, const unsigned char step2)
+util_sillyxor(const unsigned char* in, unsigned char* out, int size,
+    unsigned char key, unsigned char step, const unsigned char step2)
 {
     const unsigned char* iend = in + size;
     while (in < iend) {
@@ -255,7 +263,8 @@ util_sillyxor(const unsigned char* in, unsigned char* out, int size, unsigned ch
 
 #ifdef WIN32
 unsigned char*
-util_iconv(const char* to, const char* from, unsigned char* in, size_t insize, size_t* outsize)
+util_iconv(const char* to, const char* from, unsigned char* in, size_t insize,
+    size_t* outsize)
 {
     wchar_t* temp;
     int temp_len;
@@ -269,7 +278,8 @@ util_iconv(const char* to, const char* from, unsigned char* in, size_t insize, s
     } else if (strcmp(from, "UTF-8") == 0) {
         from_n = CP_UTF8;
     } else {
-        fprintf(stderr, "%s:util_iconv: Unsupported conversion specifier %s\n", argv0, from);
+        fprintf(stderr, "%s:util_iconv: Unsupported conversion specifier %s\n",
+            argv0, from);
         return NULL;
     }
 
@@ -278,17 +288,20 @@ util_iconv(const char* to, const char* from, unsigned char* in, size_t insize, s
     } else if (strcmp(to, "UTF-8") == 0) {
         to_n = CP_UTF8;
     } else {
-        fprintf(stderr, "%s:util_iconv: Unsupported conversion specifier %s\n", argv0, to);
+        fprintf(stderr, "%s:util_iconv: Unsupported conversion specifier %s\n",
+            argv0, to);
         return NULL;
     }
 
-    temp_len = MultiByteToWideChar(from_n, MB_ERR_INVALID_CHARS, (LPCSTR)in, insize, NULL, 0);
+    temp_len = MultiByteToWideChar(from_n, MB_ERR_INVALID_CHARS, (LPCSTR)in,
+        insize, NULL, 0);
     if (!temp_len) {
         fprintf(stderr, "%s:MultiByteToWideChar: %lu\n", argv0, GetLastError());
         return NULL;
     }
     temp = malloc(temp_len * sizeof(wchar_t));
-    temp_len = MultiByteToWideChar(from_n, MB_ERR_INVALID_CHARS, (LPCSTR)in, insize, temp, temp_len);
+    temp_len = MultiByteToWideChar(from_n, MB_ERR_INVALID_CHARS, (LPCSTR)in,
+        insize, temp, temp_len);
     if (!temp_len) {
         fprintf(stderr, "%s:MultiByteToWideChar: %lu\n", argv0, GetLastError());
         return NULL;
@@ -302,7 +315,8 @@ util_iconv(const char* to, const char* from, unsigned char* in, size_t insize, s
         return NULL;
     }
     out = malloc(out_len);
-    out_len = WideCharToMultiByte(to_n, 0, temp, temp_len, (LPSTR)out, out_len, NULL, NULL);
+    out_len = WideCharToMultiByte(to_n, 0, temp, temp_len, (LPSTR)out, out_len,
+        NULL, NULL);
     if (!out_len) {
         fprintf(stderr, "%s:WideCharToMultiByte: %lu\n", argv0, GetLastError());
         return NULL;
@@ -316,7 +330,8 @@ util_iconv(const char* to, const char* from, unsigned char* in, size_t insize, s
 #else
 #ifdef HAVE_ICONV_H
 unsigned char*
-util_iconv(const char* to, const char* from, unsigned char* in, size_t insize, size_t* outsize)
+util_iconv(const char* to, const char* from, unsigned char* in, size_t insize,
+    size_t* outsize)
 {
     size_t ret;
     char* inp;

@@ -113,7 +113,8 @@ th08_open(FILE* stream, unsigned int version)
     if (!util_read(stream, header, 3 * sizeof(uint32_t)))
         return NULL;
 
-    th_decrypt((unsigned char*)header, 3 * sizeof(uint32_t), 0x1b, 0x37, 3 * sizeof(uint32_t), 0x400);
+    th_decrypt((unsigned char*)header, 3 * sizeof(uint32_t), 0x1b, 0x37,
+        3 * sizeof(uint32_t), 0x400);
 
     count = header[0] - 123456;
     offset = header[1] - 345678;
@@ -160,7 +161,8 @@ th08_open(FILE* stream, unsigned int version)
 static int
 th08_extract(archive_t* archive, entry_t* entry, FILE* stream)
 {
-    const crypt_params* current_crypt_params = archive->version == 8 ? th08_crypt_params : th09_crypt_params;
+    const crypt_params* current_crypt_params = archive->version == 8 ?
+        th08_crypt_params : th09_crypt_params;
     unsigned char* data = malloc(entry->size);
     unsigned int i;
     int type = -1;
@@ -231,7 +233,8 @@ th08_read_file(entry_t* entry, FILE* stream)
 static void
 th08_encrypt(archive_t* archive, entry_t* entry, unsigned char* data)
 {
-    const crypt_params* current_crypt_params = archive->version == 8 ? th08_crypt_params : th09_crypt_params;
+    const crypt_params* current_crypt_params = archive->version == 8 ?
+        th08_crypt_params : th09_crypt_params;
     unsigned int type;
     char ext[5];
 
@@ -349,7 +352,8 @@ th08_close(archive_t* archive)
     header[2] = archive->offset + 345678;
     header[3] = list_size + 567891;
 
-    th_encrypt((unsigned char*)&header[1], sizeof(uint32_t) * 3, 0x1b, 0x37, sizeof(uint32_t) * 3, 0x400);
+    th_encrypt((unsigned char*)&header[1], sizeof(uint32_t) * 3, 0x1b, 0x37,
+        sizeof(uint32_t) * 3, 0x400);
 
     if (!util_seek(archive->stream, 0))
         return 0;

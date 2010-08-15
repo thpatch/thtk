@@ -96,9 +96,12 @@ rgba_to_fmt(const uint32_t* data, unsigned int pixels, format_t format)
         out = malloc(sizeof(uint16_t) * pixels);
         out16 = (uint16_t*)out;
         for (i = 0; i < pixels; ++i) {
-            out16[i] = ((data[i] &     0xf8) << 8)  /* 00000000 00000000 11111000 -> 00000000 00011111 */
-                     | ((data[i] &   0xfc00) >> 5)  /* 00000000 11111100 00000000 -> 00000111 11100000 */
-                     | ((data[i] & 0xf80000) >>19); /* 11111000 00000000 00000000 -> 11111000 00000000 */
+                     /* 00000000 00000000 11111000 -> 00000000 00011111 */
+            out16[i] = ((data[i] &     0xf8) << 8)
+                     /* 00000000 11111100 00000000 -> 00000111 11100000 */
+                     | ((data[i] &   0xfc00) >> 5)
+                     /* 11111000 00000000 00000000 -> 11111000 00000000 */
+                     | ((data[i] & 0xf80000) >>19);
         }
     } else {
         fprintf(stderr, "%s: unknown format: %u\n", argv0, format);
@@ -472,7 +475,8 @@ anm_read_file(const char* filename)
     long filesize;
     FILE* f = fopen(filename, "rb");
     if (!f) {
-        fprintf(stderr, "%s: couldn't open %s for reading: %s\n", argv0, filename, strerror(errno));
+        fprintf(stderr, "%s: couldn't open %s for reading: %s\n",
+            argv0, filename, strerror(errno));
         exit(1);
     }
 
@@ -525,7 +529,8 @@ anm_read_file(const char* filename)
             entry->header.format != FORMAT_GRAY8) {
             if (!(entry->header.format == 0 && entry->header.thtxoffset == 0)) {
                 fprintf(stderr, "%s:%s:%u: unknown format: %u\n",
-                    argv0, current_input, anm->entry_count, entry->header.format);
+                    argv0, current_input, anm->entry_count,
+                    entry->header.format);
                 if (!option_force) abort();
             }
         }
@@ -539,8 +544,10 @@ anm_read_file(const char* filename)
         }
         if (entry->header.hasdata == 0 &&
             entry->header.thtxoffset != 0) {
-            fprintf(stderr, "%s:%s:%u: hasdata and thtxoffset do not match: %u, %u\n",
-                argv0, current_input, anm->entry_count, entry->header.hasdata, entry->header.thtxoffset);
+            fprintf(stderr,
+                "%s:%s:%u: hasdata and thtxoffset do not match: %u, %u\n",
+                argv0, current_input, anm->entry_count, entry->header.hasdata,
+                entry->header.thtxoffset);
             if (!option_force) abort();
         }
         if (entry->header.hasdata != 0 &&
@@ -597,7 +604,8 @@ anm_read_file(const char* filename)
 
             if (sequential) {
                 util_seek(f, offset + offsets[0]);
-                util_read(f, entry->sprites, sizeof(sprite_t) * entry->header.sprites);
+                util_read(f, entry->sprites,
+                    sizeof(sprite_t) * entry->header.sprites);
             } else {
                 for (i = 0; i < entry->header.sprites; ++i) {
                     util_seek(f, offset + offsets[i]);
@@ -609,7 +617,8 @@ anm_read_file(const char* filename)
         }
 
         if (entry->header.scripts) {
-            util_seek(f, offset + sizeof(anm_header_t) + sizeof(uint32_t) * entry->header.sprites);
+            util_seek(f, offset + sizeof(anm_header_t) + sizeof(uint32_t)
+                         * entry->header.sprites);
 
             entry->script_count = entry->header.scripts;
             entry->scripts = malloc(entry->script_count * sizeof(anm_script_t));
@@ -645,7 +654,9 @@ anm_read_file(const char* filename)
                         util_read(f, &tempinstr, ANM_INSTR0_SIZE);
 
                         ++entry->scripts[i].instr_count;
-                        entry->scripts[i].instrs = realloc(entry->scripts[i].instrs, entry->scripts[i].instr_count * sizeof(anm_instr_t));
+                        entry->scripts[i].instrs = realloc(
+                            entry->scripts[i].instrs,
+                            entry->scripts[i].instr_count * sizeof(anm_instr_t));
                         instr = &entry->scripts[i].instrs[entry->scripts[i].instr_count - 1];
                         instr->type = tempinstr.type;
                         instr->length = tempinstr.length;
@@ -670,7 +681,9 @@ anm_read_file(const char* filename)
                         util_read(f, &tempinstr, ANM_INSTR_SIZE);
 
                         ++entry->scripts[i].instr_count;
-                        entry->scripts[i].instrs = realloc(entry->scripts[i].instrs, entry->scripts[i].instr_count * sizeof(anm_instr_t));
+                        entry->scripts[i].instrs = realloc(
+                            entry->scripts[i].instrs,
+                            entry->scripts[i].instr_count * sizeof(anm_instr_t));
                         instr = &entry->scripts[i].instrs[entry->scripts[i].instr_count - 1];
                         instr->type = tempinstr.type;
                         instr->length = tempinstr.length;
@@ -678,8 +691,10 @@ anm_read_file(const char* filename)
                         instr->param_mask = tempinstr.param_mask;
 
                         if (instr->length > ANM_INSTR_SIZE) {
-                            instr->data = malloc(instr->length - ANM_INSTR_SIZE);
-                            util_read(f, instr->data, instr->length - ANM_INSTR_SIZE);
+                            instr->data =
+                                malloc(instr->length - ANM_INSTR_SIZE);
+                            util_read(f, instr->data,
+                                instr->length - ANM_INSTR_SIZE);
                         } else {
                             instr->data = NULL;
                         }
@@ -714,16 +729,20 @@ anm_read_file(const char* filename)
                 if (!option_force) abort();
             }
             if (entry->header.format != entry->thtx.format) {
-                fprintf(stderr, "%s:%s:%s: header format does not match thtx header format: %u != %u\n",
+                fprintf(stderr,
+                    "%s:%s:%s: header format does not match thtx header format: %u != %u\n",
                     argv0, current_input, entry->name,
                     entry->header.format, entry->thtx.format);
                 if (!option_force) abort();
             }
 
-            if (entry->thtx.w * entry->thtx.h * format_Bpp(entry->thtx.format) > entry->thtx.size) {
-                fprintf(stderr, "%s:%s:%s: w*h*Bpp is greater than data size: %u*%u*%u > %u\n",
+            if (entry->thtx.w * entry->thtx.h * format_Bpp(entry->thtx.format) >
+                entry->thtx.size) {
+                fprintf(stderr,
+                    "%s:%s:%s: w*h*Bpp is greater than data size: %u*%u*%u > %u\n",
                     argv0, current_input, entry->name,
-                    entry->thtx.w, entry->thtx.h, format_Bpp(entry->thtx.format), entry->thtx.size);
+                    entry->thtx.w, entry->thtx.h,
+                    format_Bpp(entry->thtx.format), entry->thtx.size);
                 if (!option_force) abort();
             }
 
@@ -733,7 +752,8 @@ anm_read_file(const char* filename)
             data = malloc(entry->thtx.size);
             util_read(f, data, entry->thtx.size);
 
-            entry->data = fmt_to_rgba(data, entry->thtx.w * entry->thtx.h, entry->thtx.format);
+            entry->data = fmt_to_rgba(
+                data, entry->thtx.w * entry->thtx.h, entry->thtx.format);
             free(data);
 #else
             entry->data = NULL;
@@ -777,7 +797,9 @@ anm_dump(FILE* stream, const anm_t* anm)
             formats = formats_v4p;
             format_count = sizeof(formats_v4p) / sizeof(formats_v4p[0]);
         } else {
-            fprintf(stderr, "%s:%s: could not find a format description for version %u\n", argv0, current_input, entry->header.version);
+            fprintf(stderr,
+                "%s:%s: could not find a format description for version %u\n",
+                argv0, current_input, entry->header.version);
             abort();
         }
 
@@ -831,7 +853,8 @@ anm_dump(FILE* stream, const anm_t* anm)
             for (iter_instrs = 0; iter_instrs < scr->instr_count; ++iter_instrs) {
                 int done = 0;
                 anm_instr_t* instr = &scr->instrs[iter_instrs];
-                fprintf(stream, "Instruction: %hu %hu %hu", instr->time, instr->param_mask, instr->type);
+                fprintf(stream, "Instruction: %hu %hu %hu",
+                    instr->time, instr->param_mask, instr->type);
                 for (iter_formats = 0; iter_formats < format_count; ++iter_formats) {
                     if (formats[iter_formats].type == instr->type) {
                         const char* data = instr->data;
@@ -847,7 +870,9 @@ anm_dump(FILE* stream, const anm_t* anm)
                                 data += sizeof(float);
                                 break;
                             default:
-                                fprintf(stderr, "%s: invalid format descriptor `%c'\n", argv0, *format);
+                                fprintf(stderr,
+                                    "%s: invalid format descriptor `%c'\n",
+                                    argv0, *format);
                                 abort();
                             }
                             ++format;
@@ -858,7 +883,8 @@ anm_dump(FILE* stream, const anm_t* anm)
                     }
                 }
                 if (!done) {
-                    fprintf(stderr, "%s: no format descriptor found for %d\n", argv0, instr->type);
+                    fprintf(stderr, "%s: no format descriptor found for %d\n",
+                        argv0, instr->type);
                     abort();
                 }
             }
@@ -907,10 +933,13 @@ png_read(FILE* stream, format_t format)
 
     for (y = 0; y < image->height; ++y) {
         if (format == FORMAT_RGBA8888) {
-            memcpy(image->data + y * image->width * format_Bpp(image->format), row_pointers[y], image->width * format_Bpp(image->format));
+            memcpy(image->data + y * image->width * format_Bpp(image->format),
+                row_pointers[y], image->width * format_Bpp(image->format));
         } else {
-            unsigned char* converted_data = rgba_to_fmt((uint32_t*)row_pointers[y], image->width, image->format);
-            memcpy(image->data + y * image->width * format_Bpp(image->format), converted_data, image->width * format_Bpp(image->format));
+            unsigned char* converted_data =
+                rgba_to_fmt((uint32_t*)row_pointers[y], image->width, image->format);
+            memcpy(image->data + y * image->width * format_Bpp(image->format),
+                converted_data, image->width * format_Bpp(image->format));
             free(converted_data);
         }
     }
@@ -947,7 +976,8 @@ png_write(FILE* stream, image_t* image)
 }
 
 static void
-util_total_entry_size(const anm_t* anm, const char* name, unsigned int* widthptr, unsigned int* heightptr)
+util_total_entry_size(const anm_t* anm, const char* name,
+    unsigned int* widthptr, unsigned int* heightptr)
 {
     unsigned int i;
     unsigned int width = 0;
@@ -971,7 +1001,8 @@ util_total_entry_size(const anm_t* anm, const char* name, unsigned int* widthptr
 static void
 anm_replace(const anm_t* anm, const char* name, const char* filename)
 {
-    const format_t formats[] = { FORMAT_BGRA8888, FORMAT_BGR565, FORMAT_BGRA4444, FORMAT_GRAY8 };
+    const format_t formats[] = { FORMAT_BGRA8888, FORMAT_BGR565,
+                                 FORMAT_BGRA4444, FORMAT_GRAY8 };
     unsigned int f, i, y;
     unsigned int width = 0;
     unsigned int height = 0;
@@ -986,14 +1017,18 @@ anm_replace(const anm_t* anm, const char* name, const char* filename)
 
     stream = fopen(filename, "rb");
     if (!stream) {
-        fprintf(stderr, "%s: couldn't open %s for reading: %s\n", argv0, filename, strerror(errno));
+        fprintf(stderr, "%s: couldn't open %s for reading: %s\n",
+            argv0, filename, strerror(errno));
         exit(1);
     }
     image = png_read(stream, FORMAT_RGBA8888);
     fclose(stream);
 
     if (width != image->width || height != image->height) {
-        fprintf(stderr, "%s:%s:%s: wrong image dimensions for %s: %u, %u instead of %u, %u\n", argv0, current_input, name, filename, image->width, image->height, width, height);
+        fprintf(stderr,
+            "%s:%s:%s: wrong image dimensions for %s: %u, %u instead of %u, %u\n",
+            argv0, current_input, name, filename, image->width, image->height,
+            width, height);
         exit(1);
     }
 
@@ -1005,7 +1040,8 @@ anm_replace(const anm_t* anm, const char* name, const char* filename)
                 anm->entries[i].header.hasdata) {
 
                 if (!converted_data)
-                    converted_data = rgba_to_fmt((uint32_t*)image->data, width * height, formats[f]);
+                    converted_data = rgba_to_fmt((uint32_t*)image->data,
+                        width * height, formats[f]);
 
                 for (y = anm->entries[i].header.y; y < anm->entries[i].header.y + anm->entries[i].thtx.h; ++y) {
                     memcpy(anm->entries[i].data + (y - anm->entries[i].header.y) * anm->entries[i].thtx.w * format_Bpp(formats[f]),
@@ -1024,7 +1060,8 @@ anm_replace(const anm_t* anm, const char* name, const char* filename)
 static void
 anm_extract(const anm_t* anm, const char* name)
 {
-    const format_t formats[] = { FORMAT_GRAY8, FORMAT_BGRA4444, FORMAT_BGR565, FORMAT_BGRA8888 };
+    const format_t formats[] = { FORMAT_GRAY8, FORMAT_BGRA4444,
+                                 FORMAT_BGR565, FORMAT_BGRA8888 };
     FILE* stream;
     image_t image;
 
@@ -1060,7 +1097,8 @@ anm_extract(const anm_t* anm, const char* name)
     util_makepath(name);
     stream = fopen(name, "wb");
     if (!stream) {
-        fprintf(stderr, "%s: couldn't open %s for writing: %s\n", argv0, name, strerror(errno));
+        fprintf(stderr, "%s: couldn't open %s for writing: %s\n",
+            argv0, name, strerror(errno));
         return;
     }
     png_write(stream, &image);
@@ -1081,7 +1119,8 @@ anm_create(const char* spec)
 
     f = fopen(spec, "r");
     if (!f) {
-        fprintf(stderr, "%s: couldn't open %s for reading: %s\n", argv0, spec, strerror(errno));
+        fprintf(stderr, "%s: couldn't open %s for reading: %s\n",
+            argv0, spec, strerror(errno));
         exit(1);
     }
 
@@ -1096,7 +1135,8 @@ anm_create(const char* spec)
 
         if (strncmp(linep, "ENTRY ", 6) == 0) {
             anm->entry_count++;
-            anm->entries = realloc(anm->entries, anm->entry_count * sizeof(entry_t));
+            anm->entries =
+                realloc(anm->entries, anm->entry_count * sizeof(entry_t));
             entry = &anm->entries[anm->entry_count - 1];
             memset(entry, 0, sizeof(entry_t));
             sscanf(linep, "ENTRY %u", &entry->header.version);
@@ -1111,22 +1151,28 @@ anm_create(const char* spec)
         } else if (strncmp(linep, "Sprite: ", 8) == 0) {
             sprite_t* sprite;
             entry->sprite_count++;
-            entry->sprites = realloc(entry->sprites, entry->sprite_count * sizeof(sprite_t));
+            entry->sprites =
+                realloc(entry->sprites, entry->sprite_count * sizeof(sprite_t));
             sprite = &entry->sprites[entry->sprite_count - 1];
 
-            if (5 != sscanf(linep, "Sprite: %u %f*%f+%f+%f", &sprite->id, &sprite->w, &sprite->h, &sprite->x, &sprite->y)) {
-                fprintf(stderr, "%s: Sprite parsing failed for %s\n", argv0, linep);
+            if (5 != sscanf(linep, "Sprite: %u %f*%f+%f+%f",
+                         &sprite->id, &sprite->w, &sprite->h,
+                         &sprite->x, &sprite->y)) {
+                fprintf(stderr, "%s: Sprite parsing failed for %s\n",
+                    argv0, linep);
                 exit(1);
             }
         } else if (strncmp(linep, "Script: ", 8) == 0) {
             entry->script_count++;
-            entry->scripts = realloc(entry->scripts, entry->script_count * sizeof(anm_script_t));
+            entry->scripts = realloc(
+                entry->scripts, entry->script_count * sizeof(anm_script_t));
             script = &entry->scripts[entry->script_count - 1];
             script->offset = 0;
             script->instr_count = 0;
             script->instrs = NULL;
             if (1 != sscanf(linep, "Script: %d", &script->id)) {
-                fprintf(stderr, "%s: Script parsing failed for %s\n", argv0, linep);
+                fprintf(stderr, "%s: Script parsing failed for %s\n",
+                    argv0, linep);
                 exit(1);
             }
         } else if (strncmp(linep, "Instruction: ", 13) == 0) {
@@ -1135,7 +1181,8 @@ anm_create(const char* spec)
             char* after = NULL;
 
             script->instr_count++;
-            script->instrs = realloc(script->instrs, script->instr_count * sizeof(anm_instr_t));
+            script->instrs = realloc(
+                script->instrs, script->instr_count * sizeof(anm_instr_t));
             instr = &script->instrs[script->instr_count - 1];
             instr->data = NULL;
             instr->length = ANM_INSTR_SIZE;
@@ -1155,14 +1202,17 @@ anm_create(const char* spec)
                     break;
                 } else {
                     instr->length += sizeof(int32_t);
-                    instr->data = realloc(instr->data, instr->length - ANM_INSTR_SIZE);
+                    instr->data =
+                        realloc(instr->data, instr->length - ANM_INSTR_SIZE);
                     if (*after == 'f' || *after == '.') {
                         f = strtof(before, &after);
-                        memcpy(instr->data + instr->length - ANM_INSTR_SIZE - sizeof(float), &f, sizeof(float));
+                        memcpy(instr->data + instr->length - ANM_INSTR_SIZE - sizeof(float),
+                            &f, sizeof(float));
                         /* Skip 'f'. */
                         ++after;
                     } else {
-                        memcpy(instr->data + instr->length - ANM_INSTR_SIZE - sizeof(int32_t), &i, sizeof(int32_t));
+                        memcpy(instr->data + instr->length - ANM_INSTR_SIZE - sizeof(int32_t),
+                            &i, sizeof(int32_t));
                     }
                 }
 
@@ -1203,7 +1253,8 @@ anm_write(anm_t* anm, const char* filename)
 
     stream = fopen(filename, "wb");
     if (!stream) {
-        fprintf(stderr, "%s: couldn't open %s for writing: %s\n", argv0, filename, strerror(errno));
+        fprintf(stderr, "%s: couldn't open %s for writing: %s\n",
+            argv0, filename, strerror(errno));
         exit(1);
     }
 
@@ -1217,7 +1268,8 @@ anm_write(anm_t* anm, const char* filename)
 
         namepad = (16 - strlen(entry->name) % 16);
 
-        /* TODO: Make sure the correct header version is written, convert when needed. */
+        /* TODO: Make sure the correct header version is written,
+         *       convert when needed. */
 
         fseek(stream, sizeof(anm_header_t), SEEK_CUR);
         fseek(stream, entry->sprite_count * sizeof(uint32_t), SEEK_CUR);
@@ -1253,14 +1305,19 @@ anm_write(anm_t* anm, const char* filename)
                     anm_instr0_t instr;
                     instr.time = entry->scripts[j].instrs[k].time;
                     instr.type = entry->scripts[j].instrs[k].type;
-                    instr.length = entry->scripts[j].instrs[k].length - ANM_INSTR_SIZE;
+                    instr.length = entry->scripts[j].instrs[k].length -
+                        ANM_INSTR_SIZE;
                     fwrite(&instr, ANM_INSTR0_SIZE, 1, stream);
                     if (entry->scripts[j].instrs[k].data)
-                        fwrite(entry->scripts[j].instrs[k].data, entry->scripts[j].instrs[k].length - ANM_INSTR_SIZE, 1, stream);
+                        fwrite(entry->scripts[j].instrs[k].data,
+                            entry->scripts[j].instrs[k].length - ANM_INSTR_SIZE,
+                            1, stream);
                 } else {
-                    fwrite(&entry->scripts[j].instrs[k], ANM_INSTR_SIZE, 1, stream);
+                    fwrite(&entry->scripts[j].instrs[k], ANM_INSTR_SIZE,
+                        1, stream);
                     if (entry->scripts[j].instrs[k].data)
-                        fwrite(entry->scripts[j].instrs[k].data, entry->scripts[j].instrs[k].length - ANM_INSTR_SIZE, 1, stream);
+                        fwrite(entry->scripts[j].instrs[k].data,
+                            entry->scripts[j].instrs[k].length - ANM_INSTR_SIZE, 1, stream);
                 }
             }
         }
@@ -1438,7 +1495,8 @@ main(int argc, char* argv[])
                         goto extract_next;
                     }
                 }
-                fprintf(stderr, "%s:%s: %s not found in archive\n", argv0, current_input, argv[i]);
+                fprintf(stderr, "%s:%s: %s not found in archive\n",
+                    argv0, current_input, argv[i]);
 extract_next:
                 ;
             }
@@ -1462,20 +1520,24 @@ extract_next:
             }
         }
 
-        fprintf(stderr, "%s:%s: %s not found in archive\n", argv0, current_input, argv[3]);
+        fprintf(stderr, "%s:%s: %s not found in archive\n",
+            argv0, current_input, argv[3]);
 
 replace_done:
 
         anmfp = fopen(argv[2], "rb+");
         if (!anmfp) {
-            fprintf(stderr, "%s: couldn't open %s for writing: %s\n", argv0, current_input, strerror(errno));
+            fprintf(stderr, "%s: couldn't open %s for writing: %s\n",
+                argv0, current_input, strerror(errno));
             exit(1);
         }
 
         for (i = 0; i < (int)anm->entry_count; ++i) {
             unsigned int nextoffset = anm->entries[i].header.nextoffset;
             if (strcmp(argv[3], anm->entries[i].name) == 0 && anm->entries[i].header.hasdata) {
-                fseek(anmfp, offset + anm->entries[i].header.thtxoffset + 4 + sizeof(thtx_header_t), SEEK_SET);
+                fseek(anmfp,
+                    offset + anm->entries[i].header.thtxoffset + 4 + sizeof(thtx_header_t),
+                    SEEK_SET);
                 fwrite(anm->entries[i].data, anm->entries[i].thtx.size, 1, anmfp);
             }
             offset += nextoffset;

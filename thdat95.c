@@ -92,7 +92,8 @@ th95_open(FILE* stream, unsigned int version)
     if (!util_read(stream, header, sizeof(header)))
         return NULL;
 
-    th_decrypt((unsigned char*)&header, sizeof(header), 0x1b, 0x37, sizeof(header), sizeof(header));
+    th_decrypt((unsigned char*)&header, sizeof(header), 0x1b, 0x37,
+        sizeof(header), sizeof(header));
 
     if (strncmp((const char*)&header[0], "THA1", 4)) {
         fprintf(stderr, "%s: wrong magic for archive\n", argv0);
@@ -151,12 +152,15 @@ th95_decrypt_data(archive_t* archive, entry_t* entry, unsigned char* data)
 {
     const unsigned int i = th95_get_crypt_param_index(entry->name);
     const crypt_params_t* crypt_params;
-    if (archive->version == 95 || archive->version == 10 || archive->version == 11)
+    if (archive->version == 95 ||
+        archive->version == 10 ||
+        archive->version == 11)
         crypt_params = th95_crypt_params;
     else
         crypt_params = th12_crypt_params;
 
-    th_decrypt(data, entry->zsize, crypt_params[i].key, crypt_params[i].step, crypt_params[i].block, crypt_params[i].limit);
+    th_decrypt(data, entry->zsize, crypt_params[i].key, crypt_params[i].step,
+        crypt_params[i].block, crypt_params[i].limit);
 }
 
 static int
@@ -207,12 +211,15 @@ th95_encrypt_data(archive_t* archive, entry_t* entry, unsigned char* data)
 {
     const unsigned int i = th95_get_crypt_param_index(entry->name);
     const crypt_params_t* crypt_params;
-    if (archive->version == 95 || archive->version == 10 || archive->version == 11)
+    if (archive->version == 95 ||
+        archive->version == 10 ||
+        archive->version == 11)
         crypt_params = th95_crypt_params;
     else
         crypt_params = th12_crypt_params;
 
-    th_encrypt(data, entry->zsize, crypt_params[i].key, crypt_params[i].step, crypt_params[i].block, crypt_params[i].limit);
+    th_encrypt(data, entry->zsize, crypt_params[i].key, crypt_params[i].step,
+        crypt_params[i].block, crypt_params[i].limit);
 }
 
 static int
@@ -265,7 +272,8 @@ th95_close(archive_t* archive)
         const uint32_t zero = 0;
         const entry_t* entry = &archive->entries[i];
         const size_t namelen = strlen(entry->name);
-        buffer_ptr = mempcpy(buffer_ptr, entry->name, namelen + (4 - namelen % 4));
+        buffer_ptr = mempcpy(buffer_ptr, entry->name,
+            namelen + (4 - namelen % 4));
         buffer_ptr = mempcpy(buffer_ptr, &entry->offset, sizeof(uint32_t));
         buffer_ptr = mempcpy(buffer_ptr, &entry->size, sizeof(uint32_t));
         buffer_ptr = mempcpy(buffer_ptr, &zero, sizeof(uint32_t));
@@ -290,7 +298,8 @@ th95_close(archive_t* archive)
     header[2] = list_zsize + 987654321;
     header[3] = archive->count + 135792468;
 
-    th_encrypt((unsigned char*)&header, sizeof(header), 0x1b, 0x37, sizeof(header), sizeof(header));
+    th_encrypt((unsigned char*)&header, sizeof(header), 0x1b, 0x37,
+        sizeof(header), sizeof(header));
 
     if (!util_write(archive->stream, &header, sizeof(header)))
         return 0;

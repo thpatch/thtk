@@ -94,7 +94,8 @@ th02_extract(archive_t* archive, entry_t* entry, FILE* stream)
         for (i = 0; i < entry->zsize; ++i) {
             int c = fgetc(archive->stream);
             if (c == EOF) {
-                fprintf(stderr, "%s: error while reading from archive: %s\n", argv0, strerror(errno));
+                fprintf(stderr, "%s: error while reading from archive: %s\n",
+                    argv0, strerror(errno));
                 return 0;
             }
             fputc(c ^ 0x12, stream);
@@ -121,7 +122,8 @@ th02_extract(archive_t* archive, entry_t* entry, FILE* stream)
 static archive_t*
 th02_create(FILE* stream, unsigned int version, unsigned int count)
 {
-    return archive_create(stream, version, (count + 1) * sizeof(th02_entry_header_t), count);
+    return archive_create(stream, version,
+        (count + 1) * sizeof(th02_entry_header_t), count);
 }
 
 /* TODO: Check that filenames are 8.3, make it a THDAT_ flag. */

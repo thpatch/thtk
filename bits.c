@@ -51,7 +51,8 @@ bitstream_init_stream(struct bitstream* b, FILE* stream)
 }
 
 void
-bitstream_init_fixed(struct bitstream* b, unsigned char* buffer, unsigned int size)
+bitstream_init_fixed(struct bitstream* b, unsigned char* buffer,
+    unsigned int size)
 {
     bitstream_init(b);
     b->type = BITSTREAM_BUFFER_FIXED;
@@ -71,7 +72,8 @@ bitstream_free(struct bitstream* b)
 {
     if (b->type == BITSTREAM_STREAM) {
         fclose(b->io.stream);
-    } else if (b->type == BITSTREAM_BUFFER_FIXED || b->type == BITSTREAM_BUFFER_GROW) {
+    } else if (b->type == BITSTREAM_BUFFER_FIXED
+               || b->type == BITSTREAM_BUFFER_GROW) {
         free(b->io.buffer.buffer);
     } else {
         abort();
@@ -130,7 +132,8 @@ bitstream_write1(struct bitstream* b, unsigned int bit)
     if (b->bits == 8) {
         if (b->type == BITSTREAM_STREAM) {
             if (fputc(b->byte, b->io.stream) == EOF) {
-                fprintf(stderr, "%s: error while writing: %s\n", argv0, strerror(errno));
+                fprintf(stderr, "%s: error while writing: %s\n",
+                    argv0, strerror(errno));
                 abort();
             }
         } else if (b->type == BITSTREAM_BUFFER_FIXED) {
@@ -142,7 +145,8 @@ bitstream_write1(struct bitstream* b, unsigned int bit)
         } else if (b->type == BITSTREAM_BUFFER_GROW) {
             if (b->byte_count >= b->io.buffer.size) {
                 b->io.buffer.size <<= 1;
-                b->io.buffer.buffer = realloc(b->io.buffer.buffer, b->io.buffer.size);
+                b->io.buffer.buffer =
+                    realloc(b->io.buffer.buffer, b->io.buffer.size);
             }
             b->io.buffer.buffer[b->byte_count] = b->byte;
         } else {

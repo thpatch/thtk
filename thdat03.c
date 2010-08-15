@@ -99,7 +99,8 @@ th03_open(FILE* stream, unsigned int version)
     archive = thdat_open(stream, version);
 
     for (i = 0; i < fh.count; ++i) {
-        memcpy(&fe, data + i * sizeof(th03_entry_header_t), sizeof(th03_entry_header_t));
+        memcpy(&fe, data + i * sizeof(th03_entry_header_t),
+            sizeof(th03_entry_header_t));
         if (!fe.magic) {
             fprintf(stderr, "fe.magic == 0?\n");
             break;
@@ -127,7 +128,8 @@ th03_extract(archive_t* archive, entry_t* entry, FILE* stream)
         for (i = 0; i < entry->zsize; ++i) {
             int c = fgetc(archive->stream);
             if (c == EOF) {
-                fprintf(stderr, "%s: error while reading from archive: %s\n", argv0, strerror(errno));
+                fprintf(stderr, "%s: error while reading from archive: %s\n",
+                    argv0, strerror(errno));
                 return 0;
             }
             fputc(c ^ entry->extra, stream);
@@ -154,7 +156,8 @@ th03_extract(archive_t* archive, entry_t* entry, FILE* stream)
 static archive_t*
 th03_create(FILE* stream, unsigned int version, unsigned int count)
 {
-    return archive_create(stream, version, sizeof(th03_archive_header_t) + (count + 1) * sizeof(th03_entry_header_t), count);
+    return archive_create(stream, version,
+        sizeof(th03_archive_header_t) + (count + 1) * sizeof(th03_entry_header_t), count);
 }
 
 /* TODO: Check that filenames are 8.3, make it a THDAT_ flag. */

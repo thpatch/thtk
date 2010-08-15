@@ -118,7 +118,8 @@ typedef struct {
     uint32_t zero2; /* XXX: A few are 0xff000000. */
     uint32_t nameoffset;
     /* XXX: X is unused here. */
-    /* XXX: Y stores the secondary name offset for TH06. There is no secondary name when it is zero. */
+    /* XXX: Y stores the secondary name offset for TH06.
+     *      There is no secondary name when it is zero. */
     uint32_t x, y;
     /* 0: TH06
      * 2: TH07

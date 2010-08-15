@@ -35,7 +35,8 @@
 #include "util.h"
 
 char
-parse_args(int argc, char* argv[], void (*usage)(void), const char* commands, char* options, unsigned int* version)
+parse_args(int argc, char* argv[], void (*usage)(void), const char* commands,
+    char* options, unsigned int* version)
 {
     char command;
     char* argp;
@@ -68,7 +69,8 @@ parse_args(int argc, char* argv[], void (*usage)(void), const char* commands, ch
             argp++;
         } else {
             long int parsed_version = strtol(argp, &argp, 10);
-            if (!version || parsed_version == 0 || parsed_version == LONG_MIN || parsed_version == LONG_MAX) {
+            if (!version || parsed_version == 0 || parsed_version == LONG_MIN
+                || parsed_version == LONG_MAX) {
                 fprintf(stderr, "%s: unrecognized option '%c'\n", argv0, *argp);
                 usage();
                 return 0;

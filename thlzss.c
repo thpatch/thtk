@@ -71,7 +71,8 @@ typedef struct {
 static inline unsigned int
 generate_key(const unsigned char* array, unsigned int base)
 {
-    return ((array[(base + 1) & LZSS_DICTSIZE_MASK] << 8) | array[(base + 2) & LZSS_DICTSIZE_MASK]) ^ (array[base] << 4);
+    return ((array[(base + 1) & LZSS_DICTSIZE_MASK] << 8) |
+            array[(base + 2) & LZSS_DICTSIZE_MASK]) ^ (array[base] << 4);
 }
 
 static inline void
@@ -128,10 +129,13 @@ th_lz(unsigned int* outsize, read_byte_fptr read_byte, void* data)
         unsigned int offset;
 
         /* Find a good match. */
-        for (offset = hash.hash[generate_key(dict, dict_head)]; offset != HASH_NULL; offset = hash.next[offset]) {
+        for (offset = hash.hash[generate_key(dict, dict_head)];
+             offset != HASH_NULL;
+             offset = hash.next[offset]) {
             unsigned int match_tmp = 0;
             for (i = 0; i < waiting_bytes; ++i) {
-                if (dict[(dict_head + i) & LZSS_DICTSIZE_MASK] != dict[(offset + i) & LZSS_DICTSIZE_MASK])
+                if (dict[(dict_head + i) & LZSS_DICTSIZE_MASK] !=
+                    dict[(offset + i) & LZSS_DICTSIZE_MASK])
                     break;
                 match_tmp++;
             }
@@ -156,7 +160,8 @@ th_lz(unsigned int* outsize, read_byte_fptr read_byte, void* data)
 
         /* Add bytes to the dictionary. */
         for (i = 0; i < match_len; ++i) {
-            unsigned int offset = (dict_head + LZSS_MAX_MATCH) & LZSS_DICTSIZE_MASK;
+            unsigned int offset =
+                (dict_head + LZSS_MAX_MATCH) & LZSS_DICTSIZE_MASK;
             /* TODO: See if it is possible to combine list_add and list_remove
              * instead.  The cases where they are not called at the same time
              * must be identified first. */
@@ -256,7 +261,8 @@ th_unlz(struct bitstream* bs, unsigned char* out, unsigned int outsize)
 }
 
 void
-th_unlz_mem(unsigned char* in, unsigned int insize, unsigned char* out, unsigned int outsize)
+th_unlz_mem(unsigned char* in, unsigned int insize, unsigned char* out,
+    unsigned int outsize)
 {
     struct bitstream bs;
     bitstream_init_fixed(&bs, in, insize);

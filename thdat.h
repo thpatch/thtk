@@ -52,7 +52,8 @@ typedef struct {
 
 archive_t* thdat_open(FILE* stream, unsigned int version);
 /* TODO: Rename functions. */
-archive_t* archive_create(FILE* stream, uint32_t version, uint32_t offset, unsigned int count);
+archive_t* archive_create(FILE* stream, uint32_t version, uint32_t offset,
+    unsigned int count);
 
 /* Reads entry->size bytes from the passed file descriptor.  Returns a newly
  * allocated buffer with the read data.  Returns NULL on error. */

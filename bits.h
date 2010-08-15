@@ -55,7 +55,8 @@ struct bitstream {
 };
 
 void bitstream_init_stream(struct bitstream* b, FILE* stream);
-void bitstream_init_fixed(struct bitstream* b, unsigned char* buffer, unsigned int size);
+void bitstream_init_fixed(struct bitstream* b, unsigned char* buffer,
+    unsigned int size);
 void bitstream_init_growing(struct bitstream* b, unsigned int size);
 /* Closes an FD or frees a buffer. */
 void bitstream_free(struct bitstream* b);

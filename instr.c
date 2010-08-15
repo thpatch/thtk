@@ -624,7 +624,8 @@ format_find(unsigned int version, int id)
         if (fmts[i].id == id)
             return fmts[i].format;
 
-    fprintf(stderr, "%s: instruction %u is not defined for version %u\n", argv0, id, version);
+    fprintf(stderr, "%s: instruction %u is not defined for version %u\n",
+        argv0, id, version);
     return NULL;
 }
 
@@ -665,18 +666,21 @@ instr_parse(raw_instr_t* rinstr, instr_t* instr, unsigned int version)
             param_t* param;
 
             if (data_offset == rinstr->data_size) {
-                fprintf(stderr, "%s:%s: data size too small for instruction %u of version %u\n",
+                fprintf(stderr,
+                    "%s:%s: data size too small for instruction %u of version %u\n",
                     argv0, current_input, rinstr->id, version);
                 return NULL;
             }
 
             instr->param_cnt++;
-            instr->params = realloc(instr->params, instr->param_cnt * sizeof(param_t));
+            instr->params =
+                realloc(instr->params, instr->param_cnt * sizeof(param_t));
             param = &instr->params[instr->param_cnt - 1];
             param->type = format[i];
 
             if (data_offset + 4 > rinstr->data_size) {
-                fprintf(stderr, "%s:%s: format size larger than data size for instruction %u of version %u\n",
+                fprintf(stderr,
+                    "%s:%s: format size larger than data size for instruction %u of version %u\n",
                     argv0, current_input, rinstr->id, version);
                 return NULL;
             }
@@ -686,22 +690,30 @@ instr_parse(raw_instr_t* rinstr, instr_t* instr, unsigned int version)
 
             if (format[i] == 's' || format[i] == 'c') {
                 if (data_offset + param->value.s.length > rinstr->data_size) {
-                    fprintf(stderr, "%s:%s: format size larger than data size for instruction %u of version %u\n",
+                    fprintf(stderr,
+                        "%s:%s: format size larger than data size for instruction %u of version %u\n",
                         argv0, current_input, rinstr->id, version);
                     return NULL;
                 }
                 param->value.s.data = malloc(param->value.s.length);
-                memcpy(param->value.s.data, rinstr->data + data_offset, param->value.s.length);
+                memcpy(param->value.s.data, rinstr->data + data_offset,
+                    param->value.s.length);
                 data_offset += param->value.s.length;
 
                 if (format[i] == 'c') {
                     size_t outsize;
-                    util_sillyxor((unsigned char*)param->value.s.data, (unsigned char*)param->value.s.data, param->value.s.length, 119, 7, 16);
-                    param->value.s.data = (char*)util_iconv("UTF-8", "CP932", (unsigned char*)param->value.s.data, param->value.s.length, &outsize);
+                    util_sillyxor((unsigned char*)param->value.s.data,
+                        (unsigned char*)param->value.s.data,
+                        param->value.s.length, 119, 7, 16);
+                    param->value.s.data = (char*)util_iconv(
+                        "UTF-8", "CP932",
+                        (unsigned char*)param->value.s.data,
+                        param->value.s.length, &outsize);
                 }
             } else if (format[i] == 'D') {
                 if (data_offset + 4 > rinstr->data_size) {
-                    fprintf(stderr, "%s:%s: format size larger than data size for instruction %u of version %u\n",
+                    fprintf(stderr,
+                        "%s:%s: format size larger than data size for instruction %u of version %u\n",
                         argv0, current_input, rinstr->id, version);
                     return NULL;
                 }
@@ -712,7 +724,8 @@ instr_parse(raw_instr_t* rinstr, instr_t* instr, unsigned int version)
     }
 
     if (data_offset != rinstr->data_size) {
-        fprintf(stderr, "%s:%s: data size differs from format size for instruction %u of version %u\n",
+        fprintf(stderr,
+            "%s:%s: data size differs from format size for instruction %u of version %u\n",
             argv0, current_input, rinstr->id, version);
         return NULL;
     }

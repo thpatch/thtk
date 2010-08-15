@@ -80,7 +80,8 @@ open_ecl(ecl_t* ecl, FILE* f)
         return 0;
     }
     if (strncmp(magic, "SCPT", 4) != 0) {
-        fprintf(stderr, "%s:%s: SCPT signature missing\n", argv0, current_input);
+        fprintf(stderr, "%s:%s: SCPT signature missing\n",
+            argv0, current_input);
         return 0;
     }
 
@@ -109,7 +110,8 @@ open_ecl(ecl_t* ecl, FILE* f)
         return 0;
     }
     if (strncmp(magic, "ANIM", 4) != 0) {
-        fprintf(stderr, "%s:%s: ANIM signature missing\n", argv0, current_input);
+        fprintf(stderr, "%s:%s: ANIM signature missing\n",
+            argv0, current_input);
         return 0;
     }
 
@@ -136,7 +138,8 @@ open_ecl(ecl_t* ecl, FILE* f)
         return 0;
     }
     if (strncmp(magic, "ECLI", 4) != 0) {
-        fprintf(stderr, "%s:%s: ECLI signature missing\n", argv0, current_input);
+        fprintf(stderr, "%s:%s: ECLI signature missing\n",
+            argv0, current_input);
         return 0;
     }
 
@@ -443,7 +446,8 @@ ecldump_display_param(char* output, unsigned int output_length,
                 argv0, current_input, param->value.D[0]);
             abort();
         }
-        ecldump_display_param(output + strlen(output), output_length - strlen(output), sub, instr, i, &newparam, version);
+        ecldump_display_param(output + strlen(output),
+            output_length - strlen(output), sub, instr, i, &newparam, version);
         break;
     default:
         break;
@@ -451,7 +455,8 @@ ecldump_display_param(char* output, unsigned int output_length,
 }
 
 static void
-ecldump_render_instr(const sub_t* sub, instr_t* instr, instr_t** stack, unsigned int* stack_top, unsigned int version)
+ecldump_render_instr(const sub_t* sub, instr_t* instr, instr_t** stack,
+    unsigned int* stack_top, unsigned int version)
 {
     const stackinstr_t* i;
     unsigned int j;
@@ -504,13 +509,16 @@ ecldump_render_instr(const sub_t* sub, instr_t* instr, instr_t** stack, unsigned
 
             /* TODO: Make 1024 a constant. */
             if (format) {
-                snprintf(instr->string, 1024, format, stack[*stack_top - 3]->string, stack[*stack_top - 2]->string);
+                snprintf(instr->string, 1024, format,
+                    stack[*stack_top - 3]->string, stack[*stack_top - 2]->string);
             } else {
                 if (i->type == GOTO || i->type == UNLESS || i->type == IF) {
                     char target[256];
                     char newtime[256];
-                    ecldump_display_param(target, 256, sub, instr, 0, NULL, version);
-                    ecldump_display_param(newtime, 256, sub, instr, 1, NULL, version);
+                    ecldump_display_param(target, 256, sub, instr, 0, NULL,
+                        version);
+                    ecldump_display_param(newtime, 256, sub, instr, 1, NULL,
+                        version);
                     if (i->type == GOTO) {
                         snprintf(instr->string, 1024, "goto %s @ %s",
                             target, newtime);
@@ -525,12 +533,15 @@ ecldump_render_instr(const sub_t* sub, instr_t* instr, instr_t** stack, unsigned
                     /* ecldump_display_param(instr->string + strlen(instr->string), 1024 - strlen(instr->string), &ecl->subs[i], instr, k, NULL, version); */
                     if (instr->params[0].type == 'i') {
                         if (instr->param_mask & 1) {
-                            snprintf(instr->string, 1024, "[%d]", instr->params[0].value.i);
+                            snprintf(instr->string, 1024, "[%d]",
+                                instr->params[0].value.i);
                         } else {
-                            snprintf(instr->string, 1024, "%d", instr->params[0].value.i);
+                            snprintf(instr->string, 1024, "%d",
+                                instr->params[0].value.i);
                         }
                     } else if (instr->params[0].type == 'f') {
-                        const char* floatb = util_printfloat(&instr->params[0].value.f);
+                        const char* floatb =
+                            util_printfloat(&instr->params[0].value.f);
                         if (instr->param_mask & 1) {
                             snprintf(instr->string, 1024, "[%sf]", floatb);
                         } else
@@ -538,10 +549,13 @@ ecldump_render_instr(const sub_t* sub, instr_t* instr, instr_t** stack, unsigned
                     }
 
                     if (i->type == ASSIGN) {
-                        snprintf(instr->string + strlen(instr->string), 1024 - strlen(instr->string), " = %s", stack[*stack_top - 2]->string);
+                        snprintf(instr->string + strlen(instr->string),
+                            1024 - strlen(instr->string),
+                            " = %s", stack[*stack_top - 2]->string);
                     }
                 } else if (i->type == NOT) {
-                    snprintf(instr->string, 1024, "(!%s)", stack[*stack_top - 2]->string);
+                    snprintf(instr->string, 1024, "(!%s)",
+                        stack[*stack_top - 2]->string);
                 }
             }
 
@@ -610,26 +624,35 @@ ecldump_translate_print(ecl_t* ecl, unsigned int version)
             stack[stack_top - 1] = instr;
 
             if (instr->rank_mask == 0xff)
-                ecldump_render_instr(&ecl->subs[i], instr, stack, &stack_top, version);
+                ecldump_render_instr(&ecl->subs[i], instr, stack, &stack_top,
+                    version);
 
             if (!instr->string[0]) {
                 snprintf(instr->string, 1024, "ins_%u", instr->id);
 
                 if (instr->rank_mask != 0xff) {
-                    snprintf(instr->string + strlen(instr->string), 1024 - strlen(instr->string), " +");
+                    snprintf(instr->string + strlen(instr->string),
+                        1024 - strlen(instr->string), " +");
                     if (instr->rank_mask & RANK_EASY)
-                        snprintf(instr->string + strlen(instr->string), 1024 - strlen(instr->string), "E");
+                        snprintf(instr->string + strlen(instr->string),
+                            1024 - strlen(instr->string), "E");
                     if (instr->rank_mask & RANK_NORMAL)
-                        snprintf(instr->string + strlen(instr->string), 1024 - strlen(instr->string), "N");
+                        snprintf(instr->string + strlen(instr->string),
+                            1024 - strlen(instr->string), "N");
                     if (instr->rank_mask & RANK_HARD)
-                        snprintf(instr->string + strlen(instr->string), 1024 - strlen(instr->string), "H");
+                        snprintf(instr->string + strlen(instr->string),
+                            1024 - strlen(instr->string), "H");
                     if (instr->rank_mask & RANK_LUNATIC)
-                        snprintf(instr->string + strlen(instr->string), 1024 - strlen(instr->string), "L");
+                        snprintf(instr->string + strlen(instr->string),
+                            1024 - strlen(instr->string), "L");
                 }
 
                 for (k = 0; k < instr->param_cnt; ++k) {
-                    snprintf(instr->string + strlen(instr->string), 1024 - strlen(instr->string), " ");
-                    ecldump_display_param(instr->string + strlen(instr->string), 1024 - strlen(instr->string), &ecl->subs[i], instr, k, &instr->params[k], version);
+                    snprintf(instr->string + strlen(instr->string),
+                        1024 - strlen(instr->string), " ");
+                    ecldump_display_param(instr->string + strlen(instr->string),
+                        1024 - strlen(instr->string), &ecl->subs[i], instr, k,
+                        &instr->params[k], version);
                 }
             }
         }
@@ -726,14 +749,16 @@ main(int argc, char* argv[])
         current_input = argv[2];
         in = fopen(argv[2], "rb");
         if (!in) {
-            fprintf(stderr, "%s: couldn't open %s for reading: %s\n", argv0, argv[2], strerror(errno));
+            fprintf(stderr, "%s: couldn't open %s for reading: %s\n",
+                argv0, argv[2], strerror(errno));
             exit(1);
         }
         if (argc > 3) {
             current_output = argv[3];
             out = fopen(argv[3], "wb");
             if (!out) {
-                fprintf(stderr, "%s: couldn't open %s for writing: %s\n", argv0, argv[3], strerror(errno));
+                fprintf(stderr, "%s: couldn't open %s for writing: %s\n",
+                    argv0, argv[3], strerror(errno));
                 exit(1);
             }
         }

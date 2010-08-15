@@ -148,11 +148,14 @@ C\" {
 }
 <CSTRING>\" {
     size_t length = 0;
-    yylval.bytes.data = util_iconv("CP932", "UTF-8", (unsigned char*)yylval.bytes.data, yylval.bytes.length, &length);
+    yylval.bytes.data = util_iconv(
+        "CP932", "UTF-8",
+        (unsigned char*)yylval.bytes.data, yylval.bytes.length, &length);
     yylval.bytes.length = length;
     yylval.bytes.data = realloc(yylval.bytes.data, yylval.bytes.length + 4);
     memset(yylval.bytes.data + yylval.bytes.length, 0, 4);
-    util_sillyxor(yylval.bytes.data, yylval.bytes.data, yylval.bytes.length + 4, 119, 7, 16);
+    util_sillyxor(yylval.bytes.data, yylval.bytes.data, yylval.bytes.length + 4,
+        119, 7, 16);
     BEGIN(INITIAL);
     return CTEXT;
 }
@@ -166,7 +169,12 @@ C\" {
     yylval.string = realloc(yylval.string, strlen(yylval.string) + 1 + 1);
     strncat(yylval.string, yytext + 1, 1);
 }
-<STRING>\n         free(yylval.string); yyerror("unterminated string"); BEGIN(INITIAL); yyterminate();
+<STRING>\n         {
+    free(yylval.string);
+    yyerror("unterminated string");
+    BEGIN(INITIAL);
+    yyterminate();
+}
 <STRING>\"         BEGIN(INITIAL); return TEXT;
 
 "/*"               BEGIN(COMMENT);

@@ -32,7 +32,8 @@
 #include <string.h>
 
 static unsigned char*
-buffer_add(unsigned char* buffer, unsigned int* buffer_pos, unsigned int* buffer_size, unsigned char b)
+buffer_add(unsigned char* buffer, unsigned int* buffer_pos,
+    unsigned int* buffer_size, unsigned char b)
 {
     if (*buffer_pos >= *buffer_size) {
         *buffer_size *= 2;

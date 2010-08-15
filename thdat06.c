@@ -247,7 +247,9 @@ th06_close(archive_t* archive)
         entry_t* entry = &archive->entries[i];
         /* These values are unknown, but it seems they can be ignored. */
         uint32_t unknown1 = 0; /* The same for all entries in an archive. */
-        uint32_t unknown2 = 0; /* Starts at a high value.  Increases by a random multiple of a thousand per entry. */
+        uint32_t unknown2 = 0; /* Starts at a high value.
+                                * Increases by a random multiple of a thousand
+                                * per entry. */
 
         if (archive->version == 6) {
             th06_write_uint32(&b, unknown1);
