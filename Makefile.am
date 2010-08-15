@@ -66,6 +66,7 @@ thecl_SOURCES = \
 	thecl.c \
 	instr.c \
 	instr.h \
+	ecl.h \
 	ecsparse.h \
 	ecsscan.l \
 	ecsparse.y \
