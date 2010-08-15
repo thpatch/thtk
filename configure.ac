@@ -17,6 +17,7 @@ dnl check for programs
 
 dnl AC_PROG_CC
 AC_PROG_LEX
+AM_PROG_LEX
 AC_PROG_YACC
 
 dnl check for libraries
