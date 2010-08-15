@@ -2,6 +2,14 @@ AM_YFLAGS = -d
 LDADD = @mb_LIBS@
 BUILT_SOURCES = ecsparse.h ecsparse.c ecsscan.c
 bin_PROGRAMS = thanm thdat thecl
+EXTRA_DIST = \
+	COPYING.autotools \
+	COPYING.bison \
+	COPYING.flex \
+	COPYING.gcc \
+	COPYING.glibc \
+	COPYING.libpng \
+	COPYING.zlib
 
 if COMBINE
 am_thanm_OBJECTS = thanm.o
