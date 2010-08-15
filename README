@@ -1,0 +1,111 @@
+Touhou Tool Kit User Documentation
+  This package provides three tools for editing the content
+of the games in the Touhou series of games.
+
+- Tool Descriptions
+  A description of the tools and their commands:
+
+- - thanm
+  thanm performs actions on animation (.anm) files stored
+in the game archives.
+  The following commands are available:
+- - - List
+  The listing command displays all the non-image information
+in the animation archive, this includes sprite rectangles,
+animation scripts, and various image-related data.
+  Example:
+$ thanm l input.anm > output.txt
+- - - Extract
+  The extraction command extracts image files from the
+animation archives.
+  These images are converted to the PNG image format.
+  Extraction can be limited to only certain files by listing
+their paths after the archive.
+  Examples:
+$ thanm x input.anm 
+$ thanm x input.anm input/file3.png
+- - - Create
+  The creation command constructs a new animation archive
+from a descriptor file (these can be obtained from the
+listing command) and a number of image files.
+  The image files will have to be stored relative to the
+place of command execution, using the paths specified in the
+descriptor file.
+  Example:
+$ thanm c output.anm input.txt
+- - - Replace
+  The replacement command allows one to replace the image
+data stored in an archive with other image data.
+  Example:
+$ thanm r archive.anm archive/file.png input.png
+
+- - thdat
+  thdat can unpack and repack game archives.
+  For these commands the game version must be specified,
+unless the default (the latest supported game) is desired.
+  The following commands are available:
+- - - Extract
+  The extraction command extracts all files in the archive
+to the current directory.
+  Extraction can be limited to only certain files by listing
+their paths after the archive.
+  Examples:
+$ thdat x10 input.dat
+$ thdat x5 input.dat file1.msg
+- - - Create
+  The creation command creates a new archive from the
+specified files.
+  Example:
+$ thdat c125 output.dat input1.anm input2.ecl
+
+- - thecl
+  thecl performs actions on the level scripts included with
+the games.
+  The following commands are available:
+- - - Dump
+  The dumping command parses the specified script file and
+generates a human-readable representation of its contents.
+  The game version must be specified when using this
+commmand.
+  The actual syntax of the output is not currently
+documented.
+  Example:
+$ thecl d128 input.ecl output.ecs
+- - - Create
+  The creation command compiles the specified file into a
+new script file.
+  The actual syntax of the input is not currently
+documented, but it will take the output from the dumping
+command.
+  Example:
+$ thecl c input.ecs output.ecl
+- - - Raw Dump
+  The raw dumping command can be of use when figuring out
+new commands in future versions of the game engines by
+performing an unformatted dump of the specified script.
+  Note that this command will only work as long as the basic
+file format is the same.
+  Example:
+$ thecl r input.ecl output.txt
+- - - Generate Parameter Table
+  The parameter table generation command can be of use when
+figuring out new commands in future versions of the game
+engines by presenting a table of all used commands in the
+specified script along with their guessed parameter lists.
+  Note that this command will only work as long as the basic
+file format is the same.
+  Example:
+$ thecl p input.ecl output.txt
+
+- Supported Games
+
+  This table displays which of the main actions are
+supported for each game.
+
+Action   1 2 3 4 5 6 7 75 8 9 95 10 105 11 12 123 125 128
+thanm x  - - - - - - y  - y y  y  y   -  y  y   -   y   y
+thanm l  - - - - - y y  - y y  y  y   -  y  y   -   y   y
+thdat x  y y y y y y y  n y y  y  y   n  y  y   n   y   y
+thdat c  y y y y y y y  y y y  y  y   n  y  y   n   y   y
+thecl d  - - - - - n n  - n n  n  y   -  y  y   -   y   y
+thecl c  - - - - - n n  - n n  n  y   -  y  y   -   y   y
