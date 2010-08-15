@@ -135,23 +135,17 @@ thdat_add_entry(archive_t* archive)
 int
 thdat_write_entry(archive_t* archive, entry_t* entry, unsigned char* data)
 {
-    size_t ret;
+    int ret;
 
 #pragma omp critical
 {
-    ret = fwrite(data, entry->zsize, 1, archive->stream);
+    ret = util_write(archive->stream, data, entry->zsize);
     entry->offset = archive->offset;
     archive->offset += entry->zsize;
 }
 
     free(data);
-
-    if (ret != 1) {
-        fprintf(stderr, "%s: failed writing %lu bytes: %s\n", argv0, (long unsigned int)entry->zsize, strerror(errno));
-        free(data);
-        return 0;
-    } else
-        return 1;
+    return ret;
 }
 
 static int
