@@ -1,7 +1,7 @@
 AC_PREREQ(2.62) dnl 2.62 for AC_OPENMP.
 AC_INIT([Touhou Toolkit], [0], [xarnonymous@gmail.com], [thtk], [http://code.google.com/p/thtk/])
-AM_INIT_AUTOMAKE([silent-rules foreign])
-AM_SILENT_RULES
+AM_INIT_AUTOMAKE([1.11 silent-rules foreign])
+AM_SILENT_RULES dnl requires automake 1.11
 AC_CONFIG_SRCDIR([thdat.c])
 AC_CONFIG_HEADERS([config.h])
 
