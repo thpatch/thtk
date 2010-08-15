@@ -43,6 +43,7 @@ thdat_SOURCES = \
 	thdat.c \
 	thdat.h \
 	thdat02.c \
+	thdat03.c \
 	thdat06.c \
 	thdat08.c \
 	thdat75.c \
