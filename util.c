@@ -55,7 +55,9 @@ void
 util_print_version(const char* name, const char* version)
 {
     printf("%s %s (part of " PACKAGE_NAME " release " PACKAGE_VERSION ")\n"
+#ifdef PACKAGE_URL
            "The latest version is available at <" PACKAGE_URL ">\n",
+#endif
            name, version);
 }
 
