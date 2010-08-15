@@ -1,5 +1,4 @@
 AM_YFLAGS = -d
-AM_CFLAGS = -pedantic -Wall -Wextra
 LDADD = @mb_LIBS@
 BUILT_SOURCES = ecsparse.h ecsparse.c ecsscan.c
 bin_PROGRAMS = thanm thdat thecl
