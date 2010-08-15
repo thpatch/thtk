@@ -619,79 +619,22 @@ yyerror(const char* str)
     }
 }
 
-static void
-print_usage(void)
-{
-    printf("Usage: %s -v {10,11,12,125} [OPTION]... [FILE]\n"
-           "OPTION can be:\n"
-           "  -o FILE  write output to the specified file\n"
-           "  -h       display this help and exit\n"
-           "  -V       display version information and exit\n\n"
-           "Additional documentation might be available at <" PACKAGE_URL ">.\n"
-           "Report bugs to <" PACKAGE_BUGREPORT ">.\n", argv0);
-}
-
 int
-main(int argc, char* argv[])
+compile_ecs(FILE* in, FILE* out, unsigned int version)
 {
     long pos;
     int ret;
     unsigned int i;
-    int j;
-    FILE* out;
     const uint32_t zero = 0;
-    unsigned int version = 0;
     header_scpt_t header;
     header_eclh_t eclh;
 
-    yyin = stdin;
-    argv0 = "eclc";
-    current_input = "(stdin)";
-    out = stdout;
-
-    for (j = 1; j < argc; ++j) {
-        if (strcmp(argv[j], "-h") == 0) {
-            print_usage();
-            return 0;
-        } else if (strcmp(argv[j], "-V") == 0) {
-            util_print_version("eclc", PACKAGE_THECL_VERSION);
-            return 0;
-        } else if (strcmp(argv[j], "-v") == 0) {
-            ++j;
-            if (j == argc) {
-                print_usage();
-                return 1;
-            }
-            version = strtol(argv[j], NULL, 10);
-        } else if (strcmp(argv[j], "-o") == 0) {
-            ++j;
-            if (j == argc) {
-                print_usage();
-                return 1;
-            }
-            out = fopen(argv[j], "wb");
-            if (!out) {
-                fprintf(stderr, "%s: couldn't open %s for writing: %s\n", argv0, argv[j], strerror(errno));
-                return 1;
-            }
-        } else {
-            break;
-        }
+    if (!util_seekable(out)) {
+        fprintf(stderr, "%s: output is not seekable\n", argv0);
+        return -1;
     }
 
-    if (version != 10 && version != 11 && version != 12 && version != 125) {
-        print_usage();
-        return 1;
-    }
-
-    if (j != argc) {
-        yyin = fopen(argv[j], "r");
-        current_input = argv[j];
-        if (!yyin) {
-            fprintf(stderr, "%s: couldn't open %s for reading: %s\n", argv0, argv[j], strerror(errno));
-            return 1;
-        }
-    }
+    yyin = in;
 
     ret = yyparse();
 
@@ -853,7 +796,5 @@ main(int argc, char* argv[])
     }
     free(subs);
 
-    fclose(yyin);
-    fclose(out);
     return 0;
 }

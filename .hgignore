@@ -1,6 +1,7 @@
 syntax:glob
 *.exe
 *.o
+*.output
 *~
 .deps/
 Makefile
@@ -13,8 +14,6 @@ config.log
 config.status
 configure
 depcomp
-eclc
-ecldump
 install-sh
 missing
 ecsparse.c
@@ -22,5 +21,6 @@ ecsparse.h
 ecsscan.c
 stamp-h1
 thanm
+thecl
 thdat
 ylwrap

@@ -57,6 +57,8 @@ void util_basename(char* dst, size_t dstlen, const char* src);
 
 /* A wrapper for fseek with SEEK_SET which prints an error message upon error. */
 int util_seek(FILE* stream, long offset);
+/* Checks if a stream is seekable. */
+int util_seekable(FILE* stream);
 /* A wrapper for ftell which prints an error message upon error. */
 long util_tell(FILE* stream);
 /* A wrapper for fread which prints an error message upon error. */

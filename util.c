@@ -69,6 +69,12 @@ util_seek(FILE* stream, long offset)
         return 1;
 }
 
+int
+util_seekable(FILE* stream)
+{
+    return ftell(stream) != -1;
+}
+
 long
 util_tell(FILE* stream)
 {

@@ -27,31 +27,37 @@
  * DAMAGE.
  */
 #include <config.h>
-#include <inttypes.h>
-#include <string.h>
-#include <stdio.h>
-#include <stdlib.h>
 #include <assert.h>
 #include <errno.h>
 #include <math.h>
-#include "program.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "args.h"
 #include "ecl.h"
-#include "instr.h"
-#include "util.h"
 #include "ecsparse.h"
+#include "instr.h"
+#include "program.h"
+#include "util.h"
 
+extern int compile_ecs(FILE* in, FILE* out, unsigned int version);
+
+static FILE* in;
 static FILE* out;
 
 static void
 print_usage(void)
 {
-    printf("Usage: %s -v {10,11,12,125} [OPTION]... FILE\n"
+    printf("Usage: %s COMMAND[OPTION...] [INPUT [OUTPUT]]\n"
+           "COMMAND can be:\n"
+           "  c  create ECL file\n"
+           "  d  dump ECL file\n"
+           "  r  raw ECL file dump\n"
+           "  p  generate parameter table\n"
+           "  h  display this help and exit\n"
+           "  V  display version information and exit\n"
            "OPTION can be:\n"
-           "  -o FILE  write output to the specified file\n"
-           "  -r       raw dump\n"
-           "  -p       generate parameter table\n"
-           "  -h       display this help and exit\n"
-           "  -V       display version information and exit\n\n"
+           "  #  # can be 10, 11, 12, or 125 (required)\n"
            "Additional documentation might be available at <" PACKAGE_URL ">.\n"
            "Report bugs to <" PACKAGE_BUGREPORT ">.\n", argv0);
 }
@@ -63,6 +69,11 @@ open_ecl(ecl_t* ecl, FILE* f)
 {
     unsigned int i;
     char magic[5] = { 0 };
+
+    if (!util_seekable(f)) {
+        fprintf(stderr, "%s: input is not seekable\n", argv0);
+        return -1;
+    }
 
     if (fread(magic, 4, 1, f) != 1) {
         fprintf(stderr, "%s:%s: couldn't read: %s\n",
@@ -701,91 +712,81 @@ ecldump_free(ecl_t* ecl)
 int
 main(int argc, char* argv[])
 {
-    int i;
-    FILE* f;
-    unsigned int mode = ECLDUMP_MODE_NORMAL;
+    char mode;
     unsigned int version = 0;
-    ecl_t ecl;
-
-    f = stdin;
-    current_input = "(stdin)";
-    out = stdout;
 
     argv0 = util_shortname(argv[0]);
-    memset(&ecl, 0, sizeof(ecl_t));
+    in = stdin;
+    current_input = "(stdin)";
+    out = stdout;
+    current_output = "(stdout)";
 
-    for (i = 1; i < argc; ++i) {
-        if (strcmp(argv[i], "-h") == 0) {
-            print_usage();
-            exit(0);
-        } else if (strcmp(argv[i], "-V") == 0) {
-            util_print_version("ecldump", PACKAGE_THECL_VERSION);
-            exit(0);
-        } else if (strcmp(argv[i], "-v") == 0) {
-            ++i;
-            if (i == argc) {
-                print_usage();
-                exit(1);
-            }
-            version = strtol(argv[i], NULL, 10);
-        } else if (strcmp(argv[i], "-r") == 0) {
-            mode = ECLDUMP_MODE_RAWDUMP;
-        } else if (strcmp(argv[i], "-p") == 0) {
-            mode = ECLDUMP_MODE_PARAMETERS;
-        } else if (strcmp(argv[i], "-o") == 0) {
-            ++i;
-            if (i == argc) {
-                print_usage();
-                exit(1);
-            }
-            out = fopen(argv[i], "w");
-            if (!out) {
-                fprintf(stderr, "%s: couldn't open %s for writing: %s\n",
-                    argv0, argv[i], strerror(errno));
-                exit(1);
-            }
-        } else {
-            break;
-        }
-    }
+    mode = parse_args(argc, argv, print_usage, "cdrphV", "", &version);
 
-    if (version != 10 && version != 11 && version != 12 && version != 125) {
-        print_usage();
-        exit(1);
-    }
-
-    if (i != argc) {
-        f = fopen(argv[i], "rb");
-        if (!f) {
-            fprintf(stderr, "%s: couldn't open %s for reading: %s\n",
-                argv0, argv[i], strerror(errno));
+    if (argc > 2) {
+        current_input = argv[2];
+        in = fopen(argv[2], "rb");
+        if (!in) {
+            fprintf(stderr, "%s: couldn't open %s for reading: %s\n", argv0, argv[2], strerror(errno));
             exit(1);
         }
-
-        current_input = argv[i];
+        if (argc > 3) {
+            current_output = argv[3];
+            out = fopen(argv[3], "wb");
+            if (!out) {
+                fprintf(stderr, "%s: couldn't open %s for writing: %s\n", argv0, argv[3], strerror(errno));
+                exit(1);
+            }
+        }
     }
 
-    if (open_ecl(&ecl, f) != 0)
-        exit(1);
-
-    fclose(f);
-
-    switch (mode) {
-    case ECLDUMP_MODE_NORMAL:
+    switch (mode)
+    {
+    case 'h':
+        print_usage();
+        exit(0);
+    case 'V':
+        util_print_version("thecl", PACKAGE_THECL_VERSION);
+        exit(0);
+    case 'c':
+        if (compile_ecs(in, out, version) != 0)
+            exit(0);
+        fclose(in);
+        fclose(out);
+        exit(0);
+    case 'd': {
+        ecl_t ecl;
+        if (open_ecl(&ecl, in) == -1)
+            exit(1);
+        fclose(in);
         ecldump_translate(&ecl, version);
         ecldump_translate_print(&ecl, version);
-        break;
-    case ECLDUMP_MODE_PARAMETERS:
-        ecldump_list_params(&ecl);
-        break;
-    /* This mode might be useful for newer formats. */
-    case ECLDUMP_MODE_RAWDUMP:
-        ecldump_rawdump(&ecl);
-        break;
+        ecldump_free(&ecl);
+        fclose(out);
+        exit(0);
     }
-
-    ecldump_free(&ecl);
-    fclose(out);
-
-    return 0;
+    case 'p': {
+        ecl_t ecl;
+        if (open_ecl(&ecl, in) == -1)
+            exit(1);
+        fclose(in);
+        ecldump_list_params(&ecl);
+        ecldump_free(&ecl);
+        fclose(out);
+        exit(0);
+    }
+    case 'r': {
+        ecl_t ecl;
+        if (open_ecl(&ecl, in) == -1)
+            exit(1);
+        fclose(in);
+        ecldump_rawdump(&ecl);
+        ecldump_free(&ecl);
+        fclose(out);
+        exit(0);
+    }
+    default:
+        /* Usage will already have been displayed. */
+        exit(1);
+    }
 }
