@@ -231,7 +231,6 @@ print_usage(void)
            "  V  display version information and exit\n"
            "OPTION can be:\n"
            "  #  # can be 2, 3, 4, 5, 6, 7, 75, 8, 9, 95, 10, 11, 12, 125, or 128, defaults to the latest\n\n"
-           "Additional documentation might be available at <" PACKAGE_URL ">.\n"
            "Report bugs to <" PACKAGE_BUGREPORT ">.\n", argv0);
 }
 

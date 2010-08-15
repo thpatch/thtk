@@ -58,7 +58,6 @@ print_usage(void)
            "  V  display version information and exit\n"
            "OPTION can be:\n"
            "  #  # can be 10, 11, 12, 125, or 128 (required)\n"
-           "Additional documentation might be available at <" PACKAGE_URL ">.\n"
            "Report bugs to <" PACKAGE_BUGREPORT ">.\n", argv0);
 }
 

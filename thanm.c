@@ -1365,7 +1365,6 @@ print_usage(void)
            "  V                               display version information and exit\n"
            "OPTION can be:\n"
            "  f  ignore errors when possible\n"
-           "Additional documentation might be available at <" PACKAGE_URL ">.\n"
            "Report bugs to <" PACKAGE_BUGREPORT ">.\n");
 }
 
