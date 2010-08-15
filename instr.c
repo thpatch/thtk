@@ -100,7 +100,7 @@ get_stackinstrs(unsigned int version)
 {
     if (version == 10 || version == 11) {
         return th10_stackinstrs;
-    } else if (version == 12 || version == 125) {
+    } else if (version == 12 || version == 125 || version == 128) {
         return th12_stackinstrs;
     } else {
         fprintf(stderr, "not implemented\n");
@@ -416,6 +416,7 @@ static const instr_fmt_t th12_fmts[] = {
     { 16, "si?D*" },
     { 17, "f" },
     { 21, "" },
+    { 22, "is" },
     { 30, "s?D*" },
     { 40, "i" },
     { 42, "i" },
@@ -443,6 +444,7 @@ static const instr_fmt_t th12_fmts[] = {
     { 68, "" },
     { 69, "" },
     { 70, "" },
+    { 71, "" },
     { 73, "" },
     { 74, "" },
     { 77, "" },
@@ -482,6 +484,7 @@ static const instr_fmt_t th12_fmts[] = {
     { 280, "siiiii" },
     { 281, "if" },
     { 282, "ii" },
+    { 283, "ffi" },
     { 300, "ff" },
     { 301, "iiff" },
     { 303, "iifi" },
@@ -581,6 +584,8 @@ static const instr_fmt_t th12_fmts[] = {
     { 532, "f" },
     { 534, "i" },
     { 536, "i" },
+    { 537, "fifiiiffffff" },
+    { 538, "iis" },
     { 600, "iffff" },
     { 601, "iiiiii" },
     { 602, "i" },
@@ -591,6 +596,9 @@ static const instr_fmt_t th12_fmts[] = {
     { 610, "i" },
     { 611, "i" },
     { 612, "ff" },
+    { 613, "i" },
+    { 614, "fi" },
+    { 615, "ii" },
     { 700, "i" },
     { -1, NULL }
 };
@@ -605,7 +613,8 @@ format_find(unsigned int version, int id)
     case 10: fmts = th10_fmts; break;
     case 11: fmts = th11_fmts; break;
     case 12:
-    case 125: fmts = th12_fmts; break;
+    case 125:
+    case 128: fmts = th12_fmts; break;
     default:
         fprintf(stderr, "%s: unsupported version: %u\n", argv0, version);
         return NULL;

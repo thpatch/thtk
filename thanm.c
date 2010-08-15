@@ -397,6 +397,8 @@ static const opcode_fmt_t formats_v4p[] = {
     { 110, "ff" },
     { 111, "i" },
     { 112, "i" },
+    { 113, "iif" },
+    { 114, "i" },
     { 0xffff, "" }
 };
 
