@@ -114,11 +114,7 @@ util_fsize(FILE* stream)
 int
 util_read(FILE* stream, void* buffer, size_t size)
 {
-    if (size == 0) {
-        fprintf(stderr, "%s: util_read called with size 0\n", argv0);
-        abort();
-    }
-    if (fread(buffer, size, 1, stream) != 1) {
+    if (fread(buffer, size, 1, stream) != 1 && size != 0) {
         if (feof(stream)) {
             fprintf(stderr, "%s: failed reading %lu bytes: unexpected end of file\n", argv0, (long unsigned int)size);
         } else {
@@ -132,11 +128,7 @@ util_read(FILE* stream, void* buffer, size_t size)
 int
 util_write(FILE* stream, const void* buffer, size_t size)
 {
-    if (size == 0) {
-        fprintf(stderr, "%s: util_write called with size 0\n", argv0);
-        abort();
-    }
-    if (fwrite(buffer, size, 1, stream) != 1) {
+    if (fwrite(buffer, size, 1, stream) != 1 && size != 0) {
         fprintf(stderr, "%s: failed writing %lu bytes: %s\n", argv0, (long unsigned int)size, strerror(errno));
         return 0;
     } else
