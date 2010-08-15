@@ -23,7 +23,7 @@ thdat.o: $(thdat_SOURCES)
 	$(COMPILE) $(thdat_CFLAGS) @combine_CFLAGS@ -c -o $@ $(filter %.c,$^)
 
 thecl.o: $(thecl_SOURCES)
-	$(COMPILE) $(thecl_CFLAGS) @combine_CFLAGS@ -c -o $@ $(filter %.c,$^) ecsparse.c ecsscan.c
+	$(COMPILE) $(thecl_CFLAGS) @combine_CFLAGS@ -c -o $@ $(filter %.c,$^) $(srcdir)/ecsparse.c $(srcdir)/ecsscan.c
 endif
 
 util_SOURCES = \
