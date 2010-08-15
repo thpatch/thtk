@@ -1,0 +1,14 @@
+Build requirements:
+	[if building from repository] autoconf 2.62
+	[if building from repository] automake 1.11
+	libpng.
+	libiconv (for non-Windows systems).
+	Recent GCC.
+	Recent glibc.
+
+Build instructions:
+	[if building from repository] $ autoreconf -fi
+	$ ./configure 
+	$ make
+
+	Three executables are generated, thanm, thdat, and thecl.
