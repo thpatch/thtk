@@ -605,31 +605,52 @@ static const instr_fmt_t th12_fmts[] = {
 };
 
 static const char*
+search_format(
+    int id,
+    const instr_fmt_t* formats)
+{
+    unsigned int i;
+
+    for (i = 0; formats[i].id != -1; ++i)
+        if (formats[i].id == id)
+            return formats[i].format;
+
+    return NULL;
+}
+
+static const char*
 format_find(
     unsigned int version,
     int id)
 {
-    unsigned int i;
-    const instr_fmt_t* fmts = NULL;
+    const char* ret = NULL;
 
     switch (version) {
-    case 10: fmts = th10_fmts; break;
-    case 11: fmts = th11_fmts; break;
+    case 10:
+        if (!ret) ret = search_format(id, th10_fmts);
+        break;
+    case 11:
+        if (!ret) ret = search_format(id, th11_fmts);
+        break;
     case 12:
+        if (!ret) ret = search_format(id, th12_fmts);
+        break;
     case 125:
-    case 128: fmts = th12_fmts; break;
+        if (!ret) ret = search_format(id, th12_fmts);
+        break;
+    case 128:
+        if (!ret) ret = search_format(id, th12_fmts);
+        break;
     default:
         fprintf(stderr, "%s: unsupported version: %u\n", argv0, version);
         return NULL;
     }
 
-    for (i = 0; fmts[i].id != -1; ++i)
-        if (fmts[i].id == id)
-            return fmts[i].format;
+    if (!ret)
+        fprintf(stderr, "%s: instruction %u is not defined for version %u\n",
+            argv0, id, version);
 
-    fprintf(stderr, "%s: instruction %u is not defined for version %u\n",
-        argv0, id, version);
-    return NULL;
+    return ret;
 }
 
 instr_t*
