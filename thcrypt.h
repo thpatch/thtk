@@ -35,7 +35,7 @@ void th_encrypt(
     unsigned char* data,
     unsigned int size,
     unsigned char key,
-    unsigned char step,
+    const unsigned char step,
     unsigned int block,
     unsigned int limit);
 
@@ -43,7 +43,7 @@ void th_decrypt(
     unsigned char* data,
     unsigned int size,
     unsigned char key,
-    unsigned char step,
+    const unsigned char step,
     unsigned int block,
     unsigned int limit);
 

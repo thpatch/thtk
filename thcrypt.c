@@ -33,8 +33,13 @@
 #include "thcrypt.h"
 
 void
-th_encrypt(unsigned char* data, unsigned int size, unsigned char key,
-    const unsigned char step, unsigned int block, unsigned int limit)
+th_encrypt(
+    unsigned char* data,
+    unsigned int size,
+    unsigned char key,
+    const unsigned char step,
+    unsigned int block,
+    unsigned int limit)
 {
     const unsigned char* end;
     unsigned char* temp = malloc(block);
@@ -79,8 +84,13 @@ th_encrypt(unsigned char* data, unsigned int size, unsigned char key,
 }
 
 void
-th_decrypt(unsigned char* data, unsigned int size, unsigned char key,
-    const unsigned char step, unsigned int block, unsigned int limit)
+th_decrypt(
+    unsigned char* data,
+    unsigned int size,
+    unsigned char key,
+    const unsigned char step,
+    unsigned int block,
+    unsigned int limit)
 {
     const unsigned char* end;
     unsigned char* temp = malloc(block);

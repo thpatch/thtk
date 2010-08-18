@@ -353,7 +353,11 @@ static sub_t* subs;
 static sub_t* current_sub;
 
 static int
-make_stackinstr(int type, char stack1, char stack2, list_t* params)
+make_stackinstr(
+    int type,
+    char stack1,
+    char stack2,
+    list_t* params)
 {
     const stackinstr_t* i;
 
@@ -410,7 +414,8 @@ make_stackinstr(int type, char stack1, char stack2, list_t* params)
 }
 
 static void
-add_eclh(char* arg)
+add_eclh(
+    char* arg)
 {
     if (!arg) {
         current_sub = NULL;
@@ -431,7 +436,8 @@ add_eclh(char* arg)
 }
 
 static void
-label_create(char* name)
+label_create(
+    char* name)
 {
     current_sub->label_cnt++;
     current_sub->labels =
@@ -442,7 +448,9 @@ label_create(char* name)
 }
 
 static int32_t
-label_find(sub_t* sub, const char* name)
+label_find(
+    sub_t* sub,
+    const char* name)
 {
     char buf[256];
     unsigned int i;
@@ -456,8 +464,14 @@ label_find(sub_t* sub, const char* name)
 }
 
 static void
-instr_create(instr_t* instr, uint32_t time, uint16_t id, uint16_t param_mask,
-    uint8_t rank_mask, uint8_t param_cnt, param_t* params)
+instr_create(
+    instr_t* instr,
+    uint32_t time,
+    uint16_t id,
+    uint16_t param_mask,
+    uint8_t rank_mask,
+    uint8_t param_cnt,
+    param_t* params)
 {
     unsigned int i;
 
@@ -493,7 +507,9 @@ instr_create(instr_t* instr, uint32_t time, uint16_t id, uint16_t param_mask,
 }
 
 static char*
-instr_serialize(sub_t* sub, instr_t* op)
+instr_serialize(
+    sub_t* sub,
+    instr_t* op)
 {
     unsigned int i;
     char* data = calloc(op->size, 1);
@@ -555,7 +571,10 @@ instr_serialize(sub_t* sub, instr_t* op)
 }
 
 static void
-instr_add(int id, int rank_mask, list_t* list)
+instr_add(
+    int id,
+    int rank_mask,
+    list_t* list)
 {
     int param_mask = 0;
     uint8_t param_cnt = 0;
@@ -591,7 +610,8 @@ instr_add(int id, int rank_mask, list_t* list)
 }
 
 static void
-add_anim(char* arg)
+add_anim(
+    char* arg)
 {
     anim_cnt++;
     anim_list = realloc(anim_list, sizeof(char*) * anim_cnt);
@@ -599,7 +619,8 @@ add_anim(char* arg)
 }
 
 static void
-add_ecli(char* arg)
+add_ecli(
+    char* arg)
 {
     ecli_cnt++;
     ecli_list = realloc(ecli_list, sizeof(char*) * ecli_cnt);
@@ -607,7 +628,8 @@ add_ecli(char* arg)
 }
 
 void
-yyerror(const char* str)
+yyerror(
+    const char* str)
 {
     /* TODO: Research standard row and column range formats. */
     if (yylloc.first_line == yylloc.last_line) {
@@ -631,7 +653,10 @@ yyerror(const char* str)
 }
 
 int
-compile_ecs(FILE* in, FILE* out, unsigned int version)
+compile_ecs(
+    FILE* in,
+    FILE* out,
+    unsigned int version)
 {
     long pos;
     unsigned int i;

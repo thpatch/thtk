@@ -52,7 +52,9 @@
 #include "util.h"
 
 void
-util_print_version(const char* name, const char* version)
+util_print_version(
+    const char* name,
+    const char* version)
 {
     printf("%s %s (part of " PACKAGE_NAME " release " PACKAGE_VERSION ")\n"
 #ifdef PACKAGE_URL
@@ -62,7 +64,9 @@ util_print_version(const char* name, const char* version)
 }
 
 int
-util_seek(FILE* stream, long offset)
+util_seek(
+    FILE* stream,
+    long offset)
 {
     if (fseek(stream, offset, SEEK_SET) != 0) {
         fprintf(stderr, "%s: failed seeking to %lu: %s\n",
@@ -73,13 +77,15 @@ util_seek(FILE* stream, long offset)
 }
 
 int
-util_seekable(FILE* stream)
+util_seekable(
+    FILE* stream)
 {
     return ftell(stream) != -1;
 }
 
 long
-util_tell(FILE* stream)
+util_tell(
+    FILE* stream)
 {
     long pos = ftell(stream);
     if (pos == -1)
@@ -91,7 +97,8 @@ util_tell(FILE* stream)
 /* This will fail for 2GB+ files, but who cares. */
 /* TODO: Implement stat() version. */
 long
-util_fsize(FILE* stream)
+util_fsize(
+    FILE* stream)
 {
     long prev, end;
 
@@ -114,7 +121,10 @@ util_fsize(FILE* stream)
 }
 
 int
-util_read(FILE* stream, void* buffer, size_t size)
+util_read(
+    FILE* stream,
+    void* buffer,
+    size_t size)
 {
     if (fread(buffer, size, 1, stream) != 1 && size != 0) {
         if (feof(stream)) {
@@ -131,7 +141,10 @@ util_read(FILE* stream, void* buffer, size_t size)
 }
 
 int
-util_write(FILE* stream, const void* buffer, size_t size)
+util_write(
+    FILE* stream,
+    const void* buffer,
+    size_t size)
 {
     if (fwrite(buffer, size, 1, stream) != 1 && size != 0) {
         fprintf(stderr, "%s: failed writing %lu bytes: %s\n",
@@ -142,7 +155,10 @@ util_write(FILE* stream, const void* buffer, size_t size)
 }
 
 ssize_t
-util_read_asciiz(char* buffer, size_t buffersize, FILE* stream)
+util_read_asciiz(
+    char* buffer,
+    size_t buffersize,
+    FILE* stream)
 {
     unsigned int i;
     int c;
@@ -162,7 +178,10 @@ util_read_asciiz(char* buffer, size_t buffersize, FILE* stream)
 }
 
 void
-util_basename(char* dst, size_t dstlen, const char* src)
+util_basename(
+    char* dst,
+    size_t dstlen,
+    const char* src)
 {
 #ifdef WIN32
     char filename[_MAX_FNAME];
@@ -179,7 +198,8 @@ util_basename(char* dst, size_t dstlen, const char* src)
 /* TODO: Use util_basename if it can be made to return a pointer to inside of
  * path. */
 const char*
-util_shortname(const char* path)
+util_shortname(
+    const char* path)
 {
     const char* ret;
     if (!path) {
@@ -196,7 +216,8 @@ util_shortname(const char* path)
 
 /* XXX: Win32 has MakeSureDirectoryPathExists in dbghelp.dll. */
 void
-util_makepath(const char* path)
+util_makepath(
+    const char* path)
 {
     char* name;
     char* filename;
@@ -240,7 +261,10 @@ util_makepath(const char* path)
 
 #ifndef HAVE_MEMPCPY
 void*
-mempcpy(void* dest, const void* src, size_t n)
+mempcpy(
+    void* dest,
+    const void* src,
+    size_t n)
 {
     memcpy(dest, src, n);
     return (void*)((size_t)dest + n);
@@ -248,8 +272,13 @@ mempcpy(void* dest, const void* src, size_t n)
 #endif
 
 void
-util_sillyxor(const unsigned char* in, unsigned char* out, int size,
-    unsigned char key, unsigned char step, const unsigned char step2)
+util_sillyxor(
+    const unsigned char* in,
+    unsigned char* out,
+    int size,
+    unsigned char key,
+    unsigned char step,
+    const unsigned char step2)
 {
     const unsigned char* iend = in + size;
     while (in < iend) {
@@ -263,7 +292,11 @@ util_sillyxor(const unsigned char* in, unsigned char* out, int size,
 
 #ifdef WIN32
 unsigned char*
-util_iconv(const char* to, const char* from, unsigned char* in, size_t insize,
+util_iconv(
+    const char* to,
+    const char* from,
+    unsigned char* in,
+    size_t insize,
     size_t* outsize)
 {
     wchar_t* temp;
@@ -330,7 +363,11 @@ util_iconv(const char* to, const char* from, unsigned char* in, size_t insize,
 #else
 #ifdef HAVE_ICONV_H
 unsigned char*
-util_iconv(const char* to, const char* from, unsigned char* in, size_t insize,
+util_iconv(
+    const char* to,
+    const char* from,
+    unsigned char* in,
+    size_t insize,
     size_t* outsize)
 {
     size_t ret;
@@ -371,7 +408,8 @@ util_iconv(const char* to, const char* from, unsigned char* in, size_t insize,
 #endif
 
 const char*
-util_printfloat(const void* data)
+util_printfloat(
+    const void* data)
 {
     static char buf[256];
     float f;
@@ -400,7 +438,9 @@ util_printfloat(const void* data)
 }
 
 int
-util_strpcmp(const void* a, const void* b)
+util_strpcmp(
+    const void* a,
+    const void* b)
 {
     return strcmp(*(const char**)a, *(const char**)b);
 }

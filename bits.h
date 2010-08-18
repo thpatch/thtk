@@ -54,18 +54,34 @@ struct bitstream {
     unsigned int bits;
 };
 
-void bitstream_init_stream(struct bitstream* b, FILE* stream);
-void bitstream_init_fixed(struct bitstream* b, unsigned char* buffer,
+void bitstream_init_stream(
+    struct bitstream* b,
+    FILE* stream);
+void bitstream_init_fixed(
+    struct bitstream* b,
+    unsigned char* buffer,
     unsigned int size);
-void bitstream_init_growing(struct bitstream* b, unsigned int size);
+void bitstream_init_growing(
+    struct bitstream* b,
+    unsigned int size);
 /* Closes an FD or frees a buffer. */
-void bitstream_free(struct bitstream* b);
+void bitstream_free(
+    struct bitstream* b);
 
-unsigned int bitstream_read1(struct bitstream* b);
-uint32_t bitstream_read(struct bitstream* b, unsigned int bits);
+unsigned int bitstream_read1(
+    struct bitstream* b);
+uint32_t bitstream_read(
+    struct bitstream* b,
+    unsigned int bits);
 
-void bitstream_write1(struct bitstream* b, unsigned int bit);
-void bitstream_write(struct bitstream* b, unsigned int bits, uint32_t data);
-void bitstream_finish(struct bitstream* b);
+void bitstream_write1(
+    struct bitstream* b,
+    unsigned int bit);
+void bitstream_write(
+    struct bitstream* b,
+    unsigned int bits,
+    uint32_t data);
+void bitstream_finish(
+    struct bitstream* b);
 
 #endif

@@ -96,7 +96,8 @@ static const stackinstr_t th12_stackinstrs[] = {
 };
 
 const stackinstr_t*
-get_stackinstrs(unsigned int version)
+get_stackinstrs(
+    unsigned int version)
 {
     if (version == 10 || version == 11) {
         return th10_stackinstrs;
@@ -604,7 +605,9 @@ static const instr_fmt_t th12_fmts[] = {
 };
 
 static const char*
-format_find(unsigned int version, int id)
+format_find(
+    unsigned int version,
+    int id)
 {
     unsigned int i;
     const instr_fmt_t* fmts = NULL;
@@ -630,7 +633,10 @@ format_find(unsigned int version, int id)
 }
 
 instr_t*
-instr_parse(raw_instr_t* rinstr, instr_t* instr, unsigned int version)
+instr_parse(
+    raw_instr_t* rinstr,
+    instr_t* instr,
+    unsigned int version)
 {
     unsigned int param_cnt;
     unsigned int i;

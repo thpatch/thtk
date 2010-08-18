@@ -35,8 +35,13 @@
 #include "util.h"
 
 char
-parse_args(int argc, char* argv[], void (*usage)(void), const char* commands,
-    char* options, unsigned int* version)
+parse_args(
+    int argc,
+    char* argv[],
+    void (*usage)(void),
+    const char* commands,
+    char* options,
+    unsigned int* version)
 {
     char command;
     char* argp;

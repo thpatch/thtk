@@ -46,7 +46,9 @@ extern const archive_module_t archive_th08;
 extern const archive_module_t archive_th95;
 
 archive_t*
-thdat_open(FILE* stream, unsigned int version)
+thdat_open(
+    FILE* stream,
+    unsigned int version)
 {
     archive_t* archive = malloc(sizeof(archive_t));
 
@@ -60,7 +62,10 @@ thdat_open(FILE* stream, unsigned int version)
 }
 
 archive_t*
-archive_create(FILE* stream, uint32_t version, uint32_t offset,
+archive_create(
+    FILE* stream,
+    uint32_t version,
+    uint32_t offset,
     unsigned int count)
 {
     archive_t* archive;
@@ -81,7 +86,9 @@ archive_create(FILE* stream, uint32_t version, uint32_t offset,
 }
 
 unsigned char*
-thdat_read_file(entry_t* entry, FILE* stream)
+thdat_read_file(
+    const entry_t* entry,
+    FILE* stream)
 {
     unsigned char* data = malloc(entry->size);
 
@@ -94,13 +101,17 @@ thdat_read_file(entry_t* entry, FILE* stream)
 }
 
 unsigned char*
-thdat_read_file_lzss(entry_t* entry, FILE* stream)
+thdat_read_file_lzss(
+    entry_t* entry,
+    FILE* stream)
 {
     return th_lz_file(stream, &entry->zsize);
 }
 
 unsigned char*
-thdat_rle(entry_t* entry, unsigned char* data)
+thdat_rle(
+    entry_t* entry,
+    unsigned char* data)
 {
     unsigned char* zdata = th_rle(data, entry->size, &entry->zsize);
 
@@ -116,7 +127,8 @@ thdat_rle(entry_t* entry, unsigned char* data)
 }
 
 entry_t*
-thdat_add_entry(archive_t* archive)
+thdat_add_entry(
+    archive_t* archive)
 {
     entry_t* e;
 
@@ -136,7 +148,10 @@ thdat_add_entry(archive_t* archive)
 }
 
 int
-thdat_write_entry(archive_t* archive, entry_t* entry, unsigned char* data)
+thdat_write_entry(
+    archive_t* archive,
+    entry_t* entry,
+    unsigned char* data)
 {
     int ret;
 
@@ -165,13 +180,17 @@ entry_compar(const void* a, const void* b)
 }
 
 void
-thdat_sort(archive_t* archive)
+thdat_sort(
+    archive_t* archive)
 {
     qsort(archive->entries, archive->count, sizeof(entry_t), entry_compar);
 }
 
 static entry_t*
-archive_add_entry(archive_t* archive, FILE* stream, const char* filename,
+archive_add_entry(
+    archive_t* archive,
+    FILE* stream,
+    const char* filename,
     unsigned int flags)
 {
     entry_t* e;
@@ -198,7 +217,8 @@ archive_add_entry(archive_t* archive, FILE* stream, const char* filename,
 }
 
 static int
-archive_check_duplicates(archive_t* archive)
+archive_check_duplicates(
+    const archive_t* archive)
 {
     unsigned int i, j;
 
@@ -216,7 +236,8 @@ archive_check_duplicates(archive_t* archive)
 }
 
 static void
-archive_free(archive_t* archive)
+archive_free(
+    archive_t* archive)
 {
     if (archive) {
         free(archive->entries);
@@ -239,7 +260,9 @@ print_usage(void)
 }
 
 int
-main(int argc, char* argv[])
+main(
+    int argc,
+    char* argv[])
 {
     FILE* archive;
     archive_t* private;

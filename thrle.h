@@ -31,8 +31,13 @@
 
 #include <stdio.h>
 
-unsigned char* th_rle(const unsigned char* in, unsigned int insize,
-    unsigned int* outsize);
-void th_unrle(const unsigned char* in, unsigned int insize, FILE* stream);
+unsigned char* th_rle(
+    const unsigned char* in,
+    const unsigned int insize,
+    unsigned int* const outsize);
+void th_unrle(
+    const unsigned char* in,
+    const unsigned int insize,
+    FILE* stream);
 
 #endif

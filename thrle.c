@@ -32,8 +32,11 @@
 #include <string.h>
 
 static unsigned char*
-buffer_add(unsigned char* buffer, unsigned int* buffer_pos,
-    unsigned int* buffer_size, unsigned char b)
+buffer_add(
+    unsigned char* buffer,
+    unsigned int* buffer_pos,
+    unsigned int* buffer_size,
+    unsigned char b)
 {
     if (*buffer_pos >= *buffer_size) {
         *buffer_size *= 2;
@@ -44,7 +47,10 @@ buffer_add(unsigned char* buffer, unsigned int* buffer_pos,
 }
 
 unsigned char*
-th_rle(const unsigned char* in, unsigned int insize, unsigned int* outsize)
+th_rle(
+    const unsigned char* in,
+    const unsigned int insize,
+    unsigned int* const outsize)
 {
     const unsigned char* orig_in = in;
     unsigned char* buffer = NULL;
@@ -80,7 +86,10 @@ th_rle(const unsigned char* in, unsigned int insize, unsigned int* outsize)
 }
 
 void
-th_unrle(const unsigned char* in, unsigned int insize, FILE* stream)
+th_unrle(
+    const unsigned char* in,
+    const unsigned int insize,
+    FILE* stream)
 {
     unsigned int i;
     if (insize < 3) {

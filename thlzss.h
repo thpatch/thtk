@@ -34,14 +34,14 @@
 
 unsigned char* th_lz_file(
     FILE* stream,
-    unsigned int* outsize);
+    unsigned int* const outsize);
 
 /* Compress insize bytes from in and return a pointer to allocated data outsize
  * large. */
 unsigned char* th_lz_mem(
     const unsigned char* in,
-    unsigned int insize,
-    unsigned int* outsize);
+    const unsigned int insize,
+    unsigned int* const outsize);
 
 void th_unlz_file(
     FILE* stream,
@@ -49,9 +49,9 @@ void th_unlz_file(
     unsigned int outsize);
 
 void th_unlz_mem(
-    unsigned char* in,
-    unsigned int insize,
-    unsigned char* out,
-    unsigned int outsize);
+    unsigned char* const in,
+    const unsigned int insize,
+    unsigned char* const out,
+    const unsigned int outsize);
 
 #endif

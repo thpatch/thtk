@@ -34,8 +34,9 @@
 #include "bits.h"
 #include "program.h"
 
-void
-bitstream_init(struct bitstream* b)
+static void
+bitstream_init(
+    struct bitstream* b)
 {
     b->byte_count = 0;
     b->byte = 0;
@@ -43,7 +44,9 @@ bitstream_init(struct bitstream* b)
 }
 
 void
-bitstream_init_stream(struct bitstream* b, FILE* stream)
+bitstream_init_stream(
+    struct bitstream* b,
+    FILE* stream)
 {
     bitstream_init(b);
     b->type = BITSTREAM_STREAM;
@@ -51,7 +54,9 @@ bitstream_init_stream(struct bitstream* b, FILE* stream)
 }
 
 void
-bitstream_init_fixed(struct bitstream* b, unsigned char* buffer,
+bitstream_init_fixed(
+    struct bitstream* b,
+    unsigned char* buffer,
     unsigned int size)
 {
     bitstream_init(b);
@@ -61,14 +66,17 @@ bitstream_init_fixed(struct bitstream* b, unsigned char* buffer,
 }
 
 void
-bitstream_init_growing(struct bitstream* b, unsigned int size)
+bitstream_init_growing(
+    struct bitstream* b,
+    unsigned int size)
 {
     bitstream_init_fixed(b, malloc(size), size);
     b->type = BITSTREAM_BUFFER_GROW;
 }
 
 void
-bitstream_free(struct bitstream* b)
+bitstream_free(
+    struct bitstream* b)
 {
     if (b->type == BITSTREAM_STREAM) {
         fclose(b->io.stream);
@@ -81,7 +89,8 @@ bitstream_free(struct bitstream* b)
 }
 
 unsigned int
-bitstream_read1(struct bitstream* b)
+bitstream_read1(
+    struct bitstream* b)
 {
     unsigned int ret = 0;
 
@@ -114,7 +123,9 @@ bitstream_read1(struct bitstream* b)
 }
 
 uint32_t
-bitstream_read(struct bitstream* b, unsigned int bits)
+bitstream_read(
+    struct bitstream* b,
+    unsigned int bits)
 {
     uint32_t ret = 0;
     for (; bits; --bits)
@@ -123,7 +134,9 @@ bitstream_read(struct bitstream* b, unsigned int bits)
 }
 
 void
-bitstream_write1(struct bitstream* b, unsigned int bit)
+bitstream_write1(
+    struct bitstream* b,
+    unsigned int bit)
 {
     b->byte <<= 1;
     b->byte |= (bit & 1);
@@ -160,7 +173,10 @@ bitstream_write1(struct bitstream* b, unsigned int bit)
 }
 
 void
-bitstream_write(struct bitstream* b, unsigned int bits, uint32_t data)
+bitstream_write(
+    struct bitstream* b,
+    unsigned int bits,
+    uint32_t data)
 {
     int i;
     if (bits > 32)
@@ -172,7 +188,8 @@ bitstream_write(struct bitstream* b, unsigned int bits, uint32_t data)
 }
 
 void
-bitstream_finish(struct bitstream* b)
+bitstream_finish(
+    struct bitstream* b)
 {
     while (b->bits)
         bitstream_write1(b, 0);

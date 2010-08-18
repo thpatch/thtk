@@ -39,7 +39,12 @@
  * "!strchr(options, option)".
  *
  * Also sets the global argv0. */
-char parse_args(int argc, char* argv[], void (*usage)(void),
-    const char* commands, char* options, unsigned int* version);
+char parse_args(
+    int argc,
+    char* argv[],
+    void (*usage)(void),
+    const char* commands,
+    char* options,
+    unsigned int* version);
 
 #endif

@@ -69,14 +69,19 @@ typedef struct {
 } hash_t;
 
 static inline unsigned int
-generate_key(const unsigned char* array, unsigned int base)
+generate_key(
+    const unsigned char* array,
+    const unsigned int base)
 {
     return ((array[(base + 1) & LZSS_DICTSIZE_MASK] << 8) |
             array[(base + 2) & LZSS_DICTSIZE_MASK]) ^ (array[base] << 4);
 }
 
 static inline void
-list_remove(hash_t* hash, const unsigned int key, const unsigned int offset)
+list_remove(
+    hash_t* hash,
+    const unsigned int key,
+    const unsigned int offset)
 {
     /* XXX: It is always the last entry in the list that is removed.
      * hash->next[offset] will always be HASH_NULL. */
@@ -88,7 +93,10 @@ list_remove(hash_t* hash, const unsigned int key, const unsigned int offset)
 }
 
 static inline void
-list_add(hash_t* hash, const unsigned int key, const unsigned int offset)
+list_add(
+    hash_t* hash,
+    const unsigned int key,
+    const unsigned int offset)
 {
     hash->next[offset] = hash->hash[key];
     hash->prev[offset] = HASH_NULL;
@@ -100,7 +108,10 @@ list_add(hash_t* hash, const unsigned int key, const unsigned int offset)
 typedef int (*read_byte_fptr)(void*);
 
 static unsigned char*
-th_lz(unsigned int* outsize, read_byte_fptr read_byte, void* data)
+th_lz(
+    unsigned int* const outsize,
+    read_byte_fptr read_byte,
+    void* data)
 {
     struct bitstream bs;
     hash_t hash;
@@ -193,25 +204,8 @@ th_lz(unsigned int* outsize, read_byte_fptr read_byte, void* data)
 }
 
 static int
-read_byte_mem(const unsigned char** ptrs)
-{
-    if (ptrs[0] >= ptrs[1])
-        return -1;
-    else
-        return *ptrs[0]++;
-}
-
-unsigned char*
-th_lz_mem(const unsigned char* in, unsigned int insize, unsigned int* outsize)
-{
-    unsigned char* ptrs[2];
-    ptrs[0] = (unsigned char*)in;
-    ptrs[1] = (unsigned char*)in + insize;
-    return th_lz(outsize, (read_byte_fptr)read_byte_mem, &ptrs);
-}
-
-static int
-read_byte_file(FILE* stream)
+read_byte_file(
+    FILE* stream)
 {
     int c = fgetc(stream);
 
@@ -222,13 +216,40 @@ read_byte_file(FILE* stream)
 }
 
 unsigned char*
-th_lz_file(FILE* stream, unsigned int* outsize)
+th_lz_file(
+    FILE* stream,
+    unsigned int* const outsize)
 {
     return th_lz(outsize, (read_byte_fptr)read_byte_file, stream);
 }
 
+static int
+read_byte_mem(
+    const unsigned char** ptrs)
+{
+    if (ptrs[0] >= ptrs[1])
+        return -1;
+    else
+        return *ptrs[0]++;
+}
+
+unsigned char*
+th_lz_mem(
+    const unsigned char* in,
+    const unsigned int insize,
+    unsigned int* const outsize)
+{
+    unsigned char* ptrs[2];
+    ptrs[0] = (unsigned char*)in;
+    ptrs[1] = (unsigned char*)in + insize;
+    return th_lz(outsize, (read_byte_fptr)read_byte_mem, &ptrs);
+}
+
 static void
-th_unlz(struct bitstream* bs, unsigned char* out, unsigned int outsize)
+th_unlz(
+    struct bitstream* bs,
+    unsigned char* out,
+    const unsigned int outsize)
 {
     unsigned char* oend = out + outsize;
     unsigned char dict[LZSS_DICTSIZE];
@@ -261,18 +282,24 @@ th_unlz(struct bitstream* bs, unsigned char* out, unsigned int outsize)
 }
 
 void
-th_unlz_mem(unsigned char* in, unsigned int insize, unsigned char* out,
-    unsigned int outsize)
+th_unlz_file(
+    FILE* stream,
+    unsigned char* const out,
+    const unsigned int outsize)
 {
     struct bitstream bs;
-    bitstream_init_fixed(&bs, in, insize);
+    bitstream_init_stream(&bs, stream);
     th_unlz(&bs, out, outsize);
 }
 
 void
-th_unlz_file(FILE* stream, unsigned char* out, unsigned int outsize)
+th_unlz_mem(
+    unsigned char* const in,
+    const unsigned int insize,
+    unsigned char* const out,
+    const unsigned int outsize)
 {
     struct bitstream bs;
-    bitstream_init_stream(&bs, stream);
+    bitstream_init_fixed(&bs, in, insize);
     th_unlz(&bs, out, outsize);
 }
