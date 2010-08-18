@@ -101,10 +101,8 @@ th03_open(FILE* stream, unsigned int version)
     for (i = 0; i < fh.count; ++i) {
         memcpy(&fe, data + i * sizeof(th03_entry_header_t),
             sizeof(th03_entry_header_t));
-        if (!fe.magic) {
-            fprintf(stderr, "fe.magic == 0?\n");
+        if (!fe.magic)
             break;
-        }
 
         e = thdat_add_entry(archive);
         e->size = fe.size;
