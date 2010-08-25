@@ -347,11 +347,8 @@ main(
                 exit(1);
             }
             current_input = argv[i];
-#pragma omp critical
-{
+
             printf("%s...\n", argv[i]);
-            fflush(stdout);
-}
 
             entry = archive_add_entry(private, stream, argv[i], archive_module->flags);
             if (!entry || !archive_module->write(private, entry, stream)) {
