@@ -216,7 +216,7 @@ archive_add_entry(
     return e;
 }
 
-static int
+static void
 archive_check_duplicates(
     const archive_t* archive)
 {
@@ -231,8 +231,6 @@ archive_check_duplicates(
                     argv0, archive->entries[i].name);
         }
     }
-
-    return 1;
 }
 
 static void
@@ -366,7 +364,9 @@ main(
             fclose(stream);
         }
 
-        if (!archive_check_duplicates(private) || !archive_module->close(private)) {
+        archive_check_duplicates(private);
+
+        if (!archive_module->close(private)) {
             fclose(archive);
             archive_free(private);
             return 1;
