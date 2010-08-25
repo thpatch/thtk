@@ -398,6 +398,8 @@ main(
             return 1;
         if (argc > 3) {
             int j;
+#pragma omp parallel shared(private)
+#pragma omp for
             for (j = 3; j < argc; ++j) {
                 int extracted = 0;
                 for (i = 0; i < (int)private->count; ++i) {
@@ -407,7 +409,7 @@ main(
                         current_output = private->entries[i].name;
                         printf("%s\n", current_output);
                         if (!archive_module->extract(private, &private->entries[i], stream))
-                            return 1;
+                            exit(1);
                         fclose(stream);
                         ++extracted;
                         break;
@@ -418,15 +420,19 @@ main(
                     fprintf(stderr, "%s: entry %s not found\n", argv0, argv[j]);
             }
         } else {
+#pragma omp parallel shared(private)
+#pragma omp for
             for (i = 0; i < (int)private->count; ++i) {
                 /* TODO: Secure the filenames first.
                  *       Don't need to do that when the user selects files
                  *       to extract. */
                 FILE* stream = fopen(private->entries[i].name, "wb");
                 current_output = private->entries[i].name;
-                printf("%s\n", current_output);
+
+                printf("%s\n", private->entries[i].name);
+
                 if (!archive_module->extract(private, &private->entries[i], stream))
-                    return 1;
+                    exit(1);
                 fclose(stream);
             }
         }

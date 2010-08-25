@@ -164,22 +164,29 @@ th08_extract(archive_t* archive, entry_t* entry, FILE* stream)
     const crypt_params* current_crypt_params = archive->version == 8 ?
         th08_crypt_params : th09_crypt_params;
     unsigned char* data = malloc(entry->size);
-    unsigned int i;
+    unsigned int i = 0;
     int type = -1;
 
-    if (!util_seek(archive->stream, entry->offset)) {
+#pragma omp critical
+{
+    if (util_seek(archive->stream, entry->offset)) {
+        i = 1;
+        th_unlz_file(archive->stream, data, entry->size);
+    }
+}
+
+    if (!i) {
         free(data);
         return 0;
     }
-    th_unlz_file(archive->stream, data, entry->size);
-
-    entry->size -= 4;
 
     if (strncmp((char*)data, "edz", 3)) {
         fprintf(stderr, "%s: entry did not start with \"edz\"\n", argv0);
         free(data);
         return 0;
     }
+
+    entry->size -= 4;
 
     for (i = 0; i < 7; ++i) {
         if (current_crypt_params[i].type == data[3]) {

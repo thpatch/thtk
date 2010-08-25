@@ -168,13 +168,13 @@ th95_extract(archive_t* archive, entry_t* entry, FILE* stream)
 {
     unsigned char* data;
     unsigned char* zdata = malloc(entry->zsize);
+    int ret;
 
-    if (!util_seek(archive->stream, entry->offset)) {
-        free(zdata);
-        return 0;
-    }
+#pragma omp critical
+    ret = util_seek(archive->stream, entry->offset) &&
+          util_read(archive->stream, zdata, entry->zsize);
 
-    if (!util_read(archive->stream, zdata, entry->zsize)) {
+    if (!ret) {
         free(zdata);
         return 0;
     }

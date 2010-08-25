@@ -2,3 +2,4 @@ What's new in thtk 2:
 
 * thdat: A bug which made compression for TH07 fail has been
   fixed.
+* thdat: Extraction can now use parallel execution.

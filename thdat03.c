@@ -119,34 +119,30 @@ static int
 th03_extract(archive_t* archive, entry_t* entry, FILE* stream)
 {
     unsigned int i;
-    if (!util_seek(archive->stream, entry->offset))
+    unsigned char* zbuf = malloc(entry->zsize);
+
+#pragma omp critical
+    i = util_seek(archive->stream, entry->offset) &&
+        util_read(archive->stream, zbuf, entry->zsize);
+
+    if (!i) {
+        free(zbuf);
         return 0;
+    }
+
+    for (i = 0; i < entry->zsize; ++i)
+        zbuf[i] ^= entry->extra;
 
     if (entry->size == entry->zsize) {
-        for (i = 0; i < entry->zsize; ++i) {
-            int c = fgetc(archive->stream);
-            if (c == EOF) {
-                fprintf(stderr, "%s: error while reading from archive: %s\n",
-                    argv0, strerror(errno));
-                return 0;
-            }
-            fputc(c ^ entry->extra, stream);
-        }
-    } else {
-        unsigned char* zbuf = malloc(entry->zsize);
-
-        if (!util_read(archive->stream, zbuf, entry->zsize)) {
+        if (!util_write(stream, zbuf, entry->zsize)) {
             free(zbuf);
             return 0;
         }
-
-        for (i = 0; i < entry->zsize; ++i)
-            zbuf[i] ^= entry->extra;
-
+    } else {
         th_unrle(zbuf, entry->zsize, stream);
-
-        free(zbuf);
     }
+
+    free(zbuf);
 
     return 1;
 }

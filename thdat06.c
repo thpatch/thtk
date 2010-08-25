@@ -170,15 +170,18 @@ th06_open(FILE* stream, unsigned int version)
 static int
 th06_extract(archive_t* archive, entry_t* entry, FILE* stream)
 {
-    unsigned char* data;
+    int ret = 0;
+    unsigned char* data = malloc(entry->size);
 
-    if (!util_seek(archive->stream, entry->offset))
-        return 0;
+#pragma omp critical
+{
+    if (util_seek(archive->stream, entry->offset)) {
+        ret = 1;
+        th_unlz_file(archive->stream, data, entry->size);
+    }
+}
 
-    data = malloc(entry->size);
-    th_unlz_file(archive->stream, data, entry->size);
-
-    if (!util_write(stream, data, entry->size)) {
+    if (!ret || !util_write(stream, data, entry->size)) {
         free(data);
         return 0;
     }
