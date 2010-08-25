@@ -313,7 +313,7 @@ th06_close(archive_t* archive)
         header[1] = archive->offset;
         header[2] = list_size;
 
-        if (util_write(archive->stream, header, sizeof(header)))
+        if (!util_write(archive->stream, header, sizeof(header)))
             return 0;
     }
 
