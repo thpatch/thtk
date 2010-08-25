@@ -126,8 +126,8 @@ util_read(
     void* buffer,
     size_t size)
 {
-    if (fread(buffer, size, 1, stream) != 1 && size != 0) {
-        if (feof(stream)) {
+    if (fread_unlocked(buffer, size, 1, stream) != 1 && size != 0) {
+        if (feof_unlocked(stream)) {
             fprintf(stderr,
                 "%s: failed reading %lu bytes: unexpected end of file\n",
                 argv0, (long unsigned int)size);
@@ -146,7 +146,7 @@ util_write(
     const void* buffer,
     size_t size)
 {
-    if (fwrite(buffer, size, 1, stream) != 1 && size != 0) {
+    if (fwrite_unlocked(buffer, size, 1, stream) != 1 && size != 0) {
         fprintf(stderr, "%s: failed writing %lu bytes: %s\n",
             argv0, (long unsigned int)size, strerror(errno));
         return 0;
@@ -166,7 +166,7 @@ util_read_asciiz(
         if (i == buffersize - 1) {
             return -1;
         }
-        c = fgetc(stream);
+        c = fgetc_unlocked(stream);
         if (c == EOF) {
             return -1;
         }

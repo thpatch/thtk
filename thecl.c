@@ -74,7 +74,7 @@ open_ecl(ecl_t* ecl, FILE* f)
         return 0;
     }
 
-    if (fread(magic, 4, 1, f) != 1) {
+    if (fread_unlocked(magic, 4, 1, f) != 1) {
         fprintf(stderr, "%s:%s: couldn't read: %s\n",
             argv0, current_input, strerror(errno));
         return 0;
@@ -85,7 +85,7 @@ open_ecl(ecl_t* ecl, FILE* f)
         return 0;
     }
 
-    if (fread(&ecl->scpt, sizeof(header_scpt_t), 1, f) != 1) {
+    if (fread_unlocked(&ecl->scpt, sizeof(header_scpt_t), 1, f) != 1) {
         fprintf(stderr, "%s:%s: couldn't read: %s\n",
             argv0, current_input, strerror(errno));
         return 0;
@@ -104,7 +104,7 @@ open_ecl(ecl_t* ecl, FILE* f)
         return 0;
     }
 
-    if (fread(magic, 4, 1, f) != 1) {
+    if (fread_unlocked(magic, 4, 1, f) != 1) {
         fprintf(stderr, "%s:%s: couldn't read: %s\n",
             argv0, current_input, strerror(errno));
         return 0;
@@ -115,7 +115,7 @@ open_ecl(ecl_t* ecl, FILE* f)
         return 0;
     }
 
-    if (fread(&ecl->anim_cnt, sizeof(uint32_t), 1, f) != 1) {
+    if (fread_unlocked(&ecl->anim_cnt, sizeof(uint32_t), 1, f) != 1) {
         fprintf(stderr, "%s:%s: couldn't read: %s\n",
             argv0, current_input, strerror(errno));
         return 0;
@@ -128,11 +128,11 @@ open_ecl(ecl_t* ecl, FILE* f)
     }
 
     while (ftell(f) % 4 != 0) {
-        if (fgetc(f) == EOF)
+        if (fgetc_unlocked(f) == EOF)
             break;
     }
 
-    if (fread(magic, 4, 1, f) != 1) {
+    if (fread_unlocked(magic, 4, 1, f) != 1) {
         fprintf(stderr, "%s:%s: couldn't read: %s\n",
             argv0, current_input, strerror(errno));
         return 0;
@@ -143,7 +143,7 @@ open_ecl(ecl_t* ecl, FILE* f)
         return 0;
     }
 
-    if (fread(&ecl->ecli_cnt, sizeof(uint32_t), 1, f) != 1) {
+    if (fread_unlocked(&ecl->ecli_cnt, sizeof(uint32_t), 1, f) != 1) {
         fprintf(stderr, "%s:%s: couldn't read: %s\n",
             argv0, current_input, strerror(errno));
         return 0;
@@ -159,12 +159,12 @@ open_ecl(ecl_t* ecl, FILE* f)
     ecl->subs = calloc(ecl->sub_cnt, sizeof(sub_t));
 
     while (ftell(f) % 4 != 0) {
-        if (fgetc(f) == EOF)
+        if (fgetc_unlocked(f) == EOF)
             break;
     }
 
     for (i = 0; i < ecl->sub_cnt; ++i) {
-        if (fread(&ecl->subs[i].offset, sizeof(uint32_t), 1, f) != 1) {
+        if (fread_unlocked(&ecl->subs[i].offset, sizeof(uint32_t), 1, f) != 1) {
             fprintf(stderr, "%s:%s: couldn't read: %s\n",
                 argv0, current_input, strerror(errno));
             return 0;
@@ -188,7 +188,7 @@ open_ecl(ecl_t* ecl, FILE* f)
             return 0;
         }
 
-        if (fread(magic, 4, 1, f) != 1) {
+        if (fread_unlocked(magic, 4, 1, f) != 1) {
             fprintf(stderr, "%s:%s: couldn't read: %s\n",
                 argv0, current_input, strerror(errno));
             return 0;
@@ -199,7 +199,7 @@ open_ecl(ecl_t* ecl, FILE* f)
             return 0;
         }
 
-        if (fread(&eclh, sizeof(header_eclh_t), 1, f) != 1) {
+        if (fread_unlocked(&eclh, sizeof(header_eclh_t), 1, f) != 1) {
             fprintf(stderr, "%s:%s: couldn't read: %s\n",
                 argv0, current_input, strerror(errno));
             return 0;
@@ -220,7 +220,7 @@ open_ecl(ecl_t* ecl, FILE* f)
             rins.offset = ftell(f);
 
             /* EOF is expected for the last instruction. */
-            if (fread(&rins, 16, 1, f) != 1)
+            if (fread_unlocked(&rins, 16, 1, f) != 1)
                 break;
 
             if (i + 1 != ecl->sub_cnt && ftell(f) > ecl->subs[i + 1].offset)
@@ -232,7 +232,7 @@ open_ecl(ecl_t* ecl, FILE* f)
             rins.data_size = rins.size - 16;
             if (rins.data_size) {
                 rins.data = malloc(rins.data_size);
-                if (fread(rins.data, rins.data_size, 1, f) != 1) {
+                if (fread_unlocked(rins.data, rins.data_size, 1, f) != 1) {
                     fprintf(stderr, "%s:%s: couldn't read: %s\n",
                         argv0, current_input, strerror(errno));
                     return 0;

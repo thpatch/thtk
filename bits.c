@@ -96,7 +96,7 @@ bitstream_read1(
 
     if (!b->bits) {
         if (b->type == BITSTREAM_STREAM) {
-            int c = fgetc(b->io.stream);
+            int c = fgetc_unlocked(b->io.stream);
             if (c == EOF) {
                 fprintf(stderr, "%s: unexpected end of file\n", argv0);
                 abort();
@@ -144,7 +144,7 @@ bitstream_write1(
 
     if (b->bits == 8) {
         if (b->type == BITSTREAM_STREAM) {
-            if (fputc(b->byte, b->io.stream) == EOF) {
+            if (fputc_unlocked(b->byte, b->io.stream) == EOF) {
                 fprintf(stderr, "%s: error while writing: %s\n",
                     argv0, strerror(errno));
                 abort();

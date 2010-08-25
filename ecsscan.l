@@ -42,7 +42,7 @@
     /* TODO: Add some \r handling to the line counting stuff. */
     #define YY_INPUT(buf,result,max_size) \
     { \
-        int c = fgetc(yyin); \
+        int c = fgetc_unlocked(yyin); \
         if (c == EOF) { \
             result = YY_NULL; \
         } else { \

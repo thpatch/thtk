@@ -1276,25 +1276,25 @@ anm_write(anm_t* anm, const char* filename)
         fseek(stream, entry->script_count * ANM_SCRIPT_SIZE, SEEK_CUR);
 
         entry->header.nameoffset = ftell(stream) - base;
-        fwrite(entry->name, strlen(entry->name), 1, stream);
+        fwrite_unlocked(entry->name, strlen(entry->name), 1, stream);
 
         padding = calloc(1, namepad);
-        fwrite(padding, namepad, 1, stream);
+        fwrite_unlocked(padding, namepad, 1, stream);
         free(padding);
 
         if (entry->name2 && entry->header.version == 0) {
             namepad = (16 - strlen(entry->name2) % 16);
 
             entry->header.y = ftell(stream) - base;
-            fwrite(entry->name2, strlen(entry->name2), 1, stream);
+            fwrite_unlocked(entry->name2, strlen(entry->name2), 1, stream);
 
             padding = calloc(1, namepad);
-            fwrite(padding, namepad, 1, stream);
+            fwrite_unlocked(padding, namepad, 1, stream);
             free(padding);
         }
 
         spriteoffset = ftell(stream) - base;
-        fwrite(entry->sprites, sizeof(sprite_t), entry->sprite_count, stream);
+        fwrite_unlocked(entry->sprites, sizeof(sprite_t), entry->sprite_count, stream);
 
         for (j = 0; j < entry->script_count; ++j) {
             unsigned int k;
@@ -1307,16 +1307,16 @@ anm_write(anm_t* anm, const char* filename)
                     instr.type = entry->scripts[j].instrs[k].type;
                     instr.length = entry->scripts[j].instrs[k].length -
                         ANM_INSTR_SIZE;
-                    fwrite(&instr, ANM_INSTR0_SIZE, 1, stream);
+                    fwrite_unlocked(&instr, ANM_INSTR0_SIZE, 1, stream);
                     if (entry->scripts[j].instrs[k].data)
-                        fwrite(entry->scripts[j].instrs[k].data,
+                        fwrite_unlocked(entry->scripts[j].instrs[k].data,
                             entry->scripts[j].instrs[k].length - ANM_INSTR_SIZE,
                             1, stream);
                 } else {
-                    fwrite(&entry->scripts[j].instrs[k], ANM_INSTR_SIZE,
+                    fwrite_unlocked(&entry->scripts[j].instrs[k], ANM_INSTR_SIZE,
                         1, stream);
                     if (entry->scripts[j].instrs[k].data)
-                        fwrite(entry->scripts[j].instrs[k].data,
+                        fwrite_unlocked(entry->scripts[j].instrs[k].data,
                             entry->scripts[j].instrs[k].length - ANM_INSTR_SIZE, 1, stream);
                 }
             }
@@ -1326,9 +1326,9 @@ anm_write(anm_t* anm, const char* filename)
             entry->header.thtxoffset = ftell(stream) - base;
 
             fputs("THTX", stream);
-            fwrite(&entry->thtx, sizeof(thtx_header_t), 1, stream);
+            fwrite_unlocked(&entry->thtx, sizeof(thtx_header_t), 1, stream);
 
-            fwrite(entry->data, entry->data_size, 1, stream);
+            fwrite_unlocked(entry->data, entry->data_size, 1, stream);
         }
 
         if (i == anm->entry_count - 1)
@@ -1343,19 +1343,19 @@ anm_write(anm_t* anm, const char* filename)
 
         if (entry->header.version >= 7) {
             convert_header_to_11(&entry->header);
-            fwrite(&entry->header, sizeof(anm_header_t), 1, stream);
+            fwrite_unlocked(&entry->header, sizeof(anm_header_t), 1, stream);
             convert_header_to_old(&entry->header);
         } else {
-            fwrite(&entry->header, sizeof(anm_header_t), 1, stream);
+            fwrite_unlocked(&entry->header, sizeof(anm_header_t), 1, stream);
         }
 
         for (j = 0; j < entry->sprite_count; ++j) {
             uint32_t ofs = spriteoffset + j * sizeof(sprite_t);
-            fwrite(&ofs, sizeof(uint32_t), 1, stream);
+            fwrite_unlocked(&ofs, sizeof(uint32_t), 1, stream);
         }
 
         for (j = 0; j < entry->script_count; ++j) {
-            fwrite(&entry->scripts[j], ANM_SCRIPT_SIZE, 1, stream);
+            fwrite_unlocked(&entry->scripts[j], ANM_SCRIPT_SIZE, 1, stream);
         }
 
         fseek(stream, base + entry->header.nextoffset, SEEK_SET);
@@ -1538,7 +1538,7 @@ replace_done:
                 fseek(anmfp,
                     offset + anm->entries[i].header.thtxoffset + 4 + sizeof(thtx_header_t),
                     SEEK_SET);
-                fwrite(anm->entries[i].data, anm->entries[i].thtx.size, 1, anmfp);
+                fwrite_unlocked(anm->entries[i].data, anm->entries[i].thtx.size, 1, anmfp);
             }
             offset += nextoffset;
         }
