@@ -123,6 +123,7 @@ th_lz(
     hash_t hash;
     unsigned char dict[LZSS_DICTSIZE];
     unsigned int dict_head = 1;
+    unsigned int dict_head_key;
     unsigned int waiting_bytes = 0;
     unsigned int i;
     int c;
@@ -140,13 +141,15 @@ th_lz(
         waiting_bytes++;
     }
 
+    dict_head_key = generate_key(dict, dict_head);
+
     while (waiting_bytes) {
         unsigned int match_len = LZSS_MIN_MATCH - 1;
         unsigned int match_offset = 0;
         unsigned int offset;
 
         /* Find a good match. */
-        for (offset = hash.hash[generate_key(dict, dict_head)];
+        for (offset = hash.hash[dict_head_key];
              offset != HASH_NULL;
              offset = hash.next[offset]) {
             unsigned int match_tmp = 0;
@@ -177,30 +180,28 @@ th_lz(
 
         /* Add bytes to the dictionary. */
         for (i = 0; i < match_len; ++i) {
-            unsigned int offset =
+            const unsigned int offset =
                 (dict_head + LZSS_MAX_MATCH) & LZSS_DICTSIZE_MASK;
-            /* TODO: See if it is possible to combine list_add and list_remove
-             * instead.  The cases where they are not called at the same time
-             * must be identified first. */
-            if (offset != 0)
+
+            if (offset != HASH_NULL)
                 list_remove(&hash, generate_key(dict, offset), offset);
+            if (dict_head != HASH_NULL)
+                list_add(&hash, dict_head_key, dict_head);
 
             c = read_byte(data);
             if (c != -1) {
                 dict[offset] = c;
-                waiting_bytes++;
+            } else {
+                waiting_bytes--;
             }
 
-            if (dict_head != 0)
-                list_add(&hash, generate_key(dict, dict_head), dict_head);
-
             dict_head = (dict_head + 1) & LZSS_DICTSIZE_MASK;
-            waiting_bytes--;
+            dict_head_key = generate_key(dict, dict_head);
         }
     }
 
     bitstream_write1(&bs, 0);
-    bitstream_write(&bs, 13, 0);
+    bitstream_write(&bs, 13, HASH_NULL);
     bitstream_write(&bs, 4, 0);
 
     bitstream_finish(&bs);
