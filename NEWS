@@ -5,3 +5,4 @@ What's new in thtk 2:
 * thdat: Extraction can now use parallel execution.
 * thdat: Compression efficiency has been improved beyond
   that of the official archives.
+* thdat: Compression times have been reduced by about 40%.

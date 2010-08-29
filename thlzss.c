@@ -150,20 +150,32 @@ th_lz(
 
         /* Find a good match. */
         for (offset = hash.hash[dict_head_key];
-             offset != HASH_NULL;
+             offset != HASH_NULL && waiting_bytes > match_len;
              offset = hash.next[offset]) {
-            unsigned int match_tmp = 0;
-            for (i = 0; i < waiting_bytes; ++i) {
-                if (dict[(dict_head + i) & LZSS_DICTSIZE_MASK] !=
-                    dict[(offset + i) & LZSS_DICTSIZE_MASK])
-                    break;
-                match_tmp++;
-            }
-            if (match_tmp > match_len) {
-                match_len = match_tmp;
+            /* First check a character further ahead to see if this match can
+             * be any longer than the current match. */
+            if (dict[(dict_head + match_len) & LZSS_DICTSIZE_MASK] ==
+                dict[(offset + match_len) & LZSS_DICTSIZE_MASK]) {
+                /* Then check the previous characters. */
+                for (i = 0;
+                     i < match_len &&
+                     (dict[(dict_head + i) & LZSS_DICTSIZE_MASK] ==
+                      dict[(offset + i) & LZSS_DICTSIZE_MASK]);
+                     ++i)
+                    ;
+
+                if (i < match_len)
+                    continue;
+
+                /* Finally try to extend the match. */
+                for (++match_len;
+                     match_len < waiting_bytes &&
+                     (dict[(dict_head + match_len) & LZSS_DICTSIZE_MASK] ==
+                      dict[(offset + match_len) & LZSS_DICTSIZE_MASK]);
+                     ++match_len)
+                    ;
+
                 match_offset = offset;
-                if (match_len == waiting_bytes)
-                    break;
             }
         }
 
