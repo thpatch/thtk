@@ -267,7 +267,7 @@ th_unlz(
 
     while (out < oend) {
         if (bitstream_read1(bs)) {
-            char c = bitstream_read(bs, 8);
+            unsigned char c = bitstream_read(bs, 8);
             *out++ = c;
             dict[dict_head] = c;
             dict_head = (dict_head + 1) & LZSS_DICTSIZE_MASK;
@@ -279,7 +279,7 @@ th_unlz(
                 return;
 
             for (i = 0; i < match_len; ++i) {
-                char c = dict[(match_offset + i) & LZSS_DICTSIZE_MASK];
+                unsigned char c = dict[(match_offset + i) & LZSS_DICTSIZE_MASK];
                 *out++ = c;
                 dict[dict_head] = c;
                 dict_head = (dict_head + 1) & LZSS_DICTSIZE_MASK;
