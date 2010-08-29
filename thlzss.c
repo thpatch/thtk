@@ -83,13 +83,18 @@ list_remove(
     const unsigned int key,
     const unsigned int offset)
 {
-    /* XXX: It is always the last entry in the list that is removed.
-     * hash->next[offset] will always be HASH_NULL. */
+    /* This function always removes the last entry in the list,
+     * or no entry at all. */
 
+    /* Set any previous entry's next pointer to HASH_NULL. */
     hash->next[hash->prev[offset]] = HASH_NULL;
 
+    /* XXX: This condition is not neccessary, but it might
+     * help optimization by not having to generate the key. */
     if (hash->prev[offset] == HASH_NULL)
-        hash->hash[key] = HASH_NULL;
+        /* If the entry being removed was the head, clear the head. */
+        if (hash->hash[key] == offset)
+            hash->hash[key] = HASH_NULL;
 }
 
 static inline void
@@ -100,6 +105,7 @@ list_add(
 {
     hash->next[offset] = hash->hash[key];
     hash->prev[offset] = HASH_NULL;
+    /* Update the previous pointer of the old head. */
     hash->prev[hash->hash[key]] = offset;
     hash->hash[key] = offset;
 }
