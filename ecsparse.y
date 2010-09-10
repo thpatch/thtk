@@ -203,6 +203,9 @@ static sub_t* current_sub;
 %type <integer> Expression_Cast
 %type <param> Load_Type
 
+%nonassoc ADD ADDI ADDF SUBTRACT SUBTRACTI SUBTRACTF MULTIPLY MULTIPLYI MULTIPLYF DIVIDE DIVIDEI DIVIDEF EQUAL EQUALI EQUALF INEQUAL INEQUALI INEQUALF LT LTI LTF LTEQ LTEQI LTEQF GT GTI GTF GTEQ GTEQI GTEQF MODULO OR AND XOR
+%left NOT
+
 %%
 
 Statements:
@@ -402,52 +405,57 @@ Expression:
       Load_Type {
         $$ = make_immediate_expression($1);
     }
-    | "(" Expression "+"   Expression ")" { $$ = make_binary_expression(ADD,       $2, $4); }
-    | "(" Expression "$+"  Expression ")" { $$ = make_binary_expression(ADDI,      $2, $4); }
-    | "(" Expression "%+"  Expression ")" { $$ = make_binary_expression(ADDF,      $2, $4); }
 
-    | "(" Expression "-"   Expression ")" { $$ = make_binary_expression(SUBTRACT,  $2, $4); }
-    | "(" Expression "$-"  Expression ")" { $$ = make_binary_expression(SUBTRACTI, $2, $4); }
-    | "(" Expression "%-"  Expression ")" { $$ = make_binary_expression(SUBTRACTF, $2, $4); }
+    | "(" Expression ")" {
+        $$ = $2;
+    }
 
-    | "(" Expression "*"   Expression ")" { $$ = make_binary_expression(MULTIPLY,  $2, $4); }
-    | "(" Expression "$*"  Expression ")" { $$ = make_binary_expression(MULTIPLYI, $2, $4); }
-    | "(" Expression "%*"  Expression ")" { $$ = make_binary_expression(MULTIPLYF, $2, $4); }
+    | Expression "+"   Expression { $$ = make_binary_expression(ADD,       $1, $3); }
+    | Expression "$+"  Expression { $$ = make_binary_expression(ADDI,      $1, $3); }
+    | Expression "%+"  Expression { $$ = make_binary_expression(ADDF,      $1, $3); }
 
-    | "(" Expression "/"   Expression ")" { $$ = make_binary_expression(DIVIDE,    $2, $4); }
-    | "(" Expression "$/"  Expression ")" { $$ = make_binary_expression(DIVIDEI,   $2, $4); }
-    | "(" Expression "%/"  Expression ")" { $$ = make_binary_expression(DIVIDEF,   $2, $4); }
+    | Expression "-"   Expression { $$ = make_binary_expression(SUBTRACT,  $1, $3); }
+    | Expression "$-"  Expression { $$ = make_binary_expression(SUBTRACTI, $1, $3); }
+    | Expression "%-"  Expression { $$ = make_binary_expression(SUBTRACTF, $1, $3); }
 
-    | "(" Expression "%"   Expression ")" { $$ = make_binary_expression(MODULO,    $2, $4); }
+    | Expression "*"   Expression { $$ = make_binary_expression(MULTIPLY,  $1, $3); }
+    | Expression "$*"  Expression { $$ = make_binary_expression(MULTIPLYI, $1, $3); }
+    | Expression "%*"  Expression { $$ = make_binary_expression(MULTIPLYF, $1, $3); }
 
-    | "(" Expression "=="  Expression ")" { $$ = make_binary_expression(EQUAL,     $2, $4); }
-    | "(" Expression "$==" Expression ")" { $$ = make_binary_expression(EQUALI,    $2, $4); }
-    | "(" Expression "%==" Expression ")" { $$ = make_binary_expression(EQUALF,    $2, $4); }
+    | Expression "/"   Expression { $$ = make_binary_expression(DIVIDE,    $1, $3); }
+    | Expression "$/"  Expression { $$ = make_binary_expression(DIVIDEI,   $1, $3); }
+    | Expression "%/"  Expression { $$ = make_binary_expression(DIVIDEF,   $1, $3); }
 
-    | "(" Expression "!="  Expression ")" { $$ = make_binary_expression(INEQUAL,   $2, $4); }
-    | "(" Expression "$!=" Expression ")" { $$ = make_binary_expression(INEQUALI,  $2, $4); }
-    | "(" Expression "%!=" Expression ")" { $$ = make_binary_expression(INEQUALF,  $2, $4); }
+    | Expression "%"   Expression { $$ = make_binary_expression(MODULO,    $1, $3); }
 
-    | "(" Expression "<"   Expression ")" { $$ = make_binary_expression(LT,        $2, $4); }
-    | "(" Expression "$<"  Expression ")" { $$ = make_binary_expression(LTI,       $2, $4); }
-    | "(" Expression "%<"  Expression ")" { $$ = make_binary_expression(LTF,       $2, $4); }
+    | Expression "=="  Expression { $$ = make_binary_expression(EQUAL,     $1, $3); }
+    | Expression "$==" Expression { $$ = make_binary_expression(EQUALI,    $1, $3); }
+    | Expression "%==" Expression { $$ = make_binary_expression(EQUALF,    $1, $3); }
 
-    | "(" Expression "<="  Expression ")" { $$ = make_binary_expression(LTEQ,      $2, $4); }
-    | "(" Expression "$<=" Expression ")" { $$ = make_binary_expression(LTEQI,     $2, $4); }
-    | "(" Expression "%<=" Expression ")" { $$ = make_binary_expression(LTEQF,     $2, $4); }
+    | Expression "!="  Expression { $$ = make_binary_expression(INEQUAL,   $1, $3); }
+    | Expression "$!=" Expression { $$ = make_binary_expression(INEQUALI,  $1, $3); }
+    | Expression "%!=" Expression { $$ = make_binary_expression(INEQUALF,  $1, $3); }
 
-    | "(" Expression ">"   Expression ")" { $$ = make_binary_expression(GT,        $2, $4); }
-    | "(" Expression "$>"  Expression ")" { $$ = make_binary_expression(GTI,       $2, $4); }
-    | "(" Expression "%>"  Expression ")" { $$ = make_binary_expression(GTF,       $2, $4); }
+    | Expression "<"   Expression { $$ = make_binary_expression(LT,        $1, $3); }
+    | Expression "$<"  Expression { $$ = make_binary_expression(LTI,       $1, $3); }
+    | Expression "%<"  Expression { $$ = make_binary_expression(LTF,       $1, $3); }
 
-    | "(" Expression ">="  Expression ")" { $$ = make_binary_expression(GTEQ,      $2, $4); }
-    | "(" Expression "$>=" Expression ")" { $$ = make_binary_expression(GTEQI,     $2, $4); }
-    | "(" Expression "%>=" Expression ")" { $$ = make_binary_expression(GTEQF,     $2, $4); }
+    | Expression "<="  Expression { $$ = make_binary_expression(LTEQ,      $1, $3); }
+    | Expression "$<=" Expression { $$ = make_binary_expression(LTEQI,     $1, $3); }
+    | Expression "%<=" Expression { $$ = make_binary_expression(LTEQF,     $1, $3); }
 
-    | "!" Expression                      { $$ = make_unary_expression(NOT, $2); }
-    | "(" Expression "||"  Expression ")" { $$ = make_binary_expression(OR,        $2, $4); }
-    | "(" Expression "&&"  Expression ")" { $$ = make_binary_expression(AND,       $2, $4); }
-    | "(" Expression "^"   Expression ")" { $$ = make_binary_expression(XOR,       $2, $4); }
+    | Expression ">"   Expression { $$ = make_binary_expression(GT,        $1, $3); }
+    | Expression "$>"  Expression { $$ = make_binary_expression(GTI,       $1, $3); }
+    | Expression "%>"  Expression { $$ = make_binary_expression(GTF,       $1, $3); }
+
+    | Expression ">="  Expression { $$ = make_binary_expression(GTEQ,      $1, $3); }
+    | Expression "$>=" Expression { $$ = make_binary_expression(GTEQI,     $1, $3); }
+    | Expression "%>=" Expression { $$ = make_binary_expression(GTEQF,     $1, $3); }
+
+    | "!" Expression              { $$ = make_unary_expression(NOT, $2); }
+    | Expression "||"  Expression { $$ = make_binary_expression(OR,        $1, $3); }
+    | Expression "&&"  Expression { $$ = make_binary_expression(AND,       $1, $3); }
+    | Expression "^"   Expression { $$ = make_binary_expression(XOR,       $1, $3); }
     ;
 
 Address:
