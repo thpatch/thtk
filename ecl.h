@@ -68,7 +68,7 @@ typedef struct {
 #endif
 } PACK_ATTRIBUTE header_eclh_t;
 
-typedef struct {
+typedef struct param_t {
     /* Same as instruction format strings. */
     unsigned char type;
     /* Reference to stack value or not. */

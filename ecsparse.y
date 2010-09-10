@@ -38,27 +38,54 @@
 #include "util.h"
 #include "instr.h"
 
-static int timer = 0;
-static int version;
-
-static void add_anim(char*);
-static void add_ecli(char*);
-static void add_eclh(char*);
-
+/* Bison things. */
 void yyerror(const char*);
+int yylex(void);
+extern FILE* yyin;
 
+/* Temporary parser structures. */
 typedef struct list_t {
     struct list_t* next;
-    param_t* param;
+    void* data;
 } list_t;
 
+typedef struct expression_t {
+    int instr;
+    int type;
+    unsigned int child_count;
+    struct expression_t** children;
+    list_t* params;
+} expression_t;
+
+/* Parser APIs. */
+static void add_eclh(char*);
+
+static expression_t* make_stackinstr(int type, expression_t* expr1, expression_t* expr2, list_t* param);
+static void output_expression(expression_t* expression);
+
+static list_t* make_list(void* data);
+static param_t* make_param(unsigned char type);
 static void instr_add(int id, int rank_mask, list_t* list);
 static void label_create(char* label);
 static int32_t label_find(sub_t* sub, const char* label);
-static int make_stackinstr(int type, char stack1, char stack2, list_t* params);
 
-int yylex(void);
-extern FILE* yyin;
+static void free_param(param_t* param);
+static void free_params(list_t* node);
+static void free_list(list_t* node);
+static void free_expression(expression_t* expr);
+
+/* Parser state. */
+static int timer = 0;
+static int version;
+
+static uint32_t anim_cnt;
+static char** anim_list;
+static uint32_t ecli_cnt;
+static char** ecli_list;
+
+static unsigned int sub_cnt;
+static sub_t* subs;
+static sub_t* current_sub;
 
 %}
 
@@ -74,6 +101,8 @@ extern FILE* yyin;
         unsigned char* data;
     } bytes;
     struct list_t* list;
+    struct param_t* param;
+    struct expression_t* expression;
 }
 
 %token <integer> INSTRUCTION "instruction"
@@ -92,9 +121,6 @@ extern FILE* yyin;
 %token ANIM "anim"
 %token ECLI "ecli"
 %token SUB "sub"
-%token IF "if"
-%token UNLESS "unless"
-%token GOTO "goto"
 %token AT "@"
 %token BRACE_OPEN "{"
 %token BRACE_CLOSE "}"
@@ -103,263 +129,341 @@ extern FILE* yyin;
 %token ILLEGAL_TOKEN "illegal token"
 %token END_OF_FILE 0 "end of file"
 
+%token GOTO "goto"
+%token UNLESS "unless"
+%token IF "if"
 %token LOAD
+%token ASSIGN "="
 %token ADD "+"
 %token SUBTRACT "-"
 %token MULTIPLY "*"
 %token DIVIDE "/"
 %token MODULO "%"
+%token EQUAL "=="
+%token INEQUAL "!="
 %token LT "<"
 %token LTEQ "<="
 %token GT ">"
 %token GTEQ ">="
-%token EQUAL "=="
-%token INEQUAL "!="
-%token ASSIGN "="
 %token NOT "!"
 %token AND "&"
 %token OR "|"
 %token XOR "^"
 
-%type <list> params
-%type <list> cast_param
-%type <list> square_param
-%type <list> param
-%type <list> includes
-%type <integer> expression
+%type <list> Include_List
+
+%type <param> Address
+%type <param> Address_Type
+
+%type <list> Instruction_Parameters
+%type <param> Instruction_Parameter
+
+%type <param> Integer
+%type <param> Floating
+%type <param> Text
+%type <param> Label
+%type <param> Encrypted_Text
+%type <param> Cast_Value
+
+%type <param> Cast_Type
+%type <integer> Cast_Target
+
+%type <expression> Expression
+%type <param> Load_Type
+
 
 %%
 
-input:
-    | input statement 
+Statements:
+    | Statement Statements
     ;
 
-statement:
-      "sub" IDENTIFIER "{" { add_eclh($2); } instructions "}" { add_eclh(NULL); }
-    | "anim" "{" includes "}" {
-        list_t* list = $3;
-
-        while (list) {
-            list_t* temp = list;
-            add_anim(list->param->value.s.data);
-            list = list->next;
-            free(temp->param);
-            free(temp);
-        }
+Statement:
+      "sub" IDENTIFIER {
+        add_eclh($2);
     }
-    | "ecli" "{" includes "}" {
-        list_t* list = $3;
+      "{" Instructions "}" { add_eclh(NULL); }
+    | "anim" "{" Include_List "}" {
+        list_t* node = $3;
 
-        while (list) {
-            list_t* temp = list;
-            add_ecli(list->param->value.s.data);
-            list = list->next;
-            free(temp->param);
-            free(temp);
+        while (node) {
+            param_t* param = (param_t*)node->data;
+            anim_cnt++;
+            anim_list = realloc(anim_list, sizeof(char*) * anim_cnt);
+            anim_list[anim_cnt - 1] = param->value.s.data;
+            node = node->next;
         }
+
+        free_params($3);
+        free_list($3);
+    }
+    | "ecli" "{" Include_List "}" {
+        list_t* node = $3;
+
+        while (node) {
+            param_t* param = (param_t*)node->data;
+            ecli_cnt++;
+            ecli_list = realloc(ecli_list, sizeof(char*) * ecli_cnt);
+            ecli_list[ecli_cnt - 1] = param->value.s.data;
+            node = node->next;
+        }
+
+        free_params($3);
+        free_list($3);
     }
     ;
 
-includes:
+Include_List:
       { $$ = NULL; }
-    | TEXT ";" includes {
-        $$ = malloc(sizeof(list_t));
-        $$->param = malloc(sizeof(param_t));
-        $$->param->type = 's';
-        $$->param->value.s.data = $1;
+    | Text ";" Include_List {
+        $$ = make_list($1);
         $$->next = $3;
     }
     ;
 
-instructions:
-    | instructions ";"
-    | instructions IDENTIFIER ":" { label_create($2); }
-    | instructions INTEGER ":" {
-        if ($2 == timer || (timer > 0 && $2 < timer)) {
+Instructions:
+    | Instruction ";" Instructions
+    | IDENTIFIER ":" { label_create($1); } Instructions
+    | INTEGER ":" {
+        if ($1 == timer || (timer > 0 && $1 < timer)) {
             char buf[256];
-            snprintf(buf, 256, "illegal timer change: %d to %d", timer, $2);
+            snprintf(buf, 256, "illegal timer change: %d to %d", timer, $1);
             yyerror(buf);
         }
-        timer = $2;
-    }
-    | instructions instruction ";"
+        timer = $1;
+    } Instructions
     ;
 
-/* TODO: Check the given parameters against the parameters expected for the
- *       instruction.  This requires passing a version parameter to eclc. */
-instruction:
-      INSTRUCTION RANK params { instr_add($1, $2, $3); }
-    | INSTRUCTION params { instr_add($1, 0xff, $2); }
-    | "if" expression "goto" square_param "@" square_param {
-        if ($4->param->stack || $6->param->stack)
-            yyerror("stack reference passed to goto");
-        if ($4->param->type != 'o' || $6->param->type != 'i')
-            yyerror("wrong parameter types for goto");
-        $6->next = NULL;
-        $4->next = $6;
-        /* TODO: Use make_stackinstr or something here. */
-        instr_add(14, 0xff, $4);
+    /* TODO: Check the given parameters against the parameters expected for the
+     *       instruction.  This requires passing a version parameter to eclc. */
+Instruction:
+      INSTRUCTION RANK Instruction_Parameters {
+        instr_add($1, $2, $3);
+        free_params($3);
+        free_list($3);
     }
-    | "unless" expression "goto" square_param "@" square_param {
-        if ($4->param->stack || $6->param->stack)
-            yyerror("stack reference passed to goto");
-        if ($4->param->type != 'o' || $6->param->type != 'i')
-            yyerror("wrong parameter types for goto");
-        $6->next = NULL;
-        $4->next = $6;
-        instr_add(13, 0xff, $4);
+    | INSTRUCTION Instruction_Parameters {
+        instr_add($1, 0xff, $2);
+        free_params($2);
+        free_list($2);
     }
-    | "goto" square_param "@" square_param {
-        if ($2->param->stack || $4->param->stack)
-            yyerror("stack reference passed to goto");
-        if ($2->param->type != 'o' || $4->param->type != 'i')
-            yyerror("wrong parameter types for goto");
-        $4->next = NULL;
-        $2->next = $4;
-        instr_add(12, 0xff, $2);
+    | "if" Expression "goto" Label "@" Integer {
+        list_t* label = make_list($4);
+        list_t* time = make_list($6);
+        label->next = time;
+        output_expression($2);
+        free_expression($2);
+        instr_add(14, 0xff, label);
+        free_params(label);
+        free_list(label);
     }
-    | square_param "=" expression {
-        /* TODO: Error if 1 isn't a stack reference. */
-        if (!$1->param->stack)
-            yyerror("parameter is not a stack reference");
-        $1->next = NULL;
-        make_stackinstr(ASSIGN, $3, 0, $1);
+    | "unless" Expression "goto" Label "@" Integer {
+        list_t* label = make_list($4);
+        list_t* time = make_list($6);
+        label->next = time;
+        output_expression($2);
+        free_expression($2);
+        instr_add(13, 0xff, label);
+        free_params(label);
+        free_list(label);
     }
-    | expression
+    | "goto" Label "@" Integer {
+        list_t* label = make_list($2);
+        list_t* time = make_list($4);
+        label->next = time;
+        instr_add(12, 0xff, label);
+        free_params(label);
+        free_list(label);
+    }
+    | Address "=" Expression {
+        expression_t* expr = make_stackinstr(ASSIGN, $3, NULL, make_list($1));
+        output_expression(expr);
+        free_expression(expr);
+    }
+    | Expression {
+        output_expression($1);
+        free_expression($1);
+    }
     ;
 
-expression:
-      square_param {
-        $1->next = NULL;
-        $$ = make_stackinstr(LOAD, 0, 0, $1);
-    }
-    | "(" "!" expression ")"             { $$ = make_stackinstr(NOT,      $3, 0,  NULL); }
-    | "(" expression "&"  expression ")" { $$ = make_stackinstr(AND,      $2, $4, NULL); }
-    | "(" expression "|"  expression ")" { $$ = make_stackinstr(OR,       $2, $4, NULL); }
-    | "(" expression "^"  expression ")" { $$ = make_stackinstr(XOR,      $2, $4, NULL); }
-    | "(" expression "+"  expression ")" { $$ = make_stackinstr(ADD,      $2, $4, NULL); }
-    | "(" expression "-"  expression ")" { $$ = make_stackinstr(SUBTRACT, $2, $4, NULL); }
-    | "(" expression "*"  expression ")" { $$ = make_stackinstr(MULTIPLY, $2, $4, NULL); }
-    | "(" expression "/"  expression ")" { $$ = make_stackinstr(DIVIDE,   $2, $4, NULL); }
-    | "(" expression "%"  expression ")" { $$ = make_stackinstr(MODULO,   $2, $4, NULL); }
-    | "(" expression "==" expression ")" { $$ = make_stackinstr(EQUAL,    $2, $4, NULL); }
-    | "(" expression "!=" expression ")" { $$ = make_stackinstr(INEQUAL,  $2, $4, NULL); }
-    | "(" expression "<"  expression ")" { $$ = make_stackinstr(LT,       $2, $4, NULL); }
-    | "(" expression "<=" expression ")" { $$ = make_stackinstr(LTEQ,     $2, $4, NULL); }
-    | "(" expression ">"  expression ")" { $$ = make_stackinstr(GT,       $2, $4, NULL); }
-    | "(" expression ">=" expression ")" { $$ = make_stackinstr(GTEQ,     $2, $4, NULL); }
-    ;
-
-params:
+Instruction_Parameters:
       { $$ = NULL; }
-    | cast_param params { $$ = $1; $$->next = $2; }
+    | Instruction_Parameter Instruction_Parameters {
+        $$ = make_list($1);
+        $$->next = $2;
+    }
     ;
 
-cast_param:
-      "(int)" square_param {
-        float floating;
-        int integer;
+Instruction_Parameter:
+      Address
+    | Integer
+    | Floating
+    | Text
+    | Label
+    | Encrypted_Text
+    | Cast_Value
+    ;
+
+Expression:
+      Load_Type {
+        $$ = make_stackinstr(LOAD, NULL, NULL, make_list($1));
+    }
+    | "(" "!" Expression ")"             { $$ = make_stackinstr(NOT,      $3, NULL, NULL); }
+    | "(" Expression "&"  Expression ")" { $$ = make_stackinstr(AND,      $2, $4, NULL); }
+    | "(" Expression "|"  Expression ")" { $$ = make_stackinstr(OR,       $2, $4, NULL); }
+    | "(" Expression "^"  Expression ")" { $$ = make_stackinstr(XOR,      $2, $4, NULL); }
+    | "(" Expression "+"  Expression ")" { $$ = make_stackinstr(ADD,      $2, $4, NULL); }
+    | "(" Expression "-"  Expression ")" { $$ = make_stackinstr(SUBTRACT, $2, $4, NULL); }
+    | "(" Expression "*"  Expression ")" { $$ = make_stackinstr(MULTIPLY, $2, $4, NULL); }
+    | "(" Expression "/"  Expression ")" { $$ = make_stackinstr(DIVIDE,   $2, $4, NULL); }
+    | "(" Expression "%"  Expression ")" { $$ = make_stackinstr(MODULO,   $2, $4, NULL); }
+    | "(" Expression "==" Expression ")" { $$ = make_stackinstr(EQUAL,    $2, $4, NULL); }
+    | "(" Expression "!=" Expression ")" { $$ = make_stackinstr(INEQUAL,  $2, $4, NULL); }
+    | "(" Expression "<"  Expression ")" { $$ = make_stackinstr(LT,       $2, $4, NULL); }
+    | "(" Expression "<=" Expression ")" { $$ = make_stackinstr(LTEQ,     $2, $4, NULL); }
+    | "(" Expression ">"  Expression ")" { $$ = make_stackinstr(GT,       $2, $4, NULL); }
+    | "(" Expression ">=" Expression ")" { $$ = make_stackinstr(GTEQ,     $2, $4, NULL); }
+    ;
+
+Address:
+      "[" Address_Type "]" {
         $$ = $2;
-        if ($$->param->type == 'f') {
-            floating = $$->param->value.f;
-            $$->param->value.D[0] = 0x6966;
-            memcpy(&$$->param->value.D[1], &floating, sizeof(float));
-        } else if ($$->param->type == 'i') {
-            integer = $$->param->value.i;
-            $$->param->value.D[0] = 0x6969;
-            $$->param->value.D[1] = integer;
+        $$->stack = 1;
+    }
+    ;
+
+Address_Type:
+      Integer
+    | Floating
+    ;
+
+Integer:
+    INTEGER {
+        $$ = make_param('i');
+        $$->value.i = $1;
+    }
+    ;
+
+Floating:
+    FLOATING {
+        $$ = make_param('f');
+        $$->value.f = $1;
+    }
+    ;
+
+Text:
+    TEXT {
+        $$ = make_param('s');
+        $$->value.s.length = strlen($1);
+        $$->value.s.data = $1;
+    }
+    ;
+
+Label:
+    IDENTIFIER {
+        $$ = make_param('o');
+        $$->value.s.length = strlen($1);
+        $$->value.s.data = $1;
+    }
+    ;
+
+Encrypted_Text:
+    CTEXT {
+        $$ = make_param('c');
+        $$->value.s.length = $1.length;
+        $$->value.s.data = (char*)$1.data;
+    }
+    ;
+
+Cast_Value:
+    Cast_Target Cast_Type {
+        $$ = make_param('D');
+        $$->value.D[0] = (      $1 == 'f' ? 0x6600 : 0x6900)
+                       | ($2->type == 'f' ?   0x66 :   0x69);
+        if ($2->type == 'f') {
+            memcpy(&$$->value.D[1], &$2->value.f, sizeof(float));
         } else {
-            yyerror("integer or float expected");
-            YYABORT;
+            $$->value.D[1] = $2->value.i;
         }
-        $$->param->type = 'D';
-    }
-    | "(float)" square_param {
-        float floating;
-        int integer;
-        $$ = $2;
-        if ($$->param->type == 'f') {
-            floating = $$->param->value.f;
-            $$->param->value.D[0] = 0x6666;
-            memcpy(&$$->param->value.D[1], &floating, sizeof(float));
-        } else if ($$->param->type == 'i') {
-            integer = $$->param->value.i;
-            $$->param->value.D[0] = 0x6669;
-            $$->param->value.D[1] = integer;
-        } else {
-            yyerror("integer or float expected");
-            YYABORT;
-        }
-        $$->param->type = 'D';
-    }
-    | square_param
-    ;
-
-square_param:
-      "[" param "]" {
-        $$ = $2;
-        $$->param->stack = 1;
-    }
-    | param {
-        $$ = $1;
-        $$->param->stack = 0;
+        $$->stack = $2->stack;
+        free_param($2);
     }
     ;
 
-param:
-      CTEXT {
-        $$ = malloc(sizeof(list_t));
-        $$->param = malloc(sizeof(param_t));
-        $$->param->type = 'c';
-        $$->param->value.s.length = $1.length;
-        $$->param->value.s.data = (char*)$1.data;
-    }
-    | TEXT {
-        $$ = malloc(sizeof(list_t));
-        $$->param = malloc(sizeof(param_t));
-        $$->param->type = 's';
-        $$->param->value.s.length = strlen($1);
-        $$->param->value.s.data = $1;
-    }
-    | INTEGER {
-        $$ = malloc(sizeof(list_t));
-        $$->param = malloc(sizeof(param_t));
-        $$->param->type = 'i';
-        $$->param->value.i = $1;
-    }
-    | FLOATING {
-        $$ = malloc(sizeof(list_t));
-        $$->param = malloc(sizeof(param_t));
-        $$->param->type = 'f';
-        $$->param->value.f = $1;
-    }
-    | IDENTIFIER {
-        $$ = malloc(sizeof(list_t));
-        $$->param = malloc(sizeof(param_t));
-        $$->param->type = 'o';
-        $$->param->value.s.length = strlen($1);
-        $$->param->value.s.data = $1;
-    }
+Cast_Target:
+      "(int)"   { $$ = 'i'; }
+    | "(float)" { $$ = 'f'; }
+    ;
+
+Cast_Type:
+      Address
+    | Integer
+    | Floating
+    ;
+
+Load_Type:
+      Address
+    | Integer
+    | Floating
     ;
 
 %%
 
-static uint32_t anim_cnt;
-static char** anim_list;
-static uint32_t ecli_cnt;
-static char** ecli_list;
+static void free_param(
+    param_t* param)
+{
+    if (param) {
+        /* ... */
+        free(param);
+    }
+}
 
-static unsigned int sub_cnt;
-static sub_t* subs;
-static sub_t* current_sub;
+static void free_params(
+    list_t* node)
+{
+    while (node) {
+        free_param(node->data);
+        node->data = NULL;
+        node = node->next;
+    }
+}
 
-static int
+/* Does not free data. */
+static void free_list(
+    list_t* node)
+{
+    if (node) {
+        list_t* temp = node->next;
+        free(node);
+        if (temp)
+            free_list(temp);
+    }
+}
+
+static void free_expression(
+    expression_t* expr)
+{
+    unsigned int i;
+
+    free_params(expr->params);
+    free_list(expr->params);
+
+    for (i = 0; i < expr->child_count; ++i) {
+        free_expression(expr->children[i]);
+    }
+    free(expr->children);
+    free(expr);
+}
+
+static expression_t*
 make_stackinstr(
     int type,
-    char stack1,
-    char stack2,
+    expression_t* expr1,
+    expression_t* expr2,
     list_t* params)
 {
+    expression_t* out;
+    unsigned int j = 0;
     const stackinstr_t* i;
 
     for (i = get_stackinstrs(version); i->type; ++i) {
@@ -367,14 +471,13 @@ make_stackinstr(
 
         if (i->type == type) {
             list_t* p;
-            unsigned int j = 0;
 
             switch (strlen(i->stack)) {
             case 2:
-                if (i->stack[1] != stack2)
+                if (!expr2 || i->stack[1] != expr2->type)
                     ok = 0;
             case 1:
-                if (i->stack[0] != stack1)
+                if (!expr1 || i->stack[0] != expr1->type)
                     ok = 0;
             case 0:
                 break;
@@ -385,10 +488,12 @@ make_stackinstr(
                 break;
             }
 
+            j = 0;
             for (p = params; p; p = p->next) {
+                param_t* param = p->data;
                 if (j > strlen(i->params))
                     ok = 0;
-                if (i->params[j] != p->param->type)
+                if (i->params[j] != param->type)
                     ok = 0;
                 j++;
             }
@@ -401,17 +506,65 @@ make_stackinstr(
     if (!i->type) {
         list_t* p;
         char buf[256];
-        sprintf(buf, "no match found for %d, %c, %c", type, stack1, stack2);
+        sprintf(buf, "no match found for %d, '%c', '%c'", type, expr1 ? expr1->type : '-', expr2 ? expr2->type : '-');
         for (p = params; p; p = p->next) {
-            fprintf(stderr, "  %c\n", p->param->type);
+            param_t* param = p->data;
+            fprintf(stderr, "  %c\n", param->type);
         }
         yyerror(buf);
-        return 0;
+        return NULL;
     }
 
-    instr_add(i->instr, 0xff, params);
+    out = malloc(sizeof(expression_t));
+    out->instr = i->instr;
+    out->type = i->value;
+    if (strlen(i->stack)) {
+        out->child_count = strlen(i->stack);
+        out->children = malloc(strlen(i->stack) * sizeof(expression_t*));
+        if (strlen(i->stack) > 0)
+            out->children[0] = expr1;
+        if (strlen(i->stack) > 1)
+            out->children[1] = expr2;
+    } else {
+        out->child_count = 0;
+        out->children = NULL;
+    }
+    out->params = params;
 
-    return i->value;
+    return out;
+}
+
+static list_t*
+make_list(
+    void* data)
+{
+    list_t* l = malloc(sizeof(list_t));
+    l->next = NULL;
+    l->data = data;
+    return l;
+}
+
+static param_t*
+make_param(
+    unsigned char type)
+{
+    param_t* p = malloc(sizeof(param_t));
+    p->type = type;
+    p->stack = 0;
+    return p;
+}
+
+static void
+output_expression(
+    expression_t* expr)
+{
+    unsigned int i;
+
+    for (i = 0; i < expr->child_count; ++i) {
+        output_expression(expr->children[i]);
+    }
+
+    instr_add(expr->instr, 0xff, expr->params);
 }
 
 static void
@@ -589,43 +742,26 @@ instr_add(
     op = &current_sub->instrs[current_sub->instr_cnt - 1];
 
     while (list) {
+        param_t* param;
         list_t* temp;
         param_cnt++;
 
-        params = realloc(params, param_cnt * sizeof(param_t));
-        params[param_cnt - 1] = *list->param;
+        param = list->data;
 
-        if (list->param->stack)
+        params = realloc(params, param_cnt * sizeof(param_t));
+        params[param_cnt - 1] = *param;
+
+        if (param->stack)
             param_mask |= 1 << (param_cnt - 1);
 
         temp = list;
         list = list->next;
-        free(temp->param);
-        free(temp);
     }
 
     instr_create(op, timer, id, param_mask, rank_mask, param_cnt, params);
 
     op->offset = current_sub->offset;
     current_sub->offset += op->size;
-}
-
-static void
-add_anim(
-    char* arg)
-{
-    anim_cnt++;
-    anim_list = realloc(anim_list, sizeof(char*) * anim_cnt);
-    anim_list[anim_cnt - 1] = arg;
-}
-
-static void
-add_ecli(
-    char* arg)
-{
-    ecli_cnt++;
-    ecli_list = realloc(ecli_list, sizeof(char*) * ecli_cnt);
-    ecli_list[ecli_cnt - 1] = arg;
 }
 
 void
