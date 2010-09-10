@@ -6,3 +6,5 @@ What's new in thtk 2:
 * thdat: Compression efficiency has been improved beyond
   that of the official archives.
 * thdat: Compression times have been reduced by about 40%.
+* thecl: The version option must now be specified for
+  compilation and dumping.

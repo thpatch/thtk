@@ -39,6 +39,7 @@
 #include "instr.h"
 
 static int timer = 0;
+static int version;
 
 static void add_anim(char*);
 static void add_ecli(char*);
@@ -361,7 +362,7 @@ make_stackinstr(
 {
     const stackinstr_t* i;
 
-    for (i = get_stackinstrs(10); i->type; ++i) {
+    for (i = get_stackinstrs(version); i->type; ++i) {
         int ok = 1;
 
         if (i->type == type) {
@@ -656,13 +657,15 @@ int
 compile_ecs(
     FILE* in,
     FILE* out,
-    unsigned int version)
+    unsigned int parse_version)
 {
     long pos;
     unsigned int i;
     const uint32_t zero = 0;
     header_scpt_t header;
     header_eclh_t eclh;
+
+    version = parse_version;
 
     if (!util_seekable(out)) {
         fprintf(stderr, "%s: output is not seekable\n", argv0);

@@ -773,6 +773,10 @@ main(int argc, char* argv[])
         util_print_version("thecl", PACKAGE_THECL_VERSION);
         exit(0);
     case 'c':
+        if (!version) {
+            print_usage();
+            exit(1);
+        }
         if (!compile_ecs(in, out, version))
             exit(0);
         fclose(in);
@@ -780,6 +784,10 @@ main(int argc, char* argv[])
         exit(0);
     case 'd': {
         ecl_t ecl;
+        if (!version) {
+            print_usage();
+            exit(1);
+        }
         if (!open_ecl(&ecl, in))
             exit(1);
         fclose(in);
