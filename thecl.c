@@ -317,8 +317,8 @@ ecldump_translate(ecl_t* ecl, unsigned int version)
         ecl->subs[i].instrs = malloc(sizeof(instr_t) * ecl->subs[i].instr_cnt);
 
         for (j = 0; j < ecl->subs[i].instr_cnt; ++j) {
-            if (!instr_parse(&ecl->subs[i].raw_instrs[j],
-                             &ecl->subs[i].instrs[j], version)) {
+            if (!instr_parse(version, &ecl->subs[i].raw_instrs[j],
+                             &ecl->subs[i].instrs[j])) {
                 exit(1);
             }
             ecl->subs[i].instrs[j].offset =

@@ -548,9 +548,9 @@ format_find(
 
 instr_t*
 instr_parse(
+    unsigned int version,
     const raw_instr_t* rinstr,
-    instr_t* instr,
-    unsigned int version)
+    instr_t* instr)
 {
     unsigned int param_cnt;
     unsigned int i;
