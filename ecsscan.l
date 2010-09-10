@@ -117,6 +117,8 @@
 "&&"       return AND;
 "^"        return XOR;
 
+"$"        return DOLLAR;
+
 -?[0-9]+(\.[0-9]+)?f {
     yylval.floating = strtof(yytext, NULL);
     return FLOATING;

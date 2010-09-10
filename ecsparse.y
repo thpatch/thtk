@@ -81,6 +81,7 @@ static void free_expression(expression_t* expr);
 static int instr_time;
 static int instr_rank = 0xff;
 static int version;
+static list_t* expressions;
 
 static uint32_t anim_cnt;
 static char** anim_list;
@@ -178,6 +179,8 @@ static sub_t* current_sub;
 %token OR "||"
 %token XOR "^"
 
+%token DOLLAR "$"
+
 %type <list> Include_List
 
 %type <param> Address
@@ -197,6 +200,7 @@ static sub_t* current_sub;
 %type <integer> Cast_Target
 
 %type <expression> Expression
+%type <integer> Expression_Cast
 %type <param> Load_Type
 
 %%
@@ -267,6 +271,14 @@ Instructions:
      *       instruction.  This requires passing a version parameter to eclc. */
 Instruction:
       INSTRUCTION Instruction_Parameters {
+        list_t* temp = expressions;
+        while (expressions) {
+            output_expression(expressions->data);
+            free_expression(expressions->data);
+            expressions = expressions->next;
+        }
+        free_list(temp);
+        expressions = NULL;
         instr_add($1, $2);
         free_params($2);
         free_list($2);
@@ -360,6 +372,30 @@ Instruction_Parameter:
     | Label
     | Encrypted_Text
     | Cast_Value
+    | Expression_Cast "(" Expression ")" {
+        list_t* list;
+
+        $3->type = $1;
+        
+        list = make_list($3);
+        list->next = expressions;
+        expressions = list;
+
+        $$ = make_param($1);
+        $$->stack = 1;
+        if ($$->type == 'i') {
+            $$->value.i = -1;
+        } else if ($$->type == 'f') {
+            $$->value.f = -1.0f;
+        } else {
+            abort();
+        }
+    }
+    ;
+
+Expression_Cast:
+      "$" { $$ = 'i'; }
+    | "%" { $$ = 'f'; }
     ;
 
 Expression:

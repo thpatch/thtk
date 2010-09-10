@@ -19,3 +19,8 @@ What's new in thtk 2:
   used (+), the return value depends on the value passed to
   it:  If both are integer, the return value is integer as
   well, if any is floating, the return value is floating.
+* thecl: Expressions can now be used as parameters to
+  instructions.  These expressions must be contained within
+  $() or %(), and are replaced by [-1] or [-1.0f]
+  respectively.  The actual expression is output before the
+  instruction it is passed to.

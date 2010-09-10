@@ -472,11 +472,26 @@ ecldump_translate_print(
                 snprintf(instr->string, 1024, "ins_%u", instr->id);
 
                 for (p = 0; p < instr->param_cnt; ++p) {
+                    param_t* param = &instr->params[p];
                     snprintf(instr->string + strlen(instr->string),
                         1024 - strlen(instr->string), " ");
-                    ecldump_display_param(instr->string + strlen(instr->string),
-                        1024 - strlen(instr->string), sub, instr, p,
-                        NULL, version);
+                    if (   (instr->param_mask & (1 << p))
+                        && (   ((param->type == 'i') && (param->value.i == -1))
+                            || ((param->type == 'f') && (param->value.f == -1.0f)))
+                        && instr->time == stack[stack_top - 2]->time
+                        && stack[stack_top - 2]->type) {
+                        snprintf(instr->string + strlen(instr->string), 1024 - strlen(instr->string), "%c(%s)",
+                            param->type == 'i' ? '$' : '%',
+                            stack[stack_top - 2]->string);
+                        instr->label = stack[stack_top - 2]->label;
+                        instr->offset = stack[stack_top - 2]->offset;
+                        --stack_top;
+                        stack[stack_top - 1] = instr;
+                    } else {
+                        ecldump_display_param(instr->string + strlen(instr->string),
+                            1024 - strlen(instr->string), sub, instr, p,
+                            NULL, version);
+                    }
                 }
             }
         }
