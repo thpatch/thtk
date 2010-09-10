@@ -174,8 +174,8 @@ static sub_t* current_sub;
 %token GTEQI "$>="
 %token GTEQF "%>="
 %token NOT "!"
-%token AND "&"
-%token OR "|"
+%token AND "&&"
+%token OR "||"
 %token XOR "^"
 
 %type <list> Include_List
@@ -409,8 +409,8 @@ Expression:
     | "(" Expression "%>=" Expression ")" { $$ = make_binary_expression(GTEQF,     $2, $4); }
 
     | "!" Expression                      { $$ = make_unary_expression(NOT, $2); }
-    | "(" Expression "|"   Expression ")" { $$ = make_binary_expression(OR,        $2, $4); }
-    | "(" Expression "&"   Expression ")" { $$ = make_binary_expression(AND,       $2, $4); }
+    | "(" Expression "||"  Expression ")" { $$ = make_binary_expression(OR,        $2, $4); }
+    | "(" Expression "&&"  Expression ")" { $$ = make_binary_expression(AND,       $2, $4); }
     | "(" Expression "^"   Expression ")" { $$ = make_binary_expression(XOR,       $2, $4); }
     ;
 

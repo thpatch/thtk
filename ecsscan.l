@@ -113,8 +113,8 @@
 "$>="      return GTEQI;
 "%>="      return GTEQF;
 "!"        return NOT;
-"|"        return OR;
-"&"        return AND;
+"||"       return OR;
+"&&"       return AND;
 "^"        return XOR;
 
 -?[0-9]+(\.[0-9]+)?f {

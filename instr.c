@@ -58,8 +58,8 @@ static const op_pair_t th10_ops[] = {
 
     /* Binary, type-neutral. */
     { 2, MODULO,   "%",  { MODULO,    "%",   58, 'i' }, { MODULO,    "%",   58, 'i' } },
-    { 2, OR,       "|",  { OR,        "|",   73, 'i' }, { OR,        "|",  73, 'i' } },
-    { 2, AND,      "&",  { AND,       "&",   74, 'i' }, { AND,       "&",  74, 'i' } },
+    { 2, OR,       "||", { OR,        "||",  73, 'i' }, { OR,        "||",  73, 'i' } },
+    { 2, AND,      "&&", { AND,       "&&",  74, 'i' }, { AND,       "&&",  74, 'i' } },
     { 2, XOR,      "^",  { XOR,       "^",   75, 'i' }, { XOR,       "^",   75, 'i' } },
 
     /* Unary. */
