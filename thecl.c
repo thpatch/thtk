@@ -519,23 +519,6 @@ ecldump_translate_print(
             if (!instr->string[0]) {
                 snprintf(instr->string, 1024, "ins_%u", instr->id);
 
-                if (instr->rank_mask != 0xff) {
-                    snprintf(instr->string + strlen(instr->string),
-                        1024 - strlen(instr->string), " !");
-                    if (instr->rank_mask & RANK_EASY)
-                        snprintf(instr->string + strlen(instr->string),
-                            1024 - strlen(instr->string), "E");
-                    if (instr->rank_mask & RANK_NORMAL)
-                        snprintf(instr->string + strlen(instr->string),
-                            1024 - strlen(instr->string), "N");
-                    if (instr->rank_mask & RANK_HARD)
-                        snprintf(instr->string + strlen(instr->string),
-                            1024 - strlen(instr->string), "H");
-                    if (instr->rank_mask & RANK_LUNATIC)
-                        snprintf(instr->string + strlen(instr->string),
-                            1024 - strlen(instr->string), "L");
-                }
-
                 for (p = 0; p < instr->param_cnt; ++p) {
                     snprintf(instr->string + strlen(instr->string),
                         1024 - strlen(instr->string), " ");
@@ -560,7 +543,22 @@ ecldump_translate_print(
                     sub->name, stack[j]->offset);
             }
 
-            fprintf(out, "    %s;\n", stack[j]->string);
+            fprintf(out, "    ");
+
+            if (stack[j]->rank_mask != 0xff) {
+                fprintf(out, "!");
+                if (stack[j]->rank_mask & RANK_EASY)
+                    fprintf(out, "E");
+                if (stack[j]->rank_mask & RANK_NORMAL)
+                    fprintf(out, "N");
+                if (stack[j]->rank_mask & RANK_HARD)
+                    fprintf(out, "H");
+                if (stack[j]->rank_mask & RANK_LUNATIC)
+                    fprintf(out, "L");
+                fprintf(out, " ");
+            }
+
+            fprintf(out, "%s;\n", stack[j]->string);
         }
         free(stack);
 

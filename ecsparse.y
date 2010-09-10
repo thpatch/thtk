@@ -65,7 +65,7 @@ static void output_expression(expression_t* expression);
 
 static list_t* make_list(void* data);
 static param_t* make_param(unsigned char type);
-static void instr_add(int id, int rank_mask, list_t* list);
+static void instr_add(int id, list_t* list);
 static void label_create(char* label);
 static int32_t label_find(sub_t* sub, const char* label);
 
@@ -76,6 +76,7 @@ static void free_expression(expression_t* expr);
 
 /* Parser state. */
 static int instr_time;
+static int instr_rank = 0xff;
 static int version;
 
 static uint32_t anim_cnt;
@@ -223,6 +224,7 @@ Include_List:
 
 Instructions:
     | Instruction ";" Instructions
+    | RANK { instr_rank = $1; } Instruction { instr_rank = 0xff; } ";" Instructions
     | IDENTIFIER ":" { label_create($1); } Instructions
     | INTEGER ":" {
         if ($1 == instr_time || (instr_time > 0 && $1 < instr_time)) {
@@ -237,13 +239,8 @@ Instructions:
     /* TODO: Check the given parameters against the parameters expected for the
      *       instruction.  This requires passing a version parameter to eclc. */
 Instruction:
-      INSTRUCTION RANK Instruction_Parameters {
-        instr_add($1, $2, $3);
-        free_params($3);
-        free_list($3);
-    }
-    | INSTRUCTION Instruction_Parameters {
-        instr_add($1, 0xff, $2);
+      INSTRUCTION Instruction_Parameters {
+        instr_add($1, $2);
         free_params($2);
         free_list($2);
     }
@@ -253,7 +250,7 @@ Instruction:
         label->next = time;
         output_expression($2);
         free_expression($2);
-        instr_add(14, 0xff, label);
+        instr_add(14, label);
         free_params(label);
         free_list(label);
     }
@@ -263,7 +260,7 @@ Instruction:
         label->next = time;
         output_expression($2);
         free_expression($2);
-        instr_add(13, 0xff, label);
+        instr_add(13, label);
         free_params(label);
         free_list(label);
     }
@@ -271,7 +268,7 @@ Instruction:
         list_t* label = make_list($2);
         list_t* time = make_list($4);
         label->next = time;
-        instr_add(12, 0xff, label);
+        instr_add(12, label);
         free_params(label);
         free_list(label);
     }
@@ -564,7 +561,7 @@ output_expression(
         output_expression(expr->children[i]);
     }
 
-    instr_add(expr->instr, 0xff, expr->params);
+    instr_add(expr->instr, expr->params);
 }
 
 static void
@@ -727,7 +724,6 @@ instr_serialize(
 static void
 instr_add(
     int id,
-    int rank_mask,
     list_t* list)
 {
     int param_mask = 0;
@@ -758,7 +754,7 @@ instr_add(
         list = list->next;
     }
 
-    instr_create(op, instr_time, id, param_mask, rank_mask, param_cnt, params);
+    instr_create(op, instr_time, id, param_mask, instr_rank, param_cnt, params);
 
     op->offset = current_sub->offset;
     current_sub->offset += op->size;
