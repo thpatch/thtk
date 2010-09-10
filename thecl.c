@@ -183,6 +183,8 @@ open_ecl(
         sub = &ecl->subs[i];
         sub->instr_cnt = 0;
         sub->raw_instrs = NULL;
+        sub->stack = -1;
+        sub->arity = -1;
 
         /* The instruction count is unfortunately not provided. */
         while (1) {
@@ -218,11 +220,34 @@ open_ecl(
 }
 
 static void
+set_arity(
+    ecl_t* ecl,
+    const char* subroutine,
+    unsigned int arity)
+{
+    unsigned int i;
+
+    for (i = 0; i < ecl->sub_cnt; ++i) {
+        if (strcmp(ecl->subs[i].name, subroutine) == 0) {
+            if (   ecl->subs[i].arity != -1
+                && (unsigned int)ecl->subs[i].arity != arity) {
+                fprintf(stderr, "%s:%s: arity mismatch %u %u for %s\n",
+                    argv0, current_input,
+                    ecl->subs[i].arity, arity, subroutine);
+            } else {
+                ecl->subs[i].arity = arity;
+            }
+            return;
+        }
+    }
+}
+
+static void
 ecldump_translate(
     ecl_t* ecl,
     unsigned int version)
 {
-    unsigned int s, r;
+    unsigned int s, r, p;
 
     for (s = 0; s < ecl->sub_cnt; ++s) {
         sub_t* sub = &ecl->subs[s];
@@ -235,7 +260,28 @@ ecldump_translate(
             if (!instr_parse(version, rinstr, instr))
                 exit(1);
 
+            for (p = 0; p < instr->param_cnt; ++p) {
+                const param_t* param = &instr->params[p];
+                if (param->type == 's') {
+                    if (instr->id == 11 || instr->id == 15)
+                        set_arity(ecl, param->value.s.data, instr->param_cnt - 1);
+                    else
+                        set_arity(ecl, param->value.s.data, 0);
+                }
+            }
+
             instr->offset = rinstr->offset - sub->offset;
+
+            if (instr->id == 40) {
+                sub->stack = instr->params[0].value.i;
+                --sub->instr_cnt;
+                free(sub->raw_instrs[r].data);
+                free(sub->instrs[r].params);
+                sub->instrs = realloc(sub->instrs, sizeof(instr_t) * sub->instr_cnt);
+                memmove(sub->raw_instrs, sub->raw_instrs + 1, sub->instr_cnt * sizeof(raw_instr_t));
+                sub->raw_instrs = realloc(sub->raw_instrs, sub->instr_cnt * sizeof(raw_instr_t));
+                --r;
+            }
         }
     }
 }
@@ -263,7 +309,12 @@ ecldump_display_param(
                     argv0, current_input, param->value.i);
                 abort();
             }
-            snprintf(output, output_length, "[%d]", param->value.i);
+            if (param->value.i >= 0) {
+                snprintf(output, output_length, "$%c",
+                    'A' + (param->value.i / 4));
+            } else {
+                snprintf(output, output_length, "[%d]", param->value.i);
+            }
         } else
             snprintf(output, output_length, "%d", param->value.i);
         break;
@@ -282,7 +333,12 @@ ecldump_display_param(
                 fprintf(stderr, "%s:%s: strange stack offset: %s\n",
                     argv0, current_input, floatb);
             }
-            snprintf(output, output_length, "[%sf]", floatb);
+            if (param->value.f >= 0) {
+                snprintf(output, output_length, "%%%c",
+                    'A' + (int)(param->value.f / 4));
+            } else {
+                snprintf(output, output_length, "[%sf]", floatb);
+            }
         } else
             snprintf(output, output_length, "%sf", floatb);
         break;
@@ -437,6 +493,7 @@ ecldump_translate_print(
         unsigned int j, k;
         unsigned int time;
         int stack_top = 0;
+        unsigned int sub_arity = sub->arity == -1 ? 0 : sub->arity;
 
         instr_t** stack = malloc(sub->instr_cnt * sizeof(instr_t*));
 
@@ -496,7 +553,19 @@ ecldump_translate_print(
             }
         }
 
-        fprintf(out, "\nsub %s\n{\n", sub->name);
+        fprintf(out, "\nsub %s(", sub->name);
+        for (p = 0; p < sub_arity; ++p) {
+            if (p != 0)
+                fprintf(out, " ");
+            fprintf(out, "%c", 'A' + p);
+        }
+        fprintf(out, ")\n{\n");
+
+        fprintf(out, "    var");
+        for (p = sub_arity * 4; p < (unsigned int)sub->stack; p += 4) {
+            fprintf(out, " %c", 'A' + (p / 4));
+        }
+        fprintf(out, ";\n");
 
         time = 0;
         for (j = 0; j < (unsigned int)stack_top; ++j) {
@@ -509,6 +578,9 @@ ecldump_translate_print(
                 fprintf(out, "%s_%u:\n",
                     sub->name, stack[j]->offset);
             }
+
+            if (stack[j]->id == 40)
+                continue;
 
             fprintf(out, "    ");
 

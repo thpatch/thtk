@@ -145,6 +145,10 @@ typedef struct {
     instr_t* instrs;
     unsigned int label_cnt;
     label_t* labels;
+    unsigned int var_cnt;
+    char** vars;
+    int stack;
+    int arity;
 } sub_t;
 
 typedef struct {

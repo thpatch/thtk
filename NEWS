@@ -24,3 +24,9 @@ What's new in thtk 2:
   $() or %(), and are replaced by [-1] or [-1.0f]
   respectively.  The actual expression is output before the
   instruction it is passed to.
+* thecl: Variables are supported, these are defined in the
+  argument list of a function, or in the body by a var
+  statement.  When using the variables, they must be
+  prefixed by $ or % in order to know which type is being
+  requested.  The dumper attempts to figure out the arity of
+  functions, and gives variables automatic names.

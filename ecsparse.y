@@ -60,6 +60,8 @@ typedef struct expression_t {
 /* Parser APIs. */
 static void sub_begin(char* name);
 static void sub_finish(void);
+static void var_create(sub_t* sub, const char* name);
+static int var_find(sub_t* sub, const char* name);
 
 static expression_t* make_immediate_expression(param_t* param);
 static expression_t* make_unary_expression(int operator, expression_t* expression);
@@ -126,6 +128,7 @@ static sub_t* current_sub;
 %token ANIM "anim"
 %token ECLI "ecli"
 %token SUB "sub"
+%token VAR "var"
 %token AT "@"
 %token BRACE_OPEN "{"
 %token BRACE_CLOSE "}"
@@ -217,7 +220,8 @@ Statement:
         sub_begin($2);
         free($2);
     }
-      "{" Instructions "}" { sub_finish(); }
+      "(" Subroutine_Parameters ")" { current_sub->stack = current_sub->arity * 4; }
+      "{" Subroutine_Body "}" { sub_finish(); }
     | "anim" "{" Include_List "}" {
         list_t* node = $3;
 
@@ -245,6 +249,34 @@ Statement:
 
         free_params($3);
         free_list($3);
+    }
+    ;
+
+Subroutine_Parameters:
+    | IDENTIFIER { var_create(current_sub, $1); } Subroutine_Parameters {
+        ++current_sub->arity;
+        free($1);
+    }
+    ;
+
+Subroutine_Body:
+    "var" Variable_List ";" {
+        param_t* param = make_param('i');
+        list_t* params = make_list(param);
+
+        param->value.i = current_sub->stack;
+        instr_add(40, params);
+
+        free_params(params);
+        free_list(params);
+    }
+    Instructions
+    ;
+
+Variable_List:
+    | IDENTIFIER { var_create(current_sub, $1); } Variable_List {
+        current_sub->stack += 4;
+        free($1);
     }
     ;
 
@@ -462,6 +494,18 @@ Address:
       "[" Address_Type "]" {
         $$ = $2;
         $$->stack = 1;
+    }
+    | "$" IDENTIFIER {
+        $$ = make_param('i');
+        $$->stack = 1;
+        $$->value.i = var_find(current_sub, $2);
+        free($2);
+    }
+    | "%" IDENTIFIER {
+        $$ = make_param('f');
+        $$->stack = 1;
+        $$->value.f = var_find(current_sub, $2);
+        free($2);
     }
     ;
 
@@ -703,12 +747,46 @@ sub_begin(
     current_sub->offset = 0;
     current_sub->label_cnt = 0;
     current_sub->labels = NULL;
+    current_sub->var_cnt = 0;
+    current_sub->vars = NULL;
+    current_sub->stack = 0;
+    current_sub->arity = 0;
 }
 
 static void
 sub_finish(void)
 {
+    unsigned int i;
+    for (i = 0; i < current_sub->var_cnt; ++i)
+        free(current_sub->vars[i]);
+    free(current_sub->vars);
     current_sub = NULL;
+}
+
+static void
+var_create(
+    sub_t* sub,
+    const char* name)
+{
+    ++sub->var_cnt;
+    sub->vars = realloc(sub->vars, sub->var_cnt * sizeof(char*));
+    sub->vars[sub->var_cnt - 1] = strdup(name);
+}
+
+static int
+var_find(
+    sub_t* sub,
+    const char* name)
+{
+    char buf[256];
+    unsigned int i;
+    for (i = 0; i < sub->var_cnt; ++i) {
+        if (strcmp(name, sub->vars[i]) == 0)
+            return i * 4;
+    }
+    snprintf(buf, 256, "variable not found: %s", name);
+    yyerror(buf);
+    return 0;
 }
 
 static void

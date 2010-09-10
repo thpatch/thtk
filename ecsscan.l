@@ -73,6 +73,7 @@
 "anim"     return ANIM;
 "ecli"     return ECLI;
 "sub"      return SUB;
+"var"      return VAR;
 "@"        return AT;
 
 "goto"     return GOTO;
