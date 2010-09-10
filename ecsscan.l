@@ -94,7 +94,7 @@ ins_[0-9]+ {
     yylval.integer = strtol(yytext, NULL, 16);
     return INTEGER;
 }
-\+[ENHL]+ {
+![ENHL]+ {
     yylval.integer = 0xf0;
     if (strchr(yytext, 'E')) yylval.integer |= RANK_EASY;
     if (strchr(yytext, 'N')) yylval.integer |= RANK_NORMAL;

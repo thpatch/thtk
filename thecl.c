@@ -595,7 +595,7 @@ ecldump_translate_print(ecl_t* ecl, unsigned int version)
 
                 if (instr->rank_mask != 0xff) {
                     snprintf(instr->string + strlen(instr->string),
-                        1024 - strlen(instr->string), " +");
+                        1024 - strlen(instr->string), " !");
                     if (instr->rank_mask & RANK_EASY)
                         snprintf(instr->string + strlen(instr->string),
                             1024 - strlen(instr->string), "E");

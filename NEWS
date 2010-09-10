@@ -8,3 +8,4 @@ What's new in thtk 2:
 * thdat: Compression times have been reduced by about 40%.
 * thecl: The version option must now be specified for
   compilation and dumping.
+* thecl: The syntax for the difficulty mask has been changed.
