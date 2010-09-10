@@ -40,7 +40,10 @@
 #include "program.h"
 #include "util.h"
 
-extern int compile_ecs(FILE* in, FILE* out, unsigned int version);
+extern int compile_ecs(
+    FILE* in,
+    FILE* out,
+    unsigned int version);
 
 static FILE* in;
 static FILE* out;
@@ -64,7 +67,9 @@ print_usage(void)
 /* It would probably be easier to read the entire file at once and use pointers
  * to access the data. */
 static int
-open_ecl(ecl_t* ecl, FILE* f)
+open_ecl(
+    ecl_t* ecl,
+    FILE* f)
 {
     unsigned int i;
     char magic[5] = { 0 };
@@ -148,7 +153,7 @@ open_ecl(ecl_t* ecl, FILE* f)
     }
 
     for (i = 0; i < ecl->sub_cnt; ++i) {
-        /* XXX: Maximum length? */
+        /* TODO: Find out the maximum length. */
         char buffer[256];
         util_read_asciiz(buffer, 256, f);
         ecl->subs[i].name = strdup(buffer);
@@ -179,13 +184,13 @@ open_ecl(ecl_t* ecl, FILE* f)
         sub->instr_cnt = 0;
         sub->raw_instrs = NULL;
 
-        /* Unfortunately the instruction count is not provided. */
+        /* The instruction count is unfortunately not provided. */
         while (1) {
             raw_instr_t rins;
             memset(&rins, 0, sizeof(raw_instr_t));
             rins.offset = util_tell(f);
 
-            /* EOF is expected for the last instruction. */
+            /* EOF is expected for the last instruction in the file. */
             if (fread_unlocked(&rins, 16, 1, f) != 1)
                 break;
 
@@ -213,129 +218,39 @@ open_ecl(ecl_t* ecl, FILE* f)
 }
 
 static void
-ecldump_list_params(ecl_t* ecl)
+ecldump_translate(
+    ecl_t* ecl,
+    unsigned int version)
 {
-    unsigned int i;
+    unsigned int s, r;
 
-    char instr_params[1024][16];
-    memset(instr_params, -1, 1024 * 16);
+    for (s = 0; s < ecl->sub_cnt; ++s) {
+        sub_t* sub = &ecl->subs[s];
 
-    for (i = 0; i < ecl->sub_cnt; ++i) {
-        unsigned int j;
-        for (j = 0; j < ecl->subs[i].instr_cnt; ++j) {
-            unsigned int k;
-            raw_instr_t* rins = &ecl->subs[i].raw_instrs[j];
+        sub->instrs = malloc(sizeof(instr_t) * sub->instr_cnt);
 
-            assert(rins->id <= 1024);
-            assert(rins->param_cnt <= 15);
-
-            switch (instr_params[rins->id][0]) {
-            case -2: /* Broken. */
-                break;
-            case -1: /* New. */
-                memset(instr_params[rins->id], 0, 16);
-                if (rins->param_cnt != rins->data_size >> 2) {
-                    instr_params[rins->id][0] = -2;
-                    break;
-                } else {
-                    instr_params[rins->id][0] = rins->param_cnt;
-                }
-            default:
-                for (k = 0; k < rins->param_cnt; ++k) {
-                    if (instr_params[rins->id][k + 1] != 'i') {
-                        /* TODO: This float checking stuff is pretty ugly,
-                         * move it to util.c so it can be fixed more easily. */
-                        int32_t integer = 0;
-                        float floating = 0;
-                        char buffer[128];
-                        memcpy(&integer,
-                               rins->data + k * sizeof(int32_t),
-                               sizeof(int32_t));
-                        memcpy(&floating,
-                               rins->data + k * sizeof(int32_t),
-                               sizeof(int32_t));
-                        sprintf(buffer, "%.9f", floating);
-                        if (((integer & 0xfffff000) == 0xfffff000) ||
-                            (strcmp("nan", buffer) == 0) ||
-                            (integer != 0 && strcmp("0.000000000", buffer) == 0))
-                            instr_params[rins->id][k + 1] = 'i';
-                        else
-                            instr_params[rins->id][k + 1] = 'f';
-                    }
-                }
-                break;
-            }
-        }
-    }
-
-    for (i = 0; i < 1024; ++i) {
-        if (instr_params[i][0] >= 0) {
-            fprintf(out, "    { %u, \"%s\" },\n", i, instr_params[i] + 1);
-        } else if (instr_params[i][0] == -2) {
-            fprintf(out, "    /*{ %u, \"%s\" },*/\n", i, instr_params[i] + 1);
-        }
-    }
-}
-
-static void
-ecldump_rawdump(ecl_t* ecl)
-{
-    unsigned int i;
-
-    for (i = 0; i < ecl->sub_cnt; ++i) {
-        unsigned int j;
-
-        fprintf(out, "Subroutine %s\n", ecl->subs[i].name);
-
-        for (j = 0; j < ecl->subs[i].instr_cnt; ++j) {
-            raw_instr_t* rins = &ecl->subs[i].raw_instrs[j];
-            unsigned int k;
-
-            fprintf(out, "Instruction %u %u %u 0x%02x %u %u: ",
-                rins->time, rins->id, rins->size, rins->param_mask,
-                rins->rank_mask, rins->param_cnt);
-
-            for (k = 0; k < rins->data_size; k += sizeof(uint32_t)) {
-                fprintf(out, "0x%08x ", *(uint32_t*)(rins->data + k));
-            }
-
-            fprintf(out, "\n");
-        }
-
-        fprintf(out, "\n");
-    }
-}
-
-static void
-ecldump_translate(ecl_t* ecl, unsigned int version)
-{
-    unsigned int i;
-
-    for (i = 0; i < ecl->sub_cnt; ++i) {
-        unsigned int j;
-
-        ecl->subs[i].instrs = malloc(sizeof(instr_t) * ecl->subs[i].instr_cnt);
-
-        for (j = 0; j < ecl->subs[i].instr_cnt; ++j) {
-            if (!instr_parse(version, &ecl->subs[i].raw_instrs[j],
-                             &ecl->subs[i].instrs[j])) {
+        for (r = 0; r < sub->instr_cnt; ++r) {
+            const raw_instr_t* rinstr = &sub->raw_instrs[r];
+            instr_t* instr = &sub->instrs[r];
+            if (!instr_parse(version, rinstr, instr))
                 exit(1);
-            }
-            ecl->subs[i].instrs[j].offset =
-                ecl->subs[i].raw_instrs[j].offset - ecl->subs[i].offset;
+
+            instr->offset = rinstr->offset - sub->offset;
         }
     }
 }
 
 static void
-ecldump_display_param(char* output, unsigned int output_length,
-                      const sub_t* sub, const instr_t* instr,
-                      unsigned int i, const param_t* param,
-                      unsigned int version)
+ecldump_display_param(
+    char* output,
+    unsigned int output_length,
+    const sub_t* sub,
+    const instr_t* instr,
+    unsigned int i,
+    const param_t* param,
+    unsigned int version)
 {
-    const char* floatb;
-    param_t newparam;
-
+    /* Allow the input to be overridden for nested data. */
     if (param == NULL)
         param = &instr->params[i];
 
@@ -356,11 +271,10 @@ ecldump_display_param(char* output, unsigned int output_length,
         snprintf(output, output_length, "%s_%u",
             sub->name, instr->offset + param->value.i);
         break;
-    case 'f':
-        floatb = util_printfloat(&param->value.f);
+    case 'f': {
+        const char* floatb = util_printfloat(&param->value.f);
         if (instr->param_mask & (1 << i)) {
             int tempint = param->value.f;
-            /* XXX: Exactly how well does this work? */
             if (floor(param->value.f) != param->value.f)
                 fprintf(stderr, "%s:%s: non-integral float: %s\n",
                     argv0, current_input, floatb);
@@ -372,14 +286,15 @@ ecldump_display_param(char* output, unsigned int output_length,
         } else
             snprintf(output, output_length, "%sf", floatb);
         break;
+    }
     case 's':
         snprintf(output, output_length, "\"%s\"", param->value.s.data);
         break;
     case 'c':
         snprintf(output, output_length, "C\"%s\"", param->value.s.data);
         break;
-    case 'D':
-        memcpy(&newparam, param, sizeof(param_t));
+    case 'D': {
+        param_t newparam = *param;
         if (param->value.D[0] == 0x6666) {
             snprintf(output, output_length, "(float)");
             newparam.type = 'f';
@@ -411,6 +326,7 @@ ecldump_display_param(char* output, unsigned int output_length,
         }
         ecldump_display_param(output + strlen(output),
             output_length - strlen(output), sub, instr, i, &newparam, version);
+    }
         break;
     default:
         break;
@@ -418,8 +334,12 @@ ecldump_display_param(char* output, unsigned int output_length,
 }
 
 static void
-ecldump_render_instr(const sub_t* sub, instr_t* instr, instr_t** stack,
-    unsigned int* stack_top, unsigned int version)
+ecldump_render_instr(
+    const sub_t* sub,
+    instr_t* instr,
+    instr_t** stack,
+    unsigned int* stack_top,
+    unsigned int version)
 {
     const stackinstr_t* i;
     unsigned int j;
@@ -536,11 +456,14 @@ ecldump_render_instr(const sub_t* sub, instr_t* instr, instr_t** stack,
 }
 
 static void
-ecldump_translate_print(ecl_t* ecl, unsigned int version)
+ecldump_translate_print(
+    ecl_t* ecl,
+    unsigned int version)
 {
-    unsigned int i;
+    unsigned int s, p;
 
     if (ecl->anim_cnt) {
+        unsigned int i;
         fprintf(out, "anim { ");
         for (i = 0; i < ecl->anim_cnt; ++i)
             fprintf(out, "\"%s\"; ", ecl->anim[i]);
@@ -548,46 +471,49 @@ ecldump_translate_print(ecl_t* ecl, unsigned int version)
     }
 
     if (ecl->ecli_cnt) {
+        unsigned int i;
         fprintf(out, "ecli { ");
         for (i = 0; i < ecl->ecli_cnt; ++i)
             fprintf(out, "\"%s\"; ", ecl->ecli[i]);
         fprintf(out, "}\n");
     }
 
-    for (i = 0; i < ecl->sub_cnt; ++i) {
+    for (s = 0; s < ecl->sub_cnt; ++s) {
+        sub_t* sub = &ecl->subs[s];
         unsigned int j, k;
         unsigned int time;
         unsigned int stack_top = 0;
-        instr_t** stack = malloc(ecl->subs[i].instr_cnt * sizeof(instr_t*));
 
-        for (j = 0; j < ecl->subs[i].instr_cnt; ++j) {
-            unsigned int m;
-            instr_t* instr = &ecl->subs[i].instrs[j];
+        instr_t** stack = malloc(sub->instr_cnt * sizeof(instr_t*));
+
+        for (j = 0; j < sub->instr_cnt; ++j) {
+            instr_t* instr = &sub->instrs[j];
             instr->string = malloc(1024);
             instr->string[0] = '\0';
             instr->type = 0;
             instr->label = 0;
-            for (k = 0; k < ecl->subs[i].instr_cnt; ++k) {
-                for (m = 0; m < ecl->subs[i].instrs[k].param_cnt; ++m) {
-                    if (ecl->subs[i].instrs[k].params[m].type == 'o' &&
-                        instr->offset == ecl->subs[i].instrs[k].offset + ecl->subs[i].instrs[k].params[m].value.i) {
+            for (k = 0; k < sub->instr_cnt; ++k) {
+                for (p = 0; p < sub->instrs[k].param_cnt; ++p) {
+                    const param_t* param = &sub->instrs[k].params[p];
+                    if (param->type == 'o' &&
+                        instr->offset == sub->instrs[k].offset + param->value.i) {
                         instr->label = 1;
 
-                        k = ecl->subs[i].instr_cnt;
+                        k = sub->instr_cnt;
                         break;
                     }
                 }
             }
         }
 
-        for (j = 0; j < ecl->subs[i].instr_cnt; ++j) {
-            instr_t* instr = &ecl->subs[i].instrs[j];
+        for (j = 0; j < sub->instr_cnt; ++j) {
+            instr_t* instr = &sub->instrs[j];
 
             ++stack_top;
             stack[stack_top - 1] = instr;
 
             if (instr->rank_mask == 0xff)
-                ecldump_render_instr(&ecl->subs[i], instr, stack, &stack_top,
+                ecldump_render_instr(sub, instr, stack, &stack_top,
                     version);
 
             if (!instr->string[0]) {
@@ -610,17 +536,17 @@ ecldump_translate_print(ecl_t* ecl, unsigned int version)
                             1024 - strlen(instr->string), "L");
                 }
 
-                for (k = 0; k < instr->param_cnt; ++k) {
+                for (p = 0; p < instr->param_cnt; ++p) {
                     snprintf(instr->string + strlen(instr->string),
                         1024 - strlen(instr->string), " ");
                     ecldump_display_param(instr->string + strlen(instr->string),
-                        1024 - strlen(instr->string), &ecl->subs[i], instr, k,
-                        &instr->params[k], version);
+                        1024 - strlen(instr->string), sub, instr, p,
+                        NULL, version);
                 }
             }
         }
 
-        fprintf(out, "\nsub %s\n{\n", ecl->subs[i].name);
+        fprintf(out, "\nsub %s\n{\n", sub->name);
 
         time = 0;
         for (j = 0; j < stack_top; ++j) {
@@ -631,7 +557,7 @@ ecldump_translate_print(ecl_t* ecl, unsigned int version)
 
             if (stack[j]->label) {
                 fprintf(out, "%s_%u:\n",
-                    ecl->subs[i].name, stack[j]->offset);
+                    sub->name, stack[j]->offset);
             }
 
             fprintf(out, "    %s;\n", stack[j]->string);
@@ -643,7 +569,99 @@ ecldump_translate_print(ecl_t* ecl, unsigned int version)
 }
 
 static void
-ecldump_free(ecl_t* ecl)
+ecldump_guess_params(
+    const ecl_t* ecl)
+{
+    unsigned int s, r, p;
+
+    char instr_params[1024][16];
+    memset(instr_params, -1, 1024 * 16);
+
+    for (s = 0; s < ecl->sub_cnt; ++s) {
+        for (r = 0; r < ecl->subs[s].instr_cnt; ++r) {
+            const raw_instr_t* rins = &ecl->subs[s].raw_instrs[r];
+
+            assert(rins->id <= 1024);
+            assert(rins->param_cnt <= 15);
+
+            switch (instr_params[rins->id][0]) {
+            case -2: /* Broken. */
+                break;
+            case -1: /* New. */
+                memset(instr_params[rins->id], 0, 16);
+                if (rins->param_cnt != rins->data_size >> 2) {
+                    instr_params[rins->id][0] = -2;
+                    break;
+                } else {
+                    instr_params[rins->id][0] = rins->param_cnt;
+                }
+            default:
+                for (p = 0; p < rins->param_cnt; ++p) {
+                    if (instr_params[rins->id][p + 1] != 'i') {
+                        /* TODO: This float checking stuff is pretty ugly,
+                         * move it to util.c so it can be fixed more easily. */
+                        int32_t integer = 0;
+                        float floating = 0;
+                        char buffer[128];
+                        memcpy(&integer,
+                               rins->data + p * sizeof(int32_t),
+                               sizeof(int32_t));
+                        memcpy(&floating,
+                               rins->data + p * sizeof(int32_t),
+                               sizeof(int32_t));
+                        sprintf(buffer, "%.9f", floating);
+                        if (((integer & 0xfffff000) == 0xfffff000) ||
+                            (strcmp("nan", buffer) == 0) ||
+                            (integer != 0 && strcmp("0.000000000", buffer) == 0))
+                            instr_params[rins->id][p + 1] = 'i';
+                        else
+                            instr_params[rins->id][p + 1] = 'f';
+                    }
+                }
+                break;
+            }
+        }
+    }
+
+    for (p = 0; p < 1024; ++p) {
+        if (instr_params[p][0] >= 0) {
+            fprintf(out, "    { %u, \"%s\" },\n", p, instr_params[p] + 1);
+        } else if (instr_params[p][0] == -2) {
+            fprintf(out, "    /*{ %u, \"%s\" },*/\n", p, instr_params[p] + 1);
+        }
+    }
+}
+
+static void
+ecldump_rawdump(
+    const ecl_t* ecl)
+{
+    unsigned int s, r, d;
+
+    for (s = 0; s < ecl->sub_cnt; ++s) {
+        fprintf(out, "Subroutine %s\n", ecl->subs[s].name);
+
+        for (r = 0; r < ecl->subs[s].instr_cnt; ++r) {
+            const raw_instr_t* rins = &ecl->subs[s].raw_instrs[r];
+
+            fprintf(out, "Instruction %u %u %u 0x%02x %u %u: ",
+                rins->time, rins->id, rins->size, rins->param_mask,
+                rins->rank_mask, rins->param_cnt);
+
+            for (d = 0; d < rins->data_size; d += sizeof(uint32_t)) {
+                fprintf(out, "0x%08x ", *(uint32_t*)(rins->data + d));
+            }
+
+            fprintf(out, "\n");
+        }
+
+        fprintf(out, "\n");
+    }
+}
+
+static void
+ecldump_free(
+    ecl_t* ecl)
 {
     unsigned int i, j, k;
 
@@ -765,7 +783,7 @@ main(int argc, char* argv[])
         if (!open_ecl(&ecl, in))
             exit(1);
         fclose(in);
-        ecldump_list_params(&ecl);
+        ecldump_guess_params(&ecl);
         ecldump_free(&ecl);
         fclose(out);
         exit(0);
