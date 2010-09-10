@@ -58,7 +58,8 @@ typedef struct expression_t {
 } expression_t;
 
 /* Parser APIs. */
-static void add_eclh(char*);
+static void sub_begin(char* name);
+static void sub_finish(void);
 
 static expression_t* make_stackinstr(int type, expression_t* expr1, expression_t* expr2, list_t* param);
 static void output_expression(expression_t* expression);
@@ -181,9 +182,10 @@ Statements:
 
 Statement:
       "sub" IDENTIFIER {
-        add_eclh($2);
+        sub_begin($2);
+        free($2);
     }
-      "{" Instructions "}" { add_eclh(NULL); }
+      "{" Instructions "}" { sub_finish(); }
     | "anim" "{" Include_List "}" {
         list_t* node = $3;
 
@@ -565,25 +567,26 @@ output_expression(
 }
 
 static void
-add_eclh(
-    char* arg)
+sub_begin(
+    char* name)
 {
-    if (!arg) {
-        current_sub = NULL;
-        return;
-    }
-
     sub_cnt++;
     subs = realloc(subs, sub_cnt * sizeof(sub_t));
     current_sub = &subs[sub_cnt - 1];
 
     instr_time = 0;
-    current_sub->name = arg;
+    current_sub->name = strdup(name);
     current_sub->instr_cnt = 0;
     current_sub->instrs = NULL;
     current_sub->offset = 0;
     current_sub->label_cnt = 0;
     current_sub->labels = NULL;
+}
+
+static void
+sub_finish(void)
+{
+    current_sub = NULL;
 }
 
 static void
