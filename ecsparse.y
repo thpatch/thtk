@@ -75,7 +75,7 @@ static void free_list(list_t* node);
 static void free_expression(expression_t* expr);
 
 /* Parser state. */
-static int timer = 0;
+static int instr_time;
 static int version;
 
 static uint32_t anim_cnt;
@@ -225,12 +225,12 @@ Instructions:
     | Instruction ";" Instructions
     | IDENTIFIER ":" { label_create($1); } Instructions
     | INTEGER ":" {
-        if ($1 == timer || (timer > 0 && $1 < timer)) {
+        if ($1 == instr_time || (instr_time > 0 && $1 < instr_time)) {
             char buf[256];
-            snprintf(buf, 256, "illegal timer change: %d to %d", timer, $1);
+            snprintf(buf, 256, "illegal timer change: %d to %d", instr_time, $1);
             yyerror(buf);
         }
-        timer = $1;
+        instr_time = $1;
     } Instructions
     ;
 
@@ -580,7 +580,7 @@ add_eclh(
     subs = realloc(subs, sub_cnt * sizeof(sub_t));
     current_sub = &subs[sub_cnt - 1];
 
-    timer = 0;
+    instr_time = 0;
     current_sub->name = arg;
     current_sub->instr_cnt = 0;
     current_sub->instrs = NULL;
@@ -758,7 +758,7 @@ instr_add(
         list = list->next;
     }
 
-    instr_create(op, timer, id, param_mask, rank_mask, param_cnt, params);
+    instr_create(op, instr_time, id, param_mask, rank_mask, param_cnt, params);
 
     op->offset = current_sub->offset;
     current_sub->offset += op->size;
