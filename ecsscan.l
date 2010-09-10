@@ -73,10 +73,49 @@
 "anim"     return ANIM;
 "ecli"     return ECLI;
 "sub"      return SUB;
-"if"       return IF;
-"unless"   return UNLESS;
-"goto"     return GOTO;
 "@"        return AT;
+
+"goto"     return GOTO;
+"unless"   return UNLESS;
+"if"       return IF;
+"="        return ASSIGN;
+"$="       return ASSIGNI;
+"%="       return ASSIGNF;
+"+"        return ADD;
+"$+"       return ADDI;
+"%+"       return ADDF;
+"-"        return SUBTRACT;
+"$-"       return SUBTRACTI;
+"%-"       return SUBTRACTF;
+"*"        return MULTIPLY;
+"$*"       return MULTIPLYI;
+"%*"       return MULTIPLYF;
+"/"        return DIVIDE;
+"$/"       return DIVIDEI;
+"%/"       return DIVIDEF;
+"%"        return MODULO;
+"=="       return EQUAL;
+"$=="      return EQUALI;
+"%=="      return EQUALF;
+"!="       return INEQUAL;
+"$!="      return INEQUALI;
+"%!="      return INEQUALF;
+"<"        return LT;
+"$<"       return LTI;
+"%<"       return LTF;
+"<="       return LTEQ;
+"$<="      return LTEQI;
+"%<="      return LTEQF;
+">"        return GT;
+"$>"       return GTI;
+"%>"       return GTF;
+">="       return GTEQ;
+"$>="      return GTEQI;
+"%>="      return GTEQF;
+"!"        return NOT;
+"|"        return OR;
+"&"        return AND;
+"^"        return XOR;
 
 -?[0-9]+(\.[0-9]+)?f {
     yylval.floating = strtof(yytext, NULL);
@@ -102,23 +141,6 @@ ins_[0-9]+ {
     if (strchr(yytext, 'L')) yylval.integer |= RANK_LUNATIC;
     return RANK;
 }
-
-"=="       return EQUAL;
-"="        return ASSIGN;
-"!="       return INEQUAL;
-"<="       return LTEQ;
-"<"        return LT;
-">="       return GTEQ;
-">"        return GT;
-"%"        return MODULO;
-"*"        return MULTIPLY;
-"/"        return DIVIDE;
-"-"        return SUBTRACT;
-"+"        return ADD;
-"!"        return NOT;
-"&"        return AND;
-"|"        return OR;
-"^"        return XOR;
 
 [a-zA-Z][a-zA-Z0-9\._]* {
     yylval.string = strdup(yytext);

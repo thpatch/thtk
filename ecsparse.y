@@ -61,7 +61,9 @@ typedef struct expression_t {
 static void sub_begin(char* name);
 static void sub_finish(void);
 
-static expression_t* make_stackinstr(int type, expression_t* expr1, expression_t* expr2, list_t* param);
+static expression_t* make_immediate_expression(param_t* param);
+static expression_t* make_unary_expression(int operator, expression_t* expression);
+static expression_t* make_binary_expression(int operator, expression_t* expression1, expression_t* expression2);
 static void output_expression(expression_t* expression);
 
 static list_t* make_list(void* data);
@@ -135,18 +137,42 @@ static sub_t* current_sub;
 %token UNLESS "unless"
 %token IF "if"
 %token LOAD
+%token LOADI
+%token LOADF
 %token ASSIGN "="
+%token ASSIGNI "$="
+%token ASSIGNF "%="
 %token ADD "+"
+%token ADDI "$+"
+%token ADDF "%+"
 %token SUBTRACT "-"
+%token SUBTRACTI "$-"
+%token SUBTRACTF "%-"
 %token MULTIPLY "*"
+%token MULTIPLYI "$*"
+%token MULTIPLYF "%*"
 %token DIVIDE "/"
+%token DIVIDEI "$/"
+%token DIVIDEF "%/"
 %token MODULO "%"
 %token EQUAL "=="
+%token EQUALI "$=="
+%token EQUALF "%=="
 %token INEQUAL "!="
+%token INEQUALI "$!="
+%token INEQUALF "%!="
 %token LT "<"
+%token LTI "$<"
+%token LTF "%<"
 %token LTEQ "<="
+%token LTEQI "$<="
+%token LTEQF "%<="
 %token GT ">"
+%token GTI "$>"
+%token GTF "%>"
 %token GTEQ ">="
+%token GTEQI "$>="
+%token GTEQF "%>="
 %token NOT "!"
 %token AND "&"
 %token OR "|"
@@ -172,7 +198,6 @@ static sub_t* current_sub;
 
 %type <expression> Expression
 %type <param> Load_Type
-
 
 %%
 
@@ -247,35 +272,69 @@ Instruction:
         free_list($2);
     }
     | "if" Expression "goto" Label "@" Integer {
+        const op_t* op = op_find_token(version, IF);
         list_t* label = make_list($4);
         list_t* time = make_list($6);
         label->next = time;
         output_expression($2);
         free_expression($2);
-        instr_add(14, label);
+        instr_add(op->instr, label);
         free_params(label);
         free_list(label);
     }
     | "unless" Expression "goto" Label "@" Integer {
+        const op_t* op = op_find_token(version, UNLESS);
         list_t* label = make_list($4);
         list_t* time = make_list($6);
         label->next = time;
         output_expression($2);
         free_expression($2);
-        instr_add(13, label);
+        instr_add(op->instr, label);
         free_params(label);
         free_list(label);
     }
     | "goto" Label "@" Integer {
+        const op_t* op = op_find_token(version, GOTO);
         list_t* label = make_list($2);
         list_t* time = make_list($4);
         label->next = time;
-        instr_add(12, label);
+        instr_add(op->instr, label);
         free_params(label);
         free_list(label);
     }
     | Address "=" Expression {
-        expression_t* expr = make_stackinstr(ASSIGN, $3, NULL, make_list($1));
+        expression_t* expr = malloc(sizeof(expression_t));
+        expr->instr = op_find_token(version, $1->type == 'i' ? ASSIGNI : ASSIGNF)->instr;
+        expr->type = 0;
+        expr->child_count = 1;
+        expr->children = malloc(sizeof(expression_t*));
+        expr->children[0] = $3;
+        expr->params = make_list($1);
+
+        output_expression(expr);
+        free_expression(expr);
+    }
+    | Address "$=" Expression {
+        expression_t* expr = malloc(sizeof(expression_t));
+        expr->instr = op_find_token(version, ASSIGNI)->instr;
+        expr->type = 0;
+        expr->child_count = 1;
+        expr->children = malloc(sizeof(expression_t*));
+        expr->children[0] = $3;
+        expr->params = make_list($1);
+
+        output_expression(expr);
+        free_expression(expr);
+    }
+    | Address "%=" Expression {
+        expression_t* expr = malloc(sizeof(expression_t));
+        expr->instr = op_find_token(version, ASSIGNF)->instr;
+        expr->type = 0;
+        expr->child_count = 1;
+        expr->children = malloc(sizeof(expression_t*));
+        expr->children[0] = $3;
+        expr->params = make_list($1);
+
         output_expression(expr);
         free_expression(expr);
     }
@@ -305,23 +364,54 @@ Instruction_Parameter:
 
 Expression:
       Load_Type {
-        $$ = make_stackinstr(LOAD, NULL, NULL, make_list($1));
+        $$ = make_immediate_expression($1);
     }
-    | "(" "!" Expression ")"             { $$ = make_stackinstr(NOT,      $3, NULL, NULL); }
-    | "(" Expression "&"  Expression ")" { $$ = make_stackinstr(AND,      $2, $4, NULL); }
-    | "(" Expression "|"  Expression ")" { $$ = make_stackinstr(OR,       $2, $4, NULL); }
-    | "(" Expression "^"  Expression ")" { $$ = make_stackinstr(XOR,      $2, $4, NULL); }
-    | "(" Expression "+"  Expression ")" { $$ = make_stackinstr(ADD,      $2, $4, NULL); }
-    | "(" Expression "-"  Expression ")" { $$ = make_stackinstr(SUBTRACT, $2, $4, NULL); }
-    | "(" Expression "*"  Expression ")" { $$ = make_stackinstr(MULTIPLY, $2, $4, NULL); }
-    | "(" Expression "/"  Expression ")" { $$ = make_stackinstr(DIVIDE,   $2, $4, NULL); }
-    | "(" Expression "%"  Expression ")" { $$ = make_stackinstr(MODULO,   $2, $4, NULL); }
-    | "(" Expression "==" Expression ")" { $$ = make_stackinstr(EQUAL,    $2, $4, NULL); }
-    | "(" Expression "!=" Expression ")" { $$ = make_stackinstr(INEQUAL,  $2, $4, NULL); }
-    | "(" Expression "<"  Expression ")" { $$ = make_stackinstr(LT,       $2, $4, NULL); }
-    | "(" Expression "<=" Expression ")" { $$ = make_stackinstr(LTEQ,     $2, $4, NULL); }
-    | "(" Expression ">"  Expression ")" { $$ = make_stackinstr(GT,       $2, $4, NULL); }
-    | "(" Expression ">=" Expression ")" { $$ = make_stackinstr(GTEQ,     $2, $4, NULL); }
+    | "(" Expression "+"   Expression ")" { $$ = make_binary_expression(ADD,       $2, $4); }
+    | "(" Expression "$+"  Expression ")" { $$ = make_binary_expression(ADDI,      $2, $4); }
+    | "(" Expression "%+"  Expression ")" { $$ = make_binary_expression(ADDF,      $2, $4); }
+
+    | "(" Expression "-"   Expression ")" { $$ = make_binary_expression(SUBTRACT,  $2, $4); }
+    | "(" Expression "$-"  Expression ")" { $$ = make_binary_expression(SUBTRACTI, $2, $4); }
+    | "(" Expression "%-"  Expression ")" { $$ = make_binary_expression(SUBTRACTF, $2, $4); }
+
+    | "(" Expression "*"   Expression ")" { $$ = make_binary_expression(MULTIPLY,  $2, $4); }
+    | "(" Expression "$*"  Expression ")" { $$ = make_binary_expression(MULTIPLYI, $2, $4); }
+    | "(" Expression "%*"  Expression ")" { $$ = make_binary_expression(MULTIPLYF, $2, $4); }
+
+    | "(" Expression "/"   Expression ")" { $$ = make_binary_expression(DIVIDE,    $2, $4); }
+    | "(" Expression "$/"  Expression ")" { $$ = make_binary_expression(DIVIDEI,   $2, $4); }
+    | "(" Expression "%/"  Expression ")" { $$ = make_binary_expression(DIVIDEF,   $2, $4); }
+
+    | "(" Expression "%"   Expression ")" { $$ = make_binary_expression(MODULO,    $2, $4); }
+
+    | "(" Expression "=="  Expression ")" { $$ = make_binary_expression(EQUAL,     $2, $4); }
+    | "(" Expression "$==" Expression ")" { $$ = make_binary_expression(EQUALI,    $2, $4); }
+    | "(" Expression "%==" Expression ")" { $$ = make_binary_expression(EQUALF,    $2, $4); }
+
+    | "(" Expression "!="  Expression ")" { $$ = make_binary_expression(INEQUAL,   $2, $4); }
+    | "(" Expression "$!=" Expression ")" { $$ = make_binary_expression(INEQUALI,  $2, $4); }
+    | "(" Expression "%!=" Expression ")" { $$ = make_binary_expression(INEQUALF,  $2, $4); }
+
+    | "(" Expression "<"   Expression ")" { $$ = make_binary_expression(LT,        $2, $4); }
+    | "(" Expression "$<"  Expression ")" { $$ = make_binary_expression(LTI,       $2, $4); }
+    | "(" Expression "%<"  Expression ")" { $$ = make_binary_expression(LTF,       $2, $4); }
+
+    | "(" Expression "<="  Expression ")" { $$ = make_binary_expression(LTEQ,      $2, $4); }
+    | "(" Expression "$<=" Expression ")" { $$ = make_binary_expression(LTEQI,     $2, $4); }
+    | "(" Expression "%<=" Expression ")" { $$ = make_binary_expression(LTEQF,     $2, $4); }
+
+    | "(" Expression ">"   Expression ")" { $$ = make_binary_expression(GT,        $2, $4); }
+    | "(" Expression "$>"  Expression ")" { $$ = make_binary_expression(GTI,       $2, $4); }
+    | "(" Expression "%>"  Expression ")" { $$ = make_binary_expression(GTF,       $2, $4); }
+
+    | "(" Expression ">="  Expression ")" { $$ = make_binary_expression(GTEQ,      $2, $4); }
+    | "(" Expression "$>=" Expression ")" { $$ = make_binary_expression(GTEQI,     $2, $4); }
+    | "(" Expression "%>=" Expression ")" { $$ = make_binary_expression(GTEQF,     $2, $4); }
+
+    | "!" Expression                      { $$ = make_unary_expression(NOT, $2); }
+    | "(" Expression "|"   Expression ")" { $$ = make_binary_expression(OR,        $2, $4); }
+    | "(" Expression "&"   Expression ")" { $$ = make_binary_expression(AND,       $2, $4); }
+    | "(" Expression "^"   Expression ")" { $$ = make_binary_expression(XOR,       $2, $4); }
     ;
 
 Address:
@@ -455,82 +545,70 @@ static void free_expression(
 }
 
 static expression_t*
-make_stackinstr(
-    int type,
-    expression_t* expr1,
-    expression_t* expr2,
-    list_t* params)
+make_immediate_expression(
+    param_t* param)
 {
-    expression_t* out;
-    unsigned int j = 0;
-    const stackinstr_t* i;
+    expression_t* ret = malloc(sizeof(expression_t));
+    const int token = param->type == 'i' ? LOADI : LOADF;
+    const op_t* op = op_find_token(version, token);
 
-    for (i = get_stackinstrs(version); i->type; ++i) {
-        int ok = 1;
+    ret->instr = op->instr;
+    ret->type = op->result_type;
+    ret->child_count = 0;
+    ret->children = NULL;
+    ret->params = make_list(param);
 
-        if (i->type == type) {
-            list_t* p;
+    return ret;
+}
 
-            switch (strlen(i->stack)) {
-            case 2:
-                if (!expr2 || i->stack[1] != expr2->type)
-                    ok = 0;
-            case 1:
-                if (!expr1 || i->stack[0] != expr1->type)
-                    ok = 0;
-            case 0:
-                break;
-            default:
-                fprintf(stderr, "error wrong strlen\n");
-                ok = 0;
-                /* Error. */
-                break;
-            }
+static expression_t*
+make_unary_expression(
+    int token,
+    expression_t* expr)
+{
+    expression_t* ret = malloc(sizeof(expression_t));
+    int stacktypes[1];
+    const op_t* op;
+    
+    stacktypes[0] = expr->type;
+    op = op_find_stack(version, token, 1, stacktypes);
+    if (!op) abort();
 
-            j = 0;
-            for (p = params; p; p = p->next) {
-                param_t* param = p->data;
-                if (j > strlen(i->params))
-                    ok = 0;
-                if (i->params[j] != param->type)
-                    ok = 0;
-                j++;
-            }
+    ret->instr = op->instr;
+    ret->type = op->result_type;
+    ret->child_count = 1;
+    ret->children = malloc(ret->child_count * sizeof(expression_t*));
+    ret->children[0] = expr;
+    ret->params = NULL;
 
-            if (ok)
-                break;
-        }
-    }
+    return ret;
+}
 
-    if (!i->type) {
-        list_t* p;
-        char buf[256];
-        sprintf(buf, "no match found for %d, '%c', '%c'", type, expr1 ? expr1->type : '-', expr2 ? expr2->type : '-');
-        for (p = params; p; p = p->next) {
-            param_t* param = p->data;
-            fprintf(stderr, "  %c\n", param->type);
-        }
-        yyerror(buf);
-        return NULL;
-    }
+static expression_t*
+make_binary_expression(
+    int token,
+    expression_t* expr1,
+    expression_t* expr2)
+{
+    expression_t* ret = malloc(sizeof(expression_t));
+    int stacktypes[2];
+    const op_t* op;
+    
+    stacktypes[0] = expr1->type;
+    stacktypes[1] = expr2->type;
+    op = op_find_stack(version, token, 2, stacktypes);
+    if (!op) op = op_find_token(version, token);
+    if (!op) abort();
 
-    out = malloc(sizeof(expression_t));
-    out->instr = i->instr;
-    out->type = i->value;
-    if (strlen(i->stack)) {
-        out->child_count = strlen(i->stack);
-        out->children = malloc(strlen(i->stack) * sizeof(expression_t*));
-        if (strlen(i->stack) > 0)
-            out->children[0] = expr1;
-        if (strlen(i->stack) > 1)
-            out->children[1] = expr2;
-    } else {
-        out->child_count = 0;
-        out->children = NULL;
-    }
-    out->params = params;
+    ret->instr = op->instr;
+    ret->type = op->result_type;
+    ret->child_count = 2;
+    ret->children = malloc(ret->child_count * sizeof(expression_t*));
+    ret->children[0] = expr1;
+    ret->children[1] = expr2;
+    ret->params = NULL;
 
-    return out;
+    return ret;
 }
 
 static list_t*

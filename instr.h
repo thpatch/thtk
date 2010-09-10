@@ -33,18 +33,37 @@
 #include "ecl.h"
 
 typedef struct {
-    int type;
-    int value;
-    const char* stack;
-    const char* params;
+    int token;
+    const char* symbol;
     int instr;
-} stackinstr_t;
+    int result_type;
+} op_t;
+
+typedef struct {
+    int arity;
+    int token;
+    const char* symbol;
+    op_t op_1;
+    op_t op_2;
+} op_pair_t;
+
+const op_pair_t* op_find_instr(
+    unsigned int version,
+    int instr);
+
+const op_t* op_find_token(
+    unsigned int version,
+    int token);
+
+const op_t* op_find_stack(
+    unsigned int version,
+    int token,
+    int stack_count,
+    const int* stack_types);
 
 instr_t* instr_parse(
     unsigned int version,
     const raw_instr_t* rinstr,
     instr_t* instr);
-const stackinstr_t* get_stackinstrs(
-    unsigned int version);
 
 #endif

@@ -9,3 +9,13 @@ What's new in thtk 2:
 * thecl: The version option must now be specified for
   compilation and dumping.
 * thecl: The syntax for the difficulty mask has been changed.
+* thecl: Parse stack-based expressions for games other than
+  TH10.
+* thecl: New type-specific operators have been added which
+  take values of any kind and give back a value of the kind
+  specified by the operator.  $+ is an addition returning an
+  integer value, while %+ is an addition returning a
+  floating-point value.  In case the generic operator is
+  used (+), the return value depends on the value passed to
+  it:  If both are integer, the return value is integer as
+  well, if any is floating, the return value is floating.

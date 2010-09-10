@@ -43,70 +43,110 @@ typedef struct {
     const char* format;
 } instr_fmt_t;
 
-static const stackinstr_t th10_stackinstrs[] = {
-    { GOTO,     0,   "",   "oi", 12 },
-    { UNLESS,   0,   "i",  "oi", 13 },
-    { UNLESS,   0,   "f",  "oi", 13 },
-    { IF,       0,   "i",  "oi", 14 },
-    { IF,       0,   "f",  "oi", 14 },
-    { LOAD,     'i', "",   "i",  42 },
-    { ASSIGN,   0,   "i",  "i",  43 },
-    { LOAD,     'f', "",   "f",  44 },
-    { ASSIGN,   0,   "f",  "f",  45 },
-    { ASSIGN,   0,   "i",  "f",  45 },
-    { ADD,      'i', "ii", "",   50 },
-    { ADD,      'f', "ff", "",   51 },
-    { ADD,      'f', "fi", "",   51 },
-    { SUBTRACT, 'i', "ii", "",   52 },
-    { SUBTRACT, 'f', "ff", "",   53 },
-    { SUBTRACT, 'f', "fi", "",   53 },
-    { SUBTRACT, 'f', "if", "",   53 },
-    { MULTIPLY, 'i', "ii", "",   54 },
-    { MULTIPLY, 'f', "ff", "",   55 },
-    { MULTIPLY, 'f', "fi", "",   55 },
-    { MULTIPLY, 'i', "if", "",   55 },
-    { DIVIDE,   'i', "ii", "",   56 },
-    { DIVIDE,   'f', "ff", "",   57 },
-    { DIVIDE,   'f', "fi", "",   57 },
-    { DIVIDE,   'i', "if", "",   57 },
-    { MODULO,   'i', "ii", "",   58 },
-    { EQUAL,    'i', "ii", "",   59 },
-    { EQUAL,    'i', "ff", "",   60 },
-    { INEQUAL,  'i', "ii", "",   61 },
-    { INEQUAL,  'i', "ff", "",   62 },
-    { LT,       'i', "ii", "",   63 },
-    { LT,       'i', "ff", "",   64 },
-    { LT,       'i', "fi", "",   64 },
-    { LTEQ,     'i', "ii", "",   65 },
-    { LTEQ,     'i', "ff", "",   66 },
-    { GT,       'i', "ii", "",   67 },
-    { GT,       'i', "ff", "",   68 },
-    { GT,       'i', "fi", "",   68 },
-    { GTEQ,     'i', "ii", "",   69 },
-    { GTEQ,     'i', "ff", "",   70 },
-    { NOT,      'i', "i",  "",   71 },
-    { OR,       'i', "ii", "",   73 },
-    { AND,      'i', "ii", "",   74 },
-    { XOR,      'i', "ii", "",   75 },
-    { 0,        0,   NULL, NULL, 0  }
+static const op_pair_t th10_ops[] = {
+    /* Binary, type-alternatives. */
+    { 2, ADD,      "+",  { ADDI,      "$+",  50, 'i' }, { ADDF,      "%+",  51, 'f' } },
+    { 2, SUBTRACT, "-",  { SUBTRACTI, "$-",  52, 'i' }, { SUBTRACTF, "%-",  53, 'f' } },
+    { 2, MULTIPLY, "*",  { MULTIPLYI, "$*",  54, 'i' }, { MULTIPLYF, "%*",  55, 'f' } },
+    { 2, DIVIDE,   "/",  { DIVIDEI,   "$/",  56, 'i' }, { DIVIDEF,   "%/",  57, 'f' } },
+    { 2, EQUAL,    "==", { EQUALI,    "$==", 59, 'i' }, { EQUALF,    "%==", 60, 'i' } },
+    { 2, INEQUAL,  "!=", { INEQUALI,  "$!=", 61, 'i' }, { INEQUALF,  "%!=", 62, 'i' } },
+    { 2, LT,       "<",  { LTI,       "$<",  63, 'i' }, { LTF,       "%<",  64, 'i' } },
+    { 2, LTEQ,     "<=", { LTEQI,     "$<=", 65, 'i' }, { LTEQF,     "%<=", 66, 'i' } },
+    { 2, GT,       ">",  { GTI,       "$>",  67, 'i' }, { GTF,       "%>",  68, 'i' } },
+    { 2, GTEQ,     ">=", { GTEQI,     "$>=", 69, 'i' }, { GTEQF,     "%>=", 70, 'i' } },
+
+    /* Binary, type-neutral. */
+    { 2, MODULO,   "%",  { MODULO,    "%",   58, 'i' }, { MODULO,    "%",   58, 'i' } },
+    { 2, OR,       "|",  { OR,        "|",   73, 'i' }, { OR,        "|",  73, 'i' } },
+    { 2, AND,      "&",  { AND,       "&",   74, 'i' }, { AND,       "&",  74, 'i' } },
+    { 2, XOR,      "^",  { XOR,       "^",   75, 'i' }, { XOR,       "^",   75, 'i' } },
+
+    /* Unary. */
+    { 1, NOT,      "!",  { NOT,       "!",   71, 'i' }, { NOT,       "!",   71, 'i' } },
+    { 1, ASSIGN,   "=",  { ASSIGNI,   "$=",  43, 0   }, { ASSIGNF,   "%=",  45, 0   } },
+
+    /* Non-operators. */
+    { 0, LOAD,     "",   { LOADI,     "",    42, 'i' }, { LOADF,     "",    44, 'f' } },
+    { 1, IF,       "",   { IF,        "",    14, 0   }, { IF,        "",    14, 0   } },
+    { 1, UNLESS,   "",   { UNLESS,    "",    13, 0   }, { UNLESS,    "",    13, 0   } },
+    { 0, GOTO,     "",   { GOTO,      "",    12, 0   }, { GOTO,      "",    12, 0   } },
+    { 0, 0,        "",   { 0,         "",    0,  0   }, { 0,         "",    0,  0   } },
 };
 
-static const stackinstr_t th12_stackinstrs[] = {
-    { 0,        0,   NULL, NULL, 0  }
-};
-
-const stackinstr_t*
-get_stackinstrs(
-    unsigned int version)
+static const op_pair_t*
+get_op_table(unsigned int version)
 {
-    if (version == 10 || version == 11) {
-        return th10_stackinstrs;
-    } else if (version == 12 || version == 125 || version == 128) {
-        return th12_stackinstrs;
-    } else {
-        fprintf(stderr, "not implemented\n");
+    if (   version != 10
+        && version != 11
+        && version != 12
+        && version != 125
+        && version != 128)
         return NULL;
+    return th10_ops;
+}
+
+const op_pair_t*
+op_find_instr(
+    unsigned int version,
+    int instr)
+{
+    const op_pair_t* table = get_op_table(version);
+    unsigned int i;
+
+    for (i = 0; table[i].token; ++i) {
+        if (table[i].op_1.instr == instr)
+            return &table[i];
+        if (table[i].op_2.instr == instr)
+            return &table[i];
     }
+
+    return NULL;
+}
+
+const op_t*
+op_find_token(
+    unsigned int version,
+    int token)
+{
+    const op_pair_t* table = get_op_table(version);
+    unsigned int i;
+
+    for (i = 0; table[i].token; ++i) {
+        if (table[i].op_1.token == token)
+            return &table[i].op_1;
+        if (table[i].op_2.token == token)
+            return &table[i].op_2;
+    }
+
+    return NULL;
+}
+
+const op_t*
+op_find_stack(
+    unsigned int version,
+    int token,
+    int stack_count,
+    const int* stack_types)
+{
+    const op_pair_t* table = get_op_table(version);
+    unsigned int i;
+
+    for (i = 0; table[i].token; ++i) {
+        if (   table[i].token == token
+            && table[i].arity == stack_count) {
+            int j;
+
+            for (j = 0; j < stack_count; ++j) {
+                if (stack_types[j] == 'f')
+                    return &table[i].op_2;
+            }
+
+            return &table[i].op_1;
+        }
+    }
+
+    return NULL;
 }
 
 static const instr_fmt_t th10_fmts[] = {

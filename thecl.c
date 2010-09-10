@@ -338,120 +338,74 @@ ecldump_render_instr(
     const sub_t* sub,
     instr_t* instr,
     instr_t** stack,
-    unsigned int* stack_top,
+    int* stack_top,
     unsigned int version)
 {
-    const stackinstr_t* i;
-    unsigned int j;
+    int i;
+    const op_pair_t* op;
+    
+    op = op_find_instr(version, instr->id);
+    if (!op)
+        return;
 
-    for (i = get_stackinstrs(version); i->type; ++i) {
-        if (i->instr == instr->id &&
-            strlen(i->params) == instr->param_cnt &&
-            *stack_top > strlen(i->stack)) {
-            int skip = 0;
-            const char* format = NULL;
+    if (*stack_top < op->arity)
+        return;
 
-            for (j = 0; j < strlen(i->stack); ++j) {
-                if (stack[*stack_top - strlen(i->stack) - 1 + j]->type != i->stack[j])
-                    skip = 1;
-                if (instr->time != stack[*stack_top - strlen(i->stack) - 1 + j]->time)
-                    skip = 1;
-                if (j != 0 && stack[*stack_top - strlen(i->stack) - 1 + j]->label)
-                    skip = 1;
-            }
-
-            for (j = 0; j < instr->param_cnt; ++j) {
-                if (instr->params[j].type != i->params[j])
-                    skip = 1;
-            }
-
-            if (skip)
-                continue;
-
-            /* Make sure the label and its offset is maintained. */
-            if (strlen(i->stack) && (instr->label || ((*stack_top > 1) && (stack[*stack_top - 2]->time != instr->time))))
-                continue;
-
-            switch (i->type) {
-            case ADD:      format = "(%s + %s)";  break;
-            case SUBTRACT: format = "(%s - %s)";  break;
-            case MULTIPLY: format = "(%s * %s)";  break;
-            case DIVIDE:   format = "(%s / %s)";  break;
-            case MODULO:   format = "(%s %% %s)"; break;
-            case EQUAL:    format = "(%s == %s)"; break;
-            case INEQUAL:  format = "(%s != %s)"; break;
-            case LT:       format = "(%s < %s)";  break;
-            case LTEQ:     format = "(%s <= %s)"; break;
-            case GT:       format = "(%s > %s)";  break;
-            case GTEQ:     format = "(%s >= %s)"; break;
-            case AND:      format = "(%s & %s)";  break;
-            case OR:       format = "(%s | %s)";  break;
-            case XOR:      format = "(%s ^ %s)";  break;
-            default: break;
-            }
-
-            /* TODO: Make 1024 a constant. */
-            if (format) {
-                snprintf(instr->string, 1024, format,
-                    stack[*stack_top - 3]->string, stack[*stack_top - 2]->string);
-            } else {
-                if (i->type == GOTO || i->type == UNLESS || i->type == IF) {
-                    char target[256];
-                    char newtime[256];
-                    ecldump_display_param(target, 256, sub, instr, 0, NULL,
-                        version);
-                    ecldump_display_param(newtime, 256, sub, instr, 1, NULL,
-                        version);
-                    if (i->type == GOTO) {
-                        snprintf(instr->string, 1024, "goto %s @ %s",
-                            target, newtime);
-                    } else if (i->type == UNLESS) {
-                        snprintf(instr->string, 1024, "unless %s goto %s @ %s",
-                            stack[*stack_top - 2]->string, target, newtime);
-                    } else if (i->type == IF) {
-                        snprintf(instr->string, 1024, "if %s goto %s @ %s",
-                            stack[*stack_top - 2]->string, target, newtime);
-                    }
-                } else if (i->type == LOAD || i->type == ASSIGN) {
-                    /* ecldump_display_param(instr->string + strlen(instr->string), 1024 - strlen(instr->string), &ecl->subs[i], instr, k, NULL, version); */
-                    if (instr->params[0].type == 'i') {
-                        if (instr->param_mask & 1) {
-                            snprintf(instr->string, 1024, "[%d]",
-                                instr->params[0].value.i);
-                        } else {
-                            snprintf(instr->string, 1024, "%d",
-                                instr->params[0].value.i);
-                        }
-                    } else if (instr->params[0].type == 'f') {
-                        const char* floatb =
-                            util_printfloat(&instr->params[0].value.f);
-                        if (instr->param_mask & 1) {
-                            snprintf(instr->string, 1024, "[%sf]", floatb);
-                        } else
-                            snprintf(instr->string, 1024, "%sf", floatb);
-                    }
-
-                    if (i->type == ASSIGN) {
-                        snprintf(instr->string + strlen(instr->string),
-                            1024 - strlen(instr->string),
-                            " = %s", stack[*stack_top - 2]->string);
-                    }
-                } else if (i->type == NOT) {
-                    snprintf(instr->string, 1024, "(!%s)",
-                        stack[*stack_top - 2]->string);
-                }
-            }
-
-            if (strlen(i->stack)) {
-                instr->label = stack[*stack_top - strlen(i->stack) - 1]->label;
-                instr->offset = stack[*stack_top - strlen(i->stack) - 1]->offset;
-            }
-
-            instr->type = i->value;
-            *stack_top -= strlen(i->stack);
-            stack[*stack_top - 1] = instr;
+    for (i = 0; i < op->arity; ++i) {
+        if (!stack[*stack_top - 2 - i]->type)
             return;
-        }
+        if (stack[*stack_top - 2 - i]->time != instr->time)
+            return;
+        if (stack[*stack_top - 2 - i]->rank_mask != instr->rank_mask)
+            return;
+        /* Only the edge entry may have a label. */
+        if (i < op->arity - 1)
+            if (stack[*stack_top - 2 - i]->label)
+                return;
+    }
+
+    if (   op->token == IF
+        || op->token == UNLESS
+        || op->token == GOTO) {
+        if (op->token == IF)
+            snprintf(instr->string + strlen(instr->string), 1024 - strlen(instr->string), "if %s ", stack[*stack_top - 2]->string);
+        else if (op->token == UNLESS)
+            snprintf(instr->string + strlen(instr->string), 1024 - strlen(instr->string), "unless %s ", stack[*stack_top - 2]->string);
+        snprintf(instr->string + strlen(instr->string), 1024 - strlen(instr->string), "goto ");
+        ecldump_display_param(instr->string + strlen(instr->string), 1024 - strlen(instr->string), sub, instr, 0, NULL, version);
+        snprintf(instr->string + strlen(instr->string), 1024 - strlen(instr->string), " @ ");
+        ecldump_display_param(instr->string + strlen(instr->string), 1024 - strlen(instr->string), sub, instr, 1, NULL, version);
+    } else if (op->token == LOAD) {
+        ecldump_display_param(instr->string, 1024, sub, instr, 0, NULL, version);
+        instr->type = instr->params[0].type;
+    } else if (op->token == ASSIGN) {
+        ecldump_display_param(instr->string, 1024, sub, instr, 0, NULL, version);
+        snprintf(instr->string + strlen(instr->string), 1024 - strlen(instr->string), " %s %s", op->symbol, stack[*stack_top - 2]->string);
+    } else if (op->arity == 1) {
+        snprintf(instr->string, 1024, "%s%s", op->symbol, stack[*stack_top - 2]->string);
+        instr->type = instr->id == op->op_1.instr ? op->op_1.result_type : op->op_2.result_type;
+    } else if (op->arity == 2) {
+        const char* symbol;
+        instr->type = instr->id == op->op_1.instr ? op->op_1.result_type : op->op_2.result_type;
+
+        if (instr->id == op->op_2.instr && (stack[*stack_top - 2]->type == 'f' || stack[*stack_top - 3]->type == 'f'))
+            symbol = op->symbol;
+        else if (instr->id == op->op_1.instr && (stack[*stack_top - 2]->type == 'i' && stack[*stack_top - 3]->type == 'i'))
+            symbol = op->symbol;
+        else
+            symbol = instr->id == op->op_1.instr ? op->op_1.symbol : op->op_2.symbol;
+
+        snprintf(instr->string, 1024, "(%s %s %s)", stack[*stack_top - 3]->string, symbol, stack[*stack_top - 2]->string);
+    } else {
+        return;
+    }
+
+    if (op->arity) {
+        instr->label = stack[*stack_top - 1 - op->arity]->label;
+        instr->offset = stack[*stack_top - 1 - op->arity]->offset;
+
+        *stack_top -= op->arity;
+        stack[*stack_top - 1] = instr;
     }
 }
 
@@ -482,7 +436,7 @@ ecldump_translate_print(
         sub_t* sub = &ecl->subs[s];
         unsigned int j, k;
         unsigned int time;
-        unsigned int stack_top = 0;
+        int stack_top = 0;
 
         instr_t** stack = malloc(sub->instr_cnt * sizeof(instr_t*));
 
@@ -512,9 +466,7 @@ ecldump_translate_print(
             ++stack_top;
             stack[stack_top - 1] = instr;
 
-            if (instr->rank_mask == 0xff)
-                ecldump_render_instr(sub, instr, stack, &stack_top,
-                    version);
+            ecldump_render_instr(sub, instr, stack, &stack_top, version);
 
             if (!instr->string[0]) {
                 snprintf(instr->string, 1024, "ins_%u", instr->id);
@@ -532,7 +484,7 @@ ecldump_translate_print(
         fprintf(out, "\nsub %s\n{\n", sub->name);
 
         time = 0;
-        for (j = 0; j < stack_top; ++j) {
+        for (j = 0; j < (unsigned int)stack_top; ++j) {
             if (stack[j]->time != time) {
                 time = stack[j]->time;
                 fprintf(out, "%u:\n", time);
