@@ -227,7 +227,7 @@ Include_List:
 Instructions:
     | Instruction ";" Instructions
     | RANK { instr_rank = $1; } Instruction { instr_rank = 0xff; } ";" Instructions
-    | IDENTIFIER ":" { label_create($1); } Instructions
+    | IDENTIFIER ":" { label_create($1); free($1); } Instructions
     | INTEGER ":" {
         if ($1 == instr_time || (instr_time > 0 && $1 < instr_time)) {
             char buf[256];
@@ -596,7 +596,7 @@ label_create(
     current_sub->label_cnt++;
     current_sub->labels =
         realloc(current_sub->labels, sizeof(label_t) * current_sub->label_cnt);
-    current_sub->labels[current_sub->label_cnt - 1].name = name;
+    current_sub->labels[current_sub->label_cnt - 1].name = strdup(name);
     current_sub->labels[current_sub->label_cnt - 1].offset =
         current_sub->offset;
 }
