@@ -11,6 +11,11 @@ AC_DEFINE([PACKAGE_THECL_VERSION], ["2"], [Define to the version of this package
 
 AH_TEMPLATE([HAVE_LIBPNG], [Define to 1 if libpng is available.])
 AH_TEMPLATE([PACK_PRAGMA], [Define to 1 if your C compiler supports the packing pragma.])
+AH_TEMPLATE([getc_unlocked], [])
+AH_TEMPLATE([putc_unlocked], [])
+AH_TEMPLATE([fread_unlocked], [])
+AH_TEMPLATE([fwrite_unlocked], [])
+AH_TEMPLATE([feof_unlocked], [])
 AC_DEFINE([PACK_ATTRIBUTE], [], [Define to __attribute__((packed)) if supported by your C compiler.])
 
 dnl check for programs
@@ -87,6 +92,12 @@ AC_MSG_RESULT([$structpacking])
 dnl check for library functions
 
 AC_CHECK_FUNCS([basename iconv_open mempcpy mkdir snprintf _snprintf _splitpath strdup strtof])
+
+AC_CHECK_FUNC([getc_unlocked], [], [AC_DEFINE([getc_unlocked], [getc])])
+AC_CHECK_FUNC([putc_unlocked], [], [AC_DEFINE([putc_unlocked], [putc])])
+AC_CHECK_FUNC([fread_unlocked], [], [AC_DEFINE([fread_unlocked], [fread])])
+AC_CHECK_FUNC([fwrite_unlocked], [], [AC_DEFINE([fwrite_unlocked], [fwrite])])
+AC_CHECK_FUNC([feof_unlocked], [], [AC_DEFINE([feof_unlocked], [feof])])
 
 AC_CONFIG_FILES([Makefile])
 AC_OUTPUT
