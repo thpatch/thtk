@@ -56,7 +56,7 @@ AC_MSG_CHECKING([whether CC supports -fwhole-program -combine])
 enable_combine="no"
 ac_save_CFLAGS=$CFLAGS
 CFLAGS="$CFLAGS -fwhole-program -combine"
-AC_COMPILE_IFELSE(AC_LANG_PROGRAM([], []),
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([], [])],
                   [AC_SUBST([combine_CFLAGS],
                             ["-fwhole-program -combine"])
                    enable_combine="yes"])
@@ -67,23 +67,23 @@ AC_MSG_RESULT([$enable_combine])
 dnl XXX: Maybe offsetof isn't all that portable.
 AC_MSG_CHECKING([whether structure packing can be controlled])
 structpacking="unsupported"
-AC_RUN_IFELSE(AC_LANG_PROGRAM([dnl
+AC_RUN_IFELSE([AC_LANG_PROGRAM([dnl
                 #include <stddef.h>
                 struct test_t { char a;
                 #pragma pack(push,1)
                 int b; };
                 #pragma pack(pop)],
-                [return offsetof(struct test_t, b) == 1 ? 0 : 1;],),
+                [return offsetof(struct test_t, b) == 1 ? 0 : 1;],)],
               [AC_DEFINE([PACK_PRAGMA], [1])
                structpacking="pragma pack(push,1)"],
               [],
               [AC_DEFINE([PACK_PRAGMA], [1])
                structpacking="(assumed) pragma pack(push,1)"])
 if test "$structpacking" = "unsupported"; then
-AC_RUN_IFELSE(AC_LANG_PROGRAM([dnl
+AC_RUN_IFELSE([AC_LANG_PROGRAM([dnl
                 #include <stddef.h>
                 struct test_t { char a; int b; } __attribute__((packed));],
-                [return offsetof(struct test_t, b) == 1 ? 0 : 1;],),
+                [return offsetof(struct test_t, b) == 1 ? 0 : 1;],)],
               [AC_DEFINE([PACK_ATTRIBUTE], [__attribute__((packed))])
                structpacking="__attribute__((packed))"])
 fi
