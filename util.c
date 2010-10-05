@@ -166,7 +166,7 @@ util_read_asciiz(
         if (i == buffersize - 1) {
             return -1;
         }
-        c = fgetc_unlocked(stream);
+        c = getc_unlocked(stream);
         if (c == EOF) {
             return -1;
         }

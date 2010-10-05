@@ -118,7 +118,7 @@ open_ecl(
     }
 
     while (util_tell(f) % 4 != 0) {
-        if (fgetc_unlocked(f) == EOF)
+        if (getc_unlocked(f) == EOF)
             break;
     }
 
@@ -143,7 +143,7 @@ open_ecl(
     ecl->subs = calloc(ecl->sub_cnt, sizeof(sub_t));
 
     while (util_tell(f) % 4 != 0) {
-        if (fgetc_unlocked(f) == EOF)
+        if (getc_unlocked(f) == EOF)
             break;
     }
 

@@ -94,19 +94,19 @@ th_unrle(
     unsigned int i;
     if (insize < 3) {
         for (i = 0; i < insize; ++i)
-            fputc_unlocked(in[i], stream);
+            putc_unlocked(in[i], stream);
     } else if (insize >= 3) {
         const unsigned char* iend = in + insize;
         unsigned char prev, cur;
         prev = *in++;
-        fputc_unlocked(prev, stream);
+        putc_unlocked(prev, stream);
         cur = *in++;
-        fputc_unlocked(cur, stream);
+        putc_unlocked(cur, stream);
         while (in < iend) {
             if (prev == cur) {
                 unsigned char count = *in++;
                 for (i = 0; i < count; ++i)
-                    fputc_unlocked(cur, stream);
+                    putc_unlocked(cur, stream);
 
                 if (in == iend)
                     break;
@@ -114,7 +114,7 @@ th_unrle(
 
             prev = cur;
             cur = *in++;
-            fputc_unlocked(cur, stream);
+            putc_unlocked(cur, stream);
         }
     }
 }

@@ -226,7 +226,7 @@ static int
 read_byte_file(
     FILE* stream)
 {
-    int c = fgetc_unlocked(stream);
+    int c = getc_unlocked(stream);
 
     if (c == EOF)
         return -1;
