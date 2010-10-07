@@ -1,13 +1,13 @@
 AC_PREREQ(2.62) dnl 2.62 for AC_OPENMP.
-AC_INIT([Touhou Toolkit], [1], [xarnonymous@gmail.com], [thtk], [http://code.google.com/p/thtk/])
+AC_INIT([Touhou Toolkit], [2], [xarnonymous@gmail.com], [thtk], [http://code.google.com/p/thtk/])
 AM_INIT_AUTOMAKE([1.11 silent-rules foreign])
 AM_SILENT_RULES dnl requires automake 1.11
 AC_CONFIG_SRCDIR([thdat.c])
 AC_CONFIG_HEADERS([config.h])
 
 AC_DEFINE([PACKAGE_THANM_VERSION], ["1"], [Define to the version of this package.])
-AC_DEFINE([PACKAGE_THDAT_VERSION], ["7"], [Define to the version of this package.])
-AC_DEFINE([PACKAGE_THECL_VERSION], ["2"], [Define to the version of this package.])
+AC_DEFINE([PACKAGE_THDAT_VERSION], ["8"], [Define to the version of this package.])
+AC_DEFINE([PACKAGE_THECL_VERSION], ["3"], [Define to the version of this package.])
 
 AH_TEMPLATE([HAVE_LIBPNG], [Define to 1 if libpng is available.])
 AH_TEMPLATE([PACK_PRAGMA], [Define to 1 if your C compiler supports the packing pragma.])
