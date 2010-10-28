@@ -296,6 +296,7 @@ ecldump_display_param(
     const param_t* param,
     unsigned int version)
 {
+    unsigned int c;
     /* Allow the input to be overridden for nested data. */
     if (param == NULL)
         param = &instr->params[i];
@@ -343,11 +344,17 @@ ecldump_display_param(
             snprintf(output, output_length, "%sf", floatb);
         break;
     }
-    case 's':
-        snprintf(output, output_length, "\"%s\"", param->value.s.data);
-        break;
     case 'c':
-        snprintf(output, output_length, "C\"%s\"", param->value.s.data);
+        *output++ = 'C';
+    case 's':
+        *output++ = '"';
+        for (c = 0; param->value.s.data[c]; ++c) {
+            if (param->value.s.data[c] == '"')
+                *output++ = '\\';
+            *output++ = param->value.s.data[c];
+        }
+        *output++ = '"';
+        *output++ = '\0';
         break;
     case 'D': {
         param_t newparam = *param;
