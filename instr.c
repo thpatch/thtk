@@ -31,7 +31,6 @@
 #include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <assert.h>
 #include "program.h"
 #include "ecl.h"
 #include "util.h"
