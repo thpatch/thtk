@@ -959,6 +959,7 @@ png_write(FILE* stream, image_t* image)
     png_bytepp imagep;
 
     png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+    png_set_compression_level(png_ptr, Z_BEST_SPEED);
     info_ptr = png_create_info_struct(png_ptr);
     png_init_io(png_ptr, stream);
     png_set_IHDR(png_ptr, info_ptr,

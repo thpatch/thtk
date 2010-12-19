@@ -2,3 +2,4 @@ What's new in thtk 3:
 
 thecl: Double quotes in ECL files are now escaped.
 thdat: Support for TH75 has been removed.
+thanm: Files will compress faster, but use less efficient compression.
