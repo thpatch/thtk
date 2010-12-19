@@ -41,7 +41,6 @@
 extern const archive_module_t archive_th02;
 extern const archive_module_t archive_th03;
 extern const archive_module_t archive_th06;
-extern const archive_module_t archive_th75;
 extern const archive_module_t archive_th08;
 extern const archive_module_t archive_th95;
 
@@ -253,7 +252,7 @@ print_usage(void)
            "  h  display this help and exit\n"
            "  V  display version information and exit\n"
            "OPTION can be:\n"
-           "  #  # can be 2, 3, 4, 5, 6, 7, 75, 8, 9, 95, 10, 11, 12, 125, or 128, defaults to the latest\n\n"
+           "  #  # can be 2, 3, 4, 5, 6, 7, 8, 9, 95, 10, 11, 12, 125, or 128, defaults to the latest\n\n"
            "Report bugs to <" PACKAGE_BUGREPORT ">.\n", argv0);
 }
 
@@ -286,9 +285,6 @@ main(
     case 6:
     case 7:
         archive_module = &archive_th06;
-        break;
-    case 75:
-        archive_module = &archive_th75;
         break;
     case 8:
     case 9:

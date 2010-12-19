@@ -106,6 +106,6 @@ Action   1 2 3 4 5 6 7 75 8 9 95 10 105 11 12 123 125 128
 thanm x  - - - - - - y  - y y  y  y   -  y  y   -   y   y
 thanm l  - - - - - y y  - y y  y  y   -  y  y   -   y   y
 thdat x  y y y y y y y  n y y  y  y   n  y  y   n   y   y
-thdat c  y y y y y y y  y y y  y  y   n  y  y   n   y   y
+thdat c  y y y y y y y  n y y  y  y   n  y  y   n   y   y
 thecl d  - - - - - n n  - n n  n  y   -  y  y   -   y   y
 thecl c  - - - - - n n  - n n  n  y   -  y  y   -   y   y
