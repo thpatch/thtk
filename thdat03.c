@@ -154,7 +154,6 @@ th03_create(FILE* stream, unsigned int version, unsigned int count)
         sizeof(th03_archive_header_t) + (count + 1) * sizeof(th03_entry_header_t), count);
 }
 
-/* TODO: Check that filenames are 8.3, make it a THDAT_ flag. */
 /* TODO: Find out if lowercase filenames are supported. */
 static int
 th03_write(archive_t* archive, entry_t* entry, FILE* stream)
@@ -230,7 +229,7 @@ th03_close(archive_t* archive)
 }
 
 const archive_module_t archive_th03 = {
-    THDAT_BASENAME,
+    THDAT_BASENAME | THDAT_UPPERCASE | THDAT_8_3,
     th03_create,
     th03_write,
     th03_close,

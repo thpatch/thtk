@@ -91,6 +91,10 @@ void thdat_sort(
 
 /* Strip path names. */
 #define THDAT_BASENAME 1
+/* Force uppercase filenames. */
+#define THDAT_UPPERCASE 2
+/* Check filenames for 8.3 format. */
+#define THDAT_8_3 4
 
 typedef struct {
     /* THDAT_ flags. */

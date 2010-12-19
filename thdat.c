@@ -27,6 +27,7 @@
  * DAMAGE.
  */
 #include <config.h>
+#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -208,6 +209,25 @@ archive_add_entry(
         util_basename(e->name, 255, filename);
     else
         strncpy(e->name, filename, 255);
+
+    /* XXX: Doesn't check empty file names. */
+    if (flags & THDAT_8_3) {
+        const char* dotpos = strchr(e->name, '.');
+        size_t name_len = dotpos ? strlen(e->name) - strlen(dotpos) : strlen(e->name);
+        size_t ext_len = dotpos ? strlen(dotpos + 1) : 0;
+
+        if (name_len > 8 || ext_len > 3) {
+            fprintf(stderr, "%s: %s is not 8.3\n", e->name, argv0);
+            return NULL;
+        }
+    }
+
+    if (flags & THDAT_UPPERCASE) {
+        unsigned int i;
+        for (i = 0; i < 255 && e->name[i]; ++i) {
+            e->name[i] = toupper(e->name[i]);
+        }
+    }
 
     if ((int)e->size == -1)
         return NULL;
