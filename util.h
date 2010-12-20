@@ -49,10 +49,6 @@ void util_print_version(
 const char* util_printfloat(
     const void* data);
 
-/* Returns a pointer to after the last directory separator in path. */
-const char* util_shortname(
-    const char* path);
-
 /* Creates all components of the path. */
 void util_makepath(
     const char* path);

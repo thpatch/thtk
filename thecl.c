@@ -763,7 +763,6 @@ main(int argc, char* argv[])
     char mode;
     unsigned int version = 0;
 
-    argv0 = util_shortname(argv[0]);
     in = stdin;
     current_input = "(stdin)";
     out = stdout;

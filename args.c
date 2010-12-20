@@ -34,6 +34,26 @@
 #include "program.h"
 #include "util.h"
 
+/* Returns a pointer to after the last directory separator in path. */
+/* TODO: Use util_basename if it can be made to return a pointer to inside of
+ * path. */
+static const char*
+util_shortname(
+    const char* path)
+{
+    const char* ret;
+    if (!path) {
+        fprintf(stderr, "%s: NULL path passed to short_name\n", argv0);
+        abort();
+    }
+#ifdef WIN32
+    ret = MAX(strrchr(path, '/'), strrchr(path, '\\'));
+#else
+    ret = strrchr(path, '/');
+#endif
+    return ret ? ret + 1 : path;
+}
+
 char
 parse_args(
     int argc,
