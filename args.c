@@ -54,7 +54,7 @@ util_shortname(
     return ret ? ret + 1 : path;
 }
 
-char
+int
 parse_args(
     int argc,
     char* argv[],
@@ -63,7 +63,7 @@ parse_args(
     char* options,
     unsigned int* version)
 {
-    char command;
+    int command;
     char* argp;
 
     /* TODO: Some kind of check here first. */
