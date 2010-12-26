@@ -31,6 +31,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "file.h"
 #include "program.h"
 #include "thdat.h"
 #include "thrle.h"
@@ -61,7 +62,7 @@ th02_open(FILE* stream, unsigned int version)
     unsigned int i;
 
     for (;;) {
-        if (!util_read(stream, &fe, sizeof(th02_entry_header_t))) {
+        if (!file_read(stream, &fe, sizeof(th02_entry_header_t))) {
             free(archive);
             return NULL;
         }
@@ -90,8 +91,8 @@ th02_extract(archive_t* archive, entry_t* entry, FILE* stream)
     unsigned char* zbuf = malloc(entry->zsize);
 
 #pragma omp critical
-    i = util_seek(archive->stream, entry->offset) &&
-        util_read(archive->stream, zbuf, entry->zsize);
+    i = file_seek(archive->stream, entry->offset) &&
+        file_read(archive->stream, zbuf, entry->zsize);
 
     if (!i) {
         free(zbuf);
@@ -102,7 +103,7 @@ th02_extract(archive_t* archive, entry_t* entry, FILE* stream)
         zbuf[i] ^= 0x12;
 
     if (entry->size == entry->zsize) {
-        if (!util_write(stream, zbuf, entry->zsize)) {
+        if (!file_write(stream, zbuf, entry->zsize)) {
             free(zbuf);
             return 0;
         }
@@ -156,7 +157,7 @@ th02_close(archive_t* archive)
     fe.key = 3;
     fe.zero = 0;
 
-    if (!util_seek(archive->stream, 0))
+    if (!file_seek(archive->stream, 0))
         return 0;
 
     buffer = malloc(list_size);
@@ -175,7 +176,7 @@ th02_close(archive_t* archive)
         buffer_ptr = mempcpy(buffer_ptr, &fe, sizeof(th02_entry_header_t));
     }
 
-    if (!util_write(archive->stream, buffer, list_size)) {
+    if (!file_write(archive->stream, buffer, list_size)) {
         free(buffer);
         return 0;
     }

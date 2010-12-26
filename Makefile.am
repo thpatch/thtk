@@ -29,6 +29,8 @@ endif
 util_SOURCES = \
 	args.c \
 	args.h \
+	file.c \
+	file.h \
 	program.c \
 	program.h \
 	util.c \

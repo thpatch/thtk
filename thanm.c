@@ -35,6 +35,7 @@
 #include <png.h>
 #endif
 #include "args.h"
+#include "file.h"
 #include "thanm.h"
 #include "program.h"
 #include "util.h"
@@ -480,7 +481,7 @@ anm_read_file(const char* filename)
         exit(1);
     }
 
-    filesize = util_fsize(f);
+    filesize = file_fsize(f);
 
     anm = malloc(sizeof(anm_t));
     anm->name_count = 0;
@@ -507,8 +508,8 @@ anm_read_file(const char* filename)
         entry->data_size = 0;
         entry->data = NULL;
 
-        util_seek(f, offset);
-        util_read(f, &entry->header, sizeof(anm_header_t));
+        file_seek(f, offset);
+        file_read(f, &entry->header, sizeof(anm_header_t));
 
         /* XXX: This is not a particularly good way of detecting this. */
         if (entry->header.zero1 != 0)
@@ -569,19 +570,19 @@ anm_read_file(const char* filename)
 
         /* Lengths, including padding, observed are: 16, 32, 48. */
         entry->name = NULL;
-        util_seek(f, offset + entry->header.nameoffset);
+        file_seek(f, offset + entry->header.nameoffset);
         fgets(name, 256, f);
 
         entry->name = anm_get_name(anm, name);
 
         if (entry->header.version == 0 && entry->header.y != 0) {
-            util_seek(f, offset + entry->header.y);
+            file_seek(f, offset + entry->header.y);
             fgets(name, 256, f);
 
             entry->name2 = strdup(name);
         }
 
-        util_seek(f, offset + sizeof(anm_header_t));
+        file_seek(f, offset + sizeof(anm_header_t));
 
         /* Parse any sprites in the entry. */
         if (entry->header.sprites) {
@@ -591,7 +592,7 @@ anm_read_file(const char* filename)
             offsets = malloc(sizeof(uint32_t) * entry->header.sprites);
             entry->sprites = malloc(sizeof(sprite_t) * entry->header.sprites);
             entry->sprite_count = entry->header.sprites;
-            util_read(f, offsets, sizeof(uint32_t) * entry->header.sprites);
+            file_read(f, offsets, sizeof(uint32_t) * entry->header.sprites);
 
             /* Check that the sprites are stored packed. */
             for (i = 1; i < entry->header.sprites; ++i) {
@@ -603,13 +604,13 @@ anm_read_file(const char* filename)
             }
 
             if (sequential) {
-                util_seek(f, offset + offsets[0]);
-                util_read(f, entry->sprites,
+                file_seek(f, offset + offsets[0]);
+                file_read(f, entry->sprites,
                     sizeof(sprite_t) * entry->header.sprites);
             } else {
                 for (i = 0; i < entry->header.sprites; ++i) {
-                    util_seek(f, offset + offsets[i]);
-                    util_read(f, &entry->sprites[i], sizeof(sprite_t));
+                    file_seek(f, offset + offsets[i]);
+                    file_read(f, &entry->sprites[i], sizeof(sprite_t));
                 }
             }
 
@@ -617,14 +618,14 @@ anm_read_file(const char* filename)
         }
 
         if (entry->header.scripts) {
-            util_seek(f, offset + sizeof(anm_header_t) + sizeof(uint32_t)
+            file_seek(f, offset + sizeof(anm_header_t) + sizeof(uint32_t)
                          * entry->header.sprites);
 
             entry->script_count = entry->header.scripts;
             entry->scripts = malloc(entry->script_count * sizeof(anm_script_t));
 
             for (i = 0; i < entry->script_count; ++i) {
-                util_read(f, &entry->scripts[i], ANM_SCRIPT_SIZE);
+                file_read(f, &entry->scripts[i], ANM_SCRIPT_SIZE);
                 entry->scripts[i].instr_count = 0;
                 entry->scripts[i].instrs = NULL;
             }
@@ -632,7 +633,7 @@ anm_read_file(const char* filename)
             for (i = 0; i < entry->header.scripts; ++i) {
                 long limit = 0;
 
-                util_seek(f, offset + entry->scripts[i].offset);
+                file_seek(f, offset + entry->scripts[i].offset);
 
                 if (i < entry->header.scripts - 1)
                     limit = offset + entry->scripts[i + 1].offset;
@@ -651,7 +652,7 @@ anm_read_file(const char* filename)
                         if (ftell(f) + ANM_INSTR0_SIZE > limit)
                             break;
 
-                        util_read(f, &tempinstr, ANM_INSTR0_SIZE);
+                        file_read(f, &tempinstr, ANM_INSTR0_SIZE);
 
                         ++entry->scripts[i].instr_count;
                         entry->scripts[i].instrs = realloc(
@@ -665,7 +666,7 @@ anm_read_file(const char* filename)
 
                         if (instr->length) {
                             instr->data = malloc(instr->length);
-                            util_read(f, instr->data, instr->length);
+                            file_read(f, instr->data, instr->length);
                         } else {
                             instr->data = NULL;
                         }
@@ -678,7 +679,7 @@ anm_read_file(const char* filename)
                         if (ftell(f) + ANM_INSTR_SIZE > limit)
                             break;
 
-                        util_read(f, &tempinstr, ANM_INSTR_SIZE);
+                        file_read(f, &tempinstr, ANM_INSTR_SIZE);
 
                         ++entry->scripts[i].instr_count;
                         entry->scripts[i].instrs = realloc(
@@ -693,7 +694,7 @@ anm_read_file(const char* filename)
                         if (instr->length > ANM_INSTR_SIZE) {
                             instr->data =
                                 malloc(instr->length - ANM_INSTR_SIZE);
-                            util_read(f, instr->data,
+                            file_read(f, instr->data,
                                 instr->length - ANM_INSTR_SIZE);
                         } else {
                             instr->data = NULL;
@@ -713,16 +714,16 @@ anm_read_file(const char* filename)
 #endif
             char magic[5] = { 0 };
 
-            util_seek(f, offset + entry->header.thtxoffset);
+            file_seek(f, offset + entry->header.thtxoffset);
 
-            util_read(f, magic, 4);
+            file_read(f, magic, 4);
             if (strcmp(magic, "THTX") != 0) {
                 fprintf(stderr, "%s:%s:%s: unknown thtx magic: %s\n",
                     argv0, current_input, entry->name, magic);
                 if (!option_force) abort();
             }
 
-            util_read(f, &entry->thtx, sizeof(thtx_header_t));
+            file_read(f, &entry->thtx, sizeof(thtx_header_t));
             if (entry->thtx.zero != 0) {
                 fprintf(stderr, "%s:%s:%s: unknown value for zero: %u\n",
                     argv0, current_input, entry->name, entry->thtx.zero);
@@ -750,7 +751,7 @@ anm_read_file(const char* filename)
 
 #ifdef HAVE_LIBPNG
             data = malloc(entry->thtx.size);
-            util_read(f, data, entry->thtx.size);
+            file_read(f, data, entry->thtx.size);
 
             entry->data = fmt_to_rgba(
                 data, entry->thtx.w * entry->thtx.h, entry->thtx.format);

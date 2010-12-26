@@ -32,6 +32,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "file.h"
 #include "program.h"
 #include "thcrypt.h"
 #include "thdat.h"
@@ -99,10 +100,10 @@ th08_open(FILE* stream, unsigned int version)
     unsigned char* ptr;
     unsigned char* data;
     unsigned char* zdata;
-    long filesize = util_fsize(stream);
+    long filesize = file_fsize(stream);
     unsigned int zsize;
 
-    if (!util_read(stream, magic, 4))
+    if (!file_read(stream, magic, 4))
         return NULL;
 
     if (strncmp(magic, "PBGZ", 4)) {
@@ -110,7 +111,7 @@ th08_open(FILE* stream, unsigned int version)
         return NULL;
     }
 
-    if (!util_read(stream, header, 3 * sizeof(uint32_t)))
+    if (!file_read(stream, header, 3 * sizeof(uint32_t)))
         return NULL;
 
     th_decrypt((unsigned char*)header, 3 * sizeof(uint32_t), 0x1b, 0x37,
@@ -120,14 +121,14 @@ th08_open(FILE* stream, unsigned int version)
     offset = header[1] - 345678;
     size = header[2] - 567891;
 
-    if (!util_seek(stream, offset))
+    if (!file_seek(stream, offset))
         return NULL;
 
     zsize = filesize - offset;
     zdata = malloc(zsize);
     data = malloc(size);
 
-    if (!util_read(stream, zdata, zsize)) {
+    if (!file_read(stream, zdata, zsize)) {
         free(data);
         free(zdata);
         return NULL;
@@ -169,7 +170,7 @@ th08_extract(archive_t* archive, entry_t* entry, FILE* stream)
 
 #pragma omp critical
 {
-    if (util_seek(archive->stream, entry->offset)) {
+    if (file_seek(archive->stream, entry->offset)) {
         i = 1;
         th_unlz_file(archive->stream, data, entry->size);
     }
@@ -208,7 +209,7 @@ th08_extract(archive_t* archive, entry_t* entry, FILE* stream)
                current_crypt_params[type].block,
                current_crypt_params[type].limit);
 
-    if (!util_write(stream, data + 4, entry->size)) {
+    if (!file_write(stream, data + 4, entry->size)) {
         free(data);
         return 0;
     }
@@ -229,7 +230,7 @@ th08_read_file(entry_t* entry, FILE* stream)
 {
     unsigned char* data = malloc(entry->size + 4);
 
-    if (!util_read(stream, data + 4, entry->size)) {
+    if (!file_read(stream, data + 4, entry->size)) {
         free(data);
         return NULL;
     }
@@ -348,7 +349,7 @@ th08_close(archive_t* archive)
 
     th_encrypt(zbuffer, list_zsize, 0x3e, 0x9b, 0x80, 0x400);
 
-    if (!util_write(archive->stream, zbuffer, list_zsize)) {
+    if (!file_write(archive->stream, zbuffer, list_zsize)) {
         free(zbuffer);
         return 0;
     }
@@ -362,10 +363,10 @@ th08_close(archive_t* archive)
     th_encrypt((unsigned char*)&header[1], sizeof(uint32_t) * 3, 0x1b, 0x37,
         sizeof(uint32_t) * 3, 0x400);
 
-    if (!util_seek(archive->stream, 0))
+    if (!file_seek(archive->stream, 0))
         return 0;
 
-    if (!util_write(archive->stream, header, sizeof(header)))
+    if (!file_write(archive->stream, header, sizeof(header)))
         return 0;
 
     return 1;

@@ -34,8 +34,8 @@
 #include <string.h>
 #include <errno.h>
 #include "ecl.h"
+#include "file.h"
 #include "program.h"
-#include "util.h"
 #include "instr.h"
 
 /* Bison things. */
@@ -1002,7 +1002,7 @@ compile_ecs(
 
     version = parse_version;
 
-    if (!util_seekable(out)) {
+    if (!file_seekable(out)) {
         fprintf(stderr, "%s: output is not seekable\n", argv0);
         return 0;
     }
@@ -1028,10 +1028,10 @@ compile_ecs(
         fprintf(stderr, "%s: couldn't write: %s\n", argv0, strerror(errno));
         return 0;
     }
-    if (!util_write(out, &header, sizeof(header_scpt_t)))
+    if (!file_write(out, &header, sizeof(header_scpt_t)))
         return 0;
 
-    header.include_offset = util_tell(out);
+    header.include_offset = file_tell(out);
     if (header.include_offset == (uint32_t)-1) {
         return 0;
     }
@@ -1039,20 +1039,20 @@ compile_ecs(
         fprintf(stderr, "%s: couldn't write: %s\n", argv0, strerror(errno));
         return 0;
     }
-    if (!util_write(out, &anim_cnt, sizeof(uint32_t)))
+    if (!file_write(out, &anim_cnt, sizeof(uint32_t)))
         return 0;
     for (i = 0; i < anim_cnt; ++i) {
-        if (!util_write(out, anim_list[i], strlen(anim_list[i]) + 1))
+        if (!file_write(out, anim_list[i], strlen(anim_list[i]) + 1))
             return 0;
         free(anim_list[i]);
     }
     free(anim_list);
 
-    pos = util_tell(out);
+    pos = file_tell(out);
     if (pos == -1)
         return 0;
     if (pos % 4 != 0) {
-        if (!util_write(out, &zero, 4 - pos % 4))
+        if (!file_write(out, &zero, 4 - pos % 4))
             return 0;
     }
 
@@ -1060,43 +1060,43 @@ compile_ecs(
         fprintf(stderr, "%s: couldn't write: %s\n", argv0, strerror(errno));
         return 0;
     }
-    if (!util_write(out, &ecli_cnt, sizeof(uint32_t)))
+    if (!file_write(out, &ecli_cnt, sizeof(uint32_t)))
         return 0;
     for (i = 0; i < ecli_cnt; ++i) {
-        if (!util_write(out, ecli_list[i], strlen(ecli_list[i]) + 1))
+        if (!file_write(out, ecli_list[i], strlen(ecli_list[i]) + 1))
             return 0;
         free(ecli_list[i]);
     }
     free(ecli_list);
 
-    pos = util_tell(out);
+    pos = file_tell(out);
     if (pos == -1)
         return 0;
     if (pos % 4 != 0) {
-        if (!util_write(out, &zero, 4 - pos % 4))
+        if (!file_write(out, &zero, 4 - pos % 4))
             return 0;
     }
-    pos = util_tell(out);
+    pos = file_tell(out);
     if (pos == -1)
         return 0;
     header.include_length = pos - header.include_offset;
 
     for (i = 0; i < sub_cnt; ++i) {
-        if (!util_write(out, &zero, sizeof(uint32_t)))
+        if (!file_write(out, &zero, sizeof(uint32_t)))
             return 0;
     }
 
     for (i = 0; i < sub_cnt; ++i) {
-        if (!util_write(out, subs[i].name, strlen(subs[i].name) + 1))
+        if (!file_write(out, subs[i].name, strlen(subs[i].name) + 1))
             return 0;
         free(subs[i].name);
     }
 
-    pos = util_tell(out);
+    pos = file_tell(out);
     if (pos == -1)
         return 0;
     if (pos % 4 != 0) {
-        if (!util_write(out, &zero, 4 - pos % 4))
+        if (!file_write(out, &zero, 4 - pos % 4))
             return 0;
     }
 
@@ -1106,18 +1106,18 @@ compile_ecs(
 
     for (i = 0; i < sub_cnt; ++i) {
         unsigned int j;
-        subs[i].offset = util_tell(out);
+        subs[i].offset = file_tell(out);
         if (subs[i].offset == (uint32_t)-1)
             return 0;
         if (fputs("ECLH", out) == EOF) {
             fprintf(stderr, "%s: couldn't write: %s\n", argv0, strerror(errno));
             return 0;
         }
-        if (!util_write(out, &eclh, sizeof(header_eclh_t)))
+        if (!file_write(out, &eclh, sizeof(header_eclh_t)))
             return 0;
         for (j = 0; j < subs[i].instr_cnt; ++j) {
             char* data = instr_serialize(&subs[i], &subs[i].instrs[j]);
-            if (!util_write(out, data, subs[i].instrs[j].size))
+            if (!file_write(out, data, subs[i].instrs[j].size))
                 return 0;
             free(data);
         }
@@ -1128,13 +1128,13 @@ compile_ecs(
         free(subs[i].instrs);
     }
 
-    util_seek(out, 4);
-    if (!util_write(out, &header, sizeof(header_scpt_t)))
+    file_seek(out, 4);
+    if (!file_write(out, &header, sizeof(header_scpt_t)))
         return 0;
 
-    util_seek(out, header.include_offset + header.include_length);
+    file_seek(out, header.include_offset + header.include_length);
     for (i = 0; i < sub_cnt; ++i) {
-        if (!util_write(out, &subs[i].offset, sizeof(uint32_t)))
+        if (!file_write(out, &subs[i].offset, sizeof(uint32_t)))
             return 0;
     }
     free(subs);

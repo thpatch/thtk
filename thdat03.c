@@ -31,6 +31,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "file.h"
 #include "program.h"
 #include "thdat.h"
 #include "thrle.h"
@@ -84,11 +85,11 @@ th03_open(FILE* stream, unsigned int version)
     unsigned int i;
     unsigned char* data;
 
-    if (!util_read(stream, &fh, sizeof(th03_archive_header_t)))
+    if (!file_read(stream, &fh, sizeof(th03_archive_header_t)))
         return NULL;
 
     data = malloc(fh.size);
-    if (!util_read(stream, data, fh.size))
+    if (!file_read(stream, data, fh.size))
         return NULL;
 
     for (i = 0; i < fh.size; ++i) {
@@ -122,8 +123,8 @@ th03_extract(archive_t* archive, entry_t* entry, FILE* stream)
     unsigned char* zbuf = malloc(entry->zsize);
 
 #pragma omp critical
-    i = util_seek(archive->stream, entry->offset) &&
-        util_read(archive->stream, zbuf, entry->zsize);
+    i = file_seek(archive->stream, entry->offset) &&
+        file_read(archive->stream, zbuf, entry->zsize);
 
     if (!i) {
         free(zbuf);
@@ -134,7 +135,7 @@ th03_extract(archive_t* archive, entry_t* entry, FILE* stream)
         zbuf[i] ^= entry->extra;
 
     if (entry->size == entry->zsize) {
-        if (!util_write(stream, zbuf, entry->zsize)) {
+        if (!file_write(stream, zbuf, entry->zsize)) {
             free(zbuf);
             return 0;
         }
@@ -184,7 +185,7 @@ th03_close(archive_t* archive)
     unsigned int list_size = (archive->count + 1) * sizeof(th03_entry_header_t);
     unsigned char header_key = archive_key;
 
-    if (!util_seek(archive->stream, 0))
+    if (!file_seek(archive->stream, 0))
         return 0;
 
     memset(&fh, 0, sizeof(th03_archive_header_t));
@@ -194,7 +195,7 @@ th03_close(archive_t* archive)
     fh.count = archive->count;
     fh.key = header_key;
 
-    util_write(archive->stream, &fh, sizeof(th03_archive_header_t));
+    file_write(archive->stream, &fh, sizeof(th03_archive_header_t));
 
     buffer = malloc(list_size);
     memset(buffer, 0, list_size);
@@ -221,7 +222,7 @@ th03_close(archive_t* archive)
         header_key -= tmp;
     }
 
-    if (!util_write(archive->stream, buffer, list_size))
+    if (!file_write(archive->stream, buffer, list_size))
         return 0;
     free(buffer);
 

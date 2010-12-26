@@ -63,42 +63,6 @@ void util_basename(
     size_t dstlen,
     const char* src);
 
-/* A wrapper for fseek with SEEK_SET which prints an error message upon error.*/
-int util_seek(
-    FILE* stream,
-    long offset);
-
-/* Checks if a stream is seekable. */
-int util_seekable(
-    FILE* stream);
-
-/* A wrapper for ftell which prints an error message upon error. */
-long util_tell(
-    FILE* stream);
-
-/* A wrapper for fread which prints an error message upon error. */
-int util_read(
-    FILE* stream,
-    void* buffer,
-    size_t size);
-
-/* A wrapper for fwrite which prints an error message upon error. */
-int util_write(
-    FILE* stream,
-    const void* buffer,
-    size_t size);
-
-/* Returns the filesize of the passed file stream, or -1 and an error message
- * upon error. */
-long util_fsize(
-    FILE* stream);
-
-/* Reads a stream until '\0'. */
-ssize_t util_read_asciiz(
-    char* buffer,
-    size_t buffersize,
-    FILE* stream);
-
 /* Compares two strings.  Can be used by qsort. */
 int util_strpcmp(
     const void* a,

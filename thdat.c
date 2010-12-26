@@ -33,6 +33,7 @@
 #include <string.h>
 #include <errno.h>
 #include "args.h"
+#include "file.h"
 #include "program.h"
 #include "util.h"
 #include "thdat.h"
@@ -71,7 +72,7 @@ archive_create(
     archive_t* archive;
 
     /* Reserve some space for the header. */
-    if (!util_seek(stream, offset))
+    if (!file_seek(stream, offset))
         return NULL;
 
     archive = malloc(sizeof(archive_t));
@@ -92,7 +93,7 @@ thdat_read_file(
 {
     unsigned char* data = malloc(entry->size);
 
-    if (!util_read(stream, data, entry->size)) {
+    if (!file_read(stream, data, entry->size)) {
         free(data);
         return NULL;
     }
@@ -157,7 +158,7 @@ thdat_write_entry(
 
 #pragma omp critical
 {
-    ret = util_write(archive->stream, data, entry->zsize);
+    ret = file_write(archive->stream, data, entry->zsize);
     entry->offset = archive->offset;
     archive->offset += entry->zsize;
 }
@@ -200,7 +201,7 @@ archive_add_entry(
     e = &archive->entries[archive->count++];
 
     memset(e->name, 0, 256);
-    e->size = util_fsize(stream);
+    e->size = file_fsize(stream);
     e->zsize = 0;
     e->offset = 0;
     e->extra = 0;

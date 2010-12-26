@@ -31,6 +31,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "bits.h"
+#include "file.h"
 #include "thdat.h"
 #include "thlzss.h"
 #include "util.h"
@@ -99,7 +100,7 @@ th06_open(FILE* stream, unsigned int version)
     entry_t* e;
     unsigned int i;
 
-    if (!util_read(stream, magic, 4))
+    if (!file_read(stream, magic, 4))
         return NULL;
 
     archive = thdat_open(stream, version);
@@ -112,7 +113,7 @@ th06_open(FILE* stream, unsigned int version)
         count = th06_read_uint32(&b);
         archive->offset = th06_read_uint32(&b);
 
-        if (!util_seek(stream, archive->offset)) {
+        if (!file_seek(stream, archive->offset)) {
             free(archive);
             return NULL;
         }
@@ -132,14 +133,14 @@ th06_open(FILE* stream, unsigned int version)
         char* ptr;
         th07_header_t h;
         archive->version = 7;
-        if (!util_read(stream, &h, sizeof(th07_header_t))) {
+        if (!file_read(stream, &h, sizeof(th07_header_t))) {
             free(archive);
             return NULL;
         }
 
         data = malloc(h.size);
 
-        if (!util_seek(stream, h.offset)) {
+        if (!file_seek(stream, h.offset)) {
             free(data);
             free(archive);
             return NULL;
@@ -175,13 +176,13 @@ th06_extract(archive_t* archive, entry_t* entry, FILE* stream)
 
 #pragma omp critical
 {
-    if (util_seek(archive->stream, entry->offset)) {
+    if (file_seek(archive->stream, entry->offset)) {
         ret = 1;
         th_unlz_file(archive->stream, data, entry->size);
     }
 }
 
-    if (!ret || !util_write(stream, data, entry->size)) {
+    if (!ret || !file_write(stream, data, entry->size)) {
         free(data);
         return 0;
     }
@@ -272,7 +273,7 @@ th06_close(archive_t* archive)
     if (archive->version == 6) {
         bitstream_finish(&b);
 
-        if (!util_write(archive->stream, b.io.buffer.buffer, b.byte_count)) {
+        if (!file_write(archive->stream, b.io.buffer.buffer, b.byte_count)) {
             bitstream_free(&b);
             return 0;
         }
@@ -284,17 +285,17 @@ th06_close(archive_t* archive)
         zbuffer = th_lz_mem(buffer, list_size, &list_zsize);
         free(buffer);
 
-        if (!util_write(archive->stream, zbuffer, list_zsize)) {
+        if (!file_write(archive->stream, zbuffer, list_zsize)) {
             free(zbuffer);
             return 0;
         }
         free(zbuffer);
     }
 
-    if (!util_seek(archive->stream, 0))
+    if (!file_seek(archive->stream, 0))
         return 0;
 
-    if (!util_write(archive->stream, magic, 4))
+    if (!file_write(archive->stream, magic, 4))
         return 0;
 
     if (archive->version == 6) {
@@ -305,7 +306,7 @@ th06_close(archive_t* archive)
 
         bitstream_finish(&b);
 
-        if (!util_write(archive->stream, b.io.buffer.buffer, b.byte_count)) {
+        if (!file_write(archive->stream, b.io.buffer.buffer, b.byte_count)) {
             bitstream_free(&b);
             return 0;
         }
@@ -316,7 +317,7 @@ th06_close(archive_t* archive)
         header[1] = archive->offset;
         header[2] = list_size;
 
-        if (!util_write(archive->stream, header, sizeof(header)))
+        if (!file_write(archive->stream, header, sizeof(header)))
             return 0;
     }
 

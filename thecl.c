@@ -36,6 +36,7 @@
 #include "args.h"
 #include "ecl.h"
 #include "ecsparse.h"
+#include "file.h"
 #include "instr.h"
 #include "program.h"
 #include "util.h"
@@ -74,12 +75,12 @@ open_ecl(
     unsigned int i;
     char magic[5] = { 0 };
 
-    if (!util_seekable(f)) {
+    if (!file_seekable(f)) {
         fprintf(stderr, "%s: input is not seekable\n", argv0);
         return 0;
     }
 
-    if (!util_read(f, magic, 4))
+    if (!file_read(f, magic, 4))
         return 0;
     if (strncmp(magic, "SCPT", 4) != 0) {
         fprintf(stderr, "%s:%s: SCPT signature missing\n",
@@ -87,7 +88,7 @@ open_ecl(
         return 0;
     }
 
-    if (!util_read(f, &ecl->scpt, sizeof(header_scpt_t)))
+    if (!file_read(f, &ecl->scpt, sizeof(header_scpt_t)))
         return 0;
     assert(ecl->scpt.unknown1 == 1);
     assert(ecl->scpt.include_offset == 0x24);
@@ -97,10 +98,10 @@ open_ecl(
     assert(ecl->scpt.zero2[2] == 0);
     assert(ecl->scpt.zero2[3] == 0);
 
-    if (!util_seek(f, ecl->scpt.include_offset))
+    if (!file_seek(f, ecl->scpt.include_offset))
         return 0;
 
-    if (!util_read(f, magic, 4))
+    if (!file_read(f, magic, 4))
         return 0;
     if (strncmp(magic, "ANIM", 4) != 0) {
         fprintf(stderr, "%s:%s: ANIM signature missing\n",
@@ -108,21 +109,21 @@ open_ecl(
         return 0;
     }
 
-    if (!util_read(f, &ecl->anim_cnt, sizeof(uint32_t)))
+    if (!file_read(f, &ecl->anim_cnt, sizeof(uint32_t)))
         return 0;
     ecl->anim = malloc(sizeof(char*) * ecl->anim_cnt);
     for (i = 0; i < ecl->anim_cnt; ++i) {
         char buffer[256];
-        util_read_asciiz(buffer, 256, f);
+        file_read_asciiz(f, buffer, 256);
         ecl->anim[i] = strdup(buffer);
     }
 
-    while (util_tell(f) % 4 != 0) {
+    while (file_tell(f) % 4 != 0) {
         if (getc_unlocked(f) == EOF)
             break;
     }
 
-    if (!util_read(f, magic, 4))
+    if (!file_read(f, magic, 4))
         return 0;
     if (strncmp(magic, "ECLI", 4) != 0) {
         fprintf(stderr, "%s:%s: ECLI signature missing\n",
@@ -130,32 +131,32 @@ open_ecl(
         return 0;
     }
 
-    if (!util_read(f, &ecl->ecli_cnt, sizeof(uint32_t)))
+    if (!file_read(f, &ecl->ecli_cnt, sizeof(uint32_t)))
         return 0;
     ecl->ecli = malloc(sizeof(char*) * ecl->ecli_cnt);
     for (i = 0; i < ecl->ecli_cnt; ++i) {
         char buffer[256];
-        util_read_asciiz(buffer, 256, f);
+        file_read_asciiz(f, buffer, 256);
         ecl->ecli[i] = strdup(buffer);
     }
 
     ecl->sub_cnt = ecl->scpt.sub_cnt;
     ecl->subs = calloc(ecl->sub_cnt, sizeof(sub_t));
 
-    while (util_tell(f) % 4 != 0) {
+    while (file_tell(f) % 4 != 0) {
         if (getc_unlocked(f) == EOF)
             break;
     }
 
     for (i = 0; i < ecl->sub_cnt; ++i) {
-        if (!util_read(f, &ecl->subs[i].offset, sizeof(uint32_t)))
+        if (!file_read(f, &ecl->subs[i].offset, sizeof(uint32_t)))
             return 0;
     }
 
     for (i = 0; i < ecl->sub_cnt; ++i) {
         /* TODO: Find out the maximum length. */
         char buffer[256];
-        util_read_asciiz(buffer, 256, f);
+        file_read_asciiz(f, buffer, 256);
         ecl->subs[i].name = strdup(buffer);
     }
 
@@ -163,10 +164,10 @@ open_ecl(
         header_eclh_t eclh;
         sub_t* sub;
 
-        if (!util_seek(f, ecl->subs[i].offset))
+        if (!file_seek(f, ecl->subs[i].offset))
             return 0;
 
-        if (!util_read(f, magic, 4))
+        if (!file_read(f, magic, 4))
             return 0;
         if (strncmp(magic, "ECLH", 4) != 0) {
             fprintf(stderr, "%s:%s: ECLH signature missing\n",
@@ -174,7 +175,7 @@ open_ecl(
             return 0;
         }
 
-        if (!util_read(f, &eclh, sizeof(header_eclh_t)))
+        if (!file_read(f, &eclh, sizeof(header_eclh_t)))
             return 0;
         assert(eclh.unknown1 == 0x10);
         assert(eclh.zero[0] == 0);
@@ -190,13 +191,13 @@ open_ecl(
         while (1) {
             raw_instr_t rins;
             memset(&rins, 0, sizeof(raw_instr_t));
-            rins.offset = util_tell(f);
+            rins.offset = file_tell(f);
 
             /* EOF is expected for the last instruction in the file. */
             if (fread_unlocked(&rins, 16, 1, f) != 1)
                 break;
 
-            if (i + 1 != ecl->sub_cnt && util_tell(f) > ecl->subs[i + 1].offset)
+            if (i + 1 != ecl->sub_cnt && file_tell(f) > ecl->subs[i + 1].offset)
                 break;
 
             assert(rins.zero == 0);
@@ -205,7 +206,7 @@ open_ecl(
             rins.data_size = rins.size - 16;
             if (rins.data_size) {
                 rins.data = malloc(rins.data_size);
-                if (!util_read(f, rins.data, rins.data_size))
+                if (!file_read(f, rins.data, rins.data_size))
                     return 0;
             }
 
