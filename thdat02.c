@@ -43,7 +43,7 @@ typedef struct {
 #endif
     uint16_t magic;
     uint8_t key;
-    char name[13];
+    unsigned char name[13];
     uint32_t zsize;
     uint32_t size;
     uint32_t offset;
@@ -57,16 +57,18 @@ static archive_t*
 th02_open(FILE* stream, unsigned int version)
 {
     archive_t* archive = thdat_open(stream, version);
-    th02_entry_header_t fe;
-    entry_t* e;
-    unsigned int i;
 
     for (;;) {
+        th02_entry_header_t fe;
+        entry_t* e;
+        unsigned int i;
+
         if (!file_read(stream, &fe, sizeof(th02_entry_header_t))) {
             free(archive);
             return NULL;
         }
 
+        /* An empty entry indicates the end. */
         if (!fe.magic)
             break;
 
@@ -87,8 +89,8 @@ th02_open(FILE* stream, unsigned int version)
 static int
 th02_extract(archive_t* archive, entry_t* entry, FILE* stream)
 {
-    unsigned int i;
-    unsigned char* zbuf = malloc(entry->zsize);
+    uint32_t i;
+    unsigned char* zbuf = util_malloc(entry->zsize);
 
 #pragma omp critical
     i = file_seek(archive->stream, entry->offset) &&

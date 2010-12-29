@@ -355,12 +355,7 @@ th06_read(FILE* in, FILE* out, unsigned int version)
     if (!file_read(in, &entry_count, sizeof(uint32_t)))
         return 0;
 
-    /* TODO: malloc wrapper. */
-    entry_offsets = malloc(entry_count * sizeof(uint32_t) * entry_offset_mul);
-    if (!entry_offsets) {
-        fprintf(stderr, "%s: allocation of %lu bytes failed\n", argv0, entry_count * sizeof(uint32_t) * entry_offset_mul);
-        return 0;
-    }
+    entry_offsets = util_malloc(entry_count * sizeof(uint32_t) * entry_offset_mul);
     if (!file_read(in, entry_offsets, entry_count * sizeof(uint32_t) * entry_offset_mul))
         return 0;
 
@@ -473,11 +468,7 @@ th06_write(FILE* in, FILE* out, unsigned int version)
 
     if (!file_seek(out, sizeof(uint32_t) + entry_count * sizeof(uint32_t) * entry_offset_mul))
         return 0;
-    entry_offsets = malloc(entry_count * sizeof(uint32_t) * entry_offset_mul);
-    if (!entry_offsets) {
-        fprintf(stderr, "%s: allocation of %lu bytes failed\n", argv0, entry_count * sizeof(uint32_t) * entry_offset_mul);
-        return 0;
-    }
+    entry_offsets = util_malloc(entry_count * sizeof(uint32_t) * entry_offset_mul);
 
     if (version >= 9) {
         memset(entry_offsets, 0, entry_count * sizeof(uint32_t) * entry_offset_mul);

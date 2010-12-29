@@ -41,6 +41,10 @@
 #  define MAX(a, b) ((a) > (b) ? (a) : (b))
 #endif
 
+/* Allocates memory and aborts with an error message if the allocation failed. */
+void* util_malloc(
+    size_t size);
+
 void util_print_version(
     const char* name,
     const char* version);

@@ -51,6 +51,19 @@
 #include "program.h"
 #include "util.h"
 
+void*
+util_malloc(
+    size_t size)
+{
+    void* ret = malloc(size);
+    if (!ret) {
+        fprintf(stderr, "%s: allocation of %lu bytes failed: %s\n",
+            argv0, size, strerror(errno));
+        abort();
+    }
+    return ret;
+}
+
 void
 util_print_version(
     const char* name,

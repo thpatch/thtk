@@ -34,6 +34,7 @@
 #include "file.h"
 #include "program.h"
 #include "thmsg.h"
+#include "util.h"
 
 typedef struct {
 #ifdef PACK_PRAGMA
@@ -85,12 +86,7 @@ th95_read(FILE* in, FILE* out, unsigned int version)
     if (!file_read(in, &entry_count, sizeof(uint32_t)))
         return 0;
 
-    /* TODO: malloc wrapper. */
-    entry_pointers = malloc(sizeof(uint32_t) * entry_count);
-    if (!entry_pointers) {
-        /* TODO: Error message. */
-        return 0;
-    }
+    entry_pointers = util_malloc(sizeof(uint32_t) * entry_count);
 
     if (!file_read(in, entry_pointers, entry_count * sizeof(uint32_t)))
         return 0;
