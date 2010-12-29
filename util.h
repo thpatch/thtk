@@ -49,7 +49,8 @@ void util_print_version(
     const char* name,
     const char* version);
 
-/* Returns an unique string representation of a float. */
+/* Returns an unique string representation of a float.  Returns a pointer to a
+ * static buffer, not thread-safe. */
 const char* util_printfloat(
     const void* data);
 
