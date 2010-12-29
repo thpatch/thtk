@@ -39,6 +39,7 @@
 #include "thanm.h"
 #include "program.h"
 #include "util.h"
+#include "value.h"
 
 static unsigned int option_force;
 
@@ -173,237 +174,241 @@ fmt_to_rgba(const char* data, unsigned int pixels, format_t format)
 }
 #endif
 
-static const opcode_fmt_t formats_v0[] = {
+static const id_format_pair_t formats_v0[] = {
     { 0, "" },
-    { 1, "i" },
+    { 1, "S" },
     { 2, "ff" },
-    { 3, "i" },
-    { 4, "i" },
-    { 5, "i" },
+    { 3, "S" },
+    { 4, "S" },
+    { 5, "S" },
     { 7, "" },
     { 9, "fff" },
-    { 10, "fif" },
+    { 10, "fSf" },
     { 11, "ff" },
-    { 12, "ii" },
+    { 12, "SS" },
     { 13, "" },
     { 14, "" },
     { 15, "" },
-    { 16, "ii" },
+    { 16, "SS" },
     { 17, "fff" },
-    { 18, "ffii" },
-    { 19, "ffii" },
-    { 20, "fffi" },
+    { 18, "ffSS" },
+    { 19, "ffSS" },
+    { 20, "fffS" },
     { 21, "" },
-    { 22, "i" },
+    { 22, "S" },
     { 23, "" },
     { 24, "" },
-    { 25, "i" },
-    { 26, "i" },
+    { 25, "S" },
+    { 26, "S" },
     { 27, "f" },
     { 28, "f" },
-    { 29, "i" },
-    { 30, "ffi" },
-    { 31, "i" },
+    { 29, "S" },
+    { 30, "ffS" },
+    { 31, "S" },
+    { 0, NULL }
 };
 
-static const opcode_fmt_t formats_v2[] = {
+static const id_format_pair_t formats_v2[] = {
     { 0, "" },
     { 1, "" },
     { 2, "" },
-    { 3, "i" },
-    { 4, "ii" },
-    { 5, "iii" },
+    { 3, "S" },
+    { 4, "SS" },
+    { 5, "SSS" },
     { 6, "fff" },
     { 7, "ff" },
-    { 8, "i" },
-    { 9, "i" },
+    { 8, "S" },
+    { 9, "S" },
     { 10, "" },
     { 12, "fff" },
     { 13, "fff" },
     { 14, "ff" },
-    { 15, "ii" },
-    { 16, "i" },
-    { 17, "ffii" },
-    { 18, "ffii" },
-    { 19, "fffi" },
+    { 15, "SS" },
+    { 16, "S" },
+    { 17, "ffSS" },
+    { 18, "ffSS" },
+    { 19, "fffS" },
     { 20, "" },
-    { 21, "i" },
+    { 21, "S" },
     { 22, "" },
     { 23, "" },
-    { 24, "i" },
-    { 25, "i" },
+    { 24, "S" },
+    { 25, "S" },
     { 26, "f" },
     { 27, "f" },
-    { 28, "i" },
-    { 29, "ffi" },
-    { 30, "i" },
-    { 31, "i" },
-    { 32, "iiffi" },
-    { 33, "iii" },
-    { 34, "iii" },
-    { 35, "iiiif" },
-    { 36, "iiff" },
-    { 37, "ii" },
+    { 28, "S" },
+    { 29, "ffS" },
+    { 30, "S" },
+    { 31, "S" },
+    { 32, "SSffS" },
+    { 33, "SSS" },
+    { 34, "SSS" },
+    { 35, "SSSSf" },
+    { 36, "SSff" },
+    { 37, "SS" },
     { 38, "ff" },
     { 42, "ff" },
     { 50, "fff" },
     { 52, "fff" },
-    { 55, "iii" },
-    { 59, "ii" },
+    { 55, "SSS" },
+    { 59, "SS" },
     { 60, "ff" },
-    { 69, "iiii" },
-    { 79, "i" },
-    { 80, "i" },
-    { 0xffff, "" }
+    { 69, "SSSS" },
+    { 79, "S" },
+    { 80, "S" },
+    { 0xffff, "" },
+    { 0, NULL }
 };
 
-static const opcode_fmt_t formats_v3[] = {
+static const id_format_pair_t formats_v3[] = {
     { 0, "" },
     { 1, "" },
     { 2, "" },
-    { 3, "i" },
-    { 4, "ii" },
-    { 5, "iii" },
+    { 3, "S" },
+    { 4, "SS" },
+    { 5, "SSS" },
     { 6, "fff" },
     { 7, "ff" },
-    { 8, "i" },
-    { 9, "iii" },
+    { 8, "S" },
+    { 9, "SSS" },
     { 10, "" },
     { 12, "fff" },
     { 13, "fff" },
     { 14, "ff" },
-    { 15, "ii" },
-    { 16, "i" },
-    { 17, "ffii" },
-    { 18, "ffii" },
+    { 15, "SS" },
+    { 16, "S" },
+    { 17, "ffSS" },
+    { 18, "ffSS" },
     { 20, "" },
-    { 21, "i" },
+    { 21, "S" },
     { 22, "" },
     { 23, "" },
-    { 24, "i" },
-    { 25, "i" },
+    { 24, "S" },
+    { 25, "S" },
     { 26, "f" },
     { 27, "f" },
-    { 28, "i" },
-    { 30, "i" },
-    { 31, "i" },
-    { 32, "iifff" },
-    { 33, "iiiii" },
-    { 34, "iii" },
-    { 35, "iiiif" },
-    { 36, "iiff" },
-    { 37, "ii" },
+    { 28, "S" },
+    { 30, "S" },
+    { 31, "S" },
+    { 32, "SSfff" },
+    { 33, "SSSSS" },
+    { 34, "SSS" },
+    { 35, "SSSSf" },
+    { 36, "SSff" },
+    { 37, "SS" },
     { 38, "ff" },
     { 40, "ff" },
     { 42, "ff" },
     { 44, "ff" },
-    { 49, "iii" },
+    { 49, "SSS" },
     { 50, "fff" },
     { 52, "fff" },
     { 54, "fff" },
-    { 55, "iii" },
+    { 55, "SSS" },
     { 56, "fff" },
-    { 59, "ii" },
+    { 59, "SS" },
     { 60, "ff" },
-    { 69, "iiii" },
-    { 79, "i" },
+    { 69, "SSSS" },
+    { 79, "S" },
     { 80, "f" },
     { 81, "f" },
-    { 82, "i" },
-    { 83, "i" },
-    { 85, "i" },
-    { 86, "iiiii" },
-    { 87, "iii" },
+    { 82, "S" },
+    { 83, "S" },
+    { 85, "S" },
+    { 86, "SSSSS" },
+    { 87, "SSS" },
     { 89, "" },
-    { 0xffff, "" }
+    { 0xffff, "" },
+    { 0, NULL }
 };
 
-static const opcode_fmt_t formats_v4p[] = {
+static const id_format_pair_t formats_v4p[] = {
     { 0, "" },
     { 1, "" },
     { 2, "" },
-    { 3, "i" },
-    { 4, "ii" },
-    { 5, "iii" },
-    { 6, "ii" },
+    { 3, "S" },
+    { 4, "SS" },
+    { 5, "SSS" },
+    { 6, "SS" },
     { 7, "ff" },
-    { 8, "ii" },
+    { 8, "SS" },
     { 9, "ff" },
     { 11, "ff" },
     { 13, "ff" },
-    { 18, "iii" },
+    { 18, "SSS" },
     { 19, "fff" },
     { 21, "fff" },
-    { 22, "iii" },
+    { 22, "SSS" },
     { 23, "fff" },
-    { 24, "iii" },
+    { 24, "SSS" },
     { 25, "fff" },
-    { 26, "iii" },
+    { 26, "SSS" },
     { 27, "fff" },
-    { 30, "iiii" },
-    { 40, "ii" },
+    { 30, "SSSS" },
+    { 40, "SS" },
     { 42, "ff" },
     { 43, "ff" },
     { 48, "fff" },
     { 49, "fff" },
     { 50, "ff" },
-    { 51, "i" },
-    { 52, "iii" },
+    { 51, "S" },
+    { 52, "SSS" },
     { 53, "fff" },
-    { 56, "iifff" },
-    { 57, "iiiii" },
-    { 58, "iii" },
-    { 59, "iifif" },
-    { 60, "iiff" },
+    { 56, "SSfff" },
+    { 57, "SSSSS" },
+    { 58, "SSS" },
+    { 59, "SSfSf" },
+    { 60, "SSff" },
     { 61, "" },
     { 63, "" },
-    { 64, "i" },
-    { 65, "i" },
-    { 66, "i" },
-    { 67, "i" },
-    { 68, "i" },
+    { 64, "S" },
+    { 65, "S" },
+    { 66, "S" },
+    { 67, "S" },
+    { 68, "S" },
     { 69, "" },
     { 70, "f" },
     { 71, "f" },
-    { 73, "i" },
-    { 74, "i" },
-    { 75, "i" },
-    { 76, "iii" },
-    { 77, "i" },
-    { 78, "iiiii" },
-    { 79, "iii" },
-    { 80, "i" },
+    { 73, "S" },
+    { 74, "S" },
+    { 75, "S" },
+    { 76, "SSS" },
+    { 77, "S" },
+    { 78, "SSSSS" },
+    { 79, "SSS" },
+    { 80, "S" },
     { 81, "" },
-    { 82, "i" },
+    { 82, "S" },
     { 83, "" },
-    { 84, "i" },
-    { 85, "i" },
-    { 86, "i" },
-    { 87, "i" },
-    { 88, "i" },
-    { 89, "i" },
-    { 90, "i" },
-    { 91, "i" },
-    { 92, "i" },
-    { 93, "iif" },
-    { 94, "iif" },
-    { 95, "i" },
-    { 96, "iff" },
-    { 100, "ifffffiffi" },
-    { 101, "i" },
-    { 102, "ii" },
+    { 84, "S" },
+    { 85, "S" },
+    { 86, "S" },
+    { 87, "S" },
+    { 88, "S" },
+    { 89, "S" },
+    { 90, "S" },
+    { 91, "S" },
+    { 92, "S" },
+    { 93, "SSf" },
+    { 94, "SSf" },
+    { 95, "S" },
+    { 96, "Sff" },
+    { 100, "SfffffSffS" },
+    { 101, "S" },
+    { 102, "SS" },
     { 103, "ff" },
-    { 104, "fi" },
-    { 105, "fi" },
-    { 106, "fi" },
-    { 107, "iiff" },
+    { 104, "fS" },
+    { 105, "fS" },
+    { 106, "fS" },
+    { 107, "SSff" },
     { 108, "ff" },
     { 110, "ff" },
-    { 111, "i" },
-    { 112, "i" },
-    { 113, "iif" },
-    { 114, "i" },
-    { 0xffff, "" }
+    { 111, "S" },
+    { 112, "S" },
+    { 113, "SSf" },
+    { 114, "S" },
+    { 0xffff, "" },
+    { 0, NULL }
 };
 
 /* The order and sizes of fields changed for TH11. */
@@ -781,7 +786,7 @@ anm_dump(FILE* stream, const anm_t* anm)
 
     for (i = 0; i < anm->entry_count; ++i) {
         unsigned int j;
-        const opcode_fmt_t* formats = NULL;
+        const id_format_pair_t* formats = NULL;
         unsigned int format_count = 0;
         entry_t* entry = &anm->entries[i];
 
@@ -845,49 +850,49 @@ anm_dump(FILE* stream, const anm_t* anm)
         fprintf(stream, "\n");
 
         for (j = 0; j < entry->script_count; ++j) {
-            unsigned int iter_instrs, iter_formats;
+            unsigned int iter_instrs;
             anm_script_t* scr = &entry->scripts[j];
 
             fprintf(stream, "Script: %d\n", scr->id);
 
-            /* TODO: Compare format length to data length. */
             for (iter_instrs = 0; iter_instrs < scr->instr_count; ++iter_instrs) {
-                int done = 0;
+                const char* format;
+                size_t i;
+                size_t length;
+                value_t* values;
                 anm_instr_t* instr = &scr->instrs[iter_instrs];
+
                 fprintf(stream, "Instruction: %hu %hu %hu",
                     instr->time, instr->param_mask, instr->type);
-                for (iter_formats = 0; iter_formats < format_count; ++iter_formats) {
-                    if (formats[iter_formats].type == instr->type) {
-                        const char* data = instr->data;
-                        const char* format = formats[iter_formats].format;
-                        while (*format) {
-                            switch (*format) {
-                            case 'i':
-                                fprintf(stream, " %i", *(int32_t*)data);
-                                data += sizeof(int32_t);
-                                break;
-                            case 'f':
-                                fprintf(stream, " %sf", util_printfloat(data));
-                                data += sizeof(float);
-                                break;
-                            default:
-                                fprintf(stderr,
-                                    "%s: invalid format descriptor `%c'\n",
-                                    argv0, *format);
-                                abort();
-                            }
-                            ++format;
-                        }
-                        fprintf(stream, "\n");
-                        done = 1;
-                        break;
-                    }
+
+                if (instr->type == 0xffff) {
+                    fprintf(stream, "\n");
+                    break;
                 }
-                if (!done) {
+
+                format = find_format(formats, instr->type);
+                if (!format) {
                     fprintf(stderr, "%s: no format descriptor found for %d\n",
                         argv0, instr->type);
                     abort();
                 }
+
+                length = instr->length - ((entry->header.version == 0) ? 0 : ANM_INSTR_SIZE);
+                values = value_list_from_data((unsigned char*)instr->data, length, format, NULL);
+                if (!values)
+                    abort();
+
+                for (i = 0; values[i].type; ++i) {
+                    char* disp;
+                    disp = value_to_text(&values[i]);
+                    fprintf(stream, " %s", disp);
+                    value_free(&values[i]);
+                    free(disp);
+                }
+
+                free(values);
+
+                fprintf(stream, "\n");
             }
         }
 

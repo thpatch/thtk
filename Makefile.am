@@ -41,6 +41,8 @@ thanm_LDADD = $(LDADD) $(libpng_LIBS)
 thanm_SOURCES = \
 	thanm.c \
 	thanm.h \
+	value.c \
+	value.h \
 	$(util_SOURCES)
 
 thdat_CFLAGS = $(OPENMP_CFLAGS)
