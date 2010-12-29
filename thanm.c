@@ -654,7 +654,7 @@ anm_read_file(const char* filename)
                     if (entry->header.version == 0) {
                         anm_instr0_t tempinstr;
 
-                        if (ftell(f) + ANM_INSTR0_SIZE > limit)
+                        if (file_tell(f) + ANM_INSTR0_SIZE > limit)
                             break;
 
                         file_read(f, &tempinstr, ANM_INSTR0_SIZE);
@@ -681,7 +681,7 @@ anm_read_file(const char* filename)
                     } else {
                         anm_instr_t tempinstr;
 
-                        if (ftell(f) + ANM_INSTR_SIZE > limit)
+                        if (file_tell(f) + ANM_INSTR_SIZE > limit)
                             break;
 
                         file_read(f, &tempinstr, ANM_INSTR_SIZE);
@@ -1266,7 +1266,7 @@ anm_write(anm_t* anm, const char* filename)
     }
 
     for (i = 0; i < anm->entry_count; ++i) {
-        unsigned int base = ftell(stream);
+        long base = file_tell(stream);
         unsigned int namepad = 0;
         entry_t* entry = &anm->entries[i];
         char* padding;
@@ -1278,35 +1278,36 @@ anm_write(anm_t* anm, const char* filename)
         /* TODO: Make sure the correct header version is written,
          *       convert when needed. */
 
-        fseek(stream, sizeof(anm_header_t), SEEK_CUR);
-        fseek(stream, entry->sprite_count * sizeof(uint32_t), SEEK_CUR);
-        fseek(stream, entry->script_count * ANM_SCRIPT_SIZE, SEEK_CUR);
+        file_seek(stream, base +
+                          sizeof(anm_header_t) +
+                          entry->sprite_count * sizeof(uint32_t) +
+                          entry->script_count * ANM_SCRIPT_SIZE);
 
-        entry->header.nameoffset = ftell(stream) - base;
-        fwrite_unlocked(entry->name, strlen(entry->name), 1, stream);
+        entry->header.nameoffset = file_tell(stream) - base;
+        file_write(stream, entry->name, strlen(entry->name));
 
         padding = calloc(1, namepad);
-        fwrite_unlocked(padding, namepad, 1, stream);
+        file_write(stream, padding, namepad);
         free(padding);
 
         if (entry->name2 && entry->header.version == 0) {
             namepad = (16 - strlen(entry->name2) % 16);
 
-            entry->header.y = ftell(stream) - base;
-            fwrite_unlocked(entry->name2, strlen(entry->name2), 1, stream);
+            entry->header.y = file_tell(stream) - base;
+            file_write(stream, entry->name2, strlen(entry->name2));
 
             padding = calloc(1, namepad);
-            fwrite_unlocked(padding, namepad, 1, stream);
+            file_write(stream, padding, namepad);
             free(padding);
         }
 
-        spriteoffset = ftell(stream) - base;
-        fwrite_unlocked(entry->sprites, sizeof(sprite_t), entry->sprite_count, stream);
+        spriteoffset = file_tell(stream) - base;
+        file_write(stream, entry->sprites, entry->sprite_count * sizeof(sprite_t));
 
         for (j = 0; j < entry->script_count; ++j) {
             unsigned int k;
 
-            entry->scripts[j].offset = ftell(stream) - base;
+            entry->scripts[j].offset = file_tell(stream) - base;
             for (k = 0; k < entry->scripts[j].instr_count; ++k) {
                 if (entry->header.version == 0) {
                     anm_instr0_t instr;
@@ -1314,58 +1315,56 @@ anm_write(anm_t* anm, const char* filename)
                     instr.type = entry->scripts[j].instrs[k].type;
                     instr.length = entry->scripts[j].instrs[k].length -
                         ANM_INSTR_SIZE;
-                    fwrite_unlocked(&instr, ANM_INSTR0_SIZE, 1, stream);
+                    file_write(stream, &instr, ANM_INSTR0_SIZE);
                     if (entry->scripts[j].instrs[k].data)
-                        fwrite_unlocked(entry->scripts[j].instrs[k].data,
-                            entry->scripts[j].instrs[k].length - ANM_INSTR_SIZE,
-                            1, stream);
+                        file_write(stream, entry->scripts[j].instrs[k].data,
+                            entry->scripts[j].instrs[k].length - ANM_INSTR_SIZE);
                 } else {
-                    fwrite_unlocked(&entry->scripts[j].instrs[k], ANM_INSTR_SIZE,
-                        1, stream);
+                    file_write(stream, &entry->scripts[j].instrs[k], ANM_INSTR_SIZE);
                     if (entry->scripts[j].instrs[k].data)
-                        fwrite_unlocked(entry->scripts[j].instrs[k].data,
-                            entry->scripts[j].instrs[k].length - ANM_INSTR_SIZE, 1, stream);
+                        file_write(stream, entry->scripts[j].instrs[k].data,
+                            entry->scripts[j].instrs[k].length - ANM_INSTR_SIZE);
                 }
             }
         }
 
         if (entry->header.hasdata) {
-            entry->header.thtxoffset = ftell(stream) - base;
+            entry->header.thtxoffset = file_tell(stream) - base;
 
             fputs("THTX", stream);
-            fwrite_unlocked(&entry->thtx, sizeof(thtx_header_t), 1, stream);
+            file_write(stream, &entry->thtx, sizeof(thtx_header_t));
 
-            fwrite_unlocked(entry->data, entry->data_size, 1, stream);
+            file_write(stream, entry->data, entry->data_size);
         }
 
         if (i == anm->entry_count - 1)
             entry->header.nextoffset = 0;
         else
-            entry->header.nextoffset = ftell(stream) - base;
+            entry->header.nextoffset = file_tell(stream) - base;
 
         entry->header.sprites = entry->sprite_count;
         entry->header.scripts = entry->script_count;
 
-        fseek(stream, base, SEEK_SET);
+        file_seek(stream, base);
 
         if (entry->header.version >= 7) {
             convert_header_to_11(&entry->header);
-            fwrite_unlocked(&entry->header, sizeof(anm_header_t), 1, stream);
+            file_write(stream, &entry->header, sizeof(anm_header_t));
             convert_header_to_old(&entry->header);
         } else {
-            fwrite_unlocked(&entry->header, sizeof(anm_header_t), 1, stream);
+            file_write(stream, &entry->header, sizeof(anm_header_t));
         }
 
         for (j = 0; j < entry->sprite_count; ++j) {
             uint32_t ofs = spriteoffset + j * sizeof(sprite_t);
-            fwrite_unlocked(&ofs, sizeof(uint32_t), 1, stream);
+            file_write(stream, &ofs, sizeof(uint32_t));
         }
 
         for (j = 0; j < entry->script_count; ++j) {
-            fwrite_unlocked(&entry->scripts[j], ANM_SCRIPT_SIZE, 1, stream);
+            file_write(stream, &entry->scripts[j], ANM_SCRIPT_SIZE);
         }
 
-        fseek(stream, base + entry->header.nextoffset, SEEK_SET);
+        file_seek(stream, base + entry->header.nextoffset);
     }
 
     fclose(stream);
@@ -1542,10 +1541,11 @@ replace_done:
         for (i = 0; i < (int)anm->entry_count; ++i) {
             unsigned int nextoffset = anm->entries[i].header.nextoffset;
             if (strcmp(argv[3], anm->entries[i].name) == 0 && anm->entries[i].header.hasdata) {
-                fseek(anmfp,
-                    offset + anm->entries[i].header.thtxoffset + 4 + sizeof(thtx_header_t),
-                    SEEK_SET);
-                fwrite_unlocked(anm->entries[i].data, anm->entries[i].thtx.size, 1, anmfp);
+                if (!file_seek(anmfp,
+                    offset + anm->entries[i].header.thtxoffset + 4 + sizeof(thtx_header_t)))
+                    exit(1);
+                if (!file_write(anmfp, anm->entries[i].data, anm->entries[i].thtx.size))
+                    exit(1);
             }
             offset += nextoffset;
         }
