@@ -11,4 +11,4 @@ Build instructions:
 	$ ./configure 
 	$ make
 
-	Three executables are generated, thanm, thdat, and thecl.
+	Four executables are generated, thanm, thdat, thecl, and thmsg.

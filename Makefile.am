@@ -1,7 +1,7 @@
 AM_YFLAGS = -d
 LDADD = @mb_LIBS@
 BUILT_SOURCES = ecsparse.h ecsparse.c ecsscan.c
-bin_PROGRAMS = thanm thdat thecl
+bin_PROGRAMS = thanm thdat thecl thmsg
 EXTRA_DIST = \
 	COPYING.autotools \
 	COPYING.bison \
@@ -15,6 +15,7 @@ if COMBINE
 am_thanm_OBJECTS = thanm.o
 am_thdat_OBJECTS = thdat.o
 am_thecl_OBJECTS = thecl.o
+am_thmsg_OBJECTS = thmsg.o
 
 thanm.o: $(thanm_SOURCES)
 	$(COMPILE) $(thanm_CFLAGS) @combine_CFLAGS@ -c -o $@ $(filter %.c,$^)
@@ -24,6 +25,9 @@ thdat.o: $(thdat_SOURCES)
 
 thecl.o: $(thecl_SOURCES)
 	$(COMPILE) $(thecl_CFLAGS) @combine_CFLAGS@ -c -o $@ $(filter %.c,$^) $(srcdir)/ecsparse.c $(srcdir)/ecsscan.c
+
+thmsg.o: $(thmsg_SOURCES)
+	$(COMPILE) $(thmsg_CFLAGS) @combine_CFLAGS@ -c -o $@ $(filter %.c,$^)
 endif
 
 util_SOURCES = \
@@ -73,4 +77,13 @@ thecl_SOURCES = \
 	ecsparse.h \
 	ecsscan.l \
 	ecsparse.y \
+	$(util_SOURCES)
+
+thmsg_SOURCES = \
+	thmsg.c \
+	thmsg.h \
+	thmsg06.c \
+	thmsg95.c \
+	value.c \
+	value.h \
 	$(util_SOURCES)

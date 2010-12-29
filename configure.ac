@@ -8,6 +8,7 @@ AC_CONFIG_HEADERS([config.h])
 AC_DEFINE([PACKAGE_THANM_VERSION], ["1"], [Define to the version of this package.])
 AC_DEFINE([PACKAGE_THDAT_VERSION], ["8"], [Define to the version of this package.])
 AC_DEFINE([PACKAGE_THECL_VERSION], ["3"], [Define to the version of this package.])
+AC_DEFINE([PACKAGE_THMSG_VERSION], ["1"], [Define to the version of this package.])
 
 AH_TEMPLATE([HAVE_LIBPNG], [Define to 1 if libpng is available.])
 AH_TEMPLATE([PACK_PRAGMA], [Define to 1 if your C compiler supports the packing pragma.])

@@ -1,5 +1,5 @@
 Touhou Tool Kit User Documentation
-  This package provides three tools for editing the content
+  This package provides four tools for editing the content
 of the games in the Touhou series of games.
 
 - Tool Descriptions
@@ -97,6 +97,17 @@ file format is the same.
   Example:
 $ thecl p input.ecl output.txt
 
+- - thmsg
+  thmsg reads and writes files containing dialogue data.
+- - - Dump
+  This command writes the instructions contained in the
+script to a human-readable file.
+$ thmsg d6 input.dat output.txt
+- - - Create
+  The counterpart to the dump command.
+  Example:
+$ thmsg c6 input.txt output.dat
+
 - Supported Games
 
   This table displays which of the main actions are
@@ -109,3 +120,5 @@ thdat x  y y y y y y y  n y y  y  y   n  y  y   n   y   y
 thdat c  y y y y y y y  n y y  y  y   n  y  y   n   y   y
 thecl d  - - - - - n n  - n n  n  y   -  y  y   -   y   y
 thecl c  - - - - - n n  - n n  n  y   -  y  y   -   y   y
+thmsg d  - - - - - y y  - y y  y  y   -  y  y   -   y   y
+thmsg c  - - - - - y y  - y y  y  y   -  y  y   -   y   y
