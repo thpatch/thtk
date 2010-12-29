@@ -30,6 +30,15 @@
 #include <errno.h>
 #include <stdio.h>
 #include <string.h>
+#ifdef HAVE_SYS_STAT_H
+#include <sys/stat.h>
+#endif
+#ifdef HAVE_SYS_TYPES_H
+#include <sys/types.h>
+#endif
+#ifdef HAVE_UNISTD_H
+#include <unistd.h>
+#endif
 #include "file.h"
 #include "program.h"
 
@@ -122,11 +131,26 @@ file_read_asciiz(
 
 /* Might be better to use stat, but it's probably less cross-platform. */
 /* This will fail for 2GB+ files, but who cares. */
-/* TODO: Implement stat() version. */
 long
 file_fsize(
     FILE* stream)
 {
+#if defined(HAVE_FILENO) && defined(HAVE_FSTAT)
+    struct stat sb;
+    int fd = fileno_unlocked(stream);
+
+    if (fd == -1) {
+        fprintf(stderr, "%s: invalid stream: %s\n", argv0, strerror(errno));
+        return -1;
+    }
+
+    if (fstat(fd, &sb) == -1) {
+        fprintf(stderr, "%s: fstat failed: %s\n", argv0, strerror(errno));
+        return -1;
+    }
+
+    return sb.st_size;
+#else
     long prev, end;
 
     if ((prev = file_tell(stream)) == -1)
@@ -145,4 +169,5 @@ file_fsize(
         return -1;
 
     return end;
+#endif
 }
