@@ -22,7 +22,7 @@ AC_DEFINE([PACK_ATTRIBUTE], [], [Define to __attribute__((packed)) if supported 
 
 dnl check for programs
 
-dnl AC_PROG_CC
+AC_PROG_CC_C99
 AC_PROG_LEX
 AM_PROG_LEX
 AC_PROG_YACC
