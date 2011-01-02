@@ -29,7 +29,11 @@
 #include <config.h>
 #include <errno.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#ifdef HAVE_SYS_MMAN_H
+#include <sys/mman.h>
+#endif
 #ifdef HAVE_SYS_STAT_H
 #include <sys/stat.h>
 #endif
@@ -169,5 +173,43 @@ file_fsize(
         return -1;
 
     return end;
+#endif
+}
+
+void*
+file_mmap(
+    FILE* stream,
+    size_t length)
+{
+#ifdef HAVE_MMAP
+    void* map = mmap(NULL, length, PROT_READ, MAP_PRIVATE, fileno_unlocked(stream), 0);
+    if (map == MAP_FAILED) {
+        fprintf(stderr, "%s: mmap failed: %s\n", argv0, strerror(errno));
+        return NULL;
+    }
+    return map;
+#else
+    void* buffer = malloc(length);
+    if (!file_read(stream, buffer, length))
+        return NULL;
+    return buffer;
+#endif
+}
+
+int
+file_munmap(
+    void* map,
+    size_t length)
+{
+#ifdef HAVE_MUNMAP
+    if (munmap(map, length) == -1) {
+        fprintf(stderr, "%s: munmap failed: %s\n", argv0, strerror(errno));
+        return 0;
+    }
+    return 1;
+#else
+    length = 0;
+    free(map);
+    return 0;
 #endif
 }

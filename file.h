@@ -67,4 +67,12 @@ ssize_t file_read_asciiz(
 long file_fsize(
     FILE* stream);
 
+void* file_mmap(
+    FILE* stream,
+    size_t length);
+
+int file_munmap(
+    void* map,
+    size_t length);
+
 #endif

@@ -33,7 +33,7 @@ PKG_CHECK_MODULES([libpng], [libpng], [AC_DEFINE([HAVE_LIBPNG], [1])])
 
 dnl check for header files
 
-AC_CHECK_HEADERS([iconv.h io.h libgen.h sys/stat.h sys/types.h unistd.h windows.h])
+AC_CHECK_HEADERS([iconv.h io.h libgen.h sys/mman.h sys/stat.h sys/types.h unistd.h windows.h])
 
 dnl check for types
 
@@ -93,7 +93,7 @@ AC_MSG_RESULT([$structpacking])
 
 dnl check for library functions
 
-AC_CHECK_FUNCS([basename fileno fstat iconv_open mempcpy mkdir snprintf _snprintf _splitpath strdup strtof])
+AC_CHECK_FUNCS([basename fileno fstat iconv_open mempcpy mkdir mmap munmap snprintf _snprintf _splitpath strdup strtof])
 
 AC_CHECK_FUNC([getc_unlocked], [], [AC_DEFINE([getc_unlocked], [getc])])
 AC_CHECK_FUNC([putc_unlocked], [], [AC_DEFINE([putc_unlocked], [putc])])

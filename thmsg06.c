@@ -27,6 +27,7 @@
  * DAMAGE.
  */
 #include <config.h>
+#include <errno.h>
 #include <stdlib.h>
 #include <string.h>
 #include "file.h"
@@ -45,6 +46,7 @@ typedef struct {
 #ifdef PACK_PRAGMA
 #pragma pack(pop)
 #endif
+    unsigned char data[];
 } PACK_ATTRIBUTE th06_msg_t;
 
 static const id_format_pair_t th06_msg_fmts[] = {
@@ -342,31 +344,34 @@ static int
 th06_read(FILE* in, FILE* out, unsigned int version)
 {
     const size_t entry_offset_mul = version >= 9 ? 2 : 1;
-    const long file_size = file_fsize(in);
-    uint32_t entry_count = 0;
-    uint32_t* entry_offsets;
+    long file_size;
     uint16_t time = -1;
     int entry_new = 1;
+    unsigned char* map;
+    size_t entry_count;
+    const int32_t* entry_offsets;
+    const th06_msg_t* msg;
 
     if (version != 6 && version != 7 && version != 8 && version != 9 && version != 10 && version != 11 && version != 12 && version != 125 && version != 128)
         return 0;
 
-    if (!file_read(in, &entry_count, sizeof(uint32_t)))
+    file_size = file_fsize(in);
+    if (file_size == -1)
         return 0;
 
-    entry_offsets = util_malloc(entry_count * sizeof(uint32_t) * entry_offset_mul);
-    if (!file_read(in, entry_offsets, entry_count * sizeof(uint32_t) * entry_offset_mul))
+    map = file_mmap(in, file_size);
+    if (!map)
         return 0;
+
+    entry_count = *((uint32_t*)map);
+    entry_offsets = (int32_t*)(map + sizeof(uint32_t));
+    msg = (th06_msg_t*)(map +
+                        sizeof(uint32_t) +
+                        entry_count * entry_offset_mul * sizeof(int32_t));
 
     for (;;) {
-        th06_msg_t msg;
-        unsigned char data[256];
-        long offset;
-        int i;
-        const char* format;
-        value_t* values;
+        const ptrdiff_t offset = (unsigned char*)msg - (unsigned char*)map;
 
-        offset = file_tell(in);
         if (offset >= file_size)
             break;
 
@@ -374,14 +379,11 @@ th06_read(FILE* in, FILE* out, unsigned int version)
         fprintf(out, "// %x\n", offset);
 #endif
 
-        if (!file_read(in, &msg, sizeof(th06_msg_t)))
-            return 0;
-
-        if (msg.time == 0 && msg.type == 0)
+        if (msg->time == 0 && msg->type == 0)
             entry_new = 1;
 
-        if (entry_new && msg.type != 0) {
-            unsigned int i;
+        if (entry_new && msg->type != 0) {
+            size_t i;
             unsigned int entry_id = -1;
             entry_new = 0;
             time = -1;
@@ -397,40 +399,48 @@ th06_read(FILE* in, FILE* out, unsigned int version)
             }
         }
 
-        if (msg.time != time) {
-            time = msg.time;
+        if (msg->time != time) {
+            time = msg->time;
             fprintf(out, "@%u\n", time);
         }
 
-        fprintf(out, "\t%d", msg.type);
+        fprintf(out, "\t%d", msg->type);
 
-        if (!file_read(in, data, msg.length))
-            return 0;
+        if (msg->length) {
+            const char* format;
+            value_t* values;
+            int i;
 
-        format = th06_find_format(version, (int)msg.type);
-        if (!format)
-            return 0;
+            format = th06_find_format(version, (int)msg->type);
+            if (!format) {
+                file_munmap(map, file_size);
+                return 0;
+            }
 
-        if (version >= 9)
-            values = value_list_from_data(data, msg.length, format, filter_sillyxor);
-        else if (version == 8)
-            values = value_list_from_data(data, msg.length, format, filter_xor);
-        else
-            values = value_list_from_data(data, msg.length, format, NULL);
+            if (version >= 9)
+                values = value_list_from_data(msg->data, msg->length, format, filter_sillyxor);
+            else if (version == 8)
+                values = value_list_from_data(msg->data, msg->length, format, filter_xor);
+            else
+                values = value_list_from_data(msg->data, msg->length, format, NULL);
 
-        for (i = 0; values && values[i].type; ++i) {
-            char* disp;
-            disp = value_to_text(&values[i]);
-            fprintf(out, ",%s", disp);
-            value_free(&values[i]);
-            free(disp);
+            for (i = 0; values && values[i].type; ++i) {
+                char* disp;
+                disp = value_to_text(&values[i]);
+                fprintf(out, ",%s", disp);
+                value_free(&values[i]);
+                free(disp);
+            }
+
+            free(values);
         }
-        free(values);
 
         fprintf(out, "\n");
+
+        msg = (th06_msg_t*)((unsigned char*)msg + sizeof(th06_msg_t) + msg->length);
     }
 
-    free(entry_offsets);
+    file_munmap(map, file_size);
 
     return 1;
 }
