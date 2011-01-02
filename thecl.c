@@ -407,7 +407,7 @@ ecldump_render_instr(
 {
     int i;
     const op_pair_t* op;
-    
+
     op = op_find_instr(version, instr->id);
     if (!op)
         return;

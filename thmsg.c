@@ -66,7 +66,7 @@ main(int argc, char* argv[])
 
     current_input = "(stdin)";
     current_output = "(stdout)";
-    
+
     mode = parse_args(argc, argv, print_usage, "cdhV", options, &version);
 
     if (!strchr(options, 'e'))

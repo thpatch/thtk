@@ -115,7 +115,7 @@ th95_open(FILE* stream, unsigned int version)
     }
 
     th_decrypt(zdata, zsize, 0x3e, 0x9b, 0x80, zsize);
- 
+
     data = malloc(size);
     th_unlz_mem(zdata, zsize, data, size);
     free(zdata);

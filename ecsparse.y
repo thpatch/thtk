@@ -411,7 +411,7 @@ Instruction_Parameter:
         list_t* list;
 
         $3->type = $1;
-        
+
         list = make_list($3);
         list->next = expressions;
         expressions = list;
@@ -657,7 +657,7 @@ make_unary_expression(
     expression_t* ret = malloc(sizeof(expression_t));
     int stacktypes[1];
     const op_t* op;
-    
+
     stacktypes[0] = expr->type;
     op = op_find_stack(version, token, 1, stacktypes);
     if (!op) abort();
@@ -681,7 +681,7 @@ make_binary_expression(
     expression_t* ret = malloc(sizeof(expression_t));
     int stacktypes[2];
     const op_t* op;
-    
+
     stacktypes[0] = expr1->type;
     stacktypes[1] = expr2->type;
     op = op_find_stack(version, token, 2, stacktypes);

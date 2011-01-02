@@ -22,7 +22,7 @@ animation archives.
   Extraction can be limited to only certain files by listing
 their paths after the archive.
   Examples:
-$ thanm x input.anm 
+$ thanm x input.anm
 $ thanm x input.anm input/file3.png
 - - - Create
   The creation command constructs a new animation archive

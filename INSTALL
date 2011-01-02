@@ -8,7 +8,7 @@ Build requirements:
 
 Build instructions:
 	[if building from repository] $ autoreconf -fi
-	$ ./configure 
+	$ ./configure
 	$ make
 
 	Four executables are generated, thanm, thdat, thecl, and thmsg.
