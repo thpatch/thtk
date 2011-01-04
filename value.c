@@ -57,7 +57,7 @@ value_from_data(
 {
 #define READ(x, n) \
     if (data_length < n) { \
-        fprintf(stderr, "%s: unexpected end of data, wanted to read %lu bytes for format " #x "\n", argv0, n); \
+        fprintf(stderr, "%s: unexpected end of data, wanted to read %zu bytes for format " #x "\n", argv0, n); \
         return -1; \
     } \
     memcpy(&value->val.x, data, n); \
@@ -127,7 +127,7 @@ value_list_from_data(
     }
 
     if (data_length)
-        fprintf(stderr, "%s: %lu bytes left over when parsing format \"%s\"\n", argv0, data_length, format);
+        fprintf(stderr, "%s: %zu bytes left over when parsing format \"%s\"\n", argv0, data_length, format);
 
     return values;
 }
@@ -262,7 +262,7 @@ value_to_data(
 {
 #define WRITE(x, n) \
     if (data_size < n) { \
-        fprintf(stderr, "%s: unexpected end of data, wanted to write %lu bytes for format " #x "\n", argv0, n); \
+        fprintf(stderr, "%s: unexpected end of data, wanted to write %zu bytes for format " #x "\n", argv0, n); \
         return -1; \
     } \
     memcpy(data, &value->val.x, n); \
@@ -288,7 +288,7 @@ value_to_data(
     case 'z': {
         size_t zlen = strlen(value->val.z) + 1;
         if (data_size < zlen) {
-            fprintf(stderr, "%s: unexpected end of data, wanted to write %lu bytes for format z\n", argv0, zlen);
+            fprintf(stderr, "%s: unexpected end of data, wanted to write %zu bytes for format z\n", argv0, zlen);
             return -1;
         }
         memcpy(data, value->val.z, zlen);
@@ -297,7 +297,7 @@ value_to_data(
     case 'm':
     case 'x':
         if (data_size < value->val.m.length) {
-            fprintf(stderr, "%s: unexpected end of data, wanted to write %lu bytes for format m\n", argv0, value->val.m.length);
+            fprintf(stderr, "%s: unexpected end of data, wanted to write %zu bytes for format m\n", argv0, value->val.m.length);
             return -1;
         }
         memcpy(data, value->val.m.data, value->val.m.length);

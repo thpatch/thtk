@@ -56,7 +56,7 @@ util_malloc(
 {
     void* ret = malloc(size);
     if (!ret) {
-        fprintf(stderr, "%s: allocation of %lu bytes failed: %s\n",
+        fprintf(stderr, "%s: allocation of %zu bytes failed: %s\n",
             argv0, size, strerror(errno));
         abort();
     }

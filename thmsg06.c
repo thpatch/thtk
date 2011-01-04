@@ -376,7 +376,7 @@ th06_read(FILE* in, FILE* out, unsigned int version)
             break;
 
 #if 0
-        fprintf(out, "// %x\n", offset);
+        fprintf(out, "// %zu\n", offset);
 #endif
 
         if (msg->time == 0 && msg->type == 0)
