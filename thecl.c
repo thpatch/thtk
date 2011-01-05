@@ -795,7 +795,7 @@ main(int argc, char* argv[])
         print_usage();
         exit(0);
     case 'V':
-        util_print_version("thecl", PACKAGE_THECL_VERSION);
+        util_print_version();
         exit(0);
     case 'c':
         if (!version) {

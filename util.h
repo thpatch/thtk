@@ -46,8 +46,7 @@ void* util_malloc(
     size_t size);
 
 void util_print_version(
-    const char* name,
-    const char* version);
+    void);
 
 /* Returns an unique string representation of a float.  Returns a pointer to a
  * static buffer, not thread-safe. */

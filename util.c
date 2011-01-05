@@ -65,14 +65,9 @@ util_malloc(
 
 void
 util_print_version(
-    const char* name,
-    const char* version)
+    void)
 {
-    printf("%s %s (part of " PACKAGE_NAME " release " PACKAGE_VERSION ")\n"
-#ifdef PACKAGE_URL
-           "The latest version is available at <" PACKAGE_URL ">\n",
-#endif
-           name, version);
+    printf(PACKAGE_NAME " release " PACKAGE_VERSION "\n");
 }
 
 void

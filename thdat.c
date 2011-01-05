@@ -331,7 +331,7 @@ main(
         print_usage();
         return 0;
     case 'V':
-        util_print_version("thdat", PACKAGE_THDAT_VERSION);
+        util_print_version();
         return 0;
     case 'c':
         if (argc < 4) {

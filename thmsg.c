@@ -140,7 +140,7 @@ main(int argc, char* argv[])
         return 0;
     }
     case 'V':
-        util_print_version("thmsg", PACKAGE_THMSG_VERSION);
+        util_print_version();
         fclose(in);
         fclose(out);
         return 0;

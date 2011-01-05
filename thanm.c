@@ -1461,7 +1461,7 @@ main(int argc, char* argv[])
         print_usage();
         exit(0);
     case 'V':
-        util_print_version("thanm", PACKAGE_THANM_VERSION);
+        util_print_version();
         exit(0);
     case 'l':
         if (argc != 3) {
