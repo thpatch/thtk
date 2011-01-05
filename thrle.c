@@ -27,6 +27,7 @@
  * DAMAGE.
  */
 #include <config.h>
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -61,7 +62,7 @@ th_rle(
 
     buffer = malloc(buffer_size);
 
-    while ((in - orig_in) < insize) {
+    while (in - orig_in < (ptrdiff_t)insize) {
         c = *in++;
         if (rl) {
             if (c != prevc || rl == 0x100) {

@@ -197,7 +197,7 @@ open_ecl(
             if (fread_unlocked(&rins, 16, 1, f) != 1)
                 break;
 
-            if (i + 1 != ecl->sub_cnt && file_tell(f) > ecl->subs[i + 1].offset)
+            if (i + 1 != ecl->sub_cnt && (unsigned long)file_tell(f) > ecl->subs[i + 1].offset)
                 break;
 
             assert(rins.zero == 0);

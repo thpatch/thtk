@@ -28,6 +28,7 @@
  */
 #include <config.h>
 #include <string.h>
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include "thcrypt.h"
@@ -58,7 +59,7 @@ th_encrypt(
     while (data < end) {
         unsigned char* in;
         unsigned char* out = temp;
-        if (end - data < block) {
+        if (end - data < (ptrdiff_t)block) {
             block = end - data;
             increment = (block >> 1) + (block & 1);
         }
@@ -109,7 +110,7 @@ th_decrypt(
     while (data < end) {
         unsigned char* in = data;
         unsigned char* out;
-        if (end - data < block) {
+        if (end - data < (ptrdiff_t)block) {
             block = end - data;
             increment = (block >> 1) + (block & 1);
         }
