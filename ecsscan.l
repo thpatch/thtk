@@ -1,3 +1,5 @@
+%option noinput nounput noyywrap
+%top {
 /*
  * Redistribution and use in source and binary forms, with
  * or without modification, are permitted provided that the
@@ -26,8 +28,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
  * DAMAGE.
  */
-%option noinput nounput noyywrap
-    #include <config.h>
+#include <config.h>
+}
     #include <string.h>
     #include <stdio.h>
     #include <stdlib.h>

@@ -1,3 +1,4 @@
+ACLOCAL_AMFLAGS = -I m4
 AM_YFLAGS = -d
 LDADD = @mb_LIBS@
 BUILT_SOURCES = ecsparse.h ecsparse.c ecsscan.c

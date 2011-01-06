@@ -80,7 +80,7 @@ util_basename(
     char filename[_MAX_FNAME];
     char ext[_MAX_EXT];
     _splitpath(src, NULL, NULL, filename, ext);
-    _snprintf(dst, dstlen, "%s%s", filename, ext);
+    snprintf(dst, dstlen, "%s%s", filename, ext);
 #else
     char* tmp = strdup(src);
     strncpy(dst, basename(tmp), dstlen);
