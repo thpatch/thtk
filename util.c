@@ -151,21 +151,18 @@ mempcpy(
 #endif
 
 void
-util_sillyxor(
-    const unsigned char* in,
-    unsigned char* out,
-    int size,
+util_xor(
+    unsigned char* data,
+    size_t data_length,
     unsigned char key,
     unsigned char step,
-    const unsigned char step2)
+    unsigned char step2)
 {
-    const unsigned char* iend = in + size;
-    while (in < iend) {
-        *out = *in ^ key;
-        key += step;
-        step += step2;
-        in++;
-        out++;
+    size_t i;
+
+    for (i = 0; i < data_length; ++i) {
+        const int ip = i - 1;
+        data[i] ^= key + i * step + (ip * ip + ip) / 2 * step2;
     }
 }
 

@@ -269,9 +269,9 @@ filter_xor(unsigned char* data, size_t length)
 }
 
 static void
-filter_sillyxor(unsigned char* data, size_t length)
+filter_xor2(unsigned char* data, size_t length)
 {
-    util_sillyxor(data, data, length, 0x77, 7, 16);
+    util_xor(data, length, 0x77, 7, 16);
 }
 
 /* Pads the variable-length values to a multiple of four.  Padding is applied
@@ -418,7 +418,7 @@ th06_read(FILE* in, FILE* out, unsigned int version)
             }
 
             if (version >= 9)
-                values = value_list_from_data(msg->data, msg->length, format, filter_sillyxor);
+                values = value_list_from_data(msg->data, msg->length, format, filter_xor2);
             else if (version == 8)
                 values = value_list_from_data(msg->data, msg->length, format, filter_xor);
             else
@@ -555,7 +555,7 @@ th06_write(FILE* in, FILE* out, unsigned int version)
 
                 value_pad(&val);
                 if (version >= 9) {
-                    templength = value_to_data(&val, temp, 1024, filter_sillyxor);
+                    templength = value_to_data(&val, temp, 1024, filter_xor2);
                     if (val.type == 'x') {
                         if (val.val.m.data[0] == '|') {
                             padding_value.type = 'm';

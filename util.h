@@ -76,14 +76,14 @@ void* mempcpy(
     const void* src,
     size_t n);
 
-/* Performs simple encryption. */
-void util_sillyxor(
-    const unsigned char* in,
-    unsigned char* out,
-    int size,
+/* XOR each byte by key.  Key is incremented by step, which is in turn
+ * incremented by step2. */
+void util_xor(
+    unsigned char* data,
+    size_t data_length,
     unsigned char key,
     unsigned char step,
-    const unsigned char step2);
+    unsigned char step2);
 
 /* Converts a string from one character set to another. */
 unsigned char* util_iconv(

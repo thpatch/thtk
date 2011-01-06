@@ -661,9 +661,8 @@ instr_parse(
 
                 if (format[i] == 'c') {
                     size_t outsize;
-                    util_sillyxor((unsigned char*)param->value.s.data,
-                        (unsigned char*)param->value.s.data,
-                        param->value.s.length, 119, 7, 16);
+                    util_xor((unsigned char*)param->value.s.data,
+                        param->value.s.length, 0x77, 7, 16);
                     param->value.s.data = (char*)util_iconv(
                         "UTF-8", "CP932",
                         (unsigned char*)param->value.s.data,

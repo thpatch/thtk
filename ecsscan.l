@@ -179,8 +179,7 @@ C\" {
     yylval.bytes.length = length;
     yylval.bytes.data = realloc(yylval.bytes.data, yylval.bytes.length + 4);
     memset(yylval.bytes.data + yylval.bytes.length, 0, 4);
-    util_sillyxor(yylval.bytes.data, yylval.bytes.data, yylval.bytes.length + 4,
-        119, 7, 16);
+    util_xor(yylval.bytes.data, yylval.bytes.length + 4, 0x77, 7, 16);
     BEGIN(INITIAL);
     return CTEXT;
 }
