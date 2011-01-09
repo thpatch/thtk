@@ -141,17 +141,11 @@ main(int argc, char* argv[])
     }
     case 'V':
         util_print_version();
-        fclose(in);
-        fclose(out);
         return 0;
     case 'h':
         print_usage();
-        fclose(in);
-        fclose(out);
         return 0;
     default:
-        fclose(in);
-        fclose(out);
         return 1;
     }
 }
