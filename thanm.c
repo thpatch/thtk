@@ -34,6 +34,7 @@
 #ifdef HAVE_LIBPNG
 #include <png.h>
 #endif
+#include <zlib.h>
 #include "args.h"
 #include "file.h"
 #include "thanm.h"

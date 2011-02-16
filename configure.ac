@@ -38,7 +38,7 @@ AC_ARG_WITH([libpng],
             [AS_HELP_STRING([--without-libpng],
                             [compile the package without image support])])
 AS_IF([test "x$with_libpng" != xno],
-      [PKG_CHECK_MODULES([libpng], [libpng], [AC_DEFINE([HAVE_LIBPNG], [1])])])
+      [PKG_CHECK_MODULES([libpng], [libpng zlib], [AC_DEFINE([HAVE_LIBPNG], [1])])])
 
 dnl check for header files
 
