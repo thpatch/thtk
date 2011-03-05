@@ -30,6 +30,7 @@
 #define FILE_H_
 
 #include <stdio.h>
+#include <sys/types.h>
 
 /* A wrapper for fseek with SEEK_SET which prints an error message upon error.*/
 int file_seek(
