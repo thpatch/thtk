@@ -873,8 +873,7 @@ anm_dump(FILE* stream, const anm_t* anm)
 
                 format = find_format(formats, instr->type);
                 if (!format) {
-                    fprintf(stderr, "%s: no format descriptor found for %d\n",
-                        argv0, instr->type);
+                    fprintf(stderr, "%s: id %d was not found in the format table\n", argv0, instr->type);
                     abort();
                 }
 
