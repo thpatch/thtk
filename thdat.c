@@ -168,7 +168,9 @@ thdat_write_entry(
 }
 
 static int
-entry_compar(const void* a, const void* b)
+entry_compar(
+    const void* a,
+    const void* b)
 {
     entry_t* ea = (entry_t*)a;
     entry_t* eb = (entry_t*)b;
@@ -264,7 +266,8 @@ archive_free(
 }
 
 static void
-print_usage(void)
+print_usage(
+    void)
 {
     printf("Usage: %s COMMAND[OPTION...] [ARCHIVE [FILE...]]\n"
            "COMMAND can be:\n"

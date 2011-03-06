@@ -37,14 +37,17 @@
 #include "util.h"
 
 static uint32_t
-th06_read_uint32(struct bitstream* b)
+th06_read_uint32(
+    struct bitstream* b)
 {
     uint32_t size = bitstream_read(b, 2);
     return bitstream_read(b, (size + 1) * 8);
 }
 
 static void
-th06_write_uint32(struct bitstream* b, uint32_t value)
+th06_write_uint32(
+    struct bitstream* b,
+    uint32_t value)
 {
     unsigned int size = 1;
     if (value & 0xffffff00) {
@@ -61,7 +64,10 @@ th06_write_uint32(struct bitstream* b, uint32_t value)
 }
 
 static void
-th06_read_string(struct bitstream* b, unsigned int length, char* data)
+th06_read_string(
+    struct bitstream* b,
+    unsigned int length,
+    char* data)
 {
     while (length) {
         *data = bitstream_read(b, 8);
@@ -73,7 +79,10 @@ th06_read_string(struct bitstream* b, unsigned int length, char* data)
 }
 
 static void
-th06_write_string(struct bitstream* b, unsigned int length, char* data)
+th06_write_string(
+    struct bitstream* b,
+    unsigned int length,
+    char* data)
 {
     unsigned int i;
     for (i = 0; i < length; ++i)
@@ -93,7 +102,9 @@ typedef struct {
 } PACK_ATTRIBUTE th07_header_t;
 
 static archive_t*
-th06_open(FILE* stream, unsigned int version)
+th06_open(
+    FILE* stream,
+    unsigned int version)
 {
     archive_t* archive;
     char magic[4];
@@ -169,7 +180,10 @@ th06_open(FILE* stream, unsigned int version)
 }
 
 static int
-th06_extract(archive_t* archive, entry_t* entry, FILE* stream)
+th06_extract(
+    archive_t* archive,
+    entry_t* entry,
+    FILE* stream)
 {
     int ret = 0;
     unsigned char* data = malloc(entry->size);
@@ -193,7 +207,10 @@ th06_extract(archive_t* archive, entry_t* entry, FILE* stream)
 }
 
 static archive_t*
-th06_create(FILE* stream, unsigned int version, unsigned int count)
+th06_create(
+    FILE* stream,
+    unsigned int version,
+    unsigned int count)
 {
     /* 13 is the largest size the header can have, so some bytes might be
      * wasted. */
@@ -201,7 +218,10 @@ th06_create(FILE* stream, unsigned int version, unsigned int count)
 }
 
 static int
-th06_write(archive_t* archive, entry_t* entry, FILE* stream)
+th06_write(
+    archive_t* archive,
+    entry_t* entry,
+    FILE* stream)
 {
     unsigned char* data;
 
@@ -219,7 +239,8 @@ th06_write(archive_t* archive, entry_t* entry, FILE* stream)
 }
 
 static int
-th06_close(archive_t* archive)
+th06_close(
+    archive_t* archive)
 {
     const char* magic = archive->version == 6 ? "PBG3" : "PBG4";
     unsigned int i;

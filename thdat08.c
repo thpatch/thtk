@@ -80,7 +80,8 @@ th09_crypt_params[] = {
 };
 
 static void
-tolowerstr(char* str)
+tolowerstr(
+    char* str)
 {
     while (*str) {
         *str = tolower(*str);
@@ -89,7 +90,9 @@ tolowerstr(char* str)
 }
 
 static archive_t*
-th08_open(FILE* stream, unsigned int version)
+th08_open(
+    FILE* stream,
+    unsigned int version)
 {
     archive_t* archive;
     char magic[4];
@@ -160,7 +163,10 @@ th08_open(FILE* stream, unsigned int version)
 }
 
 static int
-th08_extract(archive_t* archive, entry_t* entry, FILE* stream)
+th08_extract(
+    archive_t* archive,
+    entry_t* entry,
+    FILE* stream)
 {
     const crypt_params* current_crypt_params = archive->version == 8 ?
         th08_crypt_params : th09_crypt_params;
@@ -220,13 +226,18 @@ th08_extract(archive_t* archive, entry_t* entry, FILE* stream)
 }
 
 static archive_t*
-th08_create(FILE* stream, unsigned int version, unsigned int count)
+th08_create(
+    FILE* stream,
+    unsigned int version,
+    unsigned int count)
 {
     return archive_create(stream, version, 16, count);
 }
 
 static unsigned char*
-th08_read_file(entry_t* entry, FILE* stream)
+th08_read_file(
+    entry_t* entry,
+    FILE* stream)
 {
     unsigned char* data = malloc(entry->size + 4);
 
@@ -239,7 +250,10 @@ th08_read_file(entry_t* entry, FILE* stream)
 }
 
 static void
-th08_encrypt(archive_t* archive, entry_t* entry, unsigned char* data)
+th08_encrypt(
+    archive_t* archive,
+    entry_t* entry,
+    unsigned char* data)
 {
     const crypt_params* current_crypt_params = archive->version == 8 ?
         th08_crypt_params : th09_crypt_params;
@@ -283,7 +297,9 @@ th08_encrypt(archive_t* archive, entry_t* entry, unsigned char* data)
 }
 
 static unsigned char*
-th08_lzss(entry_t* entry, unsigned char* data)
+th08_lzss(
+    entry_t* entry,
+    unsigned char* data)
 {
     unsigned char* zdata;
     zdata = th_lz_mem(data, entry->size + 4, &entry->zsize);
@@ -292,7 +308,10 @@ th08_lzss(entry_t* entry, unsigned char* data)
 }
 
 static int
-th08_write(archive_t* archive, entry_t* entry, FILE* stream)
+th08_write(
+    archive_t* archive,
+    entry_t* entry,
+    FILE* stream)
 {
     unsigned char* data;
 
@@ -310,7 +329,8 @@ th08_write(archive_t* archive, entry_t* entry, FILE* stream)
 }
 
 static int
-th08_close(archive_t* archive)
+th08_close(
+    archive_t* archive)
 {
     unsigned char* buffer;
     unsigned char* buffer_ptr;

@@ -39,7 +39,8 @@
 #include "util.h"
 
 static unsigned int
-th95_get_crypt_param_index(const char *name)
+th95_get_crypt_param_index(
+    const char *name)
 {
     char index = 0;
     while (*name) index += *name++;
@@ -78,7 +79,9 @@ static const crypt_params_t th12_crypt_params[] = {
 };
 
 static archive_t*
-th95_open(FILE* stream, unsigned int version)
+th95_open(
+    FILE* stream,
+    unsigned int version)
 {
     archive_t* archive;
     uint32_t header[4];
@@ -149,7 +152,10 @@ th95_open(FILE* stream, unsigned int version)
 }
 
 static void
-th95_decrypt_data(archive_t* archive, entry_t* entry, unsigned char* data)
+th95_decrypt_data(
+    archive_t* archive,
+    entry_t* entry,
+    unsigned char* data)
 {
     const unsigned int i = th95_get_crypt_param_index(entry->name);
     const crypt_params_t* crypt_params;
@@ -165,7 +171,10 @@ th95_decrypt_data(archive_t* archive, entry_t* entry, unsigned char* data)
 }
 
 static int
-th95_extract(archive_t* archive, entry_t* entry, FILE* stream)
+th95_extract(
+    archive_t* archive,
+    entry_t* entry,
+    FILE* stream)
 {
     unsigned char* data;
     unsigned char* zdata = malloc(entry->zsize);
@@ -202,13 +211,19 @@ th95_extract(archive_t* archive, entry_t* entry, FILE* stream)
 }
 
 static archive_t*
-th95_create(FILE* stream, unsigned int version, unsigned int count)
+th95_create(
+    FILE* stream,
+    unsigned int version,
+    unsigned int count)
 {
     return archive_create(stream, version, 16, count);
 }
 
 static void
-th95_encrypt_data(archive_t* archive, entry_t* entry, unsigned char* data)
+th95_encrypt_data(
+    archive_t* archive,
+    entry_t* entry,
+    unsigned char* data)
 {
     const unsigned int i = th95_get_crypt_param_index(entry->name);
     const crypt_params_t* crypt_params;
@@ -224,7 +239,10 @@ th95_encrypt_data(archive_t* archive, entry_t* entry, unsigned char* data)
 }
 
 static int
-th95_write(archive_t* archive, entry_t* entry, FILE* stream)
+th95_write(
+    archive_t* archive,
+    entry_t* entry,
+    FILE* stream)
 {
     unsigned char* data;
 
@@ -249,7 +267,8 @@ th95_write(archive_t* archive, entry_t* entry, FILE* stream)
 }
 
 static int
-th95_close(archive_t* archive)
+th95_close(
+    archive_t* archive)
 {
     unsigned char* buffer;
     unsigned char* buffer_ptr;

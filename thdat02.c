@@ -54,7 +54,9 @@ typedef struct {
 } PACK_ATTRIBUTE th02_entry_header_t;
 
 static archive_t*
-th02_open(FILE* stream, unsigned int version)
+th02_open(
+    FILE* stream,
+    unsigned int version)
 {
     archive_t* archive = thdat_open(stream, version);
 
@@ -87,7 +89,10 @@ th02_open(FILE* stream, unsigned int version)
 }
 
 static int
-th02_extract(archive_t* archive, entry_t* entry, FILE* stream)
+th02_extract(
+    archive_t* archive,
+    entry_t* entry,
+    FILE* stream)
 {
     uint32_t i;
     unsigned char* zbuf = util_malloc(entry->zsize);
@@ -119,7 +124,10 @@ th02_extract(archive_t* archive, entry_t* entry, FILE* stream)
 }
 
 static archive_t*
-th02_create(FILE* stream, unsigned int version, unsigned int count)
+th02_create(
+    FILE* stream,
+    unsigned int version,
+    unsigned int count)
 {
     return archive_create(stream, version,
         (count + 1) * sizeof(th02_entry_header_t), count);
@@ -127,7 +135,10 @@ th02_create(FILE* stream, unsigned int version, unsigned int count)
 
 /* TODO: Find out if lowercase filenames are supported. */
 static int
-th02_write(archive_t* archive, entry_t* entry, FILE* stream)
+th02_write(
+    archive_t* archive,
+    entry_t* entry,
+    FILE* stream)
 {
     unsigned int i;
     unsigned char* data;
@@ -149,7 +160,8 @@ th02_write(archive_t* archive, entry_t* entry, FILE* stream)
 }
 
 static int
-th02_close(archive_t* archive)
+th02_close(
+    archive_t* archive)
 {
     unsigned char* buffer;
     unsigned char* buffer_ptr;

@@ -76,7 +76,9 @@ const uint16_t magic1 = 0xf388;
 const uint16_t magic2 = 0x9595;
 
 static archive_t*
-th03_open(FILE* stream, unsigned int version)
+th03_open(
+    FILE* stream,
+    unsigned int version)
 {
     archive_t* archive;
     th03_archive_header_t fh;
@@ -117,7 +119,10 @@ th03_open(FILE* stream, unsigned int version)
 }
 
 static int
-th03_extract(archive_t* archive, entry_t* entry, FILE* stream)
+th03_extract(
+    archive_t* archive,
+    entry_t* entry,
+    FILE* stream)
 {
     unsigned int i;
     unsigned char* zbuf = malloc(entry->zsize);
@@ -149,7 +154,10 @@ th03_extract(archive_t* archive, entry_t* entry, FILE* stream)
 }
 
 static archive_t*
-th03_create(FILE* stream, unsigned int version, unsigned int count)
+th03_create(
+    FILE* stream,
+    unsigned int version,
+    unsigned int count)
 {
     return archive_create(stream, version,
         sizeof(th03_archive_header_t) + (count + 1) * sizeof(th03_entry_header_t), count);
@@ -157,7 +165,10 @@ th03_create(FILE* stream, unsigned int version, unsigned int count)
 
 /* TODO: Find out if lowercase filenames are supported. */
 static int
-th03_write(archive_t* archive, entry_t* entry, FILE* stream)
+th03_write(
+    archive_t* archive,
+    entry_t* entry,
+    FILE* stream)
 {
     unsigned int i;
     unsigned char* data;
@@ -175,7 +186,8 @@ th03_write(archive_t* archive, entry_t* entry, FILE* stream)
 }
 
 static int
-th03_close(archive_t* archive)
+th03_close(
+    archive_t* archive)
 {
     unsigned char* buffer;
     unsigned char* buffer_ptr;
