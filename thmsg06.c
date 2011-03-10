@@ -364,10 +364,6 @@ th06_read(FILE* in, FILE* out, unsigned int version)
         if (offset >= file_size)
             break;
 
-#if 0
-        fprintf(out, "// %zu\n", offset);
-#endif
-
         if (msg->time == 0 && msg->type == 0)
             entry_new = 1;
 
@@ -557,7 +553,7 @@ th06_write(FILE* in, FILE* out, unsigned int version)
                         }
                     }
                 }
-                
+
                 msg.length += templength;
 
                 if (!file_write(out, temp, templength))

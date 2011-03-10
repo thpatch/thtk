@@ -32,7 +32,6 @@
 #include <config.h>
 #include <stdio.h>
 
-/* Used by TH10 for ending scripts. */
 extern int thmsg_opt_end;
 
 typedef struct {
