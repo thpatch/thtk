@@ -43,7 +43,6 @@ AS_IF([test "x$with_libpng" != xno],
 dnl check for header files
 
 AC_CHECK_HEADERS([dnl
-    iconv.h dnl
     io.h dnl mkdir
     libgen.h dnl basename
     sys/mman.h dnl
@@ -76,14 +75,12 @@ AC_MSG_RESULT([$enable_combine])
 THTK_CHECK_PACKING
 
 AC_CHECK_DECL([WIN32],
-              [AC_SUBST([mb_LIBS], [-lkernel32])
-               AC_DEFINE([__USE_MINGW_ANSI_STDIO], [1])])
+              [AC_DEFINE([__USE_MINGW_ANSI_STDIO], [1])])
 
 dnl check for library functions
 
 AC_CHECK_FUNCS([dnl
     _splitpath dnl
-    iconv_open dnl
     mempcpy dnl
     mmap dnl
     munmap dnl

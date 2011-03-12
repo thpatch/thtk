@@ -38,9 +38,6 @@
 #ifdef HAVE_IO_H
 #include <io.h>
 #endif
-#ifdef HAVE_ICONV_H
-#include <iconv.h>
-#endif
 #ifdef HAVE_LIBGEN_H
 #include <libgen.h>
 #endif
@@ -160,123 +157,6 @@ util_xor(
         data[i] ^= key + i * step + (ip * ip + ip) / 2 * step2;
     }
 }
-
-#ifdef WIN32
-unsigned char*
-util_iconv(
-    const char* to,
-    const char* from,
-    unsigned char* in,
-    size_t insize,
-    size_t* outsize)
-{
-    wchar_t* temp;
-    int temp_len;
-    unsigned char* out;
-    int out_len;
-    UINT from_n;
-    UINT to_n;
-
-    if (strcmp(from, "CP932") == 0) {
-        from_n = 932;
-    } else if (strcmp(from, "UTF-8") == 0) {
-        from_n = CP_UTF8;
-    } else {
-        fprintf(stderr, "%s:util_iconv: Unsupported conversion specifier %s\n",
-            argv0, from);
-        return NULL;
-    }
-
-    if (strcmp(to, "CP932") == 0) {
-        to_n = 932;
-    } else if (strcmp(to, "UTF-8") == 0) {
-        to_n = CP_UTF8;
-    } else {
-        fprintf(stderr, "%s:util_iconv: Unsupported conversion specifier %s\n",
-            argv0, to);
-        return NULL;
-    }
-
-    temp_len = MultiByteToWideChar(from_n, MB_ERR_INVALID_CHARS, (LPCSTR)in,
-        insize, NULL, 0);
-    if (!temp_len) {
-        fprintf(stderr, "%s:MultiByteToWideChar: %lu\n", argv0, GetLastError());
-        return NULL;
-    }
-    temp = malloc(temp_len * sizeof(wchar_t));
-    temp_len = MultiByteToWideChar(from_n, MB_ERR_INVALID_CHARS, (LPCSTR)in,
-        insize, temp, temp_len);
-    if (!temp_len) {
-        fprintf(stderr, "%s:MultiByteToWideChar: %lu\n", argv0, GetLastError());
-        return NULL;
-    }
-
-    free(in);
-
-    out_len = WideCharToMultiByte(to_n, 0, temp, temp_len, NULL, 0, NULL, NULL);
-    if (!out_len) {
-        fprintf(stderr, "%s:WideCharToMultiByte: %lu\n", argv0, GetLastError());
-        return NULL;
-    }
-    out = malloc(out_len);
-    out_len = WideCharToMultiByte(to_n, 0, temp, temp_len, (LPSTR)out, out_len,
-        NULL, NULL);
-    if (!out_len) {
-        fprintf(stderr, "%s:WideCharToMultiByte: %lu\n", argv0, GetLastError());
-        return NULL;
-    }
-
-    free(temp);
-
-    *outsize = out_len;
-    return out;
-}
-#else
-#ifdef HAVE_ICONV_H
-unsigned char*
-util_iconv(
-    const char* to,
-    const char* from,
-    unsigned char* in,
-    size_t insize,
-    size_t* outsize)
-{
-    size_t ret;
-    char* inp;
-    char* outp;
-    size_t outsize2 = insize * 2;
-    size_t outsize3 = outsize2;
-    char* out = malloc(outsize2);
-    iconv_t ic = iconv_open(to, from);
-
-    if (ic == (iconv_t)-1) {
-        fprintf(stderr, "%s:iconv_open: %s\n", argv0, strerror(errno));
-        return NULL;
-    }
-
-    memset(out, 0, outsize2);
-
-    inp = (char*)in;
-    outp = out;
-
-    ret = iconv(ic, &inp, &insize, &outp, &outsize2);
-    if (ret == (size_t)-1) {
-        fprintf(stderr, "%s:iconv: %s\n", argv0, strerror(errno));
-        return NULL;
-    }
-
-    *outsize = (size_t)(outsize3 - outsize2);
-    free(in);
-
-    if (iconv_close(ic) == -1) {
-        fprintf(stderr, "%s:iconv_close: %s\n", argv0, strerror(errno));
-        return NULL;
-    }
-
-    return (unsigned char*)out;
-}
-#endif
-#endif
 
 const char*
 util_printfloat(

@@ -2,7 +2,6 @@ Build requirements:
 	[if building from repository] autoconf 2.62
 	[if building from repository] automake 1.9
 	libpng.
-	libiconv (for non-Windows systems).
 	Recent GCC.
 	Recent glibc.
 

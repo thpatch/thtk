@@ -115,7 +115,7 @@ static sub_t* current_sub;
 %token <integer> INSTRUCTION "instruction"
 %token <string> IDENTIFIER "identifier"
 %token <string> TEXT "text"
-%token <bytes> CTEXT "encrypted text"
+%token <string> CTEXT "encrypted text"
 %token <integer> INTEGER "integer"
 %token <floating> FLOATING "float"
 %token <integer> RANK "rank"
@@ -547,8 +547,8 @@ Label:
 Encrypted_Text:
     CTEXT {
         $$ = make_param('c');
-        $$->value.s.length = $1.length;
-        $$->value.s.data = (char*)$1.data;
+        $$->value.s.length = strlen($1);
+        $$->value.s.data = $1;
     }
     ;
 

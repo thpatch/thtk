@@ -1,6 +1,5 @@
 ACLOCAL_AMFLAGS = -I m4
 AM_YFLAGS = -d
-LDADD = @mb_LIBS@
 BUILT_SOURCES = ecsparse.h ecsparse.c ecsscan.c
 bin_PROGRAMS = thanm thdat thecl thmsg
 EXTRA_DIST = \
@@ -42,7 +41,7 @@ util_SOURCES = \
 	util.h
 
 thanm_CFLAGS = $(libpng_CFLAGS)
-thanm_LDADD = $(LDADD) $(libpng_LIBS)
+thanm_LDADD = $(libpng_LIBS)
 thanm_SOURCES = \
 	thanm.c \
 	thanm.h \
@@ -69,7 +68,7 @@ thdat_SOURCES = \
 	thrle.h \
 	$(util_SOURCES)
 
-thecl_LDADD = $(LDADD) -lm
+thecl_LDADD = -lm
 thecl_SOURCES = \
 	thecl.c \
 	instr.c \

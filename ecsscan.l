@@ -154,54 +154,41 @@ ins_[0-9]+ {
 
 C\" {
     BEGIN(CSTRING);
-    yylval.bytes.length = 0;
-    yylval.bytes.data = NULL;
+    yylval.string = strdup("");
 }
-<CSTRING>[^\\\"\n]+ {
-    yylval.bytes.length += yyleng;
-    yylval.bytes.data = realloc(yylval.bytes.data, yylval.bytes.length);
-    memcpy(yylval.bytes.data + yylval.bytes.length - yyleng, yytext, yyleng);
+\" {
+    BEGIN(STRING);
+    yylval.string = strdup("");
 }
-<CSTRING>\\. {
-    yylval.bytes.length++;
-    yylval.bytes.data = realloc(yylval.bytes.data, yylval.bytes.length);
-    yylval.bytes.data[yylval.bytes.length - 1] = yytext[1];
-}
-<CSTRING>\n {
-    free(yylval.bytes.data);
-    yyerror("unterminated string");
-    BEGIN(INITIAL);
-    yyterminate();
-}
-<CSTRING>\" {
-    size_t length = 0;
-    yylval.bytes.data = util_iconv(
-        "CP932", "UTF-8",
-        (unsigned char*)yylval.bytes.data, yylval.bytes.length, &length);
-    yylval.bytes.length = length;
-    yylval.bytes.data = realloc(yylval.bytes.data, yylval.bytes.length + 4);
-    memset(yylval.bytes.data + yylval.bytes.length, 0, 4);
-    util_xor(yylval.bytes.data, yylval.bytes.length + 4, 0x77, 7, 16);
-    BEGIN(INITIAL);
-    return CTEXT;
-}
-
-\"                 BEGIN(STRING); yylval.string = strdup("");
 <STRING>[^\\\"\n]+ {
     yylval.string = realloc(yylval.string, strlen(yylval.string) + yyleng + 1);
     strcat(yylval.string, yytext);
 }
-<STRING>\\.        {
-    yylval.string = realloc(yylval.string, strlen(yylval.string) + 1 + 1);
-    strncat(yylval.string, yytext + 1, 1);
+<CSTRING>[^\"\n]+ {
+    yylval.string = realloc(yylval.string, strlen(yylval.string) + yyleng + 1);
+    strcat(yylval.string, yytext);
 }
-<STRING>\n         {
+<STRING,CSTRING>\n {
     free(yylval.string);
     yyerror("unterminated string");
     BEGIN(INITIAL);
     yyterminate();
 }
-<STRING>\"         BEGIN(INITIAL); return TEXT;
+<STRING>\\. {
+    yylval.string = realloc(yylval.string, strlen(yylval.string) + 1 + 1);
+    strncat(yylval.string, yytext + 1, 1);
+}
+<STRING>\" {
+    BEGIN(INITIAL);
+    return TEXT;
+}
+<CSTRING>\" {
+    yylval.string = realloc(yylval.string, strlen(yylval.string) + 4);
+    memset(yylval.string + strlen(yylval.string), 0, 4);
+    util_xor((unsigned char*)yylval.string, strlen(yylval.string) + 4, 0x77, 7, 16);
+    BEGIN(INITIAL);
+    return CTEXT;
+}
 
 "/*"               BEGIN(COMMENT);
 <COMMENT>[^*]*     |

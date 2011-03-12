@@ -84,12 +84,4 @@ void util_xor(
     unsigned char step,
     unsigned char step2);
 
-/* Converts a string from one character set to another. */
-unsigned char* util_iconv(
-    const char* to,
-    const char* from,
-    unsigned char* in,
-    size_t insize,
-    size_t* outsize);
-
 #endif
