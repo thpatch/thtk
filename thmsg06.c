@@ -72,12 +72,12 @@ static const id_format_pair_t th08_msg_fmts[] = {
     { 0, "" },
     { 1, "ss" },
     { 2, "ss" },
-    { 3, "ssx" },
+    { 3, "ssm" },
     { 4, "S" },
     { 5, "ss" },
     { 6, "" },
     { 7, "S" },
-    { 8, "ssx" },
+    { 8, "ssm" },
     { 9, "S" },
     { 10, "" },
     { 11, "" },
@@ -85,11 +85,11 @@ static const id_format_pair_t th08_msg_fmts[] = {
     { 13, "S" },
     { 14, "" },
     { 15, "SSSSS" },
-    { 16, "x" },
+    { 16, "m" },
     { 17, "SS" },
     { 18, "S" },
-    { 19, "x" },
-    { 20, "x" },
+    { 19, "m" },
+    { 20, "m" },
     { 21, "S" },
     { 22, "" },
     { 0, NULL }
@@ -107,7 +107,7 @@ static const id_format_pair_t th09_msg_fmts[] = {
     { 13, "S" },
     { 15, "SSS" },
     { 14, "" },
-    { 16, "x" },
+    { 16, "m" },
     { 17, "SS" },
     { 23, "S" },
     { 24, "" },
@@ -118,7 +118,7 @@ static const id_format_pair_t th09_msg_fmts[] = {
 
 static const id_format_pair_t th10_msg_ed_fmts[] = {
     { 0, "" },
-    { 3, "x" },
+    { 3, "m" },
     { 5, "S" },
     { 6, "S" },
     { 7, "Sz" },
@@ -151,8 +151,8 @@ static const id_format_pair_t th10_msg_fmts[] = {
     { 13, "S" },
     { 14, "S" },
     { 15, "SSS" },
-    { 16, "x" },
-    { 17, "x" },
+    { 16, "m" },
+    { 17, "m" },
     { 18, "" },
     { 19, "" },
     { 20, "" },
@@ -179,7 +179,7 @@ static const id_format_pair_t th11_msg_fmts[] = {
     { 12, "" },
     { 13, "S" },
     { 14, "S" },
-    { 17, "x" },
+    { 17, "m" },
     { 19, "" },
     { 20, "" },
     { 21, "" },
@@ -203,7 +203,7 @@ static const id_format_pair_t th12_msg_fmts[] = {
     { 12, "" },
     { 13, "S" },
     { 14, "S" },
-    { 17, "x" },
+    { 17, "m" },
     { 19, "" },
     { 20, "" },
     { 21, "" },
@@ -227,7 +227,7 @@ static const id_format_pair_t th125_msg_fmts[] = {
     { 12, "" },
     { 13, "S" },
     { 14, "S" },
-    { 17, "x" },
+    { 17, "m" },
     { 19, "" },
     { 20, "" },
     { 25, "S" },
@@ -248,7 +248,7 @@ static const id_format_pair_t th128_msg_fmts[] = {
     { 12, "" },
     { 13, "S" },
     { 14, "S" },
-    { 17, "x" },
+    { 17, "m" },
     { 18, "" },
     { 19, "" },
     { 20, "" },
@@ -260,43 +260,35 @@ static const id_format_pair_t th128_msg_fmts[] = {
     { 0, NULL }
 };
 
-static void
-filter_xor(unsigned char* data, size_t length)
+static ssize_t
+thmsg_value_to_data(
+    const value_t* value,
+    unsigned char* data,
+    size_t data_length,
+    unsigned int version)
 {
-    size_t i;
-    for (i = 0; i < length; ++i)
-        data[i] ^= 0x77;
-}
-
-static void
-filter_xor2(unsigned char* data, size_t length)
-{
-    util_xor(data, length, 0x77, 7, 16);
-}
-
-/* Pads the variable-length values to a multiple of four.  Padding is applied
- * even if the size is already a multiple of four. */
-static void
-value_pad(value_t* val)
-{
-    switch (val->type) {
-    case 'z': {
-        size_t zlen = strlen(val->val.z);
-        size_t newlen = zlen + 4 - (zlen % 4);
-        val->type = 'm';
-        val->val.m.data = realloc(val->val.z, newlen);
-        memset(val->val.m.data + newlen - (newlen - zlen), 0, newlen - zlen);
-        val->val.m.length = newlen;
-        break;
-    }
+    switch (value->type) {
     case 'm':
-    case 'x': {
-        size_t newlen = val->val.m.length + 4 - (val->val.m.length % 4);
-        val->val.m.data = realloc(val->val.m.data, newlen);
-        memset(val->val.m.data + newlen - (newlen - val->val.m.length), 0, newlen - val->val.m.length);
-        val->val.m.length = newlen;
-        break;
+    case 'z': {
+        ssize_t ret = value_to_data(value, data, data_length);
+
+        size_t newlen = ret + 4 - (ret % 4);
+        memset(data + ret, 0, newlen - ret);
+        ret = newlen;
+
+        if (value->type == 'm') {
+            if (version == 8) {
+                for (ssize_t i = 0; i < ret; ++i)
+                    data[i] ^= 0x77;
+            } else if (version >= 9) {
+                util_xor(data, ret, 0x77, 7, 16);
+            }
+        }
+
+        return ret;
     }
+    default:
+        return value_to_data(value, data, data_length);
     }
 }
 
@@ -351,9 +343,6 @@ th06_read(FILE* in, FILE* out, unsigned int version)
     size_t entry_count;
     const int32_t* entry_offsets;
     const th06_msg_t* msg;
-
-    if (version != 6 && version != 7 && version != 8 && version != 9 && version != 10 && version != 11 && version != 12 && version != 125 && version != 128)
-        return 0;
 
     file_size = file_fsize(in);
     if (file_size == -1)
@@ -413,19 +402,23 @@ th06_read(FILE* in, FILE* out, unsigned int version)
 
             format = th06_find_format(version, (int)msg->type);
             if (!format) {
+                fprintf(stderr, "%s: id %d was not found in the format table\n", argv0, msg->type);
                 file_munmap(map, file_size);
                 return 0;
             }
 
-            if (version >= 9)
-                values = value_list_from_data(msg->data, msg->length, format, filter_xor2);
-            else if (version == 8)
-                values = value_list_from_data(msg->data, msg->length, format, filter_xor);
-            else
-                values = value_list_from_data(msg->data, msg->length, format, NULL);
+            values = value_list_from_data(value_from_data, msg->data, msg->length, format);
 
             for (i = 0; values && values[i].type; ++i) {
                 char* disp;
+                if (values[i].type == 'm') {
+                    if (version == 8) {
+                        for (size_t j = 0; j < values[i].val.m.length; ++j)
+                            values[i].val.m.data[j] ^= 0x77;
+                    } else if (version >= 9) {
+                        util_xor(values[i].val.m.data, values[i].val.m.length, 0x77, 7, 16);
+                    }
+                }
                 disp = value_to_text(&values[i]);
                 fprintf(out, ",%s", disp);
                 value_free(&values[i]);
@@ -459,9 +452,6 @@ th06_write(FILE* in, FILE* out, unsigned int version)
     int msg_time, msg_type;
     value_t padding_value;
     padding_value.type = 0;
-
-    if (version != 6 && version != 7 && version != 8 && version != 9 && version != 10 && version != 11 && version != 12 && version != 125 && version != 128)
-        return 0;
 
     while (fgets(buffer, 1024, in)) {
         if (sscanf(buffer, " entry %u", &entry_num) == 1) {
@@ -525,8 +515,10 @@ th06_write(FILE* in, FILE* out, unsigned int version)
             file_seek(out, header_offset + sizeof(th06_msg_t));
 
             format = th06_find_format(version, (int)msg.type);
-            if (!format)
+            if (!format) {
+                fprintf(stderr, "%s: id %d was not found in the format table\n", argv0, msg.type);
                 return 0;
+            }
 
             for (i = 0; i < strlen(format); ++i) {
                 ssize_t templength;
@@ -539,11 +531,11 @@ th06_write(FILE* in, FILE* out, unsigned int version)
 
                 charp++;
 
-                if (!value_from_text(charp, &val, format[i], NULL))
+                if (!value_from_text(charp, &val, format[i]))
                     return 0;
 
                 if (padding_value.type) {
-                    if (val.type == 'x' && version >= 12) {
+                    if (val.type == 'm' && version >= 12) {
                         val.val.m.data = realloc(val.val.m.data, val.val.m.length + 1 + padding_value.val.m.length);
                         val.val.m.data[val.val.m.length] = 0;
                         memcpy(val.val.m.data + val.val.m.length + 1, padding_value.val.m.data, padding_value.val.m.length);
@@ -553,10 +545,10 @@ th06_write(FILE* in, FILE* out, unsigned int version)
                     padding_value.type = 0;
                 }
 
-                value_pad(&val);
+                templength = thmsg_value_to_data(&val, temp, 1024, version);
+
                 if (version >= 9) {
-                    templength = value_to_data(&val, temp, 1024, filter_xor2);
-                    if (val.type == 'x') {
+                    if (val.type == 'm') {
                         if (val.val.m.data[0] == '|') {
                             padding_value.type = 'm';
                             padding_value.val.m.length = templength + 1;
@@ -564,11 +556,10 @@ th06_write(FILE* in, FILE* out, unsigned int version)
                             memcpy(padding_value.val.m.data, temp, templength + 1);
                         }
                     }
-                } else if (version == 8)
-                    templength = value_to_data(&val, temp, 1024, filter_xor);
-                else
-                    templength = value_to_data(&val, temp, 1024, NULL);
+                }
+                
                 msg.length += templength;
+
                 if (!file_write(out, temp, templength))
                     return 0;
 

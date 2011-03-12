@@ -878,7 +878,7 @@ anm_dump(FILE* stream, const anm_t* anm)
                 }
 
                 length = instr->length - ((entry->header.version == 0) ? 0 : ANM_INSTR_SIZE);
-                values = value_list_from_data((unsigned char*)instr->data, length, format, NULL);
+                values = value_list_from_data(value_from_data, (unsigned char*)instr->data, length, format);
                 if (!values)
                     abort();
 

@@ -32,9 +32,6 @@
 #include <config.h>
 #include <inttypes.h>
 
-/* TODO: Apply filter to value_t instead? */
-typedef void (*value_filter)(unsigned char* data, size_t length);
-
 typedef struct {
     int id;
     const char* format;
@@ -45,13 +42,13 @@ const char* find_format(
     const id_format_pair_t* fmts,
     int id);
 
-typedef struct {
+typedef struct value_t {
     int type;
     union {
         float f;
         double d;
         unsigned char b;
-        char c;
+        signed char c;
         uint16_t u;
         int16_t s;
         uint32_t U;
@@ -69,24 +66,22 @@ typedef struct {
 ssize_t value_from_data(
     const unsigned char* data,
     size_t data_length,
-    value_t* value,
     char type,
-    value_filter filter);
+    value_t* value);
 
 /* Reads a list of values, the list is terminated by a value with type 0.  NULL
  * is returned on error. */
 value_t* value_list_from_data(
+    ssize_t (*value_from_data)(const unsigned char*, size_t, char, value_t*),
     const unsigned char* data,
     size_t data_length,
-    const char* data_format,
-    value_filter filter);
+    const char* data_format);
 
 /* Parses a value from a text string. */
 int value_from_text(
     const char* text,
     value_t* value,
-    char type,
-    value_filter filter);
+    char type);
 
 /* Returns a text representation of a value. */
 char* value_to_text(
@@ -96,8 +91,7 @@ char* value_to_text(
 ssize_t value_to_data(
     const value_t* value,
     unsigned char* data,
-    size_t data_size,
-    value_filter filter);
+    size_t data_length);
 
 /* Returns the size of the value's data form, or -1 on error. */
 ssize_t value_size(
