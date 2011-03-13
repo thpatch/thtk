@@ -8,3 +8,4 @@ thtk: Text strings are no longer converted from their original character set.
 thecl: The output format has been changed in ways that are not compatible with
        thtk 2.
 thecl: Support for TH95 has been added.
+thecl: Support for TH06 has been added.
