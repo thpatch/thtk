@@ -616,8 +616,6 @@ th10_insert_labels(
     }
 }
 
-/* XXX: Can't this be rewritten to support sequential reading?
- *      ... what is sequential reading? */
 static thecl_t*
 th10_open(
     FILE* stream,
@@ -644,7 +642,6 @@ th10_open(
     if (file_size == -1)
         return NULL;
 
-    /* XXX: Is this freed? */
     map = file_mmap(stream, file_size);
     if (!map)
         return NULL;
@@ -692,8 +689,6 @@ th10_open(
 
     while ((ptrdiff_t)string_data % 4)
         ++string_data;
-    /* XXX: This might be wrong, depending on what it wants to do.
-     *      I need to document good algorithms for performing padding. */
     sub_offsets = (uint32_t*)(string_data + ((4 - (ptrdiff_t)string_data) % 4));
 
     ecl->sub_count = header->sub_count;
@@ -983,7 +978,6 @@ th10_stringify_param(
             abort();
         }
 
-        /* XXX: The _f isn't parsed into the correct value in some cases. ... */
         thecl_param_t temp_param = *param;
         temp_param.type = new_value.type;
         temp_param.value = new_value;
@@ -1152,18 +1146,15 @@ th10_dump(
                     size_t param_count = expr->param_format ? strlen(expr->param_format) : 0;
                     size_t stack_count = expr->stack_arity;
 
+                    /* TODO: Display errors. */
                     if (th10_stack_size(node) < stack_count)
-                        /* XXX: Display error?  (Not in this case, I think.) */
                         goto normal;
 
                     if (instr->param_count != param_count)
-                        /* XXX: Display error? */
                         goto normal;
 
                     for (size_t p = 0; p < param_count; ++p) {
-                        /* XXX: Is this not already checked earlier? */
                         if (th10_param_index(instr, p)->type != expr->param_format[p])
-                            /* XXX: Display error? */
                             goto normal;
                     }
 
@@ -1186,8 +1177,6 @@ th10_dump(
                         }
                     }
 
-                    /* Is this done before or after stack replacement?  I'm not
-                     * sure it matters though. */
                     /* What matters is that the correct stack offset is grabbed
                      * ... I should do this before -1. */
                     for (size_t s = 0; s < expr->stack_arity; ++s) {
@@ -1199,7 +1188,6 @@ th10_dump(
                     for (size_t p = 0; p < param_count; ++p) {
                         size_t removed = 0;
                         sprintf(pat, "p%zu", p);
-                        /* XXX: Uhh... this only does one param at the time, so ... I don't really need a count of how many are removed. */
                         char* rep_str = th10_stringify_param(sub, node, p, NULL, &removed, 0);
                         str_replace(temp, pat, rep_str);
                         free(rep_str);

@@ -34,13 +34,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "expr.h"
 #include "file.h"
 #include "list.h"
 #include "program.h"
 #include "thecl.h"
 #include "value.h"
-
-#include "expr.h"
 
 typedef struct {
     char* text;
@@ -416,8 +415,6 @@ Instruction_Parameters:
     | Instruction_Parameters_List
     ;
 
-/* Confirmed as correct, builds a sequential list, and is left-recursive for
- * performance. */
 Instruction_Parameters_List:
       Instruction_Parameter {
         $$ = list_new();
@@ -481,7 +478,6 @@ Instruction_Parameter:
     | Cast_Target "(" Expression ")" {
         list_prepend_new(&state->expressions, $3);
 
-        /* I must use $1 for this! */
         $$ = param_new($1);
         $$->stack = 1;
         if ($1 == 'S') {
@@ -586,7 +582,6 @@ Load_Type:
 
 %%
 
-/* String list API: */
 static list_t*
 string_list_add(
     list_t* list,
@@ -611,7 +606,6 @@ string_list_free(
     free(list);
 }
 
-/* Instruction API: */
 static thecl_instr_t*
 instr_init(
     parser_state_t* state)

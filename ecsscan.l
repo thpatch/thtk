@@ -30,12 +30,12 @@
  */
 #include <config.h>
 }
-    #include <string.h>
     #include <stdio.h>
     #include <stdlib.h>
+    #include <string.h>
     #include "ecsparse.h"
-    #include "util.h"
     #include "thecl.h"
+    #include "util.h"
     void yyerror(parser_state_t*, const char*);
     /* yylloc.first_column is initialized to 1. */
     #define YY_USER_INIT yylloc.first_column = 0
@@ -172,7 +172,6 @@ C\" {
     yylval.bytes.data = realloc(yylval.string, length + 4);
     yylval.bytes.length = length;
     memset(yylval.bytes.data + length, 0, 4);
-//    util_xor((unsigned char*)yylval.bytes.data, length + 4, 0x77, 7, 16);
     BEGIN(INITIAL);
     return CTEXT;
 }
