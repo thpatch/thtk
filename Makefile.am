@@ -72,6 +72,7 @@ thecl_LDADD = -lm
 thecl_SOURCES = \
 	thecl.c \
 	thecl.h \
+	thecl95.c \
 	thecl10.c \
 	ecsparse.h \
 	ecsscan.l \
