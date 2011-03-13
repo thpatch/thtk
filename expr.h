@@ -26,44 +26,35 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
  * DAMAGE.
  */
-#ifndef INSTR_H_
-#define INSTR_H_
+#ifndef EXPR_H_
+#define EXPR_H_
 
 #include <config.h>
-#include "ecl.h"
 
 typedef struct {
-    int token;
-    const char* symbol;
-    int instr;
-    int result_type;
-} op_t;
+    int symbol;
+    int id;
+    /* 0 indicates no return value. */
+    int return_type;
+    char* param_format;
+    size_t stack_arity;
+    /* / can be used to separate several patterns ... or NULL to match anything
+     * ... maybe a special symbol for that would be better. */
+    char* stack_formats;
+    /* This is a string used for displaying the expression,
+     * [p0...pn] is used to insert the parameters.
+     * [s0...sn] is used to insert the previous instructions. */
+    char* display_format;
+} expr_t;
 
-typedef struct {
-    int arity;
-    int token;
-    const char* symbol;
-    op_t op_1;
-    op_t op_2;
-} op_pair_t;
+/* Returns an expression by its symbol. */
+const expr_t* expr_get_by_symbol(unsigned int version, int symbol);
 
-const op_pair_t* op_find_instr(
-    unsigned int version,
-    int instr);
+/* Returns an expression by its id. */
+const expr_t* expr_get_by_id(unsigned int version, int id);
 
-const op_t* op_find_token(
-    unsigned int version,
-    int token);
-
-const op_t* op_find_stack(
-    unsigned int version,
-    int token,
-    int stack_count,
-    const int* stack_types);
-
-instr_t* instr_parse(
-    unsigned int version,
-    const raw_instr_t* rinstr,
-    instr_t* instr);
+/* A leaf expression is one that requires no other expressions, while returning
+ * a value. */
+int expr_is_leaf(unsigned int version, int id);
 
 #endif

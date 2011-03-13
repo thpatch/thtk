@@ -5,3 +5,5 @@ thdat: Support for TH75 has been removed.
 thanm: Files will compress faster, but use less efficient compression.
 thmsg: A new program for extracting and recreating message files.
 thtk: Text strings are no longer converted from their original character set.
+thecl: The output format has been changed in ways that are not compatible with
+       thtk 2.

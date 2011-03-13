@@ -71,12 +71,17 @@ thdat_SOURCES = \
 thecl_LDADD = -lm
 thecl_SOURCES = \
 	thecl.c \
-	instr.c \
-	instr.h \
-	ecl.h \
+	thecl.h \
+	thecl10.c \
 	ecsparse.h \
 	ecsscan.l \
 	ecsparse.y \
+	expr.c \
+	expr.h \
+	list.c \
+	list.h \
+	value.c \
+	value.h \
 	$(util_SOURCES)
 
 thmsg_SOURCES = \

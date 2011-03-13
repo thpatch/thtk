@@ -28,78 +28,89 @@
  */
 %{
 #include <config.h>
+#include <errno.h>
 #include <inttypes.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <errno.h>
-#include "ecl.h"
 #include "file.h"
+#include "list.h"
 #include "program.h"
-#include "instr.h"
+#include "thecl.h"
+#include "value.h"
+
+#include "expr.h"
+
+typedef struct {
+    char* text;
+} string_t;
+
+static list_t* string_list_add(list_t* list, char* text);
+static void string_list_free(list_t* list);
+
+static thecl_instr_t* instr_new(parser_state_t* state, unsigned int id, const char* format, ...);
+static thecl_instr_t* instr_new_list(parser_state_t* state, unsigned int id, list_t* list);
+static void instr_add(thecl_sub_t* sub, thecl_instr_t* instr);
+
+enum expression_type {
+    EXPRESSION_OP,
+    EXPRESSION_VAL,
+};
+
+typedef struct expression_t {
+    /* Operator or value. */
+    enum expression_type type;
+    int id;
+    /* For values: The value. */
+    thecl_param_t* value;
+    /* For operators: The child expressions. */
+    list_t children;
+    /* Resulting type of expression. */
+    int result_type;
+} expression_t;
+
+static expression_t* expression_load_new(const parser_state_t* state, thecl_param_t* value);
+static expression_t* expression_operation_new(const parser_state_t* state, const int* symbols, expression_t** operands);
+static void expression_output(parser_state_t* state, expression_t* expr);
+static void expression_free(expression_t* expr);
+#define EXPR_22(a, b, A, B) \
+    expression_operation_new(state, (int[]){ a, b, 0 }, (expression_t*[]){ A, B, NULL })
+#define EXPR_12(a, A, B) \
+    expression_operation_new(state, (int[]){ a, 0 }, (expression_t*[]){ A, B, NULL })
+#define EXPR_11(a, A) \
+    expression_operation_new(state, (int[]){ a, 0 }, (expression_t*[]){ A, NULL })
 
 /* Bison things. */
-void yyerror(const char*);
+void yyerror(parser_state_t*, const char*);
 int yylex(void);
 extern FILE* yyin;
 
-/* Temporary parser structures. */
-typedef struct list_t {
-    struct list_t* next;
-    void* data;
-} list_t;
-
-typedef struct expression_t {
-    int instr;
-    int type;
-    unsigned int child_count;
-    struct expression_t** children;
-    list_t* params;
-} expression_t;
-
 /* Parser APIs. */
-static void sub_begin(char* name);
-static void sub_finish(void);
-static void var_create(sub_t* sub, const char* name);
-static int var_find(sub_t* sub, const char* name);
 
-static expression_t* make_immediate_expression(param_t* param);
-static expression_t* make_unary_expression(int operator, expression_t* expression);
-static expression_t* make_binary_expression(int operator, expression_t* expression1, expression_t* expression2);
-static void output_expression(expression_t* expression);
+/* Starts a new subroutine. */
+static void sub_begin(parser_state_t* state, char* name);
+/* Closes the current subroutine. */
+static void sub_finish(parser_state_t* state);
 
-static list_t* make_list(void* data);
-static param_t* make_param(unsigned char type);
-static void instr_add(int id, list_t* list);
-static void label_create(char* label);
-static int32_t label_find(sub_t* sub, const char* label);
+/* Creates a new variable in the specified subroutine. */
+static void var_create(thecl_sub_t* sub, const char* name);
+/* Returns the stack offset of a specified variable in the specified sub. */
+static int var_find(parser_state_t* state, thecl_sub_t* sub, const char* name);
+/* Stores a new label in the current subroutine pointing to the current offset. */
+static void label_create(parser_state_t* state, char* label);
 
-static void free_param(param_t* param);
-static void free_params(list_t* node);
-static void free_list(list_t* node);
-static void free_expression(expression_t* expr);
-
-/* Parser state. */
-static int instr_time;
-static int instr_rank = 0xff;
-static int version;
-static list_t* expressions;
-
-static uint32_t anim_cnt;
-static char** anim_list;
-static uint32_t ecli_cnt;
-static char** ecli_list;
-
-static unsigned int sub_cnt;
-static sub_t* subs;
-static sub_t* current_sub;
+/* Update the current time label. */
+void set_time(parser_state_t* state, int new_time);
 
 %}
 
 %error-verbose
 %locations
+%parse-param {parser_state_t* state}
 
 %union {
+    /* Values from Flex: */
     int integer;
     float floating;
     char* string;
@@ -107,28 +118,36 @@ static sub_t* current_sub;
         unsigned int length;
         unsigned char* data;
     } bytes;
-    struct list_t* list;
-    struct param_t* param;
+
+    /* Internal types: */
+    struct thecl_param_t* param;
     struct expression_t* expression;
+    struct list_t* list;
 }
 
 %token <integer> INSTRUCTION "instruction"
 %token <string> IDENTIFIER "identifier"
 %token <string> TEXT "text"
-%token <string> CTEXT "encrypted text"
+%token <bytes> CTEXT "encrypted text"
 %token <integer> INTEGER "integer"
 %token <floating> FLOATING "float"
 %token <integer> RANK "rank"
+%token COMMA ","
 %token COLON ":"
 %token SEMICOLON ";"
 %token SQUARE_OPEN "["
 %token SQUARE_CLOSE "]"
-%token CAST_FLOAT "(float)"
-%token CAST_INT "(int)"
+%token CAST_INTEGER "_S"
+%token CAST_FLOATING "_f"
+%token CAST_II "_SS"
+%token CAST_IF "_Sf"
+%token CAST_FF "_ff"
+%token CAST_FI "_fS"
 %token ANIM "anim"
 %token ECLI "ecli"
 %token SUB "sub"
 %token VAR "var"
+%token LOCAL "local"
 %token AT "@"
 %token BRACE_OPEN "{"
 %token BRACE_CLOSE "}"
@@ -184,27 +203,28 @@ static sub_t* current_sub;
 
 %token DOLLAR "$"
 
-%type <list> Include_List
+%type <list> Text_Semicolon_List
+%type <list> Optional_Identifier_Whitespace_List
+%type <list> Identifier_Whitespace_List
+%type <list> Instruction_Parameters_List
+%type <list> Instruction_Parameters
+%type <list> Integer_List
 
+%type <expression> Expression
+
+%type <param> Instruction_Parameter
 %type <param> Address
 %type <param> Address_Type
-
-%type <list> Instruction_Parameters
-%type <param> Instruction_Parameter
-
 %type <param> Integer
 %type <param> Floating
 %type <param> Text
 %type <param> Label
 %type <param> Encrypted_Text
-%type <param> Cast_Value
-
-%type <param> Cast_Type
-%type <integer> Cast_Target
-
-%type <expression> Expression
-%type <integer> Expression_Cast
 %type <param> Load_Type
+%type <param> Cast_Type
+
+%type <integer> Cast_Target
+%type <integer> Cast_Target2
 
 %nonassoc ADD ADDI ADDF SUBTRACT SUBTRACTI SUBTRACTF MULTIPLY MULTIPLYI MULTIPLYF DIVIDE DIVIDEI DIVIDEF EQUAL EQUALI EQUALF INEQUAL INEQUALI INEQUALF LT LTI LTF LTEQ LTEQI LTEQF GT GTI GTF GTEQ GTEQI GTEQF MODULO OR AND XOR
 %left NOT
@@ -217,186 +237,223 @@ Statements:
 
 Statement:
       "sub" IDENTIFIER {
-        sub_begin($2);
+        sub_begin(state, $2);
         free($2);
-    }
-      "(" Subroutine_Parameters ")" { current_sub->stack = current_sub->arity * 4; }
-      "{" Subroutine_Body "}" { sub_finish(); }
-    | "anim" "{" Include_List "}" {
-        list_t* node = $3;
+      }
+      "(" Optional_Identifier_Whitespace_List ")" {
+            state->current_sub->arity = 0;
+            if ($5 && !list_empty($5)) {
+                string_t* str;
+                list_for_each($5, str) {
+                    state->current_sub->arity++;
+                    var_create(state->current_sub, str->text);
+                }
+                string_list_free($5);
+            }
+            state->current_sub->stack = state->current_sub->arity * 4;
+      }
+      "{" Subroutine_Body "}" {
+        sub_finish(state);
+      }
+    | "anim" "{" Text_Semicolon_List "}" {
+        string_t* str;
+        list_for_each($3, str) {
+            state->ecl->anim_count++;
+            state->ecl->anim_names = realloc(state->ecl->anim_names, state->ecl->anim_count * sizeof(char*));
+            state->ecl->anim_names[state->ecl->anim_count - 1] = strdup(str->text);
+        }
+        string_list_free($3);
+      }
+    | "ecli" "{" Text_Semicolon_List "}" {
+        string_t* str;
+        list_for_each($3, str) {
+            state->ecl->ecli_count++;
+            state->ecl->ecli_names = realloc(state->ecl->ecli_names, state->ecl->ecli_count * sizeof(char*));
+            state->ecl->ecli_names[state->ecl->ecli_count - 1] = strdup(str->text);
+        }
+        string_list_free($3);
+      }
+    | "local" IDENTIFIER "{" Integer_List "}" {
+        size_t data_length = 0;
+        thecl_local_data_t* local_data;
+        thecl_param_t* param;
 
-        while (node) {
-            param_t* param = (param_t*)node->data;
-            anim_cnt++;
-            anim_list = realloc(anim_list, sizeof(char*) * anim_cnt);
-            anim_list[anim_cnt - 1] = param->value.s.data;
-            node = node->next;
+        list_for_each($4, param) {
+            ++data_length;
         }
 
-        free_params($3);
-        free_list($3);
-    }
-    | "ecli" "{" Include_List "}" {
-        list_t* node = $3;
-
-        while (node) {
-            param_t* param = (param_t*)node->data;
-            ecli_cnt++;
-            ecli_list = realloc(ecli_list, sizeof(char*) * ecli_cnt);
-            ecli_list[ecli_cnt - 1] = param->value.s.data;
-            node = node->next;
+        local_data = malloc(sizeof(thecl_local_data_t) + data_length);
+        local_data->data_length = data_length;
+        strcpy(local_data->name, $2);
+        data_length = 0;
+        list_for_each($4, param) {
+            local_data->data[data_length++] = param->value.val.S;
         }
 
-        free_params($3);
-        free_list($3);
-    }
+        list_prepend_new(&state->ecl->local_data, local_data);
+
+        list_for_each($4, param)
+            free(param);
+        list_free_nodes($4);
+        free($4);
+
+        free($2);
+      }
     ;
 
-Subroutine_Parameters:
-    | IDENTIFIER { var_create(current_sub, $1); } Subroutine_Parameters {
-        ++current_sub->arity;
-        free($1);
-    }
+Integer_List:
+      Integer {
+        $$ = list_new();
+        list_append_new($$, $1);
+      }
+    | Integer_List Integer {
+        $$ = $1;
+        list_append_new($$, $2);
+      }
     ;
 
 Subroutine_Body:
-    "var" Variable_List ";" {
-        param_t* param = make_param('i');
-        list_t* params = make_list(param);
+      "var" Optional_Identifier_Whitespace_List ";" {
+        size_t var_list_length = 0;
+        string_t* str;
 
-        param->value.i = current_sub->stack;
-        instr_add(40, params);
+        if ($2) {
+            list_for_each($2, str) {
+                ++var_list_length;
+                var_create(state->current_sub, str->text);
+            }
+            string_list_free($2);
+        }
 
-        free_params(params);
-        free_list(params);
-    }
-    Instructions
+        state->current_sub->stack += var_list_length * 4;
+
+        instr_add(state->current_sub, instr_new(state, 40, "S", state->current_sub->stack));
+      }
+      Instructions
+    | Instructions
     ;
 
-Variable_List:
-    | IDENTIFIER { var_create(current_sub, $1); } Variable_List {
-        current_sub->stack += 4;
-        free($1);
-    }
-    ;
-
-Include_List:
+Optional_Identifier_Whitespace_List:
       { $$ = NULL; }
-    | Text ";" Include_List {
-        $$ = make_list($1);
-        $$->next = $3;
-    }
+    | Identifier_Whitespace_List
+    ;
+
+Identifier_Whitespace_List:
+      IDENTIFIER {
+        $$ = list_new();
+        string_list_add($$, $1);
+      }
+    | Identifier_Whitespace_List IDENTIFIER {
+        $$ = string_list_add($1, $2);
+      }
+    ;
+
+Text_Semicolon_List:
+      TEXT ";" {
+        $$ = list_new();
+        string_list_add($$, $1);
+      }
+    | Text_Semicolon_List TEXT ";" {
+        $$ = string_list_add($1, $2);
+      }
     ;
 
 Instructions:
-    | Instruction ";" Instructions
-    | RANK { instr_rank = $1; } Instruction { instr_rank = 0xff; } ";" Instructions
-    | IDENTIFIER ":" { label_create($1); free($1); } Instructions
-    | INTEGER ":" {
-        if ($1 == instr_time || (instr_time > 0 && $1 < instr_time)) {
-            char buf[256];
-            snprintf(buf, 256, "illegal timer change: %d to %d", instr_time, $1);
-            yyerror(buf);
-        }
-        instr_time = $1;
-    } Instructions
+      Instruction ";"
+    | INTEGER ":" { set_time(state, $1); }
+    | Instructions INTEGER ":" { set_time(state, $2); }
+    | Instructions IDENTIFIER ":" { label_create(state, $2); free($2); }
+    | Instructions Instruction ";"
+    | RANK { state->instr_rank = $1; } Instruction ";"
+    | Instructions RANK { state->instr_rank = $2; } Instruction ";"
     ;
 
     /* TODO: Check the given parameters against the parameters expected for the
-     *       instruction.  This requires passing a version parameter to eclc. */
+     *       instruction. */
 Instruction:
-      INSTRUCTION Instruction_Parameters {
-        list_t* temp = expressions;
-        while (expressions) {
-            output_expression(expressions->data);
-            free_expression(expressions->data);
-            expressions = expressions->next;
+      INSTRUCTION "(" Instruction_Parameters ")" {
+        expression_t* expr;
+        list_for_each(&state->expressions, expr) {
+            expression_output(state, expr);
+            expression_free(expr);
         }
-        free_list(temp);
-        expressions = NULL;
-        instr_add($1, $2);
-        free_params($2);
-        free_list($2);
-    }
+        list_free_nodes(&state->expressions);
+
+        instr_add(state->current_sub, instr_new_list(state, $1, $3));
+
+        free($3);
+      }
     | "if" Expression "goto" Label "@" Integer {
-        const op_t* op = op_find_token(version, IF);
-        list_t* label = make_list($4);
-        list_t* time = make_list($6);
-        label->next = time;
-        output_expression($2);
-        free_expression($2);
-        instr_add(op->instr, label);
-        free_params(label);
-        free_list(label);
-    }
+        const expr_t* expr = expr_get_by_symbol(state->version, IF);
+        expression_output(state, $2);
+        expression_free($2);
+        instr_add(state->current_sub, instr_new(state, expr->id, "pp", $4, $6));
+      }
     | "unless" Expression "goto" Label "@" Integer {
-        const op_t* op = op_find_token(version, UNLESS);
-        list_t* label = make_list($4);
-        list_t* time = make_list($6);
-        label->next = time;
-        output_expression($2);
-        free_expression($2);
-        instr_add(op->instr, label);
-        free_params(label);
-        free_list(label);
-    }
+        const expr_t* expr = expr_get_by_symbol(state->version, UNLESS);
+        expression_output(state, $2);
+        expression_free($2);
+        instr_add(state->current_sub, instr_new(state, expr->id, "pp", $4, $6));
+      }
     | "goto" Label "@" Integer {
-        const op_t* op = op_find_token(version, GOTO);
-        list_t* label = make_list($2);
-        list_t* time = make_list($4);
-        label->next = time;
-        instr_add(op->instr, label);
-        free_params(label);
-        free_list(label);
-    }
+        const expr_t* expr = expr_get_by_symbol(state->version, GOTO);
+        instr_add(state->current_sub, instr_new(state, expr->id, "pp", $2, $4));
+      }
     | Address "=" Expression {
-        expression_t* expr = malloc(sizeof(expression_t));
-        expr->instr = op_find_token(version, $1->type == 'i' ? ASSIGNI : ASSIGNF)->instr;
-        expr->type = 0;
-        expr->child_count = 1;
-        expr->children = malloc(sizeof(expression_t*));
-        expr->children[0] = $3;
-        expr->params = make_list($1);
-
-        output_expression(expr);
-        free_expression(expr);
-    }
-    | Address "$=" Expression {
-        expression_t* expr = malloc(sizeof(expression_t));
-        expr->instr = op_find_token(version, ASSIGNI)->instr;
-        expr->type = 0;
-        expr->child_count = 1;
-        expr->children = malloc(sizeof(expression_t*));
-        expr->children[0] = $3;
-        expr->params = make_list($1);
-
-        output_expression(expr);
-        free_expression(expr);
-    }
-    | Address "%=" Expression {
-        expression_t* expr = malloc(sizeof(expression_t));
-        expr->instr = op_find_token(version, ASSIGNF)->instr;
-        expr->type = 0;
-        expr->child_count = 1;
-        expr->children = malloc(sizeof(expression_t*));
-        expr->children[0] = $3;
-        expr->params = make_list($1);
-
-        output_expression(expr);
-        free_expression(expr);
-    }
+        const expr_t* expr = expr_get_by_symbol(state->version, $1->type == 'S' ? ASSIGNI : ASSIGNF);
+        expression_output(state, $3);
+        expression_free($3);
+        instr_add(state->current_sub, instr_new(state, expr->id, "p", $1));
+      }
     | Expression {
-        output_expression($1);
-        free_expression($1);
-    }
+        expression_output(state, $1);
+        expression_free($1);
+      }
     ;
 
 Instruction_Parameters:
       { $$ = NULL; }
-    | Instruction_Parameter Instruction_Parameters {
-        $$ = make_list($1);
-        $$->next = $2;
-    }
+    | Instruction_Parameters_List
+    ;
+
+/* Confirmed as correct, builds a sequential list, and is left-recursive for
+ * performance. */
+Instruction_Parameters_List:
+      Instruction_Parameter {
+        $$ = list_new();
+        list_append_new($$, $1);
+      }
+    | Instruction_Parameters_List "," Instruction_Parameter {
+        $$ = $1;
+        list_append_new($$, $3);
+      }
+    ;
+
+Cast_Target2:
+      CAST_II { $$ = 0x6969; }
+    | CAST_IF { $$ = 0x6966; }
+    | CAST_FF { $$ = 0x6666; }
+    | CAST_FI { $$ = 0x6669; }
+
+Cast_Target:
+      CAST_INTEGER  { $$ = 'S'; }
+    | CAST_FLOATING { $$ = 'f'; }
+
+Cast_Type:
+      Address
+    | Integer
+    | Floating
+    | "(" Expression ")" {
+        list_prepend_new(&state->expressions, $2);
+
+        $$ = param_new($2->result_type);
+        $$->stack = 1;
+        if ($2->result_type == 'S') {
+            $$->value.val.S = -1;
+        } else {
+            $$->value.val.f = -1.0f;
+        }
+      }
     ;
 
 Instruction_Parameter:
@@ -406,107 +463,73 @@ Instruction_Parameter:
     | Text
     | Label
     | Encrypted_Text
-    | Cast_Value
-    | Expression_Cast "(" Expression ")" {
-        list_t* list;
-
-        $3->type = $1;
-
-        list = make_list($3);
-        list->next = expressions;
-        expressions = list;
-
-        $$ = make_param($1);
-        $$->stack = 1;
-        if ($$->type == 'i') {
-            $$->value.i = -1;
-        } else if ($$->type == 'f') {
-            $$->value.f = -1.0f;
+    | Cast_Target2 Cast_Type {
+        $$ = param_new('D');
+        $$->stack = $2->stack;
+        $$->value.type = 'm';
+        $$->value.val.m.length = 2 * sizeof(int32_t);
+        $$->value.val.m.data = malloc(2 * sizeof(int32_t));
+        int32_t* D = (int32_t*)$$->value.val.m.data;
+        D[0] = $1;
+        if ($2->type == 'f') {
+            memcpy(&D[1], &$2->value.val.f, sizeof(float));
         } else {
-            abort();
+            D[1] = $2->value.val.S;
         }
-    }
-    ;
+        param_free($2);
+      }
+    | Cast_Target "(" Expression ")" {
+        list_prepend_new(&state->expressions, $3);
 
-Expression_Cast:
-      "$" { $$ = 'i'; }
-    | "%" { $$ = 'f'; }
+        /* I must use $1 for this! */
+        $$ = param_new($1);
+        $$->stack = 1;
+        if ($1 == 'S') {
+            $$->value.val.S = -1;
+        } else {
+            $$->value.val.f = -1.0f;
+        }
+      }
     ;
 
 Expression:
-      Load_Type {
-        $$ = make_immediate_expression($1);
-    }
-
-    | "(" Expression ")" {
-        $$ = $2;
-    }
-
-    | Expression "+"   Expression { $$ = make_binary_expression(ADD,       $1, $3); }
-    | Expression "$+"  Expression { $$ = make_binary_expression(ADDI,      $1, $3); }
-    | Expression "%+"  Expression { $$ = make_binary_expression(ADDF,      $1, $3); }
-
-    | Expression "-"   Expression { $$ = make_binary_expression(SUBTRACT,  $1, $3); }
-    | Expression "$-"  Expression { $$ = make_binary_expression(SUBTRACTI, $1, $3); }
-    | Expression "%-"  Expression { $$ = make_binary_expression(SUBTRACTF, $1, $3); }
-
-    | Expression "*"   Expression { $$ = make_binary_expression(MULTIPLY,  $1, $3); }
-    | Expression "$*"  Expression { $$ = make_binary_expression(MULTIPLYI, $1, $3); }
-    | Expression "%*"  Expression { $$ = make_binary_expression(MULTIPLYF, $1, $3); }
-
-    | Expression "/"   Expression { $$ = make_binary_expression(DIVIDE,    $1, $3); }
-    | Expression "$/"  Expression { $$ = make_binary_expression(DIVIDEI,   $1, $3); }
-    | Expression "%/"  Expression { $$ = make_binary_expression(DIVIDEF,   $1, $3); }
-
-    | Expression "%"   Expression { $$ = make_binary_expression(MODULO,    $1, $3); }
-
-    | Expression "=="  Expression { $$ = make_binary_expression(EQUAL,     $1, $3); }
-    | Expression "$==" Expression { $$ = make_binary_expression(EQUALI,    $1, $3); }
-    | Expression "%==" Expression { $$ = make_binary_expression(EQUALF,    $1, $3); }
-
-    | Expression "!="  Expression { $$ = make_binary_expression(INEQUAL,   $1, $3); }
-    | Expression "$!=" Expression { $$ = make_binary_expression(INEQUALI,  $1, $3); }
-    | Expression "%!=" Expression { $$ = make_binary_expression(INEQUALF,  $1, $3); }
-
-    | Expression "<"   Expression { $$ = make_binary_expression(LT,        $1, $3); }
-    | Expression "$<"  Expression { $$ = make_binary_expression(LTI,       $1, $3); }
-    | Expression "%<"  Expression { $$ = make_binary_expression(LTF,       $1, $3); }
-
-    | Expression "<="  Expression { $$ = make_binary_expression(LTEQ,      $1, $3); }
-    | Expression "$<=" Expression { $$ = make_binary_expression(LTEQI,     $1, $3); }
-    | Expression "%<=" Expression { $$ = make_binary_expression(LTEQF,     $1, $3); }
-
-    | Expression ">"   Expression { $$ = make_binary_expression(GT,        $1, $3); }
-    | Expression "$>"  Expression { $$ = make_binary_expression(GTI,       $1, $3); }
-    | Expression "%>"  Expression { $$ = make_binary_expression(GTF,       $1, $3); }
-
-    | Expression ">="  Expression { $$ = make_binary_expression(GTEQ,      $1, $3); }
-    | Expression "$>=" Expression { $$ = make_binary_expression(GTEQI,     $1, $3); }
-    | Expression "%>=" Expression { $$ = make_binary_expression(GTEQF,     $1, $3); }
-
-    | "!" Expression              { $$ = make_unary_expression(NOT, $2); }
-    | Expression "||"  Expression { $$ = make_binary_expression(OR,        $1, $3); }
-    | Expression "&&"  Expression { $$ = make_binary_expression(AND,       $1, $3); }
-    | Expression "^"   Expression { $$ = make_binary_expression(XOR,       $1, $3); }
+      Load_Type                      { $$ = expression_load_new(state, $1); }
+    |             "(" Expression ")" { $$ = $2; }
+    | Cast_Target "(" Expression ")" { $$ = $3; $$->result_type = $1; }
+    | Expression "+"   Expression { $$ = EXPR_22(ADDI,      ADDF,      $1, $3); }
+    | Expression "-"   Expression { $$ = EXPR_22(SUBTRACTI, SUBTRACTF, $1, $3); }
+    | Expression "*"   Expression { $$ = EXPR_22(MULTIPLYI, MULTIPLYF, $1, $3); }
+    | Expression "/"   Expression { $$ = EXPR_22(DIVIDEI,   DIVIDEF,   $1, $3); }
+    | Expression "%"   Expression { $$ = EXPR_12(MODULO,               $1, $3); }
+    | Expression "=="  Expression { $$ = EXPR_22(EQUALI,    EQUALF,    $1, $3); }
+    | Expression "!="  Expression { $$ = EXPR_22(INEQUALI,  INEQUALF,  $1, $3); }
+    | Expression "<"   Expression { $$ = EXPR_22(LTI,       LTF,       $1, $3); }
+    | Expression "<="  Expression { $$ = EXPR_22(LTEQI,     LTEQF,     $1, $3); }
+    | Expression ">"   Expression { $$ = EXPR_22(GTI,       GTF,       $1, $3); }
+    | Expression ">="  Expression { $$ = EXPR_22(GTEQI,     GTEQF,     $1, $3); }
+    | "!" Expression              { $$ = EXPR_11(NOT,                  $2); }
+    | Expression "||"  Expression { $$ = EXPR_12(OR,                   $1, $3); }
+    | Expression "&&"  Expression { $$ = EXPR_12(AND,                  $1, $3); }
+    | Expression "^"   Expression { $$ = EXPR_12(XOR,                  $1, $3); }
     ;
 
 Address:
       "[" Address_Type "]" {
         $$ = $2;
         $$->stack = 1;
-    }
+      }
     | "$" IDENTIFIER {
-        $$ = make_param('i');
+        $$ = param_new('S');
         $$->stack = 1;
-        $$->value.i = var_find(current_sub, $2);
+        $$->value.val.S = var_find(state, state->current_sub, $2);
         free($2);
-    }
+      }
     | "%" IDENTIFIER {
-        $$ = make_param('f');
+        $$ = param_new('f');
         $$->stack = 1;
-        $$->value.f = var_find(current_sub, $2);
+        $$->value.val.f = var_find(state, state->current_sub, $2);
         free($2);
-    }
+      }
     ;
 
 Address_Type:
@@ -516,66 +539,43 @@ Address_Type:
 
 Integer:
     INTEGER {
-        $$ = make_param('i');
-        $$->value.i = $1;
-    }
+        $$ = param_new('S');
+        $$->value.val.S = $1;
+      }
     ;
 
 Floating:
     FLOATING {
-        $$ = make_param('f');
-        $$->value.f = $1;
-    }
+        $$ = param_new('f');
+        $$->value.val.f = $1;
+      }
     ;
 
 Text:
     TEXT {
-        $$ = make_param('s');
-        $$->value.s.length = strlen($1);
-        $$->value.s.data = $1;
-    }
-    ;
-
-Label:
-    IDENTIFIER {
-        $$ = make_param('o');
-        $$->value.s.length = strlen($1);
-        $$->value.s.data = $1;
-    }
+        /* TODO: Read this as z and instead convert it to something else when needed. */
+        $$ = param_new('M');
+        $$->value.type = 'm';
+        $$->value.val.m.length = strlen($1);
+        $$->value.val.m.data = (unsigned char*)$1;
+      }
     ;
 
 Encrypted_Text:
     CTEXT {
-        $$ = make_param('c');
-        $$->value.s.length = strlen($1);
-        $$->value.s.data = $1;
-    }
+        $$ = param_new('X');
+        $$->value.type = 'm';
+        $$->value.val.m.length = $1.length;
+        $$->value.val.m.data = $1.data;
+      }
     ;
 
-Cast_Value:
-    Cast_Target Cast_Type {
-        $$ = make_param('D');
-        $$->value.D[0] = (      $1 == 'f' ? 0x6600 : 0x6900)
-                       | ($2->type == 'f' ?   0x66 :   0x69);
-        if ($2->type == 'f') {
-            memcpy(&$$->value.D[1], &$2->value.f, sizeof(float));
-        } else {
-            $$->value.D[1] = $2->value.i;
-        }
-        $$->stack = $2->stack;
-        free_param($2);
-    }
-    ;
-
-Cast_Target:
-      "(int)"   { $$ = 'i'; }
-    | "(float)" { $$ = 'f'; }
-    ;
-
-Cast_Type:
-      Address
-    | Integer
-    | Floating
+Label:
+    IDENTIFIER {
+        $$ = param_new('O');
+        $$->value.type = 'z';
+        $$->value.val.z = $1;
+      }
     ;
 
 Load_Type:
@@ -586,387 +586,268 @@ Load_Type:
 
 %%
 
-static void free_param(
-    param_t* param)
-{
-    if (param) {
-        /* ... */
-        free(param);
-    }
-}
-
-static void free_params(
-    list_t* node)
-{
-    while (node) {
-        free_param(node->data);
-        node->data = NULL;
-        node = node->next;
-    }
-}
-
-/* Does not free data. */
-static void free_list(
-    list_t* node)
-{
-    if (node) {
-        list_t* temp = node->next;
-        free(node);
-        if (temp)
-            free_list(temp);
-    }
-}
-
-static void free_expression(
-    expression_t* expr)
-{
-    unsigned int i;
-
-    free_params(expr->params);
-    free_list(expr->params);
-
-    for (i = 0; i < expr->child_count; ++i) {
-        free_expression(expr->children[i]);
-    }
-    free(expr->children);
-    free(expr);
-}
-
-static expression_t*
-make_immediate_expression(
-    param_t* param)
-{
-    expression_t* ret = malloc(sizeof(expression_t));
-    const int token = param->type == 'i' ? LOADI : LOADF;
-    const op_t* op = op_find_token(version, token);
-
-    ret->instr = op->instr;
-    ret->type = op->result_type;
-    ret->child_count = 0;
-    ret->children = NULL;
-    ret->params = make_list(param);
-
-    return ret;
-}
-
-static expression_t*
-make_unary_expression(
-    int token,
-    expression_t* expr)
-{
-    expression_t* ret = malloc(sizeof(expression_t));
-    int stacktypes[1];
-    const op_t* op;
-
-    stacktypes[0] = expr->type;
-    op = op_find_stack(version, token, 1, stacktypes);
-    if (!op) abort();
-
-    ret->instr = op->instr;
-    ret->type = op->result_type;
-    ret->child_count = 1;
-    ret->children = malloc(ret->child_count * sizeof(expression_t*));
-    ret->children[0] = expr;
-    ret->params = NULL;
-
-    return ret;
-}
-
-static expression_t*
-make_binary_expression(
-    int token,
-    expression_t* expr1,
-    expression_t* expr2)
-{
-    expression_t* ret = malloc(sizeof(expression_t));
-    int stacktypes[2];
-    const op_t* op;
-
-    stacktypes[0] = expr1->type;
-    stacktypes[1] = expr2->type;
-    op = op_find_stack(version, token, 2, stacktypes);
-    if (!op) op = op_find_token(version, token);
-    if (!op) abort();
-
-    ret->instr = op->instr;
-    ret->type = op->result_type;
-    ret->child_count = 2;
-    ret->children = malloc(ret->child_count * sizeof(expression_t*));
-    ret->children[0] = expr1;
-    ret->children[1] = expr2;
-    ret->params = NULL;
-
-    return ret;
-}
-
+/* String list API: */
 static list_t*
-make_list(
-    void* data)
+string_list_add(
+    list_t* list,
+    char* text)
 {
-    list_t* l = malloc(sizeof(list_t));
-    l->next = NULL;
-    l->data = data;
-    return l;
-}
-
-static param_t*
-make_param(
-    unsigned char type)
-{
-    param_t* p = malloc(sizeof(param_t));
-    p->type = type;
-    p->stack = 0;
-    return p;
+    string_t* s = malloc(sizeof(string_t));
+    s->text = text;
+    list_append_new(list, s);
+    return list;
 }
 
 static void
-output_expression(
-    expression_t* expr)
+string_list_free(
+    list_t* list)
 {
-    unsigned int i;
+    string_t* s;
+    list_for_each(list, s) {
+        free(s->text);
+        free(s);
+    }
+    list_free_nodes(list);
+    free(list);
+}
 
-    for (i = 0; i < expr->child_count; ++i) {
-        output_expression(expr->children[i]);
+/* Instruction API: */
+static thecl_instr_t*
+instr_init(
+    parser_state_t* state)
+{
+    thecl_instr_t* instr = thecl_instr_new();
+    instr->time = state->instr_time;
+    instr->rank = state->instr_rank;
+    return instr;
+}
+
+static thecl_instr_t*
+instr_new(
+    parser_state_t* state,
+    unsigned int id,
+    const char* format,
+    ...)
+{
+    va_list ap;
+    thecl_instr_t* instr = instr_init(state);
+    instr->id = id;
+
+    va_start(ap, format);
+    while (*format) {
+        thecl_param_t* param;
+        if (*format == 'p') {
+            param = va_arg(ap, thecl_param_t*);
+        } else if (*format == 'S') {
+            param = param_new('S');
+            param->value.val.S = va_arg(ap, int32_t);
+        } else {
+            param = NULL;
+        }
+        list_append_new(&instr->params, param);
+        ++instr->param_count;
+        ++format;
+    }
+    va_end(ap);
+
+    instr->size = state->instr_size(instr);
+
+    return instr;
+}
+
+static thecl_instr_t*
+instr_new_list(
+    parser_state_t* state,
+    unsigned int id,
+    list_t* list)
+{
+    thecl_instr_t* instr = instr_init(state);
+    thecl_param_t* param;
+
+    instr->id = id;
+    if (list) {
+        list_for_each(list, param) {
+            ++instr->param_count;
+            list_append_new(&instr->params, param);
+        }
+        list_free_nodes(list);
     }
 
-    instr_add(expr->instr, expr->params);
+    instr->size = state->instr_size(instr);
+
+    return instr;
+}
+
+static void
+instr_add(
+    thecl_sub_t* sub,
+    thecl_instr_t* instr)
+{
+    list_append_new(&sub->instrs, instr);
+    instr->offset = sub->offset;
+    sub->offset += instr->size;
+}
+
+static expression_t*
+expression_load_new(
+    const parser_state_t* state,
+    thecl_param_t* value)
+{
+    expression_t* ret = malloc(sizeof(expression_t));
+    const expr_t* expr = expr_get_by_symbol(state->version, value->type == 'S' ? LOADI : LOADF);
+    ret->type = EXPRESSION_VAL;
+    ret->id = expr->id;
+    ret->value = value;
+    ret->result_type = value->type;
+    return ret;
+}
+
+static expression_t*
+expression_operation_new(
+    const parser_state_t* state,
+    const int* symbols,
+    expression_t** operands)
+{
+    for (; *symbols; ++symbols) {
+        const expr_t* expr = expr_get_by_symbol(state->version, *symbols);
+
+        for (size_t s = 0; s < expr->stack_arity; ++s) {
+            if (operands[s]->result_type == expr->stack_formats[s]) {
+                expression_t* ret = malloc(sizeof(expression_t));
+                ret->type = EXPRESSION_OP;
+                ret->id = expr->id;
+                ret->value = NULL;
+                list_init(&ret->children);
+                for (size_t o = 0; o < expr->stack_arity; ++o) {
+                    list_append_new(&ret->children, operands[o]);
+                }
+                ret->result_type = expr->return_type;
+
+                return ret;
+            }
+        }
+    }
+
+    return NULL;
+}
+
+static void
+expression_output(
+    parser_state_t* state,
+    expression_t* expr)
+{
+    if (expr->type == EXPRESSION_VAL) {
+        instr_add(state->current_sub, instr_new(state, expr->id, "p", expr->value));
+    } else if (expr->type == EXPRESSION_OP) {
+        expression_t* child_expr;
+        list_for_each(&expr->children, child_expr) {
+            expression_output(state, child_expr);
+        }
+
+        instr_add(state->current_sub, instr_new(state, expr->id, ""));
+    }
+}
+
+static void
+expression_free(
+    expression_t* expr)
+{
+    expression_t* child_expr;
+    if (expr->type == EXPRESSION_OP) {
+        list_for_each(&expr->children, child_expr)
+            expression_free(child_expr);
+        list_free_nodes(&expr->children);
+    }
+    free(expr);
 }
 
 static void
 sub_begin(
+    parser_state_t* state,
     char* name)
 {
-    sub_cnt++;
-    subs = realloc(subs, sub_cnt * sizeof(sub_t));
-    current_sub = &subs[sub_cnt - 1];
+    thecl_sub_t* sub = malloc(sizeof(thecl_sub_t));
 
-    instr_time = 0;
-    current_sub->name = strdup(name);
-    current_sub->instr_cnt = 0;
-    current_sub->instrs = NULL;
-    current_sub->offset = 0;
-    current_sub->label_cnt = 0;
-    current_sub->labels = NULL;
-    current_sub->var_cnt = 0;
-    current_sub->vars = NULL;
-    current_sub->stack = 0;
-    current_sub->arity = 0;
+    sub->name = strdup(name);
+    list_init(&sub->instrs);
+    sub->stack = 0;
+    sub->arity = 0;
+    sub->var_count = 0;
+    sub->vars = NULL;
+    sub->offset = 0;
+    list_init(&sub->labels);
+    list_append_new(&state->ecl->subs, sub);
+
+    ++state->ecl->sub_count;
+    state->instr_time = 0;
+    state->instr_rank = 0xff;
+    state->current_sub = sub;
 }
 
 static void
-sub_finish(void)
+sub_finish(
+    parser_state_t* state)
 {
-    unsigned int i;
-    for (i = 0; i < current_sub->var_cnt; ++i)
-        free(current_sub->vars[i]);
-    free(current_sub->vars);
-    current_sub = NULL;
+    state->current_sub = NULL;
 }
 
 static void
 var_create(
-    sub_t* sub,
+    thecl_sub_t* sub,
     const char* name)
 {
-    ++sub->var_cnt;
-    sub->vars = realloc(sub->vars, sub->var_cnt * sizeof(char*));
-    sub->vars[sub->var_cnt - 1] = strdup(name);
+    ++sub->var_count;
+    sub->vars = realloc(sub->vars, sub->var_count * sizeof(char*));
+    sub->vars[sub->var_count - 1] = strdup(name);
 }
 
 static int
 var_find(
-    sub_t* sub,
+    parser_state_t* state,
+    thecl_sub_t* sub,
     const char* name)
 {
     char buf[256];
     unsigned int i;
-    for (i = 0; i < sub->var_cnt; ++i) {
+    for (i = 0; i < sub->var_count; ++i) {
         if (strcmp(name, sub->vars[i]) == 0)
             return i * 4;
     }
     snprintf(buf, 256, "variable not found: %s", name);
-    yyerror(buf);
+    yyerror(state, buf);
     return 0;
 }
 
 static void
 label_create(
+    parser_state_t* state,
     char* name)
 {
-    current_sub->label_cnt++;
-    current_sub->labels =
-        realloc(current_sub->labels, sizeof(label_t) * current_sub->label_cnt);
-    current_sub->labels[current_sub->label_cnt - 1].name = strdup(name);
-    current_sub->labels[current_sub->label_cnt - 1].offset =
-        current_sub->offset;
+    thecl_label_t* label = malloc(sizeof(thecl_label_t) + strlen(name) + 1);
+    list_prepend_new(&state->current_sub->labels, label);
+    label->offset = state->current_sub->offset;
+    strcpy(label->name, name);
 }
 
-static int32_t
-label_find(
-    sub_t* sub,
-    const char* name)
+void
+set_time(
+    parser_state_t* state,
+    int new_time)
 {
-    char buf[256];
-    unsigned int i;
-    for (i = 0; i < sub->label_cnt; ++i) {
-        if (strcmp(sub->labels[i].name, name) == 0)
-            return sub->labels[i].offset;
+    if (new_time == state->instr_time || (state->instr_time > 0 && new_time < state->instr_time)) {
+        char buf[256];
+        snprintf(buf, 256, "illegal timer change: %d to %d", state->instr_time, new_time);
+        yyerror(state, buf);
     }
-    snprintf(buf, 256, "label not found: %s", name);
-    yyerror(buf);
-    return 0;
-}
-
-static void
-instr_create(
-    instr_t* instr,
-    uint32_t time,
-    uint16_t id,
-    uint16_t param_mask,
-    uint8_t rank_mask,
-    uint8_t param_cnt,
-    param_t* params)
-{
-    unsigned int i;
-
-    instr->time = time;
-    instr->id = id;
-    instr->size = 16;
-    instr->param_mask = param_mask;
-    instr->rank_mask = rank_mask;
-    instr->param_cnt = param_cnt;
-    instr->params = params;
-    instr->offset = 0;
-
-    for (i = 0; i < param_cnt; ++i) {
-        unsigned int padded_length;
-        switch (params[i].type) {
-        case 'i':
-        case 'o':
-        case 'f':
-            instr->size += sizeof(int32_t);
-            break;
-        case 'D':
-            instr->size += sizeof(uint32_t) * 2;
-            break;
-        case 's':
-        case 'c':
-            padded_length = instr->params[i].value.s.length +
-                (4 - instr->params[i].value.s.length % 4);
-            instr->size += sizeof(uint32_t);
-            instr->size += padded_length;
-            break;
-        }
-    }
-}
-
-static char*
-instr_serialize(
-    sub_t* sub,
-    instr_t* op)
-{
-    unsigned int i;
-    char* data = calloc(op->size, 1);
-    unsigned int offset = 0;
-
-    memcpy(data, op, 12);
-    offset += 16;
-
-    for (i = 0; i < op->param_cnt; ++i) {
-        unsigned int padded_length;
-        int32_t label;
-        switch (op->params[i].type) {
-        case 'i':
-            memcpy(data + offset, &op->params[i].value.i, sizeof(int32_t));
-            offset += sizeof(int32_t);
-            break;
-        case 'f':
-            memcpy(data + offset, &op->params[i].value.f, sizeof(float));
-            offset += sizeof(float);
-            break;
-        case 'D':
-            memcpy(data + offset, &op->params[i].value.D, sizeof(int32_t) * 2);
-            offset += sizeof(int32_t) * 2;
-            break;
-        case 'o':
-            label = label_find(sub, op->params[i].value.s.data) - op->offset;
-            memcpy(data + offset, &label, sizeof(int32_t));
-            offset += sizeof(int32_t);
-
-            free(op->params[i].value.s.data);
-
-            break;
-        case 's':
-        case 'c':
-            padded_length = op->params[i].value.s.length +
-                (4 - op->params[i].value.s.length % 4);
-
-            memcpy(data + offset, &padded_length, sizeof(uint32_t));
-            offset += sizeof(uint32_t);
-
-            if (op->params[i].type == 'c') {
-                memcpy(data + offset, op->params[i].value.s.data,
-                    padded_length);
-            } else {
-                memcpy(data + offset, op->params[i].value.s.data,
-                    op->params[i].value.s.length);
-            }
-            offset += padded_length;
-
-            free(op->params[i].value.s.data);
-
-            break;
-        }
-    }
-
-    free(op->params);
-
-    return data;
-}
-
-static void
-instr_add(
-    int id,
-    list_t* list)
-{
-    int param_mask = 0;
-    uint8_t param_cnt = 0;
-    param_t* params = NULL;
-    instr_t* op;
-
-    current_sub->instr_cnt++;
-    current_sub->instrs =
-        realloc(current_sub->instrs, current_sub->instr_cnt * sizeof(instr_t));
-
-    op = &current_sub->instrs[current_sub->instr_cnt - 1];
-
-    while (list) {
-        param_t* param;
-        list_t* temp;
-        param_cnt++;
-
-        param = list->data;
-
-        params = realloc(params, param_cnt * sizeof(param_t));
-        params[param_cnt - 1] = *param;
-
-        if (param->stack)
-            param_mask |= 1 << (param_cnt - 1);
-
-        temp = list;
-        list = list->next;
-    }
-
-    instr_create(op, instr_time, id, param_mask, instr_rank, param_cnt, params);
-
-    op->offset = current_sub->offset;
-    current_sub->offset += op->size;
+    state->instr_time = new_time;
 }
 
 void
 yyerror(
+    parser_state_t* state,
     const char* str)
 {
+    state = state;
     /* TODO: Research standard row and column range formats. */
     if (yylloc.first_line == yylloc.last_line) {
         if (yylloc.first_column == yylloc.last_column) {
@@ -986,158 +867,4 @@ yyerror(
                 argv0, current_input, yylloc.first_line,
                 yylloc.first_column, yylloc.last_line, yylloc.last_column, str);
     }
-}
-
-int
-compile_ecs(
-    FILE* in,
-    FILE* out,
-    unsigned int parse_version)
-{
-    long pos;
-    unsigned int i;
-    const uint32_t zero = 0;
-    header_scpt_t header;
-    header_eclh_t eclh;
-
-    version = parse_version;
-
-    if (!file_seekable(out)) {
-        fprintf(stderr, "%s: output is not seekable\n", argv0);
-        return 0;
-    }
-
-    yyin = in;
-
-    if (yyparse() != 0)
-        return 0;
-
-    /* TODO: Use a memory buffer instead of writing many small chunks. */
-
-    header.unknown1 = 1;
-    header.include_length = 0;
-    header.include_offset = 0;
-    header.zero1 = 0;
-    header.sub_cnt = sub_cnt;
-    header.zero2[0] = 0;
-    header.zero2[1] = 0;
-    header.zero2[2] = 0;
-    header.zero2[3] = 0;
-
-    if (fputs("SCPT", out) == EOF) {
-        fprintf(stderr, "%s: couldn't write: %s\n", argv0, strerror(errno));
-        return 0;
-    }
-    if (!file_write(out, &header, sizeof(header_scpt_t)))
-        return 0;
-
-    header.include_offset = file_tell(out);
-    if (header.include_offset == (uint32_t)-1) {
-        return 0;
-    }
-    if (fputs("ANIM", out) == EOF) {
-        fprintf(stderr, "%s: couldn't write: %s\n", argv0, strerror(errno));
-        return 0;
-    }
-    if (!file_write(out, &anim_cnt, sizeof(uint32_t)))
-        return 0;
-    for (i = 0; i < anim_cnt; ++i) {
-        if (!file_write(out, anim_list[i], strlen(anim_list[i]) + 1))
-            return 0;
-        free(anim_list[i]);
-    }
-    free(anim_list);
-
-    pos = file_tell(out);
-    if (pos == -1)
-        return 0;
-    if (pos % 4 != 0) {
-        if (!file_write(out, &zero, 4 - pos % 4))
-            return 0;
-    }
-
-    if (fputs("ECLI", out) == EOF) {
-        fprintf(stderr, "%s: couldn't write: %s\n", argv0, strerror(errno));
-        return 0;
-    }
-    if (!file_write(out, &ecli_cnt, sizeof(uint32_t)))
-        return 0;
-    for (i = 0; i < ecli_cnt; ++i) {
-        if (!file_write(out, ecli_list[i], strlen(ecli_list[i]) + 1))
-            return 0;
-        free(ecli_list[i]);
-    }
-    free(ecli_list);
-
-    pos = file_tell(out);
-    if (pos == -1)
-        return 0;
-    if (pos % 4 != 0) {
-        if (!file_write(out, &zero, 4 - pos % 4))
-            return 0;
-    }
-    pos = file_tell(out);
-    if (pos == -1)
-        return 0;
-    header.include_length = pos - header.include_offset;
-
-    for (i = 0; i < sub_cnt; ++i) {
-        if (!file_write(out, &zero, sizeof(uint32_t)))
-            return 0;
-    }
-
-    for (i = 0; i < sub_cnt; ++i) {
-        if (!file_write(out, subs[i].name, strlen(subs[i].name) + 1))
-            return 0;
-        free(subs[i].name);
-    }
-
-    pos = file_tell(out);
-    if (pos == -1)
-        return 0;
-    if (pos % 4 != 0) {
-        if (!file_write(out, &zero, 4 - pos % 4))
-            return 0;
-    }
-
-    eclh.unknown1 = 0x10;
-    eclh.zero[0] = 0;
-    eclh.zero[1] = 0;
-
-    for (i = 0; i < sub_cnt; ++i) {
-        unsigned int j;
-        subs[i].offset = file_tell(out);
-        if (subs[i].offset == (uint32_t)-1)
-            return 0;
-        if (fputs("ECLH", out) == EOF) {
-            fprintf(stderr, "%s: couldn't write: %s\n", argv0, strerror(errno));
-            return 0;
-        }
-        if (!file_write(out, &eclh, sizeof(header_eclh_t)))
-            return 0;
-        for (j = 0; j < subs[i].instr_cnt; ++j) {
-            char* data = instr_serialize(&subs[i], &subs[i].instrs[j]);
-            if (!file_write(out, data, subs[i].instrs[j].size))
-                return 0;
-            free(data);
-        }
-        for (j = 0; j < subs[i].label_cnt; ++j) {
-            free(subs[i].labels[j].name);
-        }
-        free(subs[i].labels);
-        free(subs[i].instrs);
-    }
-
-    file_seek(out, 4);
-    if (!file_write(out, &header, sizeof(header_scpt_t)))
-        return 0;
-
-    file_seek(out, header.include_offset + header.include_length);
-    for (i = 0; i < sub_cnt; ++i) {
-        if (!file_write(out, &subs[i].offset, sizeof(uint32_t)))
-            return 0;
-    }
-    free(subs);
-
-    return 1;
 }

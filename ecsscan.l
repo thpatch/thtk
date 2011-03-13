@@ -34,9 +34,9 @@
     #include <stdio.h>
     #include <stdlib.h>
     #include "ecsparse.h"
-    #include "ecl.h"
     #include "util.h"
-    void yyerror(const char*);
+    #include "thecl.h"
+    void yyerror(parser_state_t*, const char*);
     /* yylloc.first_column is initialized to 1. */
     #define YY_USER_INIT yylloc.first_column = 0
     /* XXX: The builtin YY_INPUT does something with the newlines that doesn't
@@ -62,6 +62,7 @@
     }
 %x COMMENT CSTRING STRING
 %%
+","        return COMMA;
 ":"        return COLON;
 ";"        return SEMICOLON;
 "["        return SQUARE_OPEN;
@@ -70,57 +71,41 @@
 "}"        return BRACE_CLOSE;
 "("        return PARENTHESIS_OPEN;
 ")"        return PARENTHESIS_CLOSE;
-"(float)"  return CAST_FLOAT;
-"(int)"    return CAST_INT;
 "anim"     return ANIM;
 "ecli"     return ECLI;
 "sub"      return SUB;
 "var"      return VAR;
+"local"    return LOCAL;
 "@"        return AT;
 
 "goto"     return GOTO;
 "unless"   return UNLESS;
 "if"       return IF;
 "="        return ASSIGN;
-"$="       return ASSIGNI;
-"%="       return ASSIGNF;
 "+"        return ADD;
-"$+"       return ADDI;
-"%+"       return ADDF;
 "-"        return SUBTRACT;
-"$-"       return SUBTRACTI;
-"%-"       return SUBTRACTF;
 "*"        return MULTIPLY;
-"$*"       return MULTIPLYI;
-"%*"       return MULTIPLYF;
 "/"        return DIVIDE;
-"$/"       return DIVIDEI;
-"%/"       return DIVIDEF;
 "%"        return MODULO;
 "=="       return EQUAL;
-"$=="      return EQUALI;
-"%=="      return EQUALF;
 "!="       return INEQUAL;
-"$!="      return INEQUALI;
-"%!="      return INEQUALF;
 "<"        return LT;
-"$<"       return LTI;
-"%<"       return LTF;
 "<="       return LTEQ;
-"$<="      return LTEQI;
-"%<="      return LTEQF;
 ">"        return GT;
-"$>"       return GTI;
-"%>"       return GTF;
 ">="       return GTEQ;
-"$>="      return GTEQI;
-"%>="      return GTEQF;
 "!"        return NOT;
 "||"       return OR;
 "&&"       return AND;
 "^"        return XOR;
 
 "$"        return DOLLAR;
+
+_S return CAST_INTEGER;
+_f return CAST_FLOATING;
+_SS return CAST_II;
+_Sf return CAST_IF;
+_ff return CAST_FF;
+_fS return CAST_FI;
 
 -?[0-9]+(\.[0-9]+)?f {
     yylval.floating = strtof(yytext, NULL);
@@ -170,7 +155,7 @@ C\" {
 }
 <STRING,CSTRING>\n {
     free(yylval.string);
-    yyerror("unterminated string");
+    yyerror(NULL, "unterminated string");
     BEGIN(INITIAL);
     yyterminate();
 }
@@ -183,9 +168,11 @@ C\" {
     return TEXT;
 }
 <CSTRING>\" {
-    yylval.string = realloc(yylval.string, strlen(yylval.string) + 4);
-    memset(yylval.string + strlen(yylval.string), 0, 4);
-    util_xor((unsigned char*)yylval.string, strlen(yylval.string) + 4, 0x77, 7, 16);
+    size_t length = strlen(yylval.string);
+    yylval.bytes.data = realloc(yylval.string, length + 4);
+    yylval.bytes.length = length;
+    memset(yylval.bytes.data + length, 0, 4);
+//    util_xor((unsigned char*)yylval.bytes.data, length + 4, 0x77, 7, 16);
     BEGIN(INITIAL);
     return CTEXT;
 }
@@ -199,6 +186,6 @@ C\" {
 . {
     char buf[256];
     snprintf(buf, 256, "illegal token: %s", yytext);
-    yyerror(buf);
+    yyerror(NULL, buf);
     return ILLEGAL_TOKEN;
 }
