@@ -1,0 +1,96 @@
+.\" Redistribution and use in source and binary forms, with
+.\" or without modification, are permitted provided that the
+.\" following conditions are met:
+.\" 
+.\" 1. Redistributions of source code must retain this list
+.\"    of conditions and the following disclaimer.
+.\" 2. Redistributions in binary form must reproduce this
+.\"    list of conditions and the following disclaimer in the
+.\"    documentation and/or other materials provided with the
+.\"    distribution.
+.\" 
+.\" THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND
+.\" CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
+.\" WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+.\" WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+.\" PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+.\" COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+.\" INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+.\" CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+.\" PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+.\" DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+.\" CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+.\" CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+.\" OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+.\" SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
+.\" DAMAGE.
+.Dd March 13, 2011
+.Dt THDAT 1
+.Os GensokyOS
+.Sh NAME
+.Nm thdat
+.Nd Touhou archive tool
+.Sh SYNOPSIS
+.Nm
+.Ar command Ns Op Ar version
+.Op Ar archive Op Ar
+.Sh DESCRIPTION
+The
+.Nm
+utility extracts files from an archive or creates a new archive from a set of files.
+The following commands are available:
+.Bl -tag -width Ds
+.It Ar c Ns Oo Ar version Oc Ar archive Ar file Op Ar
+Archives the specified files.
+.It Ar d Ns Oo Ar version Oc Ar archive Op Ar
+Extracts files.
+If no files are specified, all files are extracted.
+The format is not automatically detected.
+.It Ar h
+Displays the usage along with the supported versions.
+.It Ar V
+Displays the program version.
+.El
+.Pp
+The version specifies which archive format to use.
+Refer to the output of the h command for a list of supported formats.
+The greatest version number is used by default.
+.Sh ENVIRONMENT
+.Bl -tag -width OMP_NUM_THREADS
+.It Ev OMP_NUM_THREADS
+The number of threads to be used for compression and decompression.
+The default used when
+.Ev OMP_NUM_THREADS
+is not set depends on the OpenMP implementation.
+.El
+.Sh EXIT STATUS
+The
+.Nm
+utility exits with 0 on success, 1 on error.
+.Sh EXAMPLES
+Create a new archive from the input files:
+.Bd -literal -offset indent
+thdat c6 output.dat input.anm input.msg input.ecl
+.Ed
+.Pp
+Extract all files from the archive to the current working directory:
+.Bd -literal -offset indent
+thdat d8 th08.dat
+.Ed
+.Sh SEE ALSO
+.Lk http://code.google.com/p/thtk "Project homepage"
+.Sh CAVEATS
+BGM archives are not supported by the
+.Nm
+utility.
+.Sh BUGS
+The format used by TH03-TH05 uses separate encryption keys for each entry in the archives, as well as one key for the entry list.
+It is not known if these keys are computed from the entries, or if they are randomly assigned.
+They are currently set to constant values.
+.Pp
+Original TH08 and TH09 archives contain a large amount of encrypted zero padding at the end of the entry list.
+This padding is reduced to four bytes.
+.Sh SECURITY CONSIDERATIONS
+File names may not be properly sanitized when extracting.
+Furthermode, invalid data may not be properly handled.
+Do not extract untrusted archives.

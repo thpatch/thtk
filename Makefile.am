@@ -10,6 +10,11 @@ EXTRA_DIST = \
 	COPYING.glibc \
 	COPYING.libpng \
 	COPYING.zlib
+dist_man1_MANS = \
+	thanm.1 \
+	thdat.1 \
+	thecl.1 \
+	thmsg.1
 
 if COMBINE
 am_thanm_OBJECTS = thanm.o
