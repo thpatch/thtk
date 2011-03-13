@@ -1,13 +1,15 @@
 Build requirements:
-	[if building from repository] autoconf 2.62
-	[if building from repository] automake 1.9
-	libpng.
-	Recent GCC.
-	Recent glibc.
+	[if building from repository] autoconf >=2.62
+	[if building from repository] automake >=1.9
+	[if building from repository] flex >=2.5.31
+	[if building from repository] bison
+	zlib
+	libpng
+	Recent GCC
+	Recent glibc
 
 Build instructions:
 	[if building from repository] $ autoreconf -fi
 	$ ./configure
 	$ make
-
-	Four executables are generated, thanm, thdat, thecl, and thmsg.
+	# make install
