@@ -365,6 +365,7 @@ th95_dump(
 
 static size_t
 th95_instr_size(
+    const thecl_t __attribute__((unused))* ecl,
     const thecl_instr_t* instr)
 {
     size_t ret = sizeof(th95_instr_t);
@@ -434,7 +435,7 @@ th95_compile(
         thecl_instr_t* instr;
         list_for_each(&sub->instrs, instr) {
             th95_instr_t raw_instr = {
-                instr->time, instr->id, th95_instr_size(instr), 0xff00, 0, instr->id == 0x9b ? 0x18 : 0x00 };
+                instr->time, instr->id, th95_instr_size(ecl, instr), 0xff00, 0, instr->id == 0x9b ? 0x18 : 0x00 };
 
             thecl_param_t* param;
             size_t p = 0;

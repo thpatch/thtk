@@ -644,7 +644,7 @@ instr_new(
     }
     va_end(ap);
 
-    instr->size = state->instr_size(instr);
+    instr->size = state->instr_size(state->ecl, instr);
 
     return instr;
 }
@@ -667,7 +667,7 @@ instr_new_list(
         list_free_nodes(list);
     }
 
-    instr->size = state->instr_size(instr);
+    instr->size = state->instr_size(state->ecl, instr);
 
     return instr;
 }

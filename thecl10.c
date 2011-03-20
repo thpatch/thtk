@@ -1224,6 +1224,7 @@ normal:
 
 static size_t
 th10_instr_size(
+    const thecl_t __attribute__((unused))* ecl,
     const thecl_instr_t* instr)
 {
     size_t ret = sizeof(th10_instr_t);
