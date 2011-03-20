@@ -1,3 +1,7 @@
+What's new in thtk 4:
+
+thecl: Support for parsing of 16-bit values.
+
 What's new in thtk 3:
 
 thecl: Double quotes in ECL files are now escaped.

@@ -168,7 +168,6 @@ static const id_format_pair_t th06_fmts[] = {
     { 63, "S" },
     { 65, "ffff" },
     { 66, "" },
-#if 0
     { 67, "ssSSffffS" },
     { 68, "ssSSffffS" },
     { 69, "ssSSffffS" },
@@ -176,15 +175,6 @@ static const id_format_pair_t th06_fmts[] = {
     { 71, "ssSSffSSS" },
     { 74, "ssSSffSSS" },
     { 75, "ssSSffffS" },
-#else
-    { 67, "SSSffffS" },
-    { 68, "SSSffffS" },
-    { 69, "SSSffffS" },
-    { 70, "SSSffffS" },
-    { 71, "SSSffSSS" },
-    { 74, "SSSffSSS" },
-    { 75, "SSSffffS" },
-#endif
     { 76, "S" },
     { 77, "S" },
     { 78, "" },
@@ -193,35 +183,18 @@ static const id_format_pair_t th06_fmts[] = {
     { 82, "SSSSffff" },
     { 83, "" },
     { 84, "S" },
-#if 0
     { 85, "ssfSffffSSSSSS" },
     { 86, "ssffSfffSSSSSS" },
-#else
-    { 85, "SfSffffSSSSSS" },
-    { 86, "SffSfffSSSSSS" },
-#endif
     { 87, "S" },
     { 88, "Sf" },
     { 90, "SSSS" },
     { 92, "S" },
-#if 0
     { 93, "ssm" },
-#else
-    { 93, "Sm" },
-#endif
     { 94, "" },
-#if 0
     { 95, "SfffssS" },
-#else
-    { 95, "SfffSS" },
-#endif
     { 96, "" },
     { 97, "S" },
-#if 0
     { 98, "ssssS" },
-#else
-    { 98, "SSS" },
-#endif
     { 99, "SS" },
     { 100, "S" },
     { 101, "S" },
@@ -240,11 +213,7 @@ static const id_format_pair_t th06_fmts[] = {
     { 115, "S" },
     { 116, "S" },
     { 117, "S" },
-#if 0
     { 118, "SSss" },
-#else
-    { 118, "SSS" },
-#endif
     { 119, "S" },
     { 120, "S" },
     { 121, "SS" },
@@ -476,11 +445,17 @@ th06_instr_size(
     size_t ret = sizeof(th06_instr_t);
     thecl_param_t* param;
 
+    const char* format = instr->id ? find_format(th06_fmts, instr->id) : "";
+
     list_for_each(&instr->params, param) {
         if (param->type == 'M')
             ret += 34;
-        else
-            ret += value_size(&param->value);
+        else {
+            value_t v = param->value;
+            v.type = *format;
+            ret += value_size(&v);
+        }
+        ++format;
     }
 
     return ret;
@@ -525,6 +500,13 @@ th06_instr_serialize(
         ret->rank_mask = 0xff00;
     ret->unknown3 = 0x00ff;
 
+    const char* format = instr->id ? find_format(th06_fmts, instr->id) : "";
+
+    if (instr->param_count != strlen(format)) {
+        fprintf(stderr, "%s: instruction parameter count does not match format count\n", argv0);
+        exit(1);
+    }
+
     thecl_param_t* param;
     unsigned char* param_data = ret->data;
     list_for_each(&instr->params, param) {
@@ -532,8 +514,12 @@ th06_instr_serialize(
             memset(param_data, 0, 34);
             memcpy(param_data, param->value.val.m.data, param->value.val.m.length);
             param_data += 34;
-        } else
-            param_data += value_to_data(&param->value, param_data, instr->size - (param_data - (unsigned char*)ret));
+        } else {
+            value_t v = param->value;
+            v.type = *format;
+            param_data += value_to_data(&v, param_data, instr->size - (param_data - (unsigned char*)ret));
+        }
+        ++format;
     }
 
     return ret;
