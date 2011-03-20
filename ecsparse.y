@@ -312,7 +312,7 @@ Integer_List:
     ;
 
 Subroutine_Body:
-      "var" Optional_Identifier_Whitespace_List ";" {
+    | "var" Optional_Identifier_Whitespace_List ";" {
         size_t var_list_length = 0;
         string_t* str;
 
