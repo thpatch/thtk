@@ -123,12 +123,16 @@ ins_[0-9]+ {
     yylval.integer = strtol(yytext, NULL, 16);
     return INTEGER;
 }
-![ENHL]+ {
+![ENHLWXYZ]+ {
     yylval.integer = 0xf0;
     if (strchr(yytext, 'E')) yylval.integer |= RANK_EASY;
     if (strchr(yytext, 'N')) yylval.integer |= RANK_NORMAL;
     if (strchr(yytext, 'H')) yylval.integer |= RANK_HARD;
     if (strchr(yytext, 'L')) yylval.integer |= RANK_LUNATIC;
+    if (strchr(yytext, 'W')) yylval.integer &= ~RANK_UNKNOWN1;
+    if (strchr(yytext, 'X')) yylval.integer &= ~RANK_UNKNOWN2;
+    if (strchr(yytext, 'Y')) yylval.integer &= ~RANK_UNKNOWN3;
+    if (strchr(yytext, 'Z')) yylval.integer &= ~RANK_UNKNOWN4;
     return RANK;
 }
 

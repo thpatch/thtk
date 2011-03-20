@@ -45,6 +45,10 @@ typedef enum {
 #define RANK_NORMAL  (1 << 1)
 #define RANK_HARD    (1 << 2)
 #define RANK_LUNATIC (1 << 3)
+#define RANK_UNKNOWN1 (1 << 4)
+#define RANK_UNKNOWN2 (1 << 5)
+#define RANK_UNKNOWN3 (1 << 6)
+#define RANK_UNKNOWN4 (1 << 7)
 
 typedef struct thecl_param_t {
     int type;
