@@ -289,7 +289,7 @@ Statement:
             local_data->data[data_length++] = param->value.val.S;
         }
 
-        list_prepend_new(&state->ecl->local_data, local_data);
+        list_append_new(&state->ecl->local_data, local_data);
 
         list_for_each($4, param)
             free(param);
