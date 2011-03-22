@@ -37,7 +37,6 @@
 #include "util.h"
 
 extern const thecl_module_t th06_ecl;
-extern const thecl_module_t th95_ecl;
 extern const thecl_module_t th10_ecl;
 
 thecl_t*
@@ -171,7 +170,7 @@ print_usage(void)
            "  h  display this help and exit\n"
            "  V  display version information and exit\n"
            "OPTION can be:\n"
-           "  #  # can be 6, 95, 10, 11, 12, 125, or 128 (required)\n"
+           "  #  # can be 6, 7, 8, 9, 95, 10, 11, 12, 125, or 128 (required)\n"
            "Report bugs to <" PACKAGE_BUGREPORT ">.\n", argv0);
 }
 
@@ -191,10 +190,11 @@ main(int argc, char* argv[])
 
     switch (version) {
     case 6:
-        module = &th06_ecl;
-        break;
+    case 7:
+    case 8:
+    case 9:
     case 95:
-        module = &th95_ecl;
+        module = &th06_ecl;
         break;
     case 10:
     case 11:

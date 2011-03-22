@@ -8,7 +8,7 @@ thanm x  - - - - - - y  - y y  y  y   -  y  y   -   y   y
 thanm l  - - - - - y y  - y y  y  y   -  y  y   -   y   y
 thdat x  y y y y y y y  n y y  y  y   n  y  y   n   y   y
 thdat c  y y y y y y y  n y y  y  y   n  y  y   n   y   y
-thecl d  - - - - - y n  - n n  y  y   -  y  y   -   y   y
-thecl c  - - - - - y n  - n n  y  y   -  y  y   -   y   y
+thecl d  - - - - - y y  - y y  y  y   -  y  y   -   y   y
+thecl c  - - - - - y y  - y y  y  y   -  y  y   -   y   y
 thmsg d  - - - - - y y  - y y  y  y   -  y  y   -   y   y
 thmsg c  - - - - - y y  - y y  y  y   -  y  y   -   y   y
