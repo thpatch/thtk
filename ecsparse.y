@@ -127,7 +127,6 @@ void set_time(parser_state_t* state, int new_time);
 %token <integer> INSTRUCTION "instruction"
 %token <string> IDENTIFIER "identifier"
 %token <string> TEXT "text"
-%token <bytes> CTEXT "encrypted text"
 %token <integer> INTEGER "integer"
 %token <floating> FLOATING "float"
 %token <integer> RANK "rank"
@@ -218,7 +217,6 @@ void set_time(parser_state_t* state, int new_time);
 %type <param> Floating
 %type <param> Text
 %type <param> Label
-%type <param> Encrypted_Text
 %type <param> Load_Type
 %type <param> Cast_Type
 
@@ -459,7 +457,6 @@ Instruction_Parameter:
     | Floating
     | Text
     | Label
-    | Encrypted_Text
     | Cast_Target2 Cast_Type {
         $$ = param_new('D');
         $$->stack = $2->stack;
@@ -549,26 +546,14 @@ Floating:
 
 Text:
     TEXT {
-        /* TODO: Read this as z and instead convert it to something else when needed. */
-        $$ = param_new('M');
-        $$->value.type = 'm';
-        $$->value.val.m.length = strlen($1);
-        $$->value.val.m.data = (unsigned char*)$1;
-      }
-    ;
-
-Encrypted_Text:
-    CTEXT {
-        $$ = param_new('X');
-        $$->value.type = 'm';
-        $$->value.val.m.length = $1.length;
-        $$->value.val.m.data = $1.data;
+        $$ = param_new('z');
+        $$->value.val.z = $1;
       }
     ;
 
 Label:
     IDENTIFIER {
-        $$ = param_new('O');
+        $$ = param_new('o');
         $$->value.type = 'z';
         $$->value.val.z = $1;
       }
@@ -616,6 +601,38 @@ instr_init(
     return instr;
 }
 
+static void
+instr_set_types(
+    parser_state_t* state,
+    thecl_instr_t* instr)
+{
+    const char* format = state->instr_format(state->version, instr->id);
+
+    thecl_param_t* param;
+    list_for_each(&instr->params, param) {
+        int new_type;
+        /* XXX: How to check for errors?
+         * Perhaps some kind of function that returns a list of satisfying types?
+         * Or should there only be one type? */
+        /* TODO: Implement * and ? if needed. */
+        if (*format == '*')
+            new_type = *(format + 1);
+        else
+            new_type = *format;
+
+        if ((new_type != param->type) && (param->type != 'z' && (new_type == 'm' || new_type == 'x')))
+            fprintf(stderr, "%c -> %c\n", param->type, new_type);
+
+        param->type = new_type;
+
+        if (*format != '*')
+            ++format;
+    }
+    
+
+    return;
+}
+
 static thecl_instr_t*
 instr_new(
     parser_state_t* state,
@@ -644,7 +661,9 @@ instr_new(
     }
     va_end(ap);
 
-    instr->size = state->instr_size(state->ecl, instr);
+    instr_set_types(state, instr);
+
+    instr->size = state->instr_size(state->version, instr);
 
     return instr;
 }
@@ -667,7 +686,9 @@ instr_new_list(
         list_free_nodes(list);
     }
 
-    instr->size = state->instr_size(state->ecl, instr);
+    instr_set_types(state, instr);
+
+    instr->size = state->instr_size(state->version, instr);
 
     return instr;
 }

@@ -112,17 +112,19 @@ th10_value_from_data(
         return value_from_data(data, 2 * sizeof(uint32_t), 'm', value);
     case 'o':
         return value_from_data(data, data_length, 'S', value);
-    case 'X': {
+    case 'm':
+    case 'x': {
         uint32_t length;
         memcpy(&length, data, sizeof(uint32_t));
-        ssize_t ret = value_from_data(data + sizeof(uint32_t), length, 'm', value);
-        util_xor(value->val.m.data, ret, 0x77, 7, 16);
-        return sizeof(uint32_t) + ret;
-    }
-    case 'M': {
-        uint32_t length;
-        memcpy(&length, data, sizeof(uint32_t));
-        return sizeof(uint32_t) + value_from_data(data + sizeof(uint32_t), length, 'm', value);
+        value_t temp;
+
+        value_from_data(data + sizeof(length), length, 'm', &temp);
+        if (type == 'x')
+            util_xor(temp.val.m.data, length, 0x77, 7, 16);
+        value->type = 'z';
+        value->val.z = (char*)temp.val.m.data;
+
+        return sizeof(uint32_t) + length;
     }
     default:
         return value_from_data(data, data_length, type, value);
@@ -133,32 +135,32 @@ static char*
 th10_param_to_text(
     const thecl_param_t* param)
 {
-    char* ret = malloc(1024);
-    char* temp = ret;
     switch (param->type) {
-    case 'f':
-        sprintf(temp, "%sf", util_printfloat(&param->value.val.f));
-        break;
-    case 'X':
-        *temp++ = 'C';
-    case 'M':
+    case 'f': {
+        char* ret = malloc(1024);
+        sprintf(ret, "%sf", util_printfloat(&param->value.val.f));
+        return ret;
+    }
+    case 'm':
+    case 'x': {
+        const size_t zlen = strlen(param->value.val.z);
+        char* ret = malloc(4 + zlen * 2);
+        char* temp = ret;
         *temp++ = '"';
-        for (size_t i = 0; i < param->value.val.m.length; ++i) {
-            if (!param->value.val.m.data[i])
+        for (size_t z = 0; z < zlen; ++z) {
+            if (!param->value.val.z[z])
                 break;
-            if (param->value.val.m.data[i] == '"')
+            if (param->value.val.z[z] == '"')
                 *temp++ = '\\';
-            *temp++ = param->value.val.m.data[i];
+            *temp++ = param->value.val.z[z];
         }
         *temp++ = '"';
         *temp++ = '\0';
-        break;
+        return ret;
+    }
     default:
-        free(ret);
         return value_to_text(&param->value);
     }
-
-    return ret;
 }
 
 #define RANK_EASY    (1 << 0)
@@ -170,12 +172,12 @@ static const id_format_pair_t th10_fmts[] = {
     { 0, "" },
     { 1, "" },
     { 10, "" },
-    { 11, "M*D" },
+    { 11, "m*D" },
     { 12, "oS" },
     { 13, "oS" },
     { 14, "oS" },
-    { 15, "M*D" },
-    { 16, "MS" },
+    { 15, "m*D" },
+    { 16, "mS" },
     { 17, "S" },
     { 21, "" },
     { 40, "S" },
@@ -210,21 +212,21 @@ static const id_format_pair_t th10_fmts[] = {
     { 82, "f" },
     { 83, "S" },
     { 85, "" },
-    { 256, "MffSSS" },
-    { 257, "MffSSS" },
+    { 256, "mffSSS" },
+    { 257, "mffSSS" },
     { 258, "S" },
     { 259, "SS" },
-    { 260, "MffSSS" },
-    { 261, "MffSSS" },
+    { 260, "mffSSS" },
+    { 261, "mffSSS" },
     { 262, "SS" },
     { 263, "SS" },
     { 264, "SS" },
-    { 265, "MffSSS" },
-    { 266, "MffSSS" },
-    { 267, "MffSSS" },
-    { 268, "MffSSS" },
+    { 265, "mffSSS" },
+    { 266, "mffSSS" },
+    { 267, "mffSSS" },
+    { 268, "mffSSS" },
     { 269, "S" },
-    { 270, "MfffSSS" },
+    { 270, "mfffSSS" },
     { 272, "SS" },
     { 273, "SSf" },
     { 280, "ff" },
@@ -257,15 +259,15 @@ static const id_format_pair_t th10_fmts[] = {
     { 331, "S" },
     { 332, "S" },
     { 333, "" },
-    { 334, "SSSM" },
+    { 334, "SSSm" },
     { 335, "S" },
     { 336, "S" },
     { 337, "SSS" },
     { 338, "S" },
     { 339, "" },
     { 340, "" },
-    { 341, "SM" },
-    { 342, "SSSX" },
+    { 341, "Sm" },
+    { 342, "SSSx" },
     { 343, "" },
     { 344, "S" },
     { 345, "" },
@@ -273,8 +275,8 @@ static const id_format_pair_t th10_fmts[] = {
     { 347, "SfS" },
     { 355, "SSSSS" },
     { 356, "fffff" },
-    { 357, "SSSX" },
-    { 359, "SSSX" },
+    { 357, "SSSx" },
+    { 359, "SSSx" },
     { 360, "S" },
     { 361, "S" },
     { 362, "" },
@@ -345,12 +347,12 @@ static const id_format_pair_t th12_fmts[] = {
     { 0, "" },
     { 1, "" },
     { 10, "" },
-    { 11, "M*D" },
+    { 11, "m*D" },
     { 12, "oS" },
     { 13, "oS" },
     { 14, "oS" },
-    { 15, "M*D" },
-    { 16, "MS*D" },
+    { 15, "m*D" },
+    { 16, "mS*D" },
     { 17, "f" },
     { 21, "" },
     { 40, "S" },
@@ -387,19 +389,19 @@ static const id_format_pair_t th12_fmts[] = {
     { 86, "fff" },
     { 87, "fffff" },
     { 89, "fff" },
-    { 256, "MffSSS" },
-    { 257, "MffSSS" },
+    { 256, "mffSSS" },
+    { 257, "mffSSS" },
     { 258, "S" },
     { 259, "SS" },
-    { 260, "MffSSS" },
-    { 261, "MffSSS" },
+    { 260, "mffSSS" },
+    { 261, "mffSSS" },
     { 262, "SS" },
     { 263, "SS" },
     { 264, "fS" },
-    { 265, "MffSSS" },
-    { 267, "MffSSS" },
+    { 265, "mffSSS" },
+    { 267, "mffSSS" },
     { 269, "f" },
-    { 270, "MffSSSS" },
+    { 270, "mffSSSS" },
     { 273, "SSf" },
     { 274, "fS" },
     { 275, "fS" },
@@ -407,7 +409,7 @@ static const id_format_pair_t th12_fmts[] = {
     { 277, "ff" },
     { 278, "Sff" },
     { 279, "Sff" },
-    { 280, "MSSSSS" },
+    { 280, "mSSSSS" },
     { 281, "Sf" },
     { 300, "ff" },
     { 301, "SSff" },
@@ -439,24 +441,24 @@ static const id_format_pair_t th12_fmts[] = {
     { 411, "S" },
     { 412, "S" },
     { 413, "" },
-    { 414, "SSSM" },
+    { 414, "SSSm" },
     { 415, "S" },
     { 416, "S" },
     { 417, "SSS" },
     { 418, "S" },
     { 419, "" },
     { 420, "" },
-    { 421, "SM" },
-    { 422, "SSSX" },
+    { 421, "Sm" },
+    { 422, "SSSx" },
     { 423, "" },
     { 424, "S" },
     { 425, "" },
     { 427, "SfS" },
     { 435, "SSSSS" },
     { 436, "fffff" },
-    { 437, "SSSX" },
-    { 438, "SSSX" },
-    { 439, "SSSX" },
+    { 437, "SSSx" },
+    { 438, "SSSx" },
+    { 439, "SSSx" },
     { 440, "S" },
     { 442, "" },
     { 443, "" },
@@ -505,7 +507,7 @@ static const id_format_pair_t th12_fmts[] = {
 };
 
 static const id_format_pair_t th125_fmts[] = {
-    { 30, "M*D" },
+    { 30, "m*D" },
     { 62, "" },
     { 77, "" },
     { 79, "" },
@@ -529,7 +531,7 @@ static const id_format_pair_t th125_fmts[] = {
     { 460, "f" },
     { 461, "f" },
     { 462, "S" },
-    { 463, "M" },
+    { 463, "m" },
     { 532, "f" },
     { 536, "S" },
     { 604, "SSf" },
@@ -539,11 +541,11 @@ static const id_format_pair_t th125_fmts[] = {
 };
 
 static const id_format_pair_t th128_fmts[] = {
-    { 22, "SM" },
+    { 22, "Sm" },
     { 71, "" },
     { 283, "ffS" },
     { 537, "fSfSSSffffff" },
-    { 538, "SSM" },
+    { 538, "SSm" },
     { 613, "S" },
     { 614, "fS" },
     { 615, "SS" },
@@ -553,7 +555,7 @@ static const id_format_pair_t th128_fmts[] = {
 static const char*
 th10_find_format(
     unsigned int version,
-    int id)
+    unsigned int id)
 {
     const char* ret = NULL;
 
@@ -838,14 +840,14 @@ th10_trans(
             if (instr->type == THECL_INSTR_INSTR) {
                 thecl_param_t* param;
                 list_for_each(&instr->params, param) {
-                    if (param->type == 'M') {
-                        thecl_sub_t* found_sub = th10_find_sub(ecl, (char*)param->value.val.m.data);
+                    if (param->type == 'm') {
+                        thecl_sub_t* found_sub = th10_find_sub(ecl, param->value.val.z);
                         if (found_sub) {
                             if (instr->id == 11 ||
                                 instr->id == 15) {
                                 th10_set_arity(found_sub, instr->param_count - 1);
                             } else {
-                                thecl_sub_t* found_sub = th10_find_sub(ecl, (char*)param->value.val.m.data);
+                                thecl_sub_t* found_sub = th10_find_sub(ecl, param->value.val.z);
                                 th10_set_arity(found_sub, 0);
                             }
                         }
@@ -949,10 +951,6 @@ th10_stringify_param(
         param = th10_param_index(instr, p);
 
     switch (param->type) {
-    case 'X': {
-        sprintf(temp, "C\"%s\"", param->value.val.m.data);
-        return strdup(temp);
-    }
     case 'o': {
         sprintf(temp, "%s_%d", sub->name, instr->offset + param->value.val.S);
         return strdup(temp);
@@ -1224,19 +1222,22 @@ normal:
 
 static size_t
 th10_instr_size(
-    const thecl_t __attribute__((unused))* ecl,
+    unsigned int __attribute__((unused)) version,
     const thecl_instr_t* instr)
 {
     size_t ret = sizeof(th10_instr_t);
     thecl_param_t* param;
 
     list_for_each(&instr->params, param) {
-        if (param->type == 'M' || param->type == 'X')
-            ret += sizeof(uint32_t) + param->value.val.m.length + (4 - (param->value.val.m.length % 4));
-        else if (param->type == 'O' || param->type == 'o')
+        /* XXX: I think 'z' is what will be passed ... */
+        if (param->type == 'm' || param->type == 'x') {
+            size_t zlen = strlen(param->value.val.z);
+            ret += sizeof(uint32_t) + zlen + (4 - (zlen % 4));
+        } else if (param->type == 'o') {
             ret += sizeof(uint32_t);
-        else
+        } else {
             ret += value_size(&param->value);
+        }
     }
 
     return ret;
@@ -1255,6 +1256,7 @@ th10_parse(
     list_init(&state.expressions);
     state.current_sub = NULL;
     state.ecl = thecl_new();
+    state.instr_format = th10_find_format;
     state.instr_size = th10_instr_size;
 
     yyin = in;
@@ -1304,25 +1306,20 @@ th10_instr_serialize(
         if (param->stack)
             ret->param_mask |= 1 << param_count;
         ++param_count;
-        if (param->type == 'O') {
+        if (param->type == 'o') {
             /* This calculates the relative offset from the current instruction. */
             uint32_t label = label_find(sub, param->value.val.z) - instr->offset;
             memcpy(param_data, &label, sizeof(uint32_t));
             param_data += sizeof(uint32_t);
-        } else if (param->type == 'X') {
-            uint32_t padded_length = param->value.val.m.length + (4 - (param->value.val.m.length % 4));
-            memcpy(param_data, &padded_length, sizeof(uint32_t));
-            param_data += sizeof(uint32_t);
+        } else if (param->type == 'x' || param->type == 'm') {
+            size_t zlen = strlen(param->value.val.z);
+            uint32_t padded_length = zlen + (4 - (zlen % 4));
+            memcpy(param_data, &padded_length, sizeof(padded_length));
+            param_data += sizeof(padded_length);
             memset(param_data, 0, padded_length);
-            memcpy(param_data, param->value.val.m.data, param->value.val.m.length);
-            util_xor(param_data, padded_length, 0x77, 7, 16);
-            param_data += padded_length;
-        } else if (param->type == 'M') {
-            uint32_t padded_length = param->value.val.m.length + (4 - (param->value.val.m.length % 4));
-            memcpy(param_data, &padded_length, sizeof(uint32_t));
-            param_data += sizeof(uint32_t);
-            memcpy(param_data, param->value.val.m.data, param->value.val.m.length);
-            memset(param_data + param->value.val.m.length, 0, padded_length - param->value.val.m.length);
+            strncpy((char*)param_data, param->value.val.z, zlen);
+            if (param->type == 'x')
+                util_xor(param_data, padded_length, 0x77, 7, 16);
             param_data += padded_length;
         } else
             param_data += value_to_data(&param->value, param_data, instr->size - (param_data - (unsigned char*)ret));

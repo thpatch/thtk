@@ -141,43 +141,23 @@ ins_[0-9]+ {
     return IDENTIFIER;
 }
 
-C\" {
-    BEGIN(CSTRING);
-    yylval.string = strdup("");
-}
 \" {
     BEGIN(STRING);
     yylval.string = strdup("");
 }
-<STRING>[^\\\"\n]+ {
+<STRING>[^\"\n]+ {
     yylval.string = realloc(yylval.string, strlen(yylval.string) + yyleng + 1);
     strcat(yylval.string, yytext);
 }
-<CSTRING>[^\"\n]+ {
-    yylval.string = realloc(yylval.string, strlen(yylval.string) + yyleng + 1);
-    strcat(yylval.string, yytext);
-}
-<STRING,CSTRING>\n {
+<STRING>\n {
     free(yylval.string);
     yyerror(NULL, "unterminated string");
     BEGIN(INITIAL);
     yyterminate();
 }
-<STRING>\\. {
-    yylval.string = realloc(yylval.string, strlen(yylval.string) + 1 + 1);
-    strncat(yylval.string, yytext + 1, 1);
-}
 <STRING>\" {
     BEGIN(INITIAL);
     return TEXT;
-}
-<CSTRING>\" {
-    size_t length = strlen(yylval.string);
-    yylval.bytes.data = realloc(yylval.string, length + 4);
-    yylval.bytes.length = length;
-    memset(yylval.bytes.data + length, 0, 4);
-    BEGIN(INITIAL);
-    return CTEXT;
 }
 
 "/*"               BEGIN(COMMENT);

@@ -72,27 +72,30 @@ th08_value_from_data(
 {
     if (type == 'm') {
         int ret;
+        value_t temp;
         switch (data_length) {
         case 224:
-            ret = value_from_data(data, 48, 'm', value);
-            util_xor(value->val.m.data, 48, 0xaa, 0, 0);
+            ret = value_from_data(data, 48, type, &temp);
+            util_xor(temp.val.m.data, 48, 0xaa, 0, 0);
             break;
         case 176:
-            ret = value_from_data(data, 48, 'm', value);
-            util_xor(value->val.m.data, 48, 0xbb, 0, 0);
+            ret = value_from_data(data, 48, type, &temp);
+            util_xor(temp.val.m.data, 48, 0xbb, 0, 0);
             break;
         case 128:
-            ret = value_from_data(data, 64, 'm', value);
-            util_xor(value->val.m.data, 64, 0xdd, 0, 0);
+            ret = value_from_data(data, 64, type, &temp);
+            util_xor(temp.val.m.data, 64, 0xdd, 0, 0);
             break;
         case 64:
-            ret = value_from_data(data, 64, 'm', value);
-            util_xor(value->val.m.data, 64, 0xee, 0, 0);
+            ret = value_from_data(data, 64, type, &temp);
+            util_xor(temp.val.m.data, 64, 0xee, 0, 0);
             break;
         default:
-            ret = value_from_data(data, data_length, type, value);
+            ret = value_from_data(data, data_length, type, &temp);
             break;
         }
+        value->type = 'z';
+        value->val.z = (char*)temp.val.m.data;
         return ret;
     } else
         return value_from_data(data, data_length, type, value);
@@ -107,8 +110,11 @@ th95_value_from_data(
 {
     if (type == 'm') {
         int ret;
-        ret = value_from_data(data, 48, 'm', value);
-        util_xor(value->val.m.data, 48, 0xaa, 0, 0);
+        value_t temp;
+        ret = value_from_data(data, 48, 'm', &temp);
+        util_xor(temp.val.m.data, 48, 0xaa, 0, 0);
+        value->type = 'z';
+        value->val.z = (char*)temp.val.m.data;
         return ret;
     } else
         return value_from_data(data, data_length, type, value);
@@ -118,17 +124,17 @@ static char*
 th06_param_to_text(
     const thecl_param_t* param)
 {
-    if (param->type == 'm' || param->type == 'M') {
-        char* ret = malloc(1024);
+    if (param->type == 'z') {
+        const size_t zlen = strlen(param->value.val.z);
+        char* ret = malloc(4 + zlen * 2);
         char* temp = ret;
-        *temp++ = 'C';
         *temp++ = '"';
-        for (size_t i = 0; i < param->value.val.m.length; ++i) {
-            if (!param->value.val.m.data[i])
+        for (size_t z = 0; z < zlen; ++z) {
+            if (!param->value.val.z[z])
                 break;
-            if (param->value.val.m.data[i] == '"')
+            if (param->value.val.z[z] == '"')
                 *temp++ = '\\';
-            *temp++ = param->value.val.m.data[i];
+            *temp++ = param->value.val.z[z];
         }
         *temp++ = '"';
         *temp++ = '\0';
@@ -139,6 +145,7 @@ th06_param_to_text(
 
 /* TODO: Try to derive the TH07 table from this. */
 static const id_format_pair_t th06_fmts[] = {
+    { 0, "" },
     { 1, "S" },
     { 2, "SS" },
     { 3, "SSS" },
@@ -207,7 +214,7 @@ static const id_format_pair_t th06_fmts[] = {
     { 88, "Sf" },
     { 90, "SSSS" },
     { 92, "S" },
-    { 93, "ssm" },
+    { 93, "ssz" },
     { 94, "" },
     { 95, "SfffssS" },
     { 96, "" },
@@ -251,7 +258,9 @@ static const id_format_pair_t th06_fmts[] = {
     { 135, "S" },
     { 0, 0 },
 };
+
 static const id_format_pair_t th07_fmts[] = {
+    { 0, "" },
     { 1, "" },
     { 2, "SS" },
     { 3, "SSS" },
@@ -396,6 +405,7 @@ static const id_format_pair_t th07_fmts[] = {
 };
 
 static const id_format_pair_t th08_fmts[] = {
+    { 0, "" },
     { 1, "" },
     { 2, "S" },
     { 3, "S" },
@@ -607,7 +617,7 @@ static const id_format_pair_t th95_fmts[] = {
 static const char*
 th06_find_format(
     unsigned int version,
-    int id)
+    unsigned int id)
 {
     const char* ret = NULL;
 
@@ -873,29 +883,27 @@ th06_dump(
 
 static size_t
 th06_instr_size(
-    const thecl_t* ecl,
+    unsigned int version,
     const thecl_instr_t* instr)
 {
     size_t ret = sizeof(th06_instr_t);
-    thecl_param_t* param;
 
-    const char* format = instr->id ? th06_find_format(ecl->version, instr->id) : "";
-
-    if (ecl->version == 8 && instr->id == 122)
-        return ret + 232;
-    else if (ecl->version == 7 && instr->id == 90)
-        return ret + 4 + 48;
-    else if (ecl->version == 6 && instr->id == 93)
+    if        (version ==  6 && instr->id ==  93) {
         return ret + 4 + 34;
-    else if (ecl->version == 95 && instr->id == 104)
+    } else if (version ==  7 && instr->id ==  90) {
+        return ret + 4 + 48;
+    } else if (version ==  8 && instr->id == 122) {
+        return ret + 4 + 4 + 48 + 48 + 64 + 64;
+    } else if (version == 95 && instr->id == 104) {
         return ret + 48;
-    else
+    } else {
+        thecl_param_t* param;
         list_for_each(&instr->params, param) {
             value_t v = param->value;
-            v.type = *format;
+            v.type = param->type;
             ret += value_size(&v);
-            ++format;
         }
+    }
 
     return ret;
 }
@@ -914,6 +922,7 @@ th06_parse(
     state.current_sub = NULL;
     state.ecl = thecl_new();
     state.ecl->version = version;
+    state.instr_format = th06_find_format;
     state.instr_size = th06_instr_size;
 
     yyin = in;
@@ -947,15 +956,6 @@ th06_instr_serialize(
     else
         ret->param_mask = 0;
 
-    const char* format = instr->id ? th06_find_format(ecl->version, instr->id) : "";
-    if (!format)
-        fprintf(stderr, "ID:%d\n", instr->id);
-
-    if (instr->param_count != strlen(format)) {
-        fprintf(stderr, "%s: instruction parameter count does not match format count\n", argv0);
-        exit(1);
-    }
-
     int param_count = 0;
     thecl_param_t* param;
     unsigned char* param_data = ret->data;
@@ -963,14 +963,14 @@ th06_instr_serialize(
         if (param->stack)
             ret->param_mask |= 1 << param_count;
         ++param_count;
-        if (param->type == 'X' || param->type == 'x') {
+        if (param->value.type == 'z') {
             if (ecl->version == 6) {
                 memset(param_data, 0, 34);
-                memcpy(param_data, param->value.val.m.data, param->value.val.m.length);
+                strncpy((char*)param_data, param->value.val.z, 34);
                 param_data += 34;
             } else if (ecl->version == 7 || ecl->version == 95) {
                 memset(param_data, 0, 48);
-                memcpy(param_data, param->value.val.m.data, param->value.val.m.length);
+                strncpy((char*)param_data, param->value.val.z, 48);
                 util_xor(param_data, 48, 0xaa, 0, 0);
                 param_data += 48;
             } else if (ecl->version == 8) {
@@ -978,14 +978,14 @@ th06_instr_serialize(
                 case 4:
                 case 5:
                     memset(param_data, 0, 48);
-                    memcpy(param_data, param->value.val.m.data, param->value.val.m.length);
+                    strncpy((char*)param_data, param->value.val.z, 48);
                     util_xor(param_data, 48, param_count == 4 ? 0xaa : 0xbb, 0, 0);
                     param_data += 48;
                     break;
                 case 6:
                 case 7:
                     memset(param_data, 0, 64);
-                    memcpy(param_data, param->value.val.m.data, param->value.val.m.length);
+                    strncpy((char*)param_data, param->value.val.z, 64);
                     util_xor(param_data, 64, param_count == 6 ? 0xdd : 0xee, 0, 0);
                     param_data += 64;
                     break;
@@ -993,10 +993,9 @@ th06_instr_serialize(
             }
         } else {
             value_t v = param->value;
-            v.type = *format;
+            v.type = param->type;
             param_data += value_to_data(&v, param_data, instr->size - (param_data - (unsigned char*)ret));
         }
-        ++format;
     }
 
     return ret;

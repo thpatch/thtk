@@ -158,7 +158,8 @@ typedef struct {
     list_t expressions;
     thecl_sub_t* current_sub;
     thecl_t* ecl;
-    size_t (*instr_size)(const thecl_t* ecl, const thecl_instr_t* instr);
+    const char* (*instr_format)(unsigned int version, unsigned int id);
+    size_t (*instr_size)(unsigned int version, const thecl_instr_t* instr);
 } parser_state_t;
 
 /* TODO: Deletion and creation functions for parser state. */
