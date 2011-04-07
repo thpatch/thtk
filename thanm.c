@@ -78,10 +78,11 @@ rgba_to_fmt(const uint32_t* data, unsigned int pixels, format_t format)
     } else if (format == FORMAT_BGRA8888) {
         const unsigned char* data8 = (const unsigned char*)data;
         out = malloc(sizeof(uint32_t) * pixels);
-        memcpy(out, data, pixels * sizeof(uint32_t));
         for (i = 0; i < pixels; ++i) {
             out[i * sizeof(uint32_t) + 0] = data8[i * sizeof(uint32_t) + 2];
+            out[i * sizeof(uint32_t) + 1] = data8[i * sizeof(uint32_t) + 1];
             out[i * sizeof(uint32_t) + 2] = data8[i * sizeof(uint32_t) + 0];
+            out[i * sizeof(uint32_t) + 3] = data8[i * sizeof(uint32_t) + 3];
         }
     } else if (format == FORMAT_BGRA4444) {
         out = malloc(sizeof(uint16_t) * pixels);
@@ -129,10 +130,11 @@ fmt_to_rgba(const char* data, unsigned int pixels, format_t format)
         }
     } else if (format == FORMAT_BGRA8888) {
         char* out8 = (char*)out;
-        memcpy(out, data, pixels * sizeof(uint32_t));
         for (i = 0; i < pixels; ++i) {
             out8[i * sizeof(uint32_t) + 0] = data[i * sizeof(uint32_t) + 2];
+            out8[i * sizeof(uint32_t) + 1] = data[i * sizeof(uint32_t) + 1];
             out8[i * sizeof(uint32_t) + 2] = data[i * sizeof(uint32_t) + 0];
+            out8[i * sizeof(uint32_t) + 3] = data[i * sizeof(uint32_t) + 3];
         }
     } else if (format == FORMAT_BGRA4444) {
         for (i = 0; i < pixels; ++i) {
