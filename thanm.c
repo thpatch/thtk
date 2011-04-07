@@ -87,6 +87,7 @@ rgba_to_fmt(const uint32_t* data, unsigned int pixels, format_t format)
     } else if (format == FORMAT_BGRA4444) {
         out = malloc(sizeof(uint16_t) * pixels);
         for (i = 0; i < pixels; ++i) {
+            /* Use the extra precision for rounding. */
             const unsigned char r = (((data[i] & 0xff000000) >> 24) + 8) / 17;
             const unsigned char g = (((data[i] &   0xff0000) >> 16) + 8) / 17;
             const unsigned char b = (((data[i] &     0xff00) >>  8) + 8) / 17;
