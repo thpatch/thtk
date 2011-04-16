@@ -10,5 +10,5 @@ thdat x  y y y y y y y  n y y  y  y   n  y  y   n   y   y  y
 thdat c  y y y y y y y  n y y  y  y   n  y  y   n   y   y  y
 thecl d  - - - - - y y  - y y  y  y   -  y  y   -   y   y  n
 thecl c  - - - - - y y  - y y  y  y   -  y  y   -   y   y  n
-thmsg d  - - - - - y y  - y y  y  y   -  y  y   -   y   y  n
-thmsg c  - - - - - y y  - y y  y  y   -  y  y   -   y   y  n
+thmsg d  - - - - - y y  - y y  y  y   -  y  y   -   y   y  y
+thmsg c  - - - - - y y  - y y  y  y   -  y  y   -   y   y  y
