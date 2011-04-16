@@ -5,6 +5,7 @@ thecl: Support for TH07, TH08, and TH09 has been added.
 thecl: The special syntax for encrypted strings was removed.
 thdat: Support for TH13 has been added.
 thmsg: Support for TH13 has been added.
+thanm: Support for TH13 has been added.
 
 What's new in thtk 3:
 

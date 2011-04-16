@@ -108,6 +108,9 @@ rgba_to_fmt(const uint32_t* data, unsigned int pixels, format_t format)
                      /* 11111000 00000000 00000000 -> 11111000 00000000 */
                      | ((data[i] & 0xf80000) >>19);
         }
+    } else if (format == FORMAT_RGBA8888) {
+        out = malloc(sizeof(uint32_t) * pixels);
+        memcpy(out, data, sizeof(uint32_t) * pixels);
     } else {
         fprintf(stderr, "%s: unknown format: %u\n", argv0, format);
         abort();
@@ -169,6 +172,8 @@ fmt_to_rgba(const char* data, unsigned int pixels, format_t format)
                    | ((u16[i] & 0x0800) >> 10 & 0x000002)
                    | ((u16[i] & 0x0800) >> 11 & 0x000001);
         }
+    } else if (format == FORMAT_RGBA8888) {
+        memcpy(out, data, sizeof(uint32_t) * pixels);
     } else {
         fprintf(stderr, "%s: unknown format: %u\n", argv0, format);
         abort();
@@ -415,6 +420,89 @@ static const id_format_pair_t formats_v4p[] = {
     { 0, NULL }
 };
 
+static const id_format_pair_t formats_v8[] = {
+    { 0, "" },
+    { 1, "" },
+    { 2, "" },
+    { 3, "" },
+    { 4, "" },
+    { 5, "S" },
+    { 6, "S" },
+    { 7, "" },
+    { 100, "SS" },
+    { 101, "SS" },
+    { 102, "SS" },
+    { 103, "ff" },
+    { 104, "SS" },
+    { 105, "ff" },
+    { 107, "SS" },
+    { 112, "SSS" },
+    { 113, "SSS" },
+    { 115, "SSS" },
+    { 117, "fff" },
+    { 118, "SSS" },
+    { 119, "fff" },
+    { 120, "SSS" },
+    { 121, "SSS" },
+    { 122, "SS" },
+    { 124, "SS" },
+    { 125, "SS" },
+    { 131, "SSSS" },
+    { 200, "SS" },
+    { 201, "SSS" },
+    { 204, "SSSS" },
+    { 300, "S" },
+    { 301, "SS" },
+    { 302, "S" },
+    { 303, "S" },
+    { 304, "S" },
+    { 305, "S" },
+    { 306, "S" },
+    { 307, "S" },
+    { 308, "" },
+    { 311, "S" },
+    { 312, "SS" },
+    { 400, "fff" },
+    { 401, "fff" },
+    { 402, "ff" },
+    { 403, "S" },
+    { 404, "SSS" },
+    { 405, "S" },
+    { 406, "SSS" },
+    { 407, "SSfff" },
+    { 408, "SSSSS" },
+    { 409, "SSS" },
+    { 410, "SSSSS" },
+    { 412, "SSff" },
+    { 413, "SSSSS" },
+    { 414, "SSS" },
+    { 415, "fff" },
+    { 420, "SSSSSSSSSS" },
+    { 421, "S" }, /* ss */
+    { 424, "S" },
+    { 425, "S" },
+    { 426, "S" },
+    { 429, "SS" },
+    { 430, "SSSS" },
+    { 431, "S" },
+    { 433, "SSSS" },
+    { 500, "S" },
+    { 501, "S" },
+    { 502, "S" },
+    { 503, "S" },
+    { 504, "S" },
+    { 505, "SSS" },
+    { 508, "S" },
+    { 600, "S" },
+    { 602, "S" },
+    { 603, "SS" },
+    { 604, "SS" },
+    { 605, "SS" },
+    { 606, "SS" },
+    { 608, "SS" },
+    { 0, NULL }
+};
+
 /* The order and sizes of fields changed for TH11. */
 static void
 convert_header_to_old(anm_header_t* header)
@@ -528,7 +616,8 @@ anm_read_file(const char* filename)
             entry->header.version != 2 &&
             entry->header.version != 3 &&
             entry->header.version != 4 &&
-            entry->header.version != 7) {
+            entry->header.version != 7 &&
+            entry->header.version != 8) {
             fprintf(stderr, "%s:%s:%u: unknown version: %u\n",
                 argv0, current_input, anm->entry_count, entry->header.version);
             if (!option_force) abort();
@@ -536,6 +625,7 @@ anm_read_file(const char* filename)
         if (entry->header.format != FORMAT_BGRA8888 &&
             entry->header.format != FORMAT_BGR565 &&
             entry->header.format != FORMAT_BGRA4444 &&
+            entry->header.format != FORMAT_RGBA8888 &&
             entry->header.format != FORMAT_GRAY8) {
             if (!(entry->header.format == 0 && entry->header.thtxoffset == 0)) {
                 fprintf(stderr, "%s:%s:%u: unknown format: %u\n",
@@ -738,13 +828,6 @@ anm_read_file(const char* filename)
                     argv0, current_input, entry->name, entry->thtx.zero);
                 if (!option_force) abort();
             }
-            if (entry->header.format != entry->thtx.format) {
-                fprintf(stderr,
-                    "%s:%s:%s: header format does not match thtx header format: %u != %u\n",
-                    argv0, current_input, entry->name,
-                    entry->header.format, entry->thtx.format);
-                if (!option_force) abort();
-            }
 
             if (entry->thtx.w * entry->thtx.h * format_Bpp(entry->thtx.format) >
                 entry->thtx.size) {
@@ -806,6 +889,9 @@ anm_dump(FILE* stream, const anm_t* anm)
         } else if (entry->header.version == 4 || entry->header.version == 7) {
             formats = formats_v4p;
             format_count = sizeof(formats_v4p) / sizeof(formats_v4p[0]);
+        } else if (entry->header.version == 8) {
+            formats = formats_v8;
+            format_count = sizeof(formats_v8) / sizeof(formats_v8[0]);
         } else {
             fprintf(stderr,
                 "%s:%s: could not find a format description for version %u\n",
@@ -1011,7 +1097,7 @@ util_total_entry_size(const anm_t* anm, const char* name,
 static void
 anm_replace(const anm_t* anm, const char* name, const char* filename)
 {
-    const format_t formats[] = { FORMAT_BGRA8888, FORMAT_BGR565,
+    const format_t formats[] = { FORMAT_RGBA8888, FORMAT_BGRA8888, FORMAT_BGR565,
                                  FORMAT_BGRA4444, FORMAT_GRAY8 };
     unsigned int f, i, y;
     unsigned int width = 0;
@@ -1071,7 +1157,7 @@ static void
 anm_extract(const anm_t* anm, const char* name)
 {
     const format_t formats[] = { FORMAT_GRAY8, FORMAT_BGRA4444,
-                                 FORMAT_BGR565, FORMAT_BGRA8888 };
+                                 FORMAT_BGR565, FORMAT_BGRA8888, FORMAT_RGBA8888 };
     FILE* stream;
     image_t image;
 
