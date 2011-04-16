@@ -3,12 +3,12 @@
   This table displays which of the main actions are
 supported for each game.
 
-Action   1 2 3 4 5 6 7 75 8 9 95 10 105 11 12 123 125 128
-thanm x  - - - - - - y  - y y  y  y   -  y  y   -   y   y
-thanm l  - - - - - y y  - y y  y  y   -  y  y   -   y   y
-thdat x  y y y y y y y  n y y  y  y   n  y  y   n   y   y
-thdat c  y y y y y y y  n y y  y  y   n  y  y   n   y   y
-thecl d  - - - - - y y  - y y  y  y   -  y  y   -   y   y
-thecl c  - - - - - y y  - y y  y  y   -  y  y   -   y   y
-thmsg d  - - - - - y y  - y y  y  y   -  y  y   -   y   y
-thmsg c  - - - - - y y  - y y  y  y   -  y  y   -   y   y
+Action   1 2 3 4 5 6 7 75 8 9 95 10 105 11 12 123 125 128 13
+thanm x  - - - - - - y  - y y  y  y   -  y  y   -   y   y  n
+thanm l  - - - - - y y  - y y  y  y   -  y  y   -   y   y  n
+thdat x  y y y y y y y  n y y  y  y   n  y  y   n   y   y  y
+thdat c  y y y y y y y  n y y  y  y   n  y  y   n   y   y  y
+thecl d  - - - - - y y  - y y  y  y   -  y  y   -   y   y  n
+thecl c  - - - - - y y  - y y  y  y   -  y  y   -   y   y  n
+thmsg d  - - - - - y y  - y y  y  y   -  y  y   -   y   y  n
+thmsg c  - - - - - y y  - y y  y  y   -  y  y   -   y   y  n

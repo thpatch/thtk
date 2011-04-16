@@ -3,6 +3,7 @@ What's new in thtk 4:
 thecl: Support for parsing of 16-bit values.
 thecl: Support for TH07, TH08, and TH09 has been added.
 thecl: The special syntax for encrypted strings was removed.
+thdat: Support for TH13 has been added.
 
 What's new in thtk 3:
 

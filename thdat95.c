@@ -78,6 +78,18 @@ static const crypt_params_t th12_crypt_params[] = {
     { 0x99, 0x7d, 0x80,  0x2800 }
 };
 
+static const crypt_params_t th13_crypt_params[] = {
+    /* key  step  block  limit */
+    { 0x1b, 0x73, 0x100, 0x3800 }, /* aa */
+    { 0x12, 0x43, 0x200, 0x3e00 }, /* ff */
+    { 0x35, 0x79, 0x400, 0x3c00 }, /* 11 */
+    { 0x03, 0x91, 0x80,  0x6400 }, /* dd */
+    { 0xab, 0xdc, 0x80,  0x6e00 }, /* ee */
+    { 0x51, 0x9e, 0x100, 0x4000 }, /* bb */
+    { 0xc1, 0x15, 0x400, 0x2c00 }, /* cc */
+    { 0x99, 0x7d, 0x80,  0x4400 }  /* 77 */
+};
+
 static archive_t*
 th95_open(
     FILE* stream,
@@ -129,6 +141,7 @@ th95_open(
     for (i = 0; i < count; ++i) {
         entry_t* e = thdat_add_entry(archive);
 
+        /* TODO: Use mempcpy or a struct. */
         strcpy(e->name, (char*)ptr);
         ptr += strlen(e->name) + (4 - strlen(e->name) % 4);
         memcpy(&e->offset, ptr, sizeof(uint32_t));
@@ -159,12 +172,13 @@ th95_decrypt_data(
 {
     const unsigned int i = th95_get_crypt_param_index(entry->name);
     const crypt_params_t* crypt_params;
-    if (archive->version == 95 ||
-        archive->version == 10 ||
-        archive->version == 11)
+    if (archive->version == 95 || archive->version == 10 || archive->version == 11) {
         crypt_params = th95_crypt_params;
-    else
+    } else if (archive->version == 12 || archive->version == 125 || archive->version == 128) {
         crypt_params = th12_crypt_params;
+    } else {
+        crypt_params = th13_crypt_params;
+    }
 
     th_decrypt(data, entry->zsize, crypt_params[i].key, crypt_params[i].step,
         crypt_params[i].block, crypt_params[i].limit);
@@ -227,12 +241,13 @@ th95_encrypt_data(
 {
     const unsigned int i = th95_get_crypt_param_index(entry->name);
     const crypt_params_t* crypt_params;
-    if (archive->version == 95 ||
-        archive->version == 10 ||
-        archive->version == 11)
+    if (archive->version == 95 || archive->version == 10 || archive->version == 11) {
         crypt_params = th95_crypt_params;
-    else
+    } else if (archive->version == 12 || archive->version == 125 || archive->version == 128) {
         crypt_params = th12_crypt_params;
+    } else {
+        crypt_params = th13_crypt_params;
+    }
 
     th_encrypt(data, entry->zsize, crypt_params[i].key, crypt_params[i].step,
         crypt_params[i].block, crypt_params[i].limit);

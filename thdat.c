@@ -276,7 +276,7 @@ print_usage(
            "  h  display this help and exit\n"
            "  V  display version information and exit\n"
            "OPTION can be:\n"
-           "  #  # can be 2, 3, 4, 5, 6, 7, 8, 9, 95, 10, 11, 12, 125, or 128, defaults to the latest\n\n"
+           "  #  # can be 2, 3, 4, 5, 6, 7, 8, 9, 95, 10, 11, 12, 125, 128, or 13 defaults to the latest\n\n"
            "Report bugs to <" PACKAGE_BUGREPORT ">.\n", argv0);
 }
 
@@ -288,7 +288,7 @@ main(
     FILE* archive;
     archive_t* private;
     const archive_module_t* archive_module = NULL;
-    unsigned int version = 125;
+    unsigned int version = 13;
     int i;
     int mode;
 
@@ -320,6 +320,7 @@ main(
     case 12:
     case 125:
     case 128:
+    case 13:
         archive_module = &archive_th95;
         break;
     }
