@@ -1,5 +1,5 @@
 AC_PREREQ(2.62) dnl 2.62 for AC_OPENMP.
-AC_INIT([Touhou Toolkit], [3],
+AC_INIT([Touhou Toolkit], [4],
         [xarnonymous@gmail.com],
         [thtk],
         [http://code.google.com/p/thtk/])

@@ -7,16 +7,3 @@ thdat: Support for TH13 has been added.
 thmsg: Support for TH13 has been added.
 thanm: Support for TH13 has been added.
 thecl: Support for TH13 has been added.
-
-What's new in thtk 3:
-
-thecl: Double quotes in ECL files are now escaped.
-thdat: Support for TH75 has been removed.
-thanm: Files will compress faster, but use less efficient compression.
-thmsg: A new program for extracting and recreating message files.
-thtk: Text strings are no longer converted from their original character set.
-thecl: The output format has been changed in ways that are not compatible with
-       thtk 2.
-thecl: Support for TH95 has been added.
-thecl: Support for TH06 has been added.
-thtk: Manual pages have been written to replace README.
