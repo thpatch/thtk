@@ -1,3 +1,4 @@
+# vim:noet
 ACLOCAL_AMFLAGS = -I m4
 AM_YFLAGS = -d
 BUILT_SOURCES = ecsparse.h ecsparse.c ecsscan.c
