@@ -205,11 +205,13 @@ main(int argc, char* argv[])
         module = &th10_ecl;
         break;
     default:
-        if (version == 0)
-            fprintf(stderr, "%s: version must be specified\n", argv0);
-        else
-            fprintf(stderr, "%s: version %u is unsupported\n", argv0, version);
-        exit(1);
+        if (mode == 'c' || mode == 'd') {
+            if (version == 0)
+                fprintf(stderr, "%s: version must be specified\n", argv0);
+            else
+                fprintf(stderr, "%s: version %u is unsupported\n", argv0, version);
+            exit(1);
+        }
     }
 
     switch (mode)

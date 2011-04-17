@@ -94,11 +94,13 @@ main(int argc, char* argv[])
             module = &th06_msg;
         break;
     default:
-        if (version == 0)
-            fprintf(stderr, "%s: version must be specified\n", argv0);
-        else
-            fprintf(stderr, "%s: version %u is unsupported\n", argv0, version);
-        return 1;
+        if (mode == 'c' || mode == 'd') {
+            if (version == 0)
+                fprintf(stderr, "%s: version must be specified\n", argv0);
+            else
+                fprintf(stderr, "%s: version %u is unsupported\n", argv0, version);
+            return 1;
+        }
     }
 
     switch (mode)
