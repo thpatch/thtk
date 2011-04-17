@@ -104,7 +104,8 @@ expr_get_table(unsigned int version)
         && version != 11
         && version != 12
         && version != 125
-        && version != 128)
+        && version != 128
+        && version != 13)
         return NULL;
     return th10_expressions;
 }

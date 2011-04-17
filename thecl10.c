@@ -93,6 +93,8 @@ typedef struct {
     /* There doesn't seem to be a way of telling how many parameters there are
      * from the additional data. */
     uint8_t param_count;
+    /* For TH13 this field is no longer guaranteed to be zero.  Its value is
+     * currently stored as an unknown difficulty flag. */
     uint32_t zero;
     unsigned char data[];
 #ifdef PACK_PRAGMA
@@ -552,6 +554,152 @@ static const id_format_pair_t th128_fmts[] = {
     { -1, NULL }
 };
 
+static const id_format_pair_t th13_fmts[] = {
+    { 0, "" },
+    { 1, "" },
+    { 10, "" },
+    { 11, "m*D" },
+    { 12, "SS" },
+    { 13, "SS" },
+    { 14, "SS" },
+    { 15, "m*D" },
+    { 21, "" },
+    { 22, "Sm" },
+    { 40, "S" },
+    { 42, "S" },
+    { 43, "S" },
+    { 44, "f" },
+    { 45, "f" },
+    { 50, "" },
+    { 51, "" },
+    { 52, "" },
+    { 53, "" },
+    { 55, "" },
+    { 57, "" },
+    { 58, "" },
+    { 59, "" },
+    { 61, "" },
+    { 63, "" },
+    { 65, "" },
+    { 64, "" },
+    { 66, "" },
+    { 67, "" },
+    { 68, "" },
+    { 69, "" },
+    { 70, "" },
+    { 73, "" },
+    { 74, "" },
+    { 78, "S" },
+    { 81, "ffff" },
+    { 83, "S" },
+    { 87, "Sff" },
+    { 88, "fffff" },
+    { 92, "SfSSff" },
+    { 94, "ffff" },
+    { 300, "mffSSS" },
+    { 301, "mffSSS" },
+    { 302, "S" },
+    { 303, "SS" },
+    { 304, "mffSSS" },
+    { 306, "SS" },
+    { 307, "SS" },
+    { 308, "SS" },
+    { 309, "mffSSS" },
+    { 311, "mffSSS" },
+    { 313, "S" },
+    { 318, "SS" },
+    { 322, "Sff" },
+    { 323, "mSSSSS" },
+    { 330, "SSSS" },
+    { 331, "Sff" },
+    { 332, "SSSff" },
+    { 334, "SSSS" },
+    { 335, "SSSff" },
+    { 400, "ff" },
+    { 401, "SSff" },
+    { 404, "ff" },
+    { 405, "SSff" },
+    { 408, "ffSS" },
+    { 409, "SSffS" },
+    { 411, "SSffS" },
+    { 412, "SSf" },
+    { 420, "fffSff" },
+    { 422, "fffSff" },
+    { 425, "Sffffff" },
+    { 429, "SSff" }, 
+    { 433, "S" },
+    { 500, "ff" },
+    { 501, "ff" },
+    { 502, "S" },
+    { 503, "S" },
+    { 504, "Sfff" },
+    { 505, "" },
+    { 506, "" },
+    { 507, "SS" },
+    { 508, "ff" },
+    { 509, "" },
+    { 510, "S" },
+    { 511, "S" },
+    { 512, "S" },
+    { 513, "" },
+    { 514, "SSSm" },
+    { 515, "S" },
+    { 516, "S" },
+    { 517, "SSS" },
+    { 518, "S" },
+    { 519, "" },
+    { 520, "" },
+    { 521, "Sm" },
+    { 523, "" },
+    { 524, "S" },
+    { 525, "" },
+    { 527, "SfS" },
+    { 535, "SSSSS" },
+    { 536, "fffff" },
+    { 537, "SSSx" },
+    { 539, "SSSx" },
+    { 540, "S" },
+    { 545, "" },
+    { 548, "SSSS" },
+    { 554, "" },
+    { 557, "m" },
+    { 558, "SSSff" },
+    { 559, "S" },
+    { 600, "S" },
+    { 601, "S" },
+    { 602, "SSS" },
+    { 603, "Sff" },
+    { 604, "Sff" },
+    { 605, "Sff" },
+    { 606, "SSS" },
+    { 607, "SS" },
+    { 608, "SSS" },
+    { 609, "SSSSSSff" },
+    { 610, "SSSSSSSSffff" },
+    { 611, "SSSSSff" },
+    { 612, "SSSSSSSffff" },
+    { 613, "" },
+    { 614, "SS" },
+    { 615, "f" },
+    { 616, "f" },
+    { 624, "Sffffffff" },
+    { 625, "SSSSSSSSS" },
+    { 626, "Sff" },
+    { 627, "Sf" },
+    { 629, "fS" },
+    { 632, "S" },
+    { 700, "Sffff" },
+    { 701, "SSSSSS" },
+    { 703, "SS" },
+    { 708, "Sf" },
+    { 711, "S" },
+    { 800, "S" },
+    { 1001, "S" },
+    { 1002, "S" },
+    { 1003, "S" },
+    { -1, NULL }
+};
+
 static const char*
 th10_find_format(
     unsigned int version,
@@ -571,6 +719,9 @@ th10_find_format(
         if (!ret) ret = find_format(th125_fmts, id);
     case 12:
         if (!ret) ret = find_format(th12_fmts, id);
+        break;
+    case 13:
+        if (!ret) ret = find_format(th13_fmts, id);
         break;
     default:
         fprintf(stderr, "%s: unsupported version: %u\n", argv0, version);
@@ -753,6 +904,7 @@ th10_open(
             if (instr->size > sizeof(th10_instr_t)) {
                 uint32_t param_mask = instr->param_mask;
                 const char* format = th10_find_format(version, instr->id);
+                /* TODO: Handle format == NULL. */
 
                 value_t* values = value_list_from_data(th10_value_from_data, instr->data, instr->size - sizeof(th10_instr_t), format);
                 if (!values)
@@ -1002,7 +1154,7 @@ th10_stringify_param(
         } else if (
             param->value.type == 'S' &&
             param->stack &&
-            param->value.val.S == -1 &&
+            (param->value.val.S == -1 || param->value.val.S == -(*removed + 1)) &&
             rep &&
             rep->op_type) {
             ++*removed;
@@ -1013,10 +1165,10 @@ th10_stringify_param(
         } else if (
             param->value.type == 'f' &&
             param->stack &&
-            param->value.val.f == -1.0f &&
+            (param->value.val.f == -1.0f || param->value.val.f == -(*removed + 1.0f)) &&
             rep &&
             rep->op_type) {
-            thecl_instr_t* rep = th10_stack_index(node, (*removed)++);
+            ++*removed;
             if (special)
                 sprintf(temp, "(%s)", rep->string);
             else
@@ -1125,11 +1277,15 @@ th10_dump(
                 instr->string = strdup(temp);
                 break;
             case THECL_INSTR_RANK:
-                sprintf(temp, "!%s%s%s%s",
-                    instr->rank & RANK_EASY    ? "E" : "",
-                    instr->rank & RANK_NORMAL  ? "N" : "",
-                    instr->rank & RANK_HARD    ? "H" : "",
-                    instr->rank & RANK_LUNATIC ? "L" : "");
+                sprintf(temp, "!%s%s%s%s%s%s%s%s",
+                    (instr->rank) & RANK_EASY    ? "E" : "",
+                    (instr->rank) & RANK_NORMAL  ? "N" : "",
+                    (instr->rank) & RANK_HARD    ? "H" : "",
+                    (instr->rank) & RANK_LUNATIC ? "L" : "",
+                    !((instr->rank) & RANK_UNKNOWN1) ? "W" : "",
+                    !((instr->rank) & RANK_UNKNOWN2) ? "X" : "",
+                    !((instr->rank) & RANK_UNKNOWN3) ? "Y" : "",
+                    !((instr->rank) & RANK_UNKNOWN4) ? "Z" : "");
                 instr->string = strdup(temp);
                 break;
             case THECL_INSTR_LABEL:
@@ -1256,6 +1412,7 @@ th10_parse(
     list_init(&state.expressions);
     state.current_sub = NULL;
     state.ecl = thecl_new();
+    state.ecl->version = version;
     state.instr_format = th10_find_format;
     state.instr_size = th10_instr_size;
 
@@ -1283,6 +1440,7 @@ label_find(
 
 static unsigned char*
 th10_instr_serialize(
+    unsigned int version,
     thecl_sub_t* sub,
     thecl_instr_t* instr)
 {
@@ -1323,7 +1481,32 @@ th10_instr_serialize(
             param_data += padded_length;
         } else
             param_data += value_to_data(&param->value, param_data, instr->size - (param_data - (unsigned char*)ret));
+
+        /* XXX: 'D' is not handled. */
+        if (param->stack && version == 13) {
+            if (param->type == 'f' && param->value.val.f == -(ret->zero + 1.0f)) {
+                ++ret->zero;
+            } else if (param->type == 'S' && param->value.val.S == -(ret->zero + 1)) {
+                ++ret->zero;
+            } else if (param->type == 'D') {
+                struct {
+                    char from;
+                    char to;
+                    union {
+                        int32_t S;
+                        float f;
+                    } val;
+                } *temp = (void*)param->value.val.m.data;
+
+                if (temp->from == 'f' && temp->val.f == -(ret->zero + 1.0f))
+                    ++ret->zero;
+                else if (temp->from == 'i' && temp->val.S == -(ret->zero + 1))
+                    ++ret->zero;
+            }
+        }
     }
+
+    ret->zero <<= 3;
 
     return (unsigned char*)ret;
 }
@@ -1394,7 +1577,7 @@ th10_compile(
             return 0;
 
         list_for_each(&sub->instrs, instr) {
-            unsigned char* data = th10_instr_serialize(sub, instr);
+            unsigned char* data = th10_instr_serialize(ecl->version, sub, instr);
             if (!file_write(out, data, instr->size))
                 return 0;
             free(data);
