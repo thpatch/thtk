@@ -98,3 +98,13 @@ thmsg_SOURCES = \
 	value.c \
 	value.h \
 	$(util_SOURCES)
+
+release: all
+	rm -Rf "$(distdir)"
+	test -d "$(distdir)" || mkdir "$(distdir)"
+	cp $(bin_PROGRAMS) "$(distdir)"
+	for i in NEWS README COPYING $(EXTRA_DIST); do cp $$i "$(distdir)/`basename $$i`.txt"; done
+	for i in $(dist_man1_MANS); do mandoc -Thtml $$i > "$(distdir)/`basename $$i`.html"; done
+	rm -f $(PACKAGE)-bin-$(VERSION).zip
+	zip -rq $(PACKAGE)-bin-$(VERSION).zip $(distdir)
+	rm -Rf "$(distdir)"
