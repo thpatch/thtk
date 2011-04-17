@@ -1482,7 +1482,6 @@ th10_instr_serialize(
         } else
             param_data += value_to_data(&param->value, param_data, instr->size - (param_data - (unsigned char*)ret));
 
-        /* XXX: 'D' is not handled. */
         if (param->stack && version == 13) {
             if (param->type == 'f' && param->value.val.f == -(ret->zero + 1.0f)) {
                 ++ret->zero;
