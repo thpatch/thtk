@@ -93,8 +93,8 @@ typedef struct {
     /* There doesn't seem to be a way of telling how many parameters there are
      * from the additional data. */
     uint8_t param_count;
-    /* For TH13 this field is no longer guaranteed to be zero.  Its value is
-     * currently stored as an unknown difficulty flag. */
+    /* For TH13 this field stores the number of current stack references in the
+     * parameter list. */
     uint32_t zero;
     unsigned char data[];
 #ifdef PACK_PRAGMA
