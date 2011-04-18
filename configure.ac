@@ -43,7 +43,6 @@ AS_IF([test "x$with_libpng" != xno],
 dnl check for header files
 
 AC_CHECK_HEADERS([dnl
-    io.h dnl mkdir
     libgen.h dnl basename
     sys/mman.h dnl
 ])

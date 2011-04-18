@@ -35,9 +35,6 @@
 #ifdef HAVE_SYS_STAT_H
 #include <sys/stat.h>
 #endif
-#ifdef HAVE_IO_H
-#include <io.h>
-#endif
 #ifdef HAVE_LIBGEN_H
 #include <libgen.h>
 #endif
@@ -107,13 +104,15 @@ util_makepath(
         if (!filename)
             break;
         *filename = '\0';
-        if (
+
 #ifdef WIN32
-            mkdir(name)
+        if (CreateDirectory(name, NULL) == 0 && GetLastError() != ERROR_ALREADY_EXISTS) {
+            fprintf(stderr, "%s: couldn't create directory %s\n",
+                argv0, name);
+            abort();
+        }
 #else
-            mkdir(name, 0755)
-#endif
-            == -1
+        if (mkdir(name, 0755) == -1
 #ifdef EEXIST
             && errno != EEXIST
 #endif
@@ -122,6 +121,7 @@ util_makepath(
                 argv0, name, strerror(errno));
             abort();
         }
+#endif
 
         *filename = '/';
         ++filename;
