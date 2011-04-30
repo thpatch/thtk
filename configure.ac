@@ -63,19 +63,6 @@ AS_IF([test "x$enable_openmp" = xno || test "x$ac_cv_prog_c_openmp" = xunsupport
       [THTK_TRY_CFLAGS([-Wno-unknown-pragmas])
        OPENMP_CFLAGS="$thtk_accepted_cflags"])
 
-AC_ARG_ENABLE([combine],
-              [AS_HELP_STRING([--disable-combine],
-                              [do not compile programs in one go])])
-AS_IF([test "x$enable_combine" != xno],
-      [THTK_TRY_CFLAGS([-fwhole-program -combine])
-       AC_SUBST([combine_CFLAGS], [$thtk_accepted_cflags])
-       AS_IF([test "x$thtk_accepted_cflags" = "x-fwhole-program -combine"],
-             [enable_combine=yes],
-             [enable_combine=no])])
-AC_MSG_CHECKING([whether the C compiler supports combined compilation])
-AM_CONDITIONAL([COMBINE], [test "x$enable_combine" != xno])
-AC_MSG_RESULT([$enable_combine])
-
 THTK_CHECK_PACKING
 
 AC_CHECK_DECL([WIN32],

@@ -17,25 +17,6 @@ dist_man1_MANS = \
 	thecl.1 \
 	thmsg.1
 
-if COMBINE
-am_thanm_OBJECTS = thanm.o
-am_thdat_OBJECTS = thdat.o
-am_thecl_OBJECTS = thecl.o
-am_thmsg_OBJECTS = thmsg.o
-
-thanm.o: $(thanm_SOURCES)
-	$(COMPILE) $(thanm_CFLAGS) @combine_CFLAGS@ -c -o $@ $(filter %.c,$^)
-
-thdat.o: $(thdat_SOURCES)
-	$(COMPILE) $(thdat_CFLAGS) @combine_CFLAGS@ -c -o $@ $(filter %.c,$^)
-
-thecl.o: $(thecl_SOURCES)
-	$(COMPILE) $(thecl_CFLAGS) @combine_CFLAGS@ -c -o $@ $(filter %.c,$^) $(srcdir)/ecsparse.c $(srcdir)/ecsscan.c
-
-thmsg.o: $(thmsg_SOURCES)
-	$(COMPILE) $(thmsg_CFLAGS) @combine_CFLAGS@ -c -o $@ $(filter %.c,$^)
-endif
-
 util_SOURCES = \
 	args.c \
 	args.h \
