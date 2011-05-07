@@ -14,6 +14,8 @@ m4_ifndef([AC_PACKAGE_URL],
 
 AH_TEMPLATE([HAVE_LIBPNG],
             [Define to 1 if libpng is available.])
+AH_TEMPLATE([HAVE_ZLIB],
+            [Define to 1 if zlib is available.])
 AH_TEMPLATE([feof_unlocked],
             [These definitions are used to provide replacements
              if the unlocked stdio functions are missing.])
@@ -38,7 +40,10 @@ AC_ARG_WITH([libpng],
             [AS_HELP_STRING([--without-libpng],
                             [compile the package without image support])])
 AS_IF([test "x$with_libpng" != xno],
-      [PKG_CHECK_MODULES([libpng], [libpng zlib], [AC_DEFINE([HAVE_LIBPNG], [1])])])
+      [PKG_CHECK_MODULES([libpng], [libpng zlib],
+                         [AC_DEFINE([HAVE_LIBPNG], [1])]
+                         [AC_DEFINE([HAVE_ZLIB], [1])]
+                         )])
 
 dnl check for header files
 
