@@ -866,24 +866,18 @@ anm_dump(FILE* stream, const anm_t* anm)
     for (i = 0; i < anm->entry_count; ++i) {
         unsigned int j;
         const id_format_pair_t* formats = NULL;
-        unsigned int format_count = 0;
         entry_t* entry = &anm->entries[i];
 
         if (entry->header.version == 0) {
             formats = formats_v0;
-            format_count = sizeof(formats_v0) / sizeof(formats_v0[0]);
         } else if (entry->header.version == 2) {
             formats = formats_v2;
-            format_count = sizeof(formats_v2) / sizeof(formats_v2[0]);
         } else if (entry->header.version == 3) {
             formats = formats_v3;
-            format_count = sizeof(formats_v3) / sizeof(formats_v3[0]);
         } else if (entry->header.version == 4 || entry->header.version == 7) {
             formats = formats_v4p;
-            format_count = sizeof(formats_v4p) / sizeof(formats_v4p[0]);
         } else if (entry->header.version == 8) {
             formats = formats_v8;
-            format_count = sizeof(formats_v8) / sizeof(formats_v8[0]);
         } else {
             fprintf(stderr,
                 "%s:%s: could not find a format description for version %u\n",
