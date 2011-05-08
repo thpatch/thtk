@@ -733,7 +733,7 @@ anm_read_file(const char* filename)
             }
 
             for (i = 0; i < entry->header.scripts; ++i) {
-                long limit = 0;
+                unsigned long limit = 0;
 
                 file_seek(f, offset + entry->scripts[i].offset);
 
