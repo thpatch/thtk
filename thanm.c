@@ -748,60 +748,49 @@ anm_read_file(const char* filename)
                 for (;;) {
                     anm_instr_t* instr;
                     if (entry->header.version == 0) {
-                        anm_instr0_t tempinstr;
+                        anm_instr0_t temp_instr;
 
-                        if (file_tell(f) + ANM_INSTR0_SIZE > limit)
+                        if (file_tell(f) + sizeof(anm_instr0_t) > limit)
                             break;
 
-                        file_read(f, &tempinstr, ANM_INSTR0_SIZE);
+                        file_read(f, &temp_instr, sizeof(anm_instr0_t));
 
                         ++entry->scripts[i].instr_count;
                         entry->scripts[i].instrs = realloc(
                             entry->scripts[i].instrs,
-                            entry->scripts[i].instr_count * sizeof(anm_instr_t));
-                        instr = &entry->scripts[i].instrs[entry->scripts[i].instr_count - 1];
-                        instr->type = tempinstr.type;
-                        instr->length = tempinstr.length;
-                        instr->time = tempinstr.time;
+                            entry->scripts[i].instr_count * sizeof(anm_instr_t*));
+                        instr = malloc(sizeof(anm_instr_t) + temp_instr.length);
+                        instr->type = temp_instr.type;
+                        instr->length = sizeof(anm_instr_t) + temp_instr.length;
+                        instr->time = temp_instr.time;
                         instr->param_mask = 0;
+                        entry->scripts[i].instrs[entry->scripts[i].instr_count - 1] = instr;
 
-                        if (instr->length) {
-                            instr->data = malloc(instr->length);
-                            file_read(f, instr->data, instr->length);
-                        } else {
-                            instr->data = NULL;
-                        }
+                        if (temp_instr.length)
+                            file_read(f, instr->data, temp_instr.length);
 
                         if (instr->type == 0 && instr->time == 0)
                             break;
                     } else {
-                        anm_instr_t tempinstr;
+                        anm_instr_t temp_instr;
 
-                        if (file_tell(f) + ANM_INSTR_SIZE > limit)
+                        if (file_tell(f) + sizeof(anm_instr_t) > limit)
                             break;
 
-                        file_read(f, &tempinstr, ANM_INSTR_SIZE);
+                        file_read(f, &temp_instr, sizeof(anm_instr_t));
 
                         ++entry->scripts[i].instr_count;
                         entry->scripts[i].instrs = realloc(
                             entry->scripts[i].instrs,
-                            entry->scripts[i].instr_count * sizeof(anm_instr_t));
-                        instr = &entry->scripts[i].instrs[entry->scripts[i].instr_count - 1];
-                        instr->type = tempinstr.type;
-                        instr->length = tempinstr.length;
-                        instr->time = tempinstr.time;
-                        instr->param_mask = tempinstr.param_mask;
+                            entry->scripts[i].instr_count * sizeof(anm_instr_t*));
+                        instr = malloc(temp_instr.length ? temp_instr.length : sizeof(anm_instr_t));
+                        *instr = temp_instr;
+                        entry->scripts[i].instrs[entry->scripts[i].instr_count - 1] = instr;
 
-                        if (instr->length > ANM_INSTR_SIZE) {
-                            instr->data =
-                                malloc(instr->length - ANM_INSTR_SIZE);
-                            file_read(f, instr->data,
-                                instr->length - ANM_INSTR_SIZE);
-                        } else {
-                            instr->data = NULL;
-                        }
+                        if (instr->length > sizeof(anm_instr_t))
+                            file_read(f, instr->data, instr->length - sizeof(anm_instr_t));
 
-                        if (tempinstr.type == 0xffff)
+                        if (instr->type == 0xffff)
                             break;
                     }
                 }
@@ -948,40 +937,38 @@ anm_dump(FILE* stream, const anm_t* anm)
             fprintf(stream, "Script: %d\n", scr->id);
 
             for (iter_instrs = 0; iter_instrs < scr->instr_count; ++iter_instrs) {
-                const char* format;
-                size_t i;
-                size_t length;
-                value_t* values;
-                anm_instr_t* instr = &scr->instrs[iter_instrs];
+                anm_instr_t* instr = scr->instrs[iter_instrs];
 
                 fprintf(stream, "Instruction: %hu %hu %hu",
                     instr->time, instr->param_mask, instr->type);
 
-                if (instr->type == 0xffff) {
+                if ((entry->header.version == 0 && instr->type == 0 && instr->time == 0) ||
+                    (entry->header.version > 0 && instr->type == 0xffff)) {
                     fprintf(stream, "\n");
                     break;
+                } else {
+                    const char* format = find_format(formats, instr->type);
+                    value_t* values;
+
+                    if (!format) {
+                        fprintf(stderr, "%s: id %d was not found in the format table\n", argv0, instr->type);
+                        abort();
+                    }
+
+                    values = value_list_from_data(value_from_data, (unsigned char*)instr->data, instr->length - sizeof(anm_instr_t), format);
+                    if (!values)
+                        abort();
+
+                    for (size_t i = 0; values[i].type; ++i) {
+                        char* disp;
+                        disp = value_to_text(&values[i]);
+                        fprintf(stream, " %s", disp);
+                        value_free(&values[i]);
+                        free(disp);
+                    }
+
+                    free(values);
                 }
-
-                format = find_format(formats, instr->type);
-                if (!format) {
-                    fprintf(stderr, "%s: id %d was not found in the format table\n", argv0, instr->type);
-                    abort();
-                }
-
-                length = instr->length - ((entry->header.version == 0) ? 0 : ANM_INSTR_SIZE);
-                values = value_list_from_data(value_from_data, (unsigned char*)instr->data, length, format);
-                if (!values)
-                    abort();
-
-                for (i = 0; values[i].type; ++i) {
-                    char* disp;
-                    disp = value_to_text(&values[i]);
-                    fprintf(stream, " %s", disp);
-                    value_free(&values[i]);
-                    free(disp);
-                }
-
-                free(values);
 
                 fprintf(stream, "\n");
             }
@@ -1282,11 +1269,10 @@ anm_create(const char* spec)
 
             script->instr_count++;
             script->instrs = realloc(
-                script->instrs, script->instr_count * sizeof(anm_instr_t));
-            instr = &script->instrs[script->instr_count - 1];
-            instr->data = NULL;
-            instr->length = ANM_INSTR_SIZE;
+                script->instrs, script->instr_count * sizeof(anm_instr_t*));
+            instr = malloc(sizeof(anm_instr_t));
 
+            instr->length = 0;
             instr->time = strtol(tmp, &tmp, 10);
             instr->param_mask = strtol(tmp, &tmp, 10);
             instr->type = strtol(tmp, &tmp, 10);
@@ -1302,16 +1288,15 @@ anm_create(const char* spec)
                     break;
                 } else {
                     instr->length += sizeof(int32_t);
-                    instr->data =
-                        realloc(instr->data, instr->length - ANM_INSTR_SIZE);
+                    instr = realloc(instr, sizeof(anm_instr_t) + instr->length);
                     if (*after == 'f' || *after == '.') {
                         f = strtof(before, &after);
-                        memcpy(instr->data + instr->length - ANM_INSTR_SIZE - sizeof(float),
+                        memcpy(instr->data + instr->length - sizeof(float),
                             &f, sizeof(float));
                         /* Skip 'f'. */
                         ++after;
                     } else {
-                        memcpy(instr->data + instr->length - ANM_INSTR_SIZE - sizeof(int32_t),
+                        memcpy(instr->data + instr->length - sizeof(int32_t),
                             &i, sizeof(int32_t));
                     }
                 }
@@ -1319,8 +1304,7 @@ anm_create(const char* spec)
                 before = after;
             }
 
-            if (instr->type == 0xffff)
-                instr->length = 0;
+            script->instrs[script->instr_count - 1] = instr;
         } else {
             sscanf(linep, "Format: %u", &entry->header.format);
             sscanf(linep, "Width: %u", &entry->header.w);
@@ -1404,19 +1388,23 @@ anm_write(anm_t* anm, const char* filename)
             for (k = 0; k < entry->scripts[j].instr_count; ++k) {
                 if (entry->header.version == 0) {
                     anm_instr0_t instr;
-                    instr.time = entry->scripts[j].instrs[k].time;
-                    instr.type = entry->scripts[j].instrs[k].type;
-                    instr.length = entry->scripts[j].instrs[k].length -
-                        ANM_INSTR_SIZE;
-                    file_write(stream, &instr, ANM_INSTR0_SIZE);
-                    if (entry->scripts[j].instrs[k].data)
-                        file_write(stream, entry->scripts[j].instrs[k].data,
-                            entry->scripts[j].instrs[k].length - ANM_INSTR_SIZE);
+                    instr.time = entry->scripts[j].instrs[k]->time;
+                    instr.type = entry->scripts[j].instrs[k]->type;
+                    instr.length = entry->scripts[j].instrs[k]->length;
+                    file_write(stream, &instr, sizeof(instr));
+                    if (instr.length) {
+                        file_write(stream,
+                            entry->scripts[j].instrs[k]->data,
+                            instr.length);
+                    }
                 } else {
-                    file_write(stream, &entry->scripts[j].instrs[k], ANM_INSTR_SIZE);
-                    if (entry->scripts[j].instrs[k].data)
-                        file_write(stream, entry->scripts[j].instrs[k].data,
-                            entry->scripts[j].instrs[k].length - ANM_INSTR_SIZE);
+                    if (entry->scripts[j].instrs[k]->type == 0xffff) {
+                        entry->scripts[j].instrs[k]->length = 0;
+                        file_write(stream, entry->scripts[j].instrs[k], sizeof(anm_instr_t));
+                    } else {
+                        entry->scripts[j].instrs[k]->length += sizeof(anm_instr_t);
+                        file_write(stream, entry->scripts[j].instrs[k], entry->scripts[j].instrs[k]->length);
+                    }
                 }
             }
         }
@@ -1482,8 +1470,7 @@ anm_free(anm_t* anm)
                 for (j = 0; j < anm->entries[i].script_count; ++j) {
                     if (anm->entries[i].scripts[j].instrs) {
                         for (k = 0; k < anm->entries[i].scripts[j].instr_count; ++k) {
-                            if (anm->entries[i].scripts[j].instrs[k].data)
-                                free(anm->entries[i].scripts[j].instrs[k].data);
+                            free(anm->entries[i].scripts[j].instrs[k]);
                         }
                         free(anm->entries[i].scripts[j].instrs);
                     }

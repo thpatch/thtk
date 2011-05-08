@@ -58,20 +58,20 @@ typedef struct {
 #endif
 } PACK_ATTRIBUTE sprite_t;
 
-#define ANM_INSTR0_SIZE 4
 typedef struct {
 #ifdef PACK_PRAGMA
 #pragma pack(push,1)
 #endif
     uint16_t time;
     uint8_t type;
+    /* XXX: data length. */
     uint8_t length;
 #ifdef PACK_PRAGMA
 #pragma pack(pop)
 #endif
+    unsigned char data[];
 } PACK_ATTRIBUTE anm_instr0_t;
 
-#define ANM_INSTR_SIZE 8
 typedef struct {
 #ifdef PACK_PRAGMA
 #pragma pack(push,1)
@@ -84,7 +84,7 @@ typedef struct {
 #ifdef PACK_PRAGMA
 #pragma pack(pop)
 #endif
-    char* data;
+    unsigned char data[];
 } PACK_ATTRIBUTE anm_instr_t;
 
 #define ANM_SCRIPT_SIZE 8
@@ -98,7 +98,7 @@ typedef struct {
 #pragma pack(pop)
 #endif
     unsigned int instr_count;
-    anm_instr_t* instrs;
+    anm_instr_t** instrs;
 } PACK_ATTRIBUTE anm_script_t;
 
 typedef struct {
