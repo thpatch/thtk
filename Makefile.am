@@ -3,6 +3,7 @@ ACLOCAL_AMFLAGS = -I m4
 AM_YFLAGS = -d
 BUILT_SOURCES = ecsparse.h ecsparse.c ecsscan.c
 bin_PROGRAMS = thanm thdat thecl thmsg
+noinst_LIBRARIES = libutil.a
 EXTRA_DIST = \
 	COPYING.autotools \
 	COPYING.bison \
@@ -17,29 +18,31 @@ dist_man1_MANS = \
 	thecl.1 \
 	thmsg.1
 
-util_SOURCES = \
+libutil_a_SOURCES = \
 	args.c \
 	args.h \
+	bits.c \
+	bits.h \
 	file.c \
 	file.h \
+	list.c \
+	list.h \
 	program.c \
 	program.h \
 	util.c \
-	util.h
+	util.h \
+	value.c \
+	value.h
 
 thanm_CFLAGS = $(libpng_CFLAGS)
-thanm_LDADD = $(libpng_LIBS)
+thanm_LDADD = libutil.a $(libpng_LIBS)
 thanm_SOURCES = \
 	thanm.c \
-	thanm.h \
-	value.c \
-	value.h \
-	$(util_SOURCES)
+	thanm.h
 
 thdat_CFLAGS = $(OPENMP_CFLAGS)
+thdat_LDADD = libutil.a
 thdat_SOURCES = \
-	bits.c \
-	bits.h \
 	thcrypt.c \
 	thcrypt.h \
 	thdat.c \
@@ -52,10 +55,9 @@ thdat_SOURCES = \
 	thlzss.c \
 	thlzss.h \
 	thrle.c \
-	thrle.h \
-	$(util_SOURCES)
+	thrle.h
 
-thecl_LDADD = -lm
+thecl_LDADD = libutil.a -lm
 thecl_SOURCES = \
 	thecl.c \
 	thecl.h \
@@ -65,21 +67,14 @@ thecl_SOURCES = \
 	ecsscan.l \
 	ecsparse.y \
 	expr.c \
-	expr.h \
-	list.c \
-	list.h \
-	value.c \
-	value.h \
-	$(util_SOURCES)
+	expr.h
 
+thmsg_LDADD = libutil.a
 thmsg_SOURCES = \
 	thmsg.c \
 	thmsg.h \
 	thmsg06.c \
-	thmsg95.c \
-	value.c \
-	value.h \
-	$(util_SOURCES)
+	thmsg95.c
 
 release: all
 	rm -Rf "$(distdir)"
