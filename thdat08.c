@@ -346,8 +346,8 @@ th08_close(
     for (i = 0; i < archive->count; ++i)
         list_size += strlen(archive->entries[i].name) + 1 + (sizeof(uint32_t) * 3);
 
-    /* XXX: I'm adding some padding here to satisfy pbgzmlt; TH08 has 1248 zero
-     * bytes and TH09 1200 bytes.  The games work fine without it. */
+    /* XXX: I'm adding some padding here to satisfy pbgzmlt.
+     * The games work fine without it. */
     list_size += 4;
     buffer = malloc(list_size);
     memset(buffer, 0, list_size);
