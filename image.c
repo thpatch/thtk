@@ -32,9 +32,6 @@
 #include <png.h>
 #endif
 #include <stdlib.h>
-#ifdef HAVE_ZLIB
-#include <zlib.h>
-#endif
 #include "image.h"
 #include "program.h"
 #include "thanm.h"
@@ -244,9 +241,7 @@ png_write(
     png_bytepp imagep;
 
     png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
-#ifdef HAVE_ZLIB
-    png_set_compression_level(png_ptr, Z_BEST_SPEED);
-#endif
+    png_set_compression_level(png_ptr, 1);
     info_ptr = png_create_info_struct(png_ptr);
     png_init_io(png_ptr, stream);
     png_set_IHDR(png_ptr, info_ptr,
