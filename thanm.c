@@ -698,7 +698,7 @@ anm_read_file(
             data = malloc(entry->thtx.size);
             file_read(f, data, entry->thtx.size);
 
-            entry->data = fmt_to_rgba(
+            entry->data = format_to_rgba(
                 data, entry->thtx.w * entry->thtx.h, entry->thtx.format);
             free(data);
 #else
@@ -906,7 +906,7 @@ anm_replace(
                 anm->entries[i].header.hasdata) {
 
                 if (!converted_data)
-                    converted_data = rgba_to_fmt((uint32_t*)image->data,
+                    converted_data = format_from_rgba((uint32_t*)image->data,
                         width * height, formats[f]);
 
                 for (y = anm->entries[i].header.y; y < anm->entries[i].header.y + anm->entries[i].thtx.h; ++y) {

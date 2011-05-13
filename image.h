@@ -46,13 +46,13 @@ format_Bpp(
     format_t format);
 
 unsigned char*
-rgba_to_fmt(
+format_from_rgba(
     const uint32_t* data,
     unsigned int pixels,
     format_t format);
 
 char*
-fmt_to_rgba(
+format_to_rgba(
     const char* data,
     unsigned int pixels,
     format_t format);

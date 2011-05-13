@@ -61,7 +61,7 @@ format_Bpp(
 
 #ifdef HAVE_LIBPNG
 unsigned char*
-rgba_to_fmt(
+format_from_rgba(
     const uint32_t* data,
     unsigned int pixels,
     format_t format)
@@ -119,7 +119,7 @@ rgba_to_fmt(
 }
 
 char*
-fmt_to_rgba(
+format_to_rgba(
     const char* data,
     unsigned int pixels,
     format_t format)
@@ -221,7 +221,7 @@ png_read(
                 row_pointers[y], image->width * format_Bpp(image->format));
         } else {
             unsigned char* converted_data =
-                rgba_to_fmt((uint32_t*)row_pointers[y], image->width, image->format);
+                format_from_rgba((uint32_t*)row_pointers[y], image->width, image->format);
             memcpy(image->data + y * image->width * format_Bpp(image->format),
                 converted_data, image->width * format_Bpp(image->format));
             free(converted_data);
