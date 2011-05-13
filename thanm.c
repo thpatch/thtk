@@ -47,7 +47,8 @@
 static unsigned int option_force;
 
 static unsigned int
-format_Bpp(format_t format)
+format_Bpp(
+    format_t format)
 {
     switch (format) {
     case FORMAT_RGBA8888:
@@ -67,7 +68,10 @@ format_Bpp(format_t format)
 
 #ifdef HAVE_LIBPNG
 static unsigned char*
-rgba_to_fmt(const uint32_t* data, unsigned int pixels, format_t format)
+rgba_to_fmt(
+    const uint32_t* data,
+    unsigned int pixels,
+    format_t format)
 {
     unsigned int i;
     unsigned char* out = NULL;
@@ -122,7 +126,10 @@ rgba_to_fmt(const uint32_t* data, unsigned int pixels, format_t format)
 }
 
 static char*
-fmt_to_rgba(const char* data, unsigned int pixels, format_t format)
+fmt_to_rgba(
+    const char* data,
+    unsigned int pixels,
+    format_t format)
 {
     unsigned int i;
     uint32_t* out = malloc(sizeof(uint32_t) * pixels);
@@ -508,7 +515,8 @@ static const id_format_pair_t formats_v8[] = {
 
 /* The order and sizes of fields changed for TH11. */
 static void
-convert_header_to_old(anm_header_t* header)
+convert_header_to_old(
+    anm_header_t* header)
 {
     anm_header11_t th11 = *(anm_header11_t*)header;
     header->sprites = th11.sprites;
@@ -531,7 +539,8 @@ convert_header_to_old(anm_header_t* header)
 
 #ifdef HAVE_LIBPNG
 static void
-convert_header_to_11(anm_header_t* oldheader)
+convert_header_to_11(
+    anm_header_t* oldheader)
 {
     anm_header_t header = *oldheader;
     anm_header11_t* th11 = (anm_header11_t*)oldheader;
@@ -554,7 +563,9 @@ convert_header_to_11(anm_header_t* oldheader)
 #endif
 
 static char*
-anm_get_name(anm_t* anm, const char* name)
+anm_get_name(
+    anm_t* anm,
+    const char* name)
 {
     unsigned int i;
     for (i = 0; i < anm->name_count; ++i) {
@@ -569,7 +580,8 @@ anm_get_name(anm_t* anm, const char* name)
 }
 
 static anm_t*
-anm_read_file(const char* filename)
+anm_read_file(
+    const char* filename)
 {
     anm_t* anm;
     uint32_t offset = 0;
@@ -859,7 +871,9 @@ anm_read_file(const char* filename)
 }
 
 static void
-anm_dump(FILE* stream, const anm_t* anm)
+anm_dump(
+    FILE* stream,
+    const anm_t* anm)
 {
     unsigned int i;
 
@@ -980,7 +994,9 @@ typedef struct {
 } image_t;
 
 static image_t*
-png_read(FILE* stream, format_t format)
+png_read(
+    FILE* stream,
+    format_t format)
 {
     unsigned int y;
     image_t* image;
@@ -1027,7 +1043,9 @@ png_read(FILE* stream, format_t format)
 }
 
 static void
-png_write(FILE* stream, image_t* image)
+png_write(
+    FILE* stream,
+    image_t* image)
 {
     unsigned int y;
     png_structp png_ptr;
@@ -1056,8 +1074,11 @@ png_write(FILE* stream, image_t* image)
 }
 
 static void
-util_total_entry_size(const anm_t* anm, const char* name,
-    unsigned int* widthptr, unsigned int* heightptr)
+util_total_entry_size(
+    const anm_t* anm,
+    const char* name,
+    unsigned int* widthptr,
+    unsigned int* heightptr)
 {
     unsigned int i;
     unsigned int width = 0;
@@ -1079,7 +1100,10 @@ util_total_entry_size(const anm_t* anm, const char* name,
 }
 
 static void
-anm_replace(const anm_t* anm, const char* name, const char* filename)
+anm_replace(
+    const anm_t* anm,
+    const char* name,
+    const char* filename)
 {
     const format_t formats[] = { FORMAT_RGBA8888, FORMAT_BGRA8888, FORMAT_BGR565,
                                  FORMAT_BGRA4444, FORMAT_GRAY8 };
@@ -1138,7 +1162,9 @@ anm_replace(const anm_t* anm, const char* name, const char* filename)
 }
 
 static void
-anm_extract(const anm_t* anm, const char* name)
+anm_extract(
+    const anm_t* anm,
+    const char* name)
 {
     const format_t formats[] = { FORMAT_GRAY8, FORMAT_BGRA4444,
                                  FORMAT_BGR565, FORMAT_BGRA8888, FORMAT_RGBA8888 };
@@ -1188,7 +1214,8 @@ anm_extract(const anm_t* anm, const char* name)
 }
 
 static anm_t*
-anm_create(const char* spec)
+anm_create(
+    const char* spec)
 {
     FILE* f;
     char line[4096];
@@ -1323,7 +1350,9 @@ anm_create(const char* spec)
 }
 
 static void
-anm_write(anm_t* anm, const char* filename)
+anm_write(
+    anm_t* anm,
+    const char* filename)
 {
     FILE* stream;
     unsigned int i;
@@ -1454,7 +1483,8 @@ anm_write(anm_t* anm, const char* filename)
 #endif
 
 static void
-anm_free(anm_t* anm)
+anm_free(
+    anm_t* anm)
 {
     unsigned int i, j, k;
 
@@ -1513,7 +1543,9 @@ print_usage(void)
 }
 
 int
-main(int argc, char* argv[])
+main(
+    int argc,
+    char* argv[])
 {
     const char commands[] = "l"
 #ifdef HAVE_LIBPNG
