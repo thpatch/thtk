@@ -78,6 +78,9 @@ utility exits with 0 on success, 1 on error.
 A few files from TH12 contain overlapping entries with different formats.
 Dumping and recreating these archives will not result in the same archives.
 The affected pixels seem to all have 0 for alpha though.
+.Pp
+One of the scripts in TH95's front.anm lack a sentinel instruction.
+Dumping and recreating this archive will add a sentinel instruction.
 .Sh SECURITY CONSIDERATIONS
 File names may not be properly sanitized when extracting.
 Furthermode, invalid data may not be properly handled.

@@ -756,6 +756,9 @@ anm_read_file(const char* filename)
 
                         file_read(f, &temp_instr, sizeof(anm_instr0_t));
 
+                        if (temp_instr.type == 0 && temp_instr.time == 0)
+                            break;
+
                         ++entry->scripts[i].instr_count;
                         entry->scripts[i].instrs = realloc(
                             entry->scripts[i].instrs,
@@ -769,9 +772,6 @@ anm_read_file(const char* filename)
 
                         if (temp_instr.length)
                             file_read(f, instr->data, temp_instr.length);
-
-                        if (instr->type == 0 && instr->time == 0)
-                            break;
                     } else {
                         anm_instr_t temp_instr;
 
@@ -779,6 +779,9 @@ anm_read_file(const char* filename)
                             break;
 
                         file_read(f, &temp_instr, sizeof(anm_instr_t));
+
+                        if (temp_instr.type == 0xffff)
+                            break;
 
                         ++entry->scripts[i].instr_count;
                         entry->scripts[i].instrs = realloc(
@@ -790,9 +793,6 @@ anm_read_file(const char* filename)
 
                         if (instr->length > sizeof(anm_instr_t))
                             file_read(f, instr->data, instr->length - sizeof(anm_instr_t));
-
-                        if (instr->type == 0xffff)
-                            break;
                     }
                 }
             }
@@ -943,11 +943,7 @@ anm_dump(FILE* stream, const anm_t* anm)
                 fprintf(stream, "Instruction: %hu %hu %hu",
                     instr->time, instr->param_mask, instr->type);
 
-                if ((entry->header.version == 0 && instr->type == 0 && instr->time == 0) ||
-                    (entry->header.version > 0 && instr->type == 0xffff)) {
-                    fprintf(stream, "\n");
-                    break;
-                } else {
+                if (instr->length > sizeof(anm_instr_t)) {
                     const char* format = find_format(formats, instr->type);
                     value_t* values;
 
@@ -973,6 +969,8 @@ anm_dump(FILE* stream, const anm_t* anm)
 
                 fprintf(stream, "\n");
             }
+
+            fprintf(stream, "\n");
         }
 
         fprintf(stream, "\n");
@@ -1407,6 +1405,14 @@ anm_write(anm_t* anm, const char* filename)
                         file_write(stream, entry->scripts[j].instrs[k], entry->scripts[j].instrs[k]->length);
                     }
                 }
+            }
+
+            if (entry->header.version == 0) {
+                anm_instr0_t sentinel = { 0, 0, 0 };
+                file_write(stream, &sentinel, sizeof(anm_instr0_t));
+            } else {
+                anm_instr_t sentinel = { 0xffff, 0, 0, 0 };
+                file_write(stream, &sentinel, sizeof(anm_instr_t));
             }
         }
 
