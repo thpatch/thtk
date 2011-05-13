@@ -32,20 +32,14 @@
 #include <config.h>
 #include <inttypes.h>
 
+extern unsigned int option_force;
+
 enum {
     MODE_EXTRACT = 1,
     MODE_REPLACE = 2,
     MODE_LIST    = 3,
     MODE_CREATE  = 4
 };
-
-typedef enum {
-    FORMAT_BGRA8888 = 1,
-    FORMAT_BGR565   = 3,
-    FORMAT_BGRA4444 = 5,
-    FORMAT_RGBA8888 = 6, /* XXX: Also used internally. */
-    FORMAT_GRAY8    = 7
-} format_t;
 
 typedef struct {
 #ifdef PACK_PRAGMA

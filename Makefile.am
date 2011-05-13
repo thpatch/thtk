@@ -37,6 +37,8 @@ libutil_a_SOURCES = \
 thanm_CFLAGS = $(libpng_CFLAGS)
 thanm_LDADD = libutil.a $(libpng_LIBS)
 thanm_SOURCES = \
+	image.c \
+	image.h \
 	thanm.c \
 	thanm.h
 
