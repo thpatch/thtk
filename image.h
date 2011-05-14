@@ -58,7 +58,7 @@ format_to_rgba(
     format_t format);
 
 typedef struct {
-    char* data;
+    unsigned char* data;
     unsigned int width;
     unsigned int height;
     format_t format;
