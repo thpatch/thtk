@@ -51,9 +51,9 @@ format_from_rgba(
     unsigned int pixels,
     format_t format);
 
-char*
+unsigned char*
 format_to_rgba(
-    const char* data,
+    const unsigned char* data,
     unsigned int pixels,
     format_t format);
 

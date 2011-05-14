@@ -115,9 +115,9 @@ format_from_rgba(
     return out;
 }
 
-char*
+unsigned char*
 format_to_rgba(
-    const char* data,
+    const unsigned char* data,
     unsigned int pixels,
     format_t format)
 {
@@ -132,7 +132,7 @@ format_to_rgba(
                    | (data[i] <<  0 &     0xff);
         }
     } else if (format == FORMAT_BGRA8888) {
-        char* out8 = (char*)out;
+        unsigned char* out8 = (unsigned char*)out;
         for (i = 0; i < pixels; ++i) {
             out8[i * sizeof(uint32_t) + 0] = data[i * sizeof(uint32_t) + 2];
             out8[i * sizeof(uint32_t) + 1] = data[i * sizeof(uint32_t) + 1];
@@ -178,7 +178,7 @@ format_to_rgba(
         abort();
     }
 
-    return (char*)out;
+    return (unsigned char*)out;
 }
 
 image_t*
