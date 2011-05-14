@@ -73,6 +73,8 @@ void list_del(list_t* list, list_node_t* node);
  * Does not free the data or the list. */
 void list_free_nodes(list_t* list);
 
+#define list_is_last_iteration() (node->next == NULL)
+
 /* Iterates through the data in the list. */
 #define list_for_each(list, var) \
     for (list_node_t* node = (list)->head; \
