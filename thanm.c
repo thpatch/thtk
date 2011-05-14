@@ -867,8 +867,13 @@ anm_replace(
     const char* name,
     const char* filename)
 {
-    const format_t formats[] = { FORMAT_RGBA8888, FORMAT_BGRA8888, FORMAT_BGR565,
-                                 FORMAT_BGRA4444, FORMAT_GRAY8 };
+    const format_t formats[] = {
+        FORMAT_RGBA8888,
+        FORMAT_BGRA8888,
+        FORMAT_BGR565,
+        FORMAT_BGRA4444,
+        FORMAT_GRAY8
+    };
     unsigned int f, i, y;
     unsigned int width = 0;
     unsigned int height = 0;
@@ -928,8 +933,13 @@ anm_extract(
     const anm_t* anm,
     const char* name)
 {
-    const format_t formats[] = { FORMAT_GRAY8, FORMAT_BGRA4444,
-                                 FORMAT_BGR565, FORMAT_BGRA8888, FORMAT_RGBA8888 };
+    const format_t formats[] = {
+        FORMAT_GRAY8,
+        FORMAT_BGRA4444,
+        FORMAT_BGR565,
+        FORMAT_BGRA8888,
+        FORMAT_RGBA8888
+    };
     FILE* stream;
     image_t image;
 
