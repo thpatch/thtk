@@ -235,23 +235,38 @@ png_write(
     FILE* stream,
     image_t* image)
 {
-    unsigned int y;
     png_structp png_ptr;
     png_infop info_ptr;
     png_bytepp imagep;
+
+    int bit_depth;
+    int color_type;
+    int bytes_per_pixel;
+
+    if (image->format == FORMAT_GRAY8) {
+        bit_depth = 8;
+        color_type = PNG_COLOR_TYPE_GRAY;
+        bytes_per_pixel = 1;
+    } else /* if (image->format == FORMAT_RGBA8888) */ {
+        bit_depth = 8;
+        color_type = PNG_COLOR_TYPE_RGB_ALPHA;
+        bytes_per_pixel = 4;
+    } /* else { abort(); } */
 
     png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
     png_set_compression_level(png_ptr, 1);
     info_ptr = png_create_info_struct(png_ptr);
     png_init_io(png_ptr, stream);
+
     png_set_IHDR(png_ptr, info_ptr,
-        image->width, image->height, 8, PNG_COLOR_TYPE_RGB_ALPHA,
+        image->width, image->height, bit_depth, color_type,
         PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
+
     png_write_info(png_ptr, info_ptr);
 
-    imagep = malloc(sizeof(png_byte*) * image->height);
-    for (y = 0; y < image->height; ++y)
-        imagep[y] = (png_byte*)(image->data + y * image->width * 4);
+    imagep = malloc(image->height * sizeof(png_byte*));
+    for (unsigned int y = 0; y < image->height; ++y)
+        imagep[y] = (png_byte*)(image->data + y * image->width * bytes_per_pixel);
 
     png_write_image(png_ptr, imagep);
     free(imagep);
