@@ -31,6 +31,7 @@
 
 #include <config.h>
 #include <inttypes.h>
+#include "list.h"
 
 extern unsigned int option_force;
 
@@ -74,7 +75,7 @@ typedef struct {
     unsigned char data[];
 } PACK_ATTRIBUTE anm_instr_t;
 
-#define ANM_SCRIPT_SIZE 8
+/* TODO: Rename this struct to _header_t something. */
 typedef struct {
 #ifdef PACK_PRAGMA
 #pragma pack(push,1)
@@ -84,9 +85,12 @@ typedef struct {
 #ifdef PACK_PRAGMA
 #pragma pack(pop)
 #endif
-    unsigned int instr_count;
-    anm_instr_t** instrs;
-} PACK_ATTRIBUTE anm_script_t;
+} PACK_ATTRIBUTE anm_offset_t;
+
+typedef struct {
+    anm_offset_t* offset;
+    list_t instrs;
+} anm_script_t;
 
 typedef struct {
     uint16_t type;
@@ -154,6 +158,7 @@ typedef struct {
 #ifdef PACK_PRAGMA
 #pragma pack(push,1)
 #endif
+    char magic[4];
     uint16_t zero;
     uint16_t format;
     /* These may be different from the parent entry. */
@@ -162,26 +167,32 @@ typedef struct {
 #ifdef PACK_PRAGMA
 #pragma pack(pop)
 #endif
+    unsigned char data[];
 } PACK_ATTRIBUTE thtx_header_t;
 
 typedef struct {
-    anm_header_t header;
-    thtx_header_t thtx;
+    anm_header_t* header;
+    thtx_header_t* thtx;
+
     char* name;
     char* name2;
-    unsigned int sprite_count;
-    sprite_t* sprites;
-    unsigned int script_count;
-    anm_script_t* scripts;
-    unsigned int data_size;
-    char* data;
-} entry_t;
+
+    /* List of sprite_t*. */
+    list_t sprites;
+    /* List of anm_script_t*. */
+    list_t scripts;
+
+    unsigned char* data;
+} anm_entry_t;
 
 typedef struct {
-    unsigned int name_count;
-    char** names;
-    unsigned int entry_count;
-    entry_t* entries;
-} anm_t;
+    unsigned char* map;
+    long map_size;
+
+    /* List of const char*. */
+    list_t names;
+    /* List of anm_entry_t*. */
+    list_t entries;
+} anm_archive_t;
 
 #endif
