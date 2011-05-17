@@ -29,7 +29,6 @@
 #include <config.h>
 #include <errno.h>
 #include <string.h>
-#include "args.h"
 #include "program.h"
 #include "thmsg.h"
 #include "util.h"

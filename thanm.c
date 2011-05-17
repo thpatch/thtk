@@ -32,7 +32,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
-#include "args.h"
 #include "file.h"
 #include "image.h"
 #include "thanm.h"

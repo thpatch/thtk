@@ -19,8 +19,6 @@ dist_man1_MANS = \
 	thmsg.1
 
 libutil_a_SOURCES = \
-	args.c \
-	args.h \
 	bits.c \
 	bits.h \
 	file.c \

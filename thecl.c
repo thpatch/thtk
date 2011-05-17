@@ -31,7 +31,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "args.h"
 #include "program.h"
 #include "thecl.h"
 #include "util.h"

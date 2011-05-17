@@ -27,9 +27,87 @@
  * DAMAGE.
  */
 #include <config.h>
+#include <limits.h>
+#include <stdio.h>
 #include <stddef.h>
+#include <stdlib.h>
+#include <string.h>
 #include "program.h"
+#include "util.h"
 
 const char* argv0 = NULL;
 const char* current_input = NULL;
 const char* current_output = NULL;
+
+/* Returns a pointer to after the last directory separator in path. */
+/* TODO: Use util_basename if it can be made to return a pointer to inside of
+ * path. */
+static const char*
+util_shortname(
+    const char* path)
+{
+    const char* ret;
+    if (!path) {
+        fprintf(stderr, "%s: NULL path passed to short_name\n", argv0);
+        abort();
+    }
+#ifdef WIN32
+    ret = MAX(strrchr(path, '/'), strrchr(path, '\\'));
+#else
+    ret = strrchr(path, '/');
+#endif
+    return ret ? ret + 1 : path;
+}
+
+int
+parse_args(
+    int argc,
+    char* argv[],
+    void (*usage)(void),
+    const char* commands,
+    char* options,
+    unsigned int* version)
+{
+    int command;
+    char* argp;
+
+    /* TODO: Some kind of check here first. */
+    argv0 = util_shortname(argv[0]);
+
+    if (argc < 2) {
+        usage();
+        return 0;
+    }
+
+    command = argv[1][0];
+
+    if (!command) {
+        fprintf(stderr, "%s: command missing\n", argv0);
+        return 0;
+    }
+
+    if (!strchr(commands, command)) {
+        fprintf(stderr, "%s: unknown command '%c'\n", argv0, command);
+        usage();
+        return 0;
+    }
+
+    for (argp = argv[1] + 1; *argp;) {
+        char* optionp = strchr(options, *argp);
+        if (optionp) {
+            *optionp = ' ';
+            argp++;
+        } else {
+            long int parsed_version = strtol(argp, &argp, 10);
+            if (!version || parsed_version == 0 || parsed_version == LONG_MIN
+                || parsed_version == LONG_MAX) {
+                fprintf(stderr, "%s: unrecognized option '%c'\n", argv0, *argp);
+                usage();
+                return 0;
+            } else
+                *version = parsed_version;
+        }
+    }
+
+    return command;
+}
