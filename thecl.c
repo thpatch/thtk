@@ -166,7 +166,6 @@ print_usage(void)
            "COMMAND can be:\n"
            "  c  create ECL file\n"
            "  d  dump ECL file\n"
-           "  h  display this help and exit\n"
            "  V  display version information and exit\n"
            "OPTION can be:\n"
            "  #  # can be 6, 7, 8, 9, 95, 10, 11, 12, 125, 128, or 13 (required)\n"
@@ -185,7 +184,10 @@ main(int argc, char* argv[])
     current_input = "(stdin)";
     current_output = "(stdout)";
 
-    mode = parse_args(argc, argv, print_usage, "cdhV", "", &version);
+    mode = parse_args(argc, argv, print_usage, "cdV", "", &version);
+
+    if (!mode)
+        exit(1);
 
     switch (version) {
     case 6:
@@ -258,9 +260,6 @@ main(int argc, char* argv[])
     }
     case 'V':
         util_print_version();
-        exit(0);
-    case 'h':
-        print_usage();
         exit(0);
     default:
         exit(1);

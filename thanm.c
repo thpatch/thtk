@@ -1196,8 +1196,7 @@ print_usage(void)
            "  r[OPTION...] ARCHIVE NAME FILE  replace entry in archive\n"
            "  c[OPTION...] ARCHIVE SPEC       create archive\n");
 #endif
-    printf("  h                               display this help and exit\n"
-           "  V                               display version information and exit\n"
+    printf("  V                               display version information and exit\n"
            "OPTION can be:\n"
            "  f  ignore errors when possible\n"
            "Report bugs to <" PACKAGE_BUGREPORT ">.\n");
@@ -1212,7 +1211,7 @@ main(
 #ifdef HAVE_LIBPNG
                             "xrc"
 #endif
-                            "hV";
+                            "V";
     char options[] = "f";
     int command = 0;
 
@@ -1236,9 +1235,6 @@ main(
         option_force = 1;
 
     switch (command) {
-    case 'h':
-        print_usage();
-        exit(0);
     case 'V':
         util_print_version();
         exit(0);

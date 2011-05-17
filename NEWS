@@ -4,6 +4,7 @@ Make: --enable-combine was removed.
 thanm: The sentinel instructions are left out from the scripts.
 thecl: Bogus rank flags will not be displayed for TH07.
 thanm: The new format will be handled correctly (by ignoring the Format: field).
+thtk: The h command has been removed, run the program without a command to see the usage.
 
 What's new in thtk 4:
 

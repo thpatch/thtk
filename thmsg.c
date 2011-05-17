@@ -45,7 +45,6 @@ print_usage(void)
            "COMMAND can be:\n"
            "  c  create a dialogue file\n"
            "  d  dump a dialogue file\n"
-           "  h  display this help and exit\n"
            "  V  display version information and exit\n"
            "OPTION can be:\n"
            "  e  extract or create ending dialogue\n"
@@ -66,7 +65,10 @@ main(int argc, char* argv[])
     current_input = "(stdin)";
     current_output = "(stdout)";
 
-    mode = parse_args(argc, argv, print_usage, "cdhV", options, &version);
+    mode = parse_args(argc, argv, print_usage, "cdV", options, &version);
+
+    if (!mode)
+        return 1;
 
     if (!strchr(options, 'e'))
         thmsg_opt_end = 1;
@@ -143,9 +145,6 @@ main(int argc, char* argv[])
     }
     case 'V':
         util_print_version();
-        return 0;
-    case 'h':
-        print_usage();
         return 0;
     default:
         return 1;

@@ -272,7 +272,6 @@ print_usage(
            "COMMAND can be:\n"
            "  c  create an archive\n"
            "  x  extract an archive\n"
-           "  h  display this help and exit\n"
            "  V  display version information and exit\n"
            "OPTION can be:\n"
            "  #  # can be 2, 3, 4, 5, 6, 7, 8, 9, 95, 10, 11, 12, 125, 128, or 13 defaults to the latest\n\n"
@@ -291,7 +290,7 @@ main(
     int i;
     int mode;
 
-    mode = parse_args(argc, argv, print_usage, "cxhV", "", &version);
+    mode = parse_args(argc, argv, print_usage, "cxV", "", &version);
 
     if (!mode)
         return 1;
@@ -330,9 +329,6 @@ main(
     }
 
     switch (mode) {
-    case 'h':
-        print_usage();
-        return 0;
     case 'V':
         util_print_version();
         return 0;
