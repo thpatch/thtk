@@ -187,11 +187,3 @@ util_printfloat(
 
     return buf;
 }
-
-int
-util_strpcmp(
-    const void* a,
-    const void* b)
-{
-    return strcmp(*(const char**)a, *(const char**)b);
-}

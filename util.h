@@ -63,11 +63,6 @@ void util_basename(
     size_t dstlen,
     const char* src);
 
-/* Compares two strings.  Can be used by qsort. */
-int util_strpcmp(
-    const void* a,
-    const void* b);
-
 /* "Writes" a value to a buffer and returns a pointer to the memory location
  * after the written value. */
 void* mempcpy(
