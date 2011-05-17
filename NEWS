@@ -2,6 +2,7 @@ What's new in thtk 5:
 
 Make: --enable-combine was removed.
 thanm: The sentinel instructions are left out from the scripts.
+thecl: Bogus rank flags will not be displayed for TH07.
 
 What's new in thtk 4:
 

@@ -714,7 +714,7 @@ th06_open(
 
             if (raw_instr->rank_mask != rank) {
                 uint16_t rank_mask = raw_instr->rank_mask >> 8;
-                if (version == 6)
+                if (version == 6 || version == 7)
                     rank_mask |= 0xf0;
                 thecl_instr_t* new = thecl_instr_rank(rank_mask & 0xff);
                 list_append_new(&sub->instrs, new);
@@ -946,7 +946,7 @@ th06_instr_serialize(
 
     if (instr->rank != 0xff) {
         ret->rank_mask = (instr->rank & 0xff) << 8;
-        if (ecl->version == 6)
+        if (ecl->version == 6 || ecl->version == 7)
             ret->rank_mask &= 0x0f00;
     } else
         ret->rank_mask = 0xff00;
