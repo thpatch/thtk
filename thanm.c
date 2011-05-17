@@ -465,17 +465,6 @@ anm_read_file(
             header->version == 7 ||
             header->version == 8);
 
-        /* XXX: header->format is 0 for at least two entries in TH06. */
-#if 0
-        fprintf(stderr, "%s:%s: %d\n", argv0, current_input, header->format);
-        assert(
-            header->format == FORMAT_BGRA8888 ||
-            header->format == FORMAT_BGR565 ||
-            header->format == FORMAT_BGRA4444 ||
-            header->format == FORMAT_RGBA8888 ||
-            header->format == FORMAT_GRAY8);
-#endif
-
         assert(
             header->unknown1 == 0 ||
             header->unknown1 == 1 ||
@@ -774,7 +763,7 @@ anm_replace(
         anm_entry_t* entry;
         list_for_each(&anm->entries, entry) {
             if (entry->name == name &&
-                entry->header->format == formats[f] &&
+                entry->thtx->format == formats[f] &&
                 entry->header->hasdata) {
                 unsigned int y;
 
@@ -842,7 +831,7 @@ anm_extract(
     for (f = 0; f < sizeof(formats) / sizeof(formats[0]); ++f) {
         anm_entry_t* entry;
         list_for_each(&anm->entries, entry) {
-            if (entry->header->hasdata && entry->name == name && formats[f] == entry->header->format) {
+            if (entry->header->hasdata && entry->name == name && formats[f] == entry->thtx->format) {
                 unsigned char* temp_data = format_to_rgba(entry->data, entry->thtx->w * entry->thtx->h, entry->thtx->format);
                 for (y = entry->header->y; y < entry->header->y + entry->thtx->h; ++y) {
                     memcpy(image.data + y * image.width * 4 + entry->header->x * 4,
