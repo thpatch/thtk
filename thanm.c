@@ -661,17 +661,18 @@ anm_dump(
 
             anm_instr_t* instr;
             list_for_each(&script->instrs, instr) {
+                const char* format = find_format(formats, instr->type);
+
+                if (!format) {
+                    fprintf(stderr, "%s: id %d was not found in the format table\n", argv0, instr->type);
+                    abort();
+                }
+
                 fprintf(stream, "Instruction: %hu %hu %hu",
                     instr->time, instr->param_mask, instr->type);
 
                 if (instr->length > sizeof(anm_instr_t)) {
-                    const char* format = find_format(formats, instr->type);
                     value_t* values;
-
-                    if (!format) {
-                        fprintf(stderr, "%s: id %d was not found in the format table\n", argv0, instr->type);
-                        abort();
-                    }
 
                     values = value_list_from_data(value_from_data, (unsigned char*)instr->data, instr->length - sizeof(anm_instr_t), format);
                     if (!values)
