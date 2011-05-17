@@ -16,6 +16,7 @@ config.status
 configure
 depcomp
 install-sh
+libutil.a
 missing
 ecsparse.c
 ecsparse.h
