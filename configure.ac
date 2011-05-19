@@ -59,6 +59,8 @@ dnl check for structures
 
 dnl check for compiler characteristics
 
+AC_C_BIGENDIAN([AC_MSG_ERROR([big-endian systems are not supported])])
+
 AC_OPENMP
 AS_IF([test "x$enable_openmp" = xno || test "x$ac_cv_prog_c_openmp" = xunsupported],
       [THTK_TRY_CFLAGS([-Wno-unknown-pragmas])
