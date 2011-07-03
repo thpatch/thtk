@@ -560,7 +560,7 @@ anm_read_file(
                 thtx->format == FORMAT_BGRA8888 ||
                 thtx->format == FORMAT_BGR565 ||
                 thtx->format == FORMAT_BGRA4444 ||
-                thtx->format == FORMAT_RGBA8888 ||
+                thtx->format == (uint16_t)FORMAT_RGBA8888 ||
                 thtx->format == FORMAT_GRAY8);
 
             entry->data = thtx->data;
