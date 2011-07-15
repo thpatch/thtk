@@ -42,7 +42,7 @@ The following commands are available:
 .Bl -tag -width Ds
 .It Ar c Ns Oo Ar version Oc Ar archive Ar file Op Ar
 Archives the specified files.
-.It Ar d Ns Oo Ar version Oc Ar archive Op Ar
+.It Ar x Ns Oo Ar version Oc Ar archive Op Ar
 Extracts files.
 If no files are specified, all files are extracted.
 The format is not automatically detected.
@@ -73,7 +73,7 @@ thdat c6 output.dat input.anm input.msg input.ecl
 .Pp
 Extract all files from the archive to the current working directory:
 .Bd -literal -offset indent
-thdat d8 th08.dat
+thdat x8 th08.dat
 .Ed
 .Sh SEE ALSO
 .Lk http://code.google.com/p/thtk "Project homepage"
