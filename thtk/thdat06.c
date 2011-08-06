@@ -173,14 +173,16 @@ th06_open(
     if (end_offset == -1)
         return 0;
 
-    thdat_entry_t* prev = NULL;
-    for (unsigned int i = 0; i < thdat->entry_count; ++i) {
-        thdat_entry_t* entry = &thdat->entries[i];
-        if (prev)
-            prev->zsize = entry->offset - prev->offset;
-        prev = entry;
+    if (thdat->entry_count) {
+        thdat_entry_t* prev = NULL;
+        for (unsigned int i = 0; i < thdat->entry_count; ++i) {
+            thdat_entry_t* entry = &thdat->entries[i];
+            if (prev)
+                prev->zsize = entry->offset - prev->offset;
+            prev = entry;
+        }
+        prev->zsize = end_offset - prev->offset;
     }
-    prev->zsize = end_offset - prev->offset;
 
     return 1;
 }

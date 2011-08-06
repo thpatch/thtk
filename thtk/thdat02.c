@@ -99,11 +99,6 @@ th02_open(
     th02_entry_header_t* th02_entry_headers = NULL;
     th03_entry_header_t* th03_entry_headers = NULL;
 
-    if (thdat->version > 2) {
-        if (thtk_io_read(thdat->stream, &th03_archive_header, sizeof(th03_archive_header), error) != sizeof(th03_archive_header))
-            return 0;
-    }
-
     if (thdat->version == 2) {
         th02_entry_header_t eh2;
         if (thtk_io_read(thdat->stream, &eh2, sizeof(eh2), error) != sizeof(eh2))
@@ -119,6 +114,8 @@ th02_open(
 
         thdat->entry_count = (eh2.offset / sizeof(eh2)) - 1;
     } else {
+        if (thtk_io_read(thdat->stream, &th03_archive_header, sizeof(th03_archive_header), error) != sizeof(th03_archive_header))
+            return 0;
         thdat->entry_count = th03_archive_header.count;
     }
 

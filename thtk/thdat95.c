@@ -146,28 +146,29 @@ th95_open(
     thdat->entry_count = header.entry_count;
     thdat->entries = calloc(header.entry_count, sizeof(thdat_entry_t));
 
-    thdat_entry_t* prev = NULL;
-    const uint32_t* ptr = (uint32_t*)data;
-    for (uint32_t i = 0; i < header.entry_count; ++i) {
-        thdat_entry_t* entry = &thdat->entries[i];
-        thdat_entry_init(entry);
+    if (header.entry_count) {
+        thdat_entry_t* prev = NULL;
+        const uint32_t* ptr = (uint32_t*)data;
+        for (uint32_t i = 0; i < header.entry_count; ++i) {
+            thdat_entry_t* entry = &thdat->entries[i];
+            thdat_entry_init(entry);
 
-        strcpy(entry->name, (char*)ptr);
-        ptr = (uint32_t*)((char*)ptr + strlen(entry->name) + (4 - strlen(entry->name) % 4));
-        entry->offset = *ptr++;
-        entry->size = *ptr++;
-        /* Zero. */
-        entry->extra = *ptr++;
+            strcpy(entry->name, (char*)ptr);
+            ptr = (uint32_t*)((char*)ptr + strlen(entry->name) + (4 - strlen(entry->name) % 4));
+            entry->offset = *ptr++;
+            entry->size = *ptr++;
+            /* Zero. */
+            entry->extra = *ptr++;
 
-        if (prev)
-            prev->zsize = entry->offset - prev->offset;
-        prev = entry;
+            if (prev)
+                prev->zsize = entry->offset - prev->offset;
+            prev = entry;
+        }
+        off_t filesize = thtk_io_seek(thdat->stream, 0, SEEK_END, error);
+        if (filesize == -1)
+            return 0;
+        prev->zsize = (filesize - header.zsize) - prev->offset;
     }
-    off_t filesize = thtk_io_seek(thdat->stream, 0, SEEK_END, error);
-    if (filesize == -1)
-        return 0;
-    thtk_io_seek(thdat->stream, 0, SEEK_SET, error);
-    prev->zsize = (filesize - header.zsize) - prev->offset;
 
     free(data);
 
@@ -352,12 +353,17 @@ th95_close(
     unsigned int i;
     unsigned char* zbuffer;
     uint32_t header[4];
-    unsigned int list_size = 0;
-    unsigned int list_zsize = 0;
+    ssize_t list_size = 0;
+    ssize_t list_zsize = 0;
 
     for (i = 0; i < thdat->entry_count; ++i) {
         const size_t namelen = strlen(thdat->entries[i].name);
         list_size += (sizeof(uint32_t) * 3) + namelen + (4 - namelen % 4);
+    }
+
+    if (list_size == 0) {
+        thtk_error_new(error, "no entries");
+        return 0;
     }
 
     buffer = malloc(list_size);

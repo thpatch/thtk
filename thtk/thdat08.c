@@ -175,14 +175,16 @@ th08_open(
         entry->extra = *ptr++;
     }
 
-    thdat_entry_t* prev = NULL;
-    for (unsigned int i = 0; i < header.count; ++i) {
-        thdat_entry_t* entry = &thdat->entries[i];
-        if (prev)
-            prev->zsize = entry->offset - prev->offset;
-        prev = entry;
+    if (header.count) {
+        thdat_entry_t* prev = NULL;
+        for (unsigned int i = 0; i < header.count; ++i) {
+            thdat_entry_t* entry = &thdat->entries[i];
+            if (prev)
+                prev->zsize = entry->offset - prev->offset;
+            prev = entry;
+        }
+        prev->zsize = (filesize - zsize) - prev->offset;
     }
-    prev->zsize = (filesize - zsize) - prev->offset;
 
     free(data);
 
@@ -381,8 +383,8 @@ th08_close(
     unsigned int i;
     unsigned char* zbuffer;
     uint32_t header[4];
-    unsigned int list_size = 0;
-    unsigned int list_zsize = 0;
+    ssize_t list_size = 0;
+    ssize_t list_zsize = 0;
     const uint32_t zero = 0;
 
     for (i = 0; i < thdat->entry_count; ++i)
@@ -403,7 +405,7 @@ th08_close(
         buffer_ptr = mempcpy(buffer_ptr, &zero, sizeof(uint32_t));
     }
 
-    buffer_ptr = mempcpy(buffer_ptr, &zero, sizeof(uint32_t));
+    memcpy(buffer_ptr, &zero, sizeof(uint32_t));
 
     thtk_io_t* buffer_stream = thtk_io_open_memory(buffer, list_size, error);
     if (!buffer_stream)
