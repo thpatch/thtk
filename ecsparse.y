@@ -862,7 +862,6 @@ yyerror(
     parser_state_t* state,
     const char* str)
 {
-    state = state;
     /* TODO: Research standard row and column range formats. */
     if (yylloc.first_line == yylloc.last_line) {
         if (yylloc.first_column == yylloc.last_column) {
