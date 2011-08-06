@@ -61,7 +61,6 @@ const char*
 thtk_error_message(
     thtk_error_t* error)
 {
-    asm("int $3");
     if (!error)
         return "(error is NULL)";
     return error->message;
