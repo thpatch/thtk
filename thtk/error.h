@@ -26,51 +26,39 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
  * DAMAGE.
  */
-#ifndef UTIL_H_
-#define UTIL_H_
+#ifndef THTK_ERROR_H_
+#define THTK_ERROR_H_
 
-#include <config.h>
-#include <stdio.h>
-#include <inttypes.h>
-#include <stddef.h>
-
-#ifndef MIN
-#  define MIN(a, b) ((a) < (b) ? (a) : (b))
-#endif
-#ifndef MAX
-#  define MAX(a, b) ((a) > (b) ? (a) : (b))
+#ifdef __cplusplus
+extern "C" {
 #endif
 
-/* Allocates memory and aborts with an error message if the allocation failed. */
-void* util_malloc(
-    size_t size);
+#ifndef API_SYMBOL
+#define API_SYMBOL /* */
+#endif
 
-void util_print_version(
-    void);
+typedef struct thtk_error_t thtk_error_t;
 
-/* Returns an unique string representation of a float.  Returns a pointer to a
- * static buffer, not thread-safe. */
-const char* util_printfloat(
-    const void* data);
+/* Creates a new error for the current function. */
+#define thtk_error_new(error, ...) thtk_error_func_new(error, __func__, __VA_ARGS__)
 
-/* Creates all components of the path. */
-void util_makepath(
-    const char* path);
+/* Stores a pointer to an error structure if error is not NULL. */
+API_SYMBOL void thtk_error_func_new(
+    thtk_error_t** error,
+    const char* function,
+    const char* message,
+    ...);
 
-/* "Writes" a value to a buffer and returns a pointer to the memory location
- * after the written value. */
-void* mempcpy(
-    void* dest,
-    const void* src,
-    size_t n);
+/* Extracts the message from an error structure. */
+API_SYMBOL const char* thtk_error_message(
+    thtk_error_t* error);
 
-/* XOR each byte by key.  Key is incremented by step, which is in turn
- * incremented by step2. */
-void util_xor(
-    unsigned char* data,
-    size_t data_length,
-    unsigned char key,
-    unsigned char step,
-    unsigned char step2);
+/* Frees the error structure and clears the pointer. */
+API_SYMBOL void thtk_error_free(
+    thtk_error_t** error);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

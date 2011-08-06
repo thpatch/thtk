@@ -26,32 +26,25 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
  * DAMAGE.
  */
-#ifndef THLZSS_H_
-#define THLZSS_H_
+#ifndef THRLE_H_
+#define THRLE_H_
 
 #include <config.h>
-#include <stdio.h>
+#ifdef HAVE_SYS_TYPES_H
+#include <sys/types.h>
+#endif
+#include <thtk/thtk.h>
 
-unsigned char* th_lz_file(
-    FILE* stream,
-    unsigned int* const outsize);
+ssize_t thtk_rle(
+    thtk_io_t* input,
+    size_t input_size,
+    thtk_io_t* output,
+    thtk_error_t** error);
 
-/* Compress insize bytes from in and return a pointer to allocated data outsize
- * large. */
-unsigned char* th_lz_mem(
-    const unsigned char* in,
-    const unsigned int insize,
-    unsigned int* const outsize);
-
-void th_unlz_file(
-    FILE* stream,
-    unsigned char* out,
-    unsigned int outsize);
-
-void th_unlz_mem(
-    unsigned char* const in,
-    const unsigned int insize,
-    unsigned char* const out,
-    const unsigned int outsize);
+ssize_t thtk_unrle(
+    thtk_io_t* input,
+    size_t input_size,
+    thtk_io_t* output,
+    thtk_error_t** error);
 
 #endif

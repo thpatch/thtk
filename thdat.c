@@ -27,242 +27,12 @@
  * DAMAGE.
  */
 #include <config.h>
-#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <errno.h>
-#include "file.h"
+#include <thtk/thtk.h>
 #include "program.h"
 #include "util.h"
-#include "thdat.h"
-#include "thrle.h"
-#include "thlzss.h"
-
-extern const archive_module_t archive_th02;
-extern const archive_module_t archive_th03;
-extern const archive_module_t archive_th06;
-extern const archive_module_t archive_th08;
-extern const archive_module_t archive_th95;
-
-archive_t*
-thdat_open(
-    FILE* stream,
-    unsigned int version)
-{
-    archive_t* archive = malloc(sizeof(archive_t));
-
-    archive->version = version;
-    archive->stream = stream;
-    archive->offset = 0;
-    archive->count = 0;
-    archive->entries = NULL;
-
-    return archive;
-}
-
-archive_t*
-archive_create(
-    FILE* stream,
-    uint32_t version,
-    uint32_t offset,
-    unsigned int count)
-{
-    archive_t* archive;
-
-    /* Reserve some space for the header. */
-    if (!file_seek(stream, offset))
-        return NULL;
-
-    archive = malloc(sizeof(archive_t));
-    archive->entries = malloc(count * sizeof(entry_t));
-
-    archive->version = version;
-    archive->stream = stream;
-    archive->offset = offset;
-    archive->count = 0;
-
-    return archive;
-}
-
-unsigned char*
-thdat_read_file(
-    const entry_t* entry,
-    FILE* stream)
-{
-    unsigned char* data = malloc(entry->size);
-
-    if (!file_read(stream, data, entry->size)) {
-        free(data);
-        return NULL;
-    }
-
-    return data;
-}
-
-unsigned char*
-thdat_read_file_lzss(
-    entry_t* entry,
-    FILE* stream)
-{
-    return th_lz_file(stream, &entry->zsize);
-}
-
-unsigned char*
-thdat_rle(
-    entry_t* entry,
-    unsigned char* data)
-{
-    unsigned char* zdata = th_rle(data, entry->size, &entry->zsize);
-
-    if (entry->zsize >= entry->size) {
-        entry->zsize = entry->size;
-        free(zdata);
-        zdata = data;
-    } else {
-        free(data);
-    }
-
-    return zdata;
-}
-
-entry_t*
-thdat_add_entry(
-    archive_t* archive)
-{
-    entry_t* e;
-
-    archive->count++;
-    archive->entries =
-        realloc(archive->entries, archive->count * sizeof(entry_t));
-
-    e = &archive->entries[archive->count - 1];
-
-    memset(e->name, 0, 255);
-    e->size = 0;
-    e->zsize = 0;
-    e->offset = 0;
-    e->extra = 0;
-
-    return e;
-}
-
-int
-thdat_write_entry(
-    archive_t* archive,
-    entry_t* entry,
-    unsigned char* data)
-{
-    int ret;
-
-#pragma omp critical
-{
-    ret = file_write(archive->stream, data, entry->zsize);
-    entry->offset = archive->offset;
-    archive->offset += entry->zsize;
-}
-
-    free(data);
-    return ret;
-}
-
-static int
-entry_compar(
-    const void* a,
-    const void* b)
-{
-    entry_t* ea = (entry_t*)a;
-    entry_t* eb = (entry_t*)b;
-    if (ea->offset < eb->offset)
-        return -1;
-    else if (ea->offset > eb->offset)
-        return 1;
-    else
-        return 0;
-}
-
-void
-thdat_sort(
-    archive_t* archive)
-{
-    qsort(archive->entries, archive->count, sizeof(entry_t), entry_compar);
-}
-
-static entry_t*
-archive_add_entry(
-    archive_t* archive,
-    FILE* stream,
-    const char* filename,
-    unsigned int flags)
-{
-    entry_t* e;
-
-    /* TODO: Pass the index to add_entry instead. */
-#pragma omp critical
-    e = &archive->entries[archive->count++];
-
-    memset(e->name, 0, 256);
-    e->size = file_fsize(stream);
-    e->zsize = 0;
-    e->offset = 0;
-    e->extra = 0;
-
-    if (flags & THDAT_BASENAME)
-        util_basename(e->name, 255, filename);
-    else
-        strncpy(e->name, filename, 255);
-
-    /* XXX: Doesn't check empty file names. */
-    if (flags & THDAT_8_3) {
-        const char* dotpos = strchr(e->name, '.');
-        size_t name_len = dotpos ? strlen(e->name) - strlen(dotpos) : strlen(e->name);
-        size_t ext_len = dotpos ? strlen(dotpos + 1) : 0;
-
-        if (name_len > 8 || ext_len > 3) {
-            fprintf(stderr, "%s: %s is not 8.3\n", e->name, argv0);
-            return NULL;
-        }
-    }
-
-    if (flags & THDAT_UPPERCASE) {
-        unsigned int i;
-        for (i = 0; i < 255 && e->name[i]; ++i) {
-            e->name[i] = toupper(e->name[i]);
-        }
-    }
-
-    if ((int)e->size == -1)
-        return NULL;
-
-    return e;
-}
-
-static void
-archive_check_duplicates(
-    const archive_t* archive)
-{
-    unsigned int i, j;
-
-    for (i = 0; i < archive->count; ++i) {
-        for (j = 0; j < archive->count; ++j) {
-            if (i == j)
-                continue;
-            if (strcmp(archive->entries[i].name, archive->entries[j].name) == 0)
-                fprintf(stderr, "%s: duplicate entry: %s\n",
-                    argv0, archive->entries[i].name);
-        }
-    }
-}
-
-static void
-archive_free(
-    archive_t* archive)
-{
-    if (archive) {
-        free(archive->entries);
-        free(archive);
-    }
-}
 
 static void
 print_usage(
@@ -271,6 +41,7 @@ print_usage(
     printf("Usage: %s COMMAND[OPTION...] [ARCHIVE [FILE...]]\n"
            "COMMAND can be:\n"
            "  c  create an archive\n"
+           "  l  list the contents of an archive\n"
            "  x  extract an archive\n"
            "  V  display version information and exit\n"
            "OPTION can be:\n"
@@ -278,183 +49,313 @@ print_usage(
            "Report bugs to <" PACKAGE_BUGREPORT ">.\n", argv0);
 }
 
+static void
+print_error(
+    thtk_error_t* error)
+{
+    fprintf(stderr, "%s:%s\n", argv0, thtk_error_message(error));
+}
+
+typedef struct {
+    thdat_t* thdat;
+    thtk_io_t* stream;
+} thdat_state_t;
+
+static thdat_state_t*
+thdat_state_alloc(void)
+{
+    thdat_state_t* state = malloc(sizeof(*state));
+    state->thdat = NULL;
+    state->stream = NULL;
+    return state;
+}
+
+static void
+thdat_state_free(
+    thdat_state_t* state)
+{
+    if (state) {
+        if (state->thdat)
+            thdat_free(state->thdat);
+        if (state->stream)
+            thtk_io_close(state->stream);
+        free(state);
+    }
+}
+
+static thdat_state_t*
+thdat_open_file(
+    unsigned int version,
+    const char* path,
+    thtk_error_t** error)
+{
+    thdat_state_t* state = thdat_state_alloc();
+
+    if (!(state->stream = thtk_io_open_file(path, "rb", error))) {
+        thdat_state_free(state);
+        return NULL;
+    }
+
+    if (!(state->thdat = thdat_open(version, state->stream, error))) { 
+        thdat_state_free(state);
+        return NULL;
+    }
+
+    return state;
+}
+
+static int
+thdat_extract_file(
+    thdat_state_t* state,
+    size_t entry_index,
+    thtk_error_t** error)
+{
+    const char* entry_name;
+    thtk_io_t* entry_stream;
+
+    if (!(entry_name = thdat_entry_get_name(state->thdat, entry_index, error)))
+        return 0;
+
+    if (!(entry_stream = thtk_io_open_file(entry_name, "wb", error)))
+        return 0;
+
+    if (thdat_entry_read_data(state->thdat, entry_index, entry_stream, error) == -1) {
+        thtk_io_close(entry_stream);
+        return 0;
+    }
+
+    printf("%s\n", entry_name);
+
+    thtk_io_close(entry_stream);
+
+    return 1;
+}
+
+static int
+thdat_list(
+    unsigned int version,
+    const char* path,
+    thtk_error_t** error)
+{
+    thdat_state_t* state = thdat_open_file(version, path, error);
+    ssize_t entry_count;
+    struct {
+        const char* name;
+        ssize_t size;
+        ssize_t zsize;
+    }* entries;
+    ssize_t e;
+    int name_width = 4;
+
+    if ((entry_count = thdat_entry_count(state->thdat, error)) == -1) {
+        thdat_state_free(state);
+        return 0;
+    }
+
+    entries = malloc(entry_count * sizeof(*entries));
+
+#pragma omp parallel /* reduction(max:name_width) */
+    {
+#pragma omp for
+        for (e = 0; e < entry_count; ++e) {
+            thtk_error_t* error = NULL;
+            entries[e].name = thdat_entry_get_name(state->thdat, e, &error);
+            entries[e].size = thdat_entry_get_size(state->thdat, e, &error);
+            entries[e].zsize = thdat_entry_get_zsize(state->thdat, e, &error);
+            if (!entries[e].name || entries[e].size == -1 || entries[e].zsize == -1) {
+                print_error(error);
+                thtk_error_free(&error);
+                continue;
+            }
+            int entry_name_width = strlen(entries[e].name);
+#pragma omp critical
+            if (entry_name_width > name_width)
+                name_width = entry_name_width;
+        }
+    }
+
+    printf("%-*s  %7s  %7s\n", name_width, "Name", "Size", "Stored");
+    for (e = 0; e < entry_count; ++e) {
+        printf("%-*s  %7zd  %7zd\n", name_width, entries[e].name, entries[e].size, entries[e].zsize);
+    }
+
+    free(entries);
+    thdat_state_free(state);
+
+    return 1;
+}
+
+static int
+thdat_create_wrapper(
+    unsigned int version,
+    const char* path,
+    const char** paths,
+    size_t entry_count,
+    thtk_error_t** error)
+{
+    thdat_state_t* state = thdat_state_alloc();
+
+    if (!(state->stream = thtk_io_open_file(path, "wb", error))) {
+        thdat_state_free(state);
+        exit(1);
+    }
+
+    if (!(state->thdat = thdat_create(version, state->stream, entry_count, error))) { 
+        thdat_state_free(state);
+        exit(1);
+    }
+
+    /* TODO: Properly indicate when insertion fails. */
+#pragma omp parallel for
+    for (size_t i = 0; i < entry_count; ++i) {
+        thtk_error_t* error = NULL;
+        thtk_io_t* entry_stream;
+        off_t entry_size;
+
+        printf("%s...\n", paths[i]);
+
+        if (!(entry_stream = thtk_io_open_file(paths[i], "rb", &error))) {
+            print_error(error);
+            thtk_error_free(&error);
+            continue;
+        }
+
+        if ((entry_size = thtk_io_seek(entry_stream, 0, SEEK_END, &error)) == -1) {
+            print_error(error);
+            thtk_error_free(&error);
+            continue;
+        }
+
+        if (thtk_io_seek(entry_stream, 0, SEEK_SET, &error) == -1) {
+            print_error(error);
+            thtk_error_free(&error);
+            continue;
+        }
+
+        if (!thdat_entry_set_name(state->thdat, i, paths[i], &error)) {
+            print_error(error);
+            thtk_error_free(&error);
+            continue;
+        }
+
+        if (thdat_entry_write_data(state->thdat, i, entry_stream, entry_size, &error) == -1) {
+            print_error(error);
+            thtk_error_free(&error);
+            continue;
+        }
+
+        thtk_io_close(entry_stream);
+    }
+
+    int ret = 1;
+
+    if (!thdat_close(state->thdat, error))
+        ret = 0;
+
+    thdat_state_free(state);
+
+    return ret;
+}
+
+/* TODO: Make sure errors are printed in all cases. */
 int
 main(
     int argc,
     char* argv[])
 {
-    FILE* archive;
-    archive_t* private;
-    const archive_module_t* archive_module = NULL;
+    thtk_error_t* error = NULL;
     unsigned int version = 13;
-    int i;
     int mode;
 
-    mode = parse_args(argc, argv, print_usage, "cxV", "", &version);
-
-    if (!mode)
-        return 1;
-
-    switch (version) {
-    case 2:
-        archive_module = &archive_th02;
-        break;
-    case 3:
-    case 4:
-    case 5:
-        archive_module = &archive_th03;
-        break;
-    case 6:
-    case 7:
-        archive_module = &archive_th06;
-        break;
-    case 8:
-    case 9:
-        archive_module = &archive_th08;
-        break;
-    case 95:
-    case 10:
-    case 11:
-    case 12:
-    case 125:
-    case 128:
-    case 13:
-        archive_module = &archive_th95;
-        break;
-    }
-
-    if (!archive_module) {
-        fprintf(stderr, "%s: unsupported version\n", argv0);
-        return 1;
-    }
+    if (!(mode = parse_args(argc, argv, print_usage, "clxV", "", &version)))
+        exit(1);
 
     switch (mode) {
     case 'V':
         util_print_version();
-        return 0;
-    case 'c':
-        if (argc < 4) {
-            print_usage();
-            return 1;
-        }
-        archive = fopen(argv[2], "wb");
-        if (!archive) {
-            fprintf(stderr, "%s: couldn't open %s for writing\n",
-                argv0, argv[2]);
-            return 1;
-        }
-        current_output = argv[2];
-
-        private = archive_module->create(archive, version, argc - 3);
-        if (!private) {
-            fclose(archive);
-            return 1;
-        }
-
-#pragma omp parallel shared(private)
-#pragma omp for
-        for (i = 3; i < argc; ++i) {
-            entry_t* entry;
-            FILE* stream = fopen(argv[i], "rb");
-            if (!stream) {
-                fprintf(stderr, "%s: couldn't open %s for reading\n",
-                    argv0, argv[i]);
-                fclose(archive);
-                exit(1);
-            }
-            current_input = argv[i];
-
-            printf("%s...\n", argv[i]);
-
-            entry = archive_add_entry(private, stream, argv[i], archive_module->flags);
-            if (!entry || !archive_module->write(private, entry, stream)) {
-                fclose(stream);
-                fclose(archive);
-                archive_free(private);
-                exit(1);
-            }
-
-            fclose(stream);
-        }
-
-        archive_check_duplicates(private);
-
-        if (!archive_module->close(private)) {
-            fclose(archive);
-            archive_free(private);
-            return 1;
-        }
-
-        archive_free(private);
-        fclose(archive);
-        return 0;
-    case 'x':
+        exit(0);
+    case 'l': {
         if (argc < 3) {
             print_usage();
-            return 1;
+            exit(1);
         }
-        if (!archive_module->open || !archive_module->extract) {
-            fprintf(stderr,
-                "%s: extraction not yet supported for this archive format\n",
-                argv0);
-            return 1;
+
+        if (!thdat_list(version, argv[2], &error)) {
+            print_error(error);
+            thtk_error_free(&error);
+            exit(1);
         }
-        current_input = argv[2];
-        archive = fopen(current_input, "rb");
-        if (!archive) {
-            fprintf(stderr, "%s: couldn't open %s for reading\n",
-                argv0, current_input);
-            return 1;
+
+        exit(0);
+    }
+    case 'c': {
+        if (argc < 4) {
+            print_usage();
+            exit(1);
         }
-        private = archive_module->open(archive, version);
-        if (!private)
-            return 1;
+
+        if (!thdat_create_wrapper(version, argv[2], (const char**)&argv[3], argc - 3, &error)) {
+            print_error(error);
+            thtk_error_free(&error);
+            exit(1);
+        }
+
+        exit(0);
+    }
+    case 'x': {
+        if (argc < 3) {
+            print_usage();
+            exit(1);
+        }
+
+        thdat_state_t* state = thdat_open_file(version, argv[2], &error);
+        if (!state) {
+            print_error(error);
+            thtk_error_free(&error);
+            exit(1);
+        }
+
         if (argc > 3) {
-            int j;
-#pragma omp parallel shared(private)
-#pragma omp for
-            for (j = 3; j < argc; ++j) {
-                int extracted = 0;
-                for (i = 0; i < (int)private->count; ++i) {
-                    if (strcmp(argv[j], private->entries[i].name) == 0) {
-                        FILE* stream;
-                        stream = fopen(private->entries[i].name, "wb");
-                        current_output = private->entries[i].name;
-                        printf("%s\n", current_output);
-                        if (!archive_module->extract(private, &private->entries[i], stream))
-                            exit(1);
-                        fclose(stream);
-                        ++extracted;
-                        break;
-                    }
+#pragma omp parallel for
+            for (int a = 3; a < argc; ++a) {
+                thtk_error_t* error = NULL;
+                int entry_index;
+
+                if ((entry_index = thdat_entry_by_name(state->thdat, argv[a], &error)) == -1) {
+                    print_error(error);
+                    thtk_error_free(&error);
+                    continue;
                 }
 
-                if (!extracted)
-                    fprintf(stderr, "%s: entry %s not found\n", argv0, argv[j]);
+                if (!thdat_extract_file(state, entry_index, &error)) {
+                    print_error(error);
+                    thtk_error_free(&error);
+                    continue;
+                }
             }
         } else {
-#pragma omp parallel shared(private)
-#pragma omp for
-            for (i = 0; i < (int)private->count; ++i) {
-                /* TODO: Secure the filenames first.
-                 *       Don't need to do that when the user selects files
-                 *       to extract. */
-                FILE* stream = fopen(private->entries[i].name, "wb");
-                current_output = private->entries[i].name;
+            ssize_t entry_count;
+            if ((entry_count = thdat_entry_count(state->thdat, &error)) == -1) {
+                print_error(error);
+                thtk_error_free(&error);
+                exit(1);
+            }
 
-                printf("%s\n", private->entries[i].name);
-
-                if (!archive_module->extract(private, &private->entries[i], stream))
-                    exit(1);
-                fclose(stream);
+#pragma omp parallel for
+            for (ssize_t entry_index = 0; entry_index < entry_count; ++entry_index) {
+                thtk_error_t* error = NULL;
+                if (!thdat_extract_file(state, entry_index, &error)) {
+                    print_error(error);
+                    thtk_error_free(&error);
+                    continue;
+                }
             }
         }
-        archive_free(private);
-        fclose(archive);
-        return 0;
+
+        thdat_state_free(state);
+        exit(0);
+    }
     default:
-        /* XXX: This shouldn't happen. */
-        abort();
-        return 1;
+        exit(1);
     }
 }

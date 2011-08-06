@@ -35,9 +35,6 @@
 #ifdef HAVE_SYS_STAT_H
 #include <sys/stat.h>
 #endif
-#ifdef HAVE_LIBGEN_H
-#include <libgen.h>
-#endif
 #ifdef WIN32
 #include <windows.h>
 #endif
@@ -62,24 +59,6 @@ util_print_version(
     void)
 {
     printf(PACKAGE_NAME " release " PACKAGE_VERSION "\n");
-}
-
-void
-util_basename(
-    char* dst,
-    size_t dstlen,
-    const char* src)
-{
-#ifdef WIN32
-    char filename[_MAX_FNAME];
-    char ext[_MAX_EXT];
-    _splitpath(src, NULL, NULL, filename, ext);
-    snprintf(dst, dstlen, "%s%s", filename, ext);
-#else
-    char* tmp = strdup(src);
-    strncpy(dst, basename(tmp), dstlen);
-    free(tmp);
-#endif
 }
 
 /* XXX: Win32 has MakeSureDirectoryPathExists in dbghelp.dll. */

@@ -26,51 +26,12 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
  * DAMAGE.
  */
-#ifndef UTIL_H_
-#define UTIL_H_
+#ifndef THTK_H_
+#define THTK_H_
 
-#include <config.h>
-#include <stdio.h>
-#include <inttypes.h>
-#include <stddef.h>
+#include <thtk/io.h>
+#include <thtk/error.h>
 
-#ifndef MIN
-#  define MIN(a, b) ((a) < (b) ? (a) : (b))
-#endif
-#ifndef MAX
-#  define MAX(a, b) ((a) > (b) ? (a) : (b))
-#endif
-
-/* Allocates memory and aborts with an error message if the allocation failed. */
-void* util_malloc(
-    size_t size);
-
-void util_print_version(
-    void);
-
-/* Returns an unique string representation of a float.  Returns a pointer to a
- * static buffer, not thread-safe. */
-const char* util_printfloat(
-    const void* data);
-
-/* Creates all components of the path. */
-void util_makepath(
-    const char* path);
-
-/* "Writes" a value to a buffer and returns a pointer to the memory location
- * after the written value. */
-void* mempcpy(
-    void* dest,
-    const void* src,
-    size_t n);
-
-/* XOR each byte by key.  Key is incremented by step, which is in turn
- * incremented by step2. */
-void util_xor(
-    unsigned char* data,
-    size_t data_length,
-    unsigned char key,
-    unsigned char step,
-    unsigned char step2);
+#include <thtk/dat.h>
 
 #endif

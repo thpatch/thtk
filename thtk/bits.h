@@ -26,18 +26,38 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
  * DAMAGE.
  */
-#ifndef THRLE_H_
-#define THRLE_H_
+#ifndef BITS_H_
+#define BITS_H_
 
-#include <stdio.h>
+#include <config.h>
+#include <inttypes.h>
+#include <thtk/thtk.h>
 
-unsigned char* th_rle(
-    const unsigned char* in,
-    const unsigned int insize,
-    unsigned int* const outsize);
-void th_unrle(
-    const unsigned char* in,
-    const unsigned int insize,
-    FILE* stream);
+struct bitstream {
+    thtk_io_t* stream;
+    unsigned int byte_count;
+    unsigned int byte;
+    unsigned int bits;
+};
+
+void bitstream_init(
+    struct bitstream* b,
+    thtk_io_t* stream);
+
+unsigned int bitstream_read1(
+    struct bitstream* b);
+uint32_t bitstream_read(
+    struct bitstream* b,
+    unsigned int bits);
+
+void bitstream_write1(
+    struct bitstream* b,
+    unsigned int bit);
+void bitstream_write(
+    struct bitstream* b,
+    unsigned int bits,
+    uint32_t data);
+void bitstream_finish(
+    struct bitstream* b);
 
 #endif

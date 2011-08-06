@@ -31,6 +31,7 @@
 #include <stdlib.h>
 #include <inttypes.h>
 #include <string.h>
+#include <thtk/thtk.h>
 
 #include "bits.h"
 
@@ -110,14 +111,12 @@ list_add(
     hash->hash[key] = offset;
 }
 
-/* TODO: Make this read blocks for improved performance. */
-typedef int (*read_byte_fptr)(void*);
-
-static unsigned char*
-th_lz(
-    unsigned int* const outsize,
-    read_byte_fptr read_byte,
-    void* data)
+ssize_t
+th_lzss(
+    thtk_io_t* input,
+    size_t input_size,
+    thtk_io_t* output,
+    thtk_error_t** error)
 {
     struct bitstream bs;
     hash_t hash;
@@ -125,18 +124,28 @@ th_lz(
     unsigned int dict_head = 1;
     unsigned int dict_head_key;
     unsigned int waiting_bytes = 0;
+    size_t bytes_read = 0;
     unsigned int i;
-    int c;
+    unsigned char c;
 
-    bitstream_init_growing(&bs, 4096);
+    if (!input || !output) {
+        thtk_error_new(error, "input or output is NULL");
+        return -1;
+    }
+
+    bitstream_init(&bs, output);
     memset(&hash, 0, sizeof(hash));
     memset(dict, 0, sizeof(dict));
 
     /* Fill the forward-looking buffer. */
-    for (i = 0; i < LZSS_MAX_MATCH; ++i) {
-        c = read_byte(data);
-        if (c == -1)
+    for (i = 0; i < LZSS_MAX_MATCH && i < input_size; ++i) {
+        int ret = thtk_io_read(input, &c, 1, error);
+        if (ret == -1) {
+            return -1;
+        } else if (ret != 1) {
             break;
+        }
+        ++bytes_read;
         dict[dict_head + i] = c;
         waiting_bytes++;
     }
@@ -200,11 +209,18 @@ th_lz(
             if (dict_head != HASH_NULL)
                 list_add(&hash, dict_head_key, dict_head);
 
-            c = read_byte(data);
-            if (c != -1) {
-                dict[offset] = c;
+            if (bytes_read < input_size) {
+                int ret = thtk_io_read(input, &c, 1, error);
+                if (ret == 1) {
+                    dict[offset] = c;
+                    ++bytes_read;
+                } else if (ret == 0) {
+                    --waiting_bytes;
+                } else {
+                    return -1;
+                }
             } else {
-                waiting_bytes--;
+                --waiting_bytes;
             }
 
             dict_head = (dict_head + 1) & LZSS_DICTSIZE_MASK;
@@ -218,107 +234,56 @@ th_lz(
 
     bitstream_finish(&bs);
 
-    *outsize = bs.byte_count;
-    return bs.io.buffer.buffer;
+    return bs.byte_count;
 }
 
-static int
-read_byte_file(
-    FILE* stream)
+ssize_t
+th_unlzss(
+    thtk_io_t* input,
+    thtk_io_t* output,
+    size_t output_size,
+    thtk_error_t** error)
 {
-    int c = getc_unlocked(stream);
-
-    if (c == EOF)
-        return -1;
-    else
-        return c;
-}
-
-unsigned char*
-th_lz_file(
-    FILE* stream,
-    unsigned int* const outsize)
-{
-    return th_lz(outsize, (read_byte_fptr)read_byte_file, stream);
-}
-
-static int
-read_byte_mem(
-    const unsigned char** ptrs)
-{
-    if (ptrs[0] >= ptrs[1])
-        return -1;
-    else
-        return *ptrs[0]++;
-}
-
-unsigned char*
-th_lz_mem(
-    const unsigned char* in,
-    const unsigned int insize,
-    unsigned int* const outsize)
-{
-    unsigned char* ptrs[2];
-    ptrs[0] = (unsigned char*)in;
-    ptrs[1] = (unsigned char*)in + insize;
-    return th_lz(outsize, (read_byte_fptr)read_byte_mem, &ptrs);
-}
-
-static void
-th_unlz(
-    struct bitstream* bs,
-    unsigned char* out,
-    const unsigned int outsize)
-{
-    unsigned char* oend = out + outsize;
     unsigned char dict[LZSS_DICTSIZE];
     unsigned int dict_head = 1;
     unsigned int i;
+    size_t bytes_written = 0;
+    struct bitstream bs;
+
+    if (!input || !output) {
+        thtk_error_new(error, "input or output is NULL");
+        return -1;
+    }
+
+    bitstream_init(&bs, input);
 
     memset(dict, 0, sizeof(dict));
 
-    while (out < oend) {
-        if (bitstream_read1(bs)) {
-            unsigned char c = bitstream_read(bs, 8);
-            *out++ = c;
+    while (bytes_written < output_size) {
+        if (bitstream_read1(&bs)) {
+            unsigned char c = bitstream_read(&bs, 8);
+            if (thtk_io_write(output, &c, 1, error) != 1)
+                return -1;
+            ++bytes_written;
             dict[dict_head] = c;
             dict_head = (dict_head + 1) & LZSS_DICTSIZE_MASK;
         } else {
-            unsigned int match_offset = bitstream_read(bs, 13);
-            unsigned int match_len = bitstream_read(bs, 4) + LZSS_MIN_MATCH;
+            unsigned int match_offset = bitstream_read(&bs, 13);
+            unsigned int match_len = bitstream_read(&bs, 4) + LZSS_MIN_MATCH;
 
             if (!match_offset)
-                return;
+                return bytes_written;
 
             for (i = 0; i < match_len; ++i) {
                 unsigned char c = dict[(match_offset + i) & LZSS_DICTSIZE_MASK];
-                *out++ = c;
+                if (thtk_io_write(output, &c, 1, error) != 1)
+                    return -1;
+                ++bytes_written;
                 dict[dict_head] = c;
                 dict_head = (dict_head + 1) & LZSS_DICTSIZE_MASK;
             }
         }
     }
-}
 
-void
-th_unlz_file(
-    FILE* stream,
-    unsigned char* const out,
-    const unsigned int outsize)
-{
-    struct bitstream bs;
-    bitstream_init_stream(&bs, stream);
-    th_unlz(&bs, out, outsize);
-}
-
-void
-th_unlz_mem(
-    unsigned char* const in,
-    const unsigned int insize,
-    unsigned char* const out,
-    const unsigned int outsize)
-{
-    struct bitstream bs;
-    bitstream_init_fixed(&bs, in, insize);
-    th_unlz(&bs, out, outsize);
+    return bytes_written;
 }

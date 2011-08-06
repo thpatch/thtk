@@ -42,6 +42,8 @@ The following commands are available:
 .Bl -tag -width Ds
 .It Ar c Ns Oo Ar version Oc Ar archive Ar file Op Ar
 Archives the specified files.
+.It Ar l Ns Oo Ar version Oc Ar archive
+Lists the contents of the archive.
 .It Ar x Ns Oo Ar version Oc Ar archive Op Ar
 Extracts files.
 If no files are specified, all files are extracted.
@@ -69,6 +71,11 @@ utility exits with 0 on success, 1 on error.
 Create a new archive from the input files:
 .Bd -literal -offset indent
 thdat c6 output.dat input.anm input.msg input.ecl
+.Ed
+.Pp
+Lists the contents of the specified archive:
+.Bd -literal -offset indent
+thdat l128 th128.dat
 .Ed
 .Pp
 Extract all files from the archive to the current working directory:

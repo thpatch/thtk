@@ -26,62 +26,91 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
  * DAMAGE.
  */
-#ifndef BITS_H_
-#define BITS_H_
-
 #include <config.h>
 #include <stdio.h>
-#include <inttypes.h>
+#include <stdlib.h>
+#include <string.h>
+#include <thtk/thtk.h>
+#include "bits.h"
 
-enum io_type {
-    BITSTREAM_STREAM,
-    BITSTREAM_BUFFER_FIXED,
-    /* For writing only. */
-    BITSTREAM_BUFFER_GROW
-};
+void
+bitstream_init(
+    struct bitstream* b,
+    thtk_io_t* stream)
+{
+    b->byte_count = 0;
+    b->byte = 0;
+    b->bits = 0;
+    b->stream = stream;
+}
 
-struct bitstream {
-    enum io_type type;
-    union {
-        FILE* stream;
-        struct {
-            unsigned char* buffer;
-            unsigned int size;
-        } buffer;
-    } io;
-    unsigned int byte_count;
-    unsigned int byte;
-    unsigned int bits;
-};
+unsigned int
+bitstream_read1(
+    struct bitstream* b)
+{
+    unsigned int ret = 0;
 
-void bitstream_init_stream(
-    struct bitstream* b,
-    FILE* stream);
-void bitstream_init_fixed(
-    struct bitstream* b,
-    unsigned char* buffer,
-    unsigned int size);
-void bitstream_init_growing(
-    struct bitstream* b,
-    unsigned int size);
-/* Closes an FD or frees a buffer. */
-void bitstream_free(
-    struct bitstream* b);
+    if (!b->bits) {
+        unsigned char c;
+        thtk_io_read(b->stream, &c, 1, NULL);
+        b->byte = c;
+        b->byte_count++;
+        b->bits = 8;
+    }
 
-unsigned int bitstream_read1(
-    struct bitstream* b);
-uint32_t bitstream_read(
-    struct bitstream* b,
-    unsigned int bits);
+    ret = (b->byte & 0x80) >> 7;
+    b->byte <<= 1;
+    b->bits--;
+    return ret & 1;
+}
 
-void bitstream_write1(
+uint32_t
+bitstream_read(
     struct bitstream* b,
-    unsigned int bit);
-void bitstream_write(
+    unsigned int bits)
+{
+    uint32_t ret = 0;
+    for (; bits; --bits)
+        ret |= bitstream_read1(b) << (bits - 1);
+    return ret;
+}
+
+void
+bitstream_write1(
+    struct bitstream* b,
+    unsigned int bit)
+{
+    b->byte <<= 1;
+    b->byte |= (bit & 1);
+    b->bits++;
+
+    if (b->bits == 8) {
+        thtk_io_write(b->stream, &b->byte, 1, NULL);
+        b->bits = 0;
+        b->byte = 0;
+        b->byte_count++;
+    }
+}
+
+void
+bitstream_write(
     struct bitstream* b,
     unsigned int bits,
-    uint32_t data);
-void bitstream_finish(
-    struct bitstream* b);
+    uint32_t data)
+{
+    int i;
+    if (bits > 32)
+        bits = 32;
+    for (i = bits - 1; i >= 0; --i) {
+        const unsigned int bit = (data >> i) & 1;
+        bitstream_write1(b, bit);
+    }
+}
 
-#endif
+void
+bitstream_finish(
+    struct bitstream* b)
+{
+    while (b->bits)
+        bitstream_write1(b, 0);
+}

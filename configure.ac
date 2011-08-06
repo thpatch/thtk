@@ -6,6 +6,7 @@ AC_INIT([Touhou Toolkit], [4],
 AM_INIT_AUTOMAKE([1.9 foreign])
 AC_CONFIG_SRCDIR([thdat.c])
 AC_CONFIG_HEADERS([config.h])
+AC_CONFIG_MACRO_DIR([m4])
 
 dnl PACKAGE_URL was introduced in autoconf 2.64.
 m4_ifndef([AC_PACKAGE_URL],
@@ -30,10 +31,10 @@ AH_TEMPLATE([__USE_MINGW_ANSI_STDIO],
 dnl check for programs
 
 AC_PROG_CC_C99
-AC_PROG_RANLIB
 AC_PROG_LEX
 AM_PROG_LEX
 AC_PROG_YACC
+LT_INIT
 
 dnl check for libraries
 
@@ -55,6 +56,10 @@ AC_CHECK_HEADERS([dnl
 
 dnl check for types
 
+AC_TYPE_OFF_T
+AC_TYPE_SIZE_T
+AC_TYPE_SSIZE_T
+
 dnl check for structures
 
 dnl check for compiler characteristics
@@ -70,6 +75,11 @@ THTK_CHECK_PACKING
 
 AC_CHECK_DECL([WIN32],
               [AC_DEFINE([__USE_MINGW_ANSI_STDIO], [1])])
+
+dnl TODO: Make this work for Windows builds.
+AC_DEFINE([API_SYMBOL], [__attribute__ ((visibility("default")))], [Marks public symbols.])
+THTK_TRY_CFLAGS([-fvisibility=hidden])
+AC_SUBST([LIBCFLAGS], ["$thtk_accepted_cflags"])
 
 dnl check for library functions
 
@@ -87,5 +97,5 @@ AC_CHECK_FUNC([fwrite_unlocked], [], [AC_DEFINE([fwrite_unlocked], [fwrite])])
 AC_CHECK_FUNC([getc_unlocked],   [], [AC_DEFINE([getc_unlocked],   [getc])])
 AC_CHECK_FUNC([putc_unlocked],   [], [AC_DEFINE([putc_unlocked],   [putc])])
 
-AC_CONFIG_FILES([Makefile])
+AC_CONFIG_FILES([Makefile thtk/Makefile thtk/thtk.pc])
 AC_OUTPUT

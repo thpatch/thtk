@@ -5,6 +5,9 @@ thanm: The sentinel instructions are left out from the scripts.
 thecl: Bogus rank flags will not be displayed for TH07.
 thanm: The new format will be handled correctly (by ignoring the Format: field).
 thtk: The h command has been removed, run the program without a command to see the usage.
+thdat: The code has been refactored.
+thdat: A shared library is available.
+thdat: A command for listing the contents of archives was added.
 
 What's new in thtk 4:
 

@@ -3,6 +3,7 @@ Build requirements:
 	[if building from repository] automake >=1.9
 	[if building from repository] flex >=2.5.31
 	[if building from repository] bison
+	[if building from repository] libtool >=2.4
 	zlib
 	libpng
 	Recent GCC

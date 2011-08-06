@@ -4,6 +4,11 @@ AM_YFLAGS = -d
 BUILT_SOURCES = ecsparse.h ecsparse.c ecsscan.c
 bin_PROGRAMS = thanm thdat thecl thmsg
 noinst_LIBRARIES = libutil.a
+nobase_include_HEADERS = \
+	thtk/dat.h \
+	thtk/error.h \
+	thtk/io.h \
+	thtk/thtk.h
 EXTRA_DIST = \
 	COPYING.autotools \
 	COPYING.bison \
@@ -18,9 +23,9 @@ dist_man1_MANS = \
 	thecl.1 \
 	thmsg.1
 
+SUBDIRS = thtk
+
 libutil_a_SOURCES = \
-	bits.c \
-	bits.h \
 	file.c \
 	file.h \
 	list.c \
@@ -41,21 +46,9 @@ thanm_SOURCES = \
 	thanm.h
 
 thdat_CFLAGS = $(OPENMP_CFLAGS)
-thdat_LDADD = libutil.a
+thdat_LDADD = libutil.a thtk/libthtk.la
 thdat_SOURCES = \
-	thcrypt.c \
-	thcrypt.h \
-	thdat.c \
-	thdat.h \
-	thdat02.c \
-	thdat03.c \
-	thdat06.c \
-	thdat08.c \
-	thdat95.c \
-	thlzss.c \
-	thlzss.h \
-	thrle.c \
-	thrle.h
+	thdat.c
 
 thecl_LDADD = libutil.a -lm
 thecl_SOURCES = \
