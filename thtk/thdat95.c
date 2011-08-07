@@ -27,13 +27,12 @@
  * DAMAGE.
  */
 #include <config.h>
-#define _GNU_SOURCE
 #include <stdlib.h>
-#include <string.h>
 #include <thtk/thtk.h>
 #include "thcrypt.h"
 #include "thdat.h"
 #include "thlzss.h"
+#include "util.h"
 
 static unsigned int
 th95_get_crypt_param_index(

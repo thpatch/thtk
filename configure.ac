@@ -27,6 +27,7 @@ AH_TEMPLATE([getc_unlocked], [...])
 AH_TEMPLATE([putc_unlocked], [...])
 AH_TEMPLATE([__USE_MINGW_ANSI_STDIO],
             [Define to 1 to use MinGW's internal stdio library instead of Windows'.])
+AH_TEMPLATE([API_SYMBOL], [Attribute for public functions.])
 
 dnl check for programs
 
@@ -77,7 +78,9 @@ AC_CHECK_DECL([WIN32],
               [AC_DEFINE([__USE_MINGW_ANSI_STDIO], [1])])
 
 dnl TODO: Make this work for Windows builds.
-AC_DEFINE([API_SYMBOL], [__attribute__ ((visibility("default")))], [Marks public symbols.])
+AC_CHECK_DECL([WIN32],
+              [AC_DEFINE([API_SYMBOL], [__declspec(dllexport)])],
+              [AC_DEFINE([API_SYMBOL], [__attribute__ ((visibility("default")))])])
 THTK_TRY_CFLAGS([-fvisibility=hidden])
 AC_SUBST([LIBCFLAGS], ["$thtk_accepted_cflags"])
 

@@ -3,7 +3,7 @@ pkgconfig_DATA = thtk.pc.in
 
 lib_LTLIBRARIES = libthtk.la
 
-libthtk_la_LDFLAGS = -version-info 1:0:0
+libthtk_la_LDFLAGS = -version-info 1:0:0 -no-undefined $(OPENMP_LDFLAGS)
 libthtk_la_CFLAGS = $(OPENMP_CFLAGS) @LIBCFLAGS@
 libthtk_la_SOURCES = \
 	bits.c \
@@ -21,4 +21,6 @@ libthtk_la_SOURCES = \
 	thlzss.c \
 	thlzss.h \
 	thrle.c \
-	thrle.h
+	thrle.h \
+	util.c \
+	util.h

@@ -109,18 +109,6 @@ util_makepath(
     free(name);
 }
 
-#ifndef HAVE_MEMPCPY
-void*
-mempcpy(
-    void* dest,
-    const void* src,
-    size_t n)
-{
-    memcpy(dest, src, n);
-    return (void*)((size_t)dest + n);
-}
-#endif
-
 void
 util_xor(
     unsigned char* data,

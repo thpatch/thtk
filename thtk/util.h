@@ -30,40 +30,16 @@
 #define UTIL_H_
 
 #include <config.h>
-#include <stdio.h>
-#include <inttypes.h>
-#include <stddef.h>
+#define _GNU_SOURCE
+#include <string.h>
 
-#ifndef MIN
-#  define MIN(a, b) ((a) < (b) ? (a) : (b))
+#ifndef HAVE_MEMPCPY
+/* "Writes" a value to a buffer and returns a pointer to the memory location
+ * after the written value. */
+void* mempcpy(
+    void* dest,
+    const void* src,
+    size_t n);
 #endif
-#ifndef MAX
-#  define MAX(a, b) ((a) > (b) ? (a) : (b))
-#endif
-
-/* Allocates memory and aborts with an error message if the allocation failed. */
-void* util_malloc(
-    size_t size);
-
-void util_print_version(
-    void);
-
-/* Returns an unique string representation of a float.  Returns a pointer to a
- * static buffer, not thread-safe. */
-const char* util_printfloat(
-    const void* data);
-
-/* Creates all components of the path. */
-void util_makepath(
-    const char* path);
-
-/* XOR each byte by key.  Key is incremented by step, which is in turn
- * incremented by step2. */
-void util_xor(
-    unsigned char* data,
-    size_t data_length,
-    unsigned char key,
-    unsigned char step,
-    unsigned char step2);
 
 #endif

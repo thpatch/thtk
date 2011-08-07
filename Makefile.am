@@ -46,6 +46,7 @@ thanm_SOURCES = \
 	thanm.h
 
 thdat_CFLAGS = $(OPENMP_CFLAGS)
+thdat_LDFLAGS = $(OPENMP_LDFLAGS)
 thdat_LDADD = libutil.a thtk/libthtk.la
 thdat_SOURCES = \
 	thdat.c

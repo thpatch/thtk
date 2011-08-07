@@ -27,12 +27,11 @@
  * DAMAGE.
  */
 #include <config.h>
-#define _GNU_SOURCE
 #include <stdlib.h>
-#include <string.h>
 #include <thtk/thtk.h>
 #include "thdat.h"
 #include "thrle.h"
+#include "util.h"
 
 typedef struct {
 #ifdef PACK_PRAGMA
