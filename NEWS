@@ -9,6 +9,8 @@ thdat: The code has been refactored.
 thdat: A shared library is available.
 thdat: A command for listing the contents of archives was added.
 thmsg: Support for TH13 has been completed.
+thecl: Support for TH13 has been completed,
+       compatibility with the trial was lost.
 
 What's new in thtk 4:
 
