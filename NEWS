@@ -11,6 +11,9 @@ thdat: A command for listing the contents of archives was added.
 thmsg: Support for TH13 has been completed.
 thecl: Support for TH13 has been completed,
        compatibility with the trial was lost.
+thanm: Support for TH13 has been completed.
+       One file is not properly reconstructed due to the same bug that affects
+       TH12.
 
 What's new in thtk 4:
 
