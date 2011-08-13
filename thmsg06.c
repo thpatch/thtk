@@ -126,7 +126,7 @@ static const id_format_pair_t th10_msg_ed_fmts[] = {
     { 9, "S" },
     { 10, "z" },
     { 11, "" },
-    { 12, "SSS" },
+    { 12, "z" },
     { 14, "S" },
     { 15, "SSS" },
     { 16, "SSS" },
