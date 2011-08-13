@@ -261,8 +261,10 @@ static const id_format_pair_t th128_msg_fmts[] = {
 };
 
 static const id_format_pair_t th13_msg_fmts[] = {
+    { 9, "" },
     { 23, "" },
     { 24, "" },
+    { 31, "S" },
     { 0, NULL }
 };
 
@@ -307,6 +309,7 @@ th06_find_format(unsigned int version, int id)
         case 11:
         case 12:
         case 128:
+        case 13:
             return find_format(th10_msg_ed_fmts, id);
         default:
             fprintf(stderr, "%s: id %d was not found in the format table\n", argv0, id);
