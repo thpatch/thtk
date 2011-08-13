@@ -14,13 +14,3 @@ thecl: Support for TH13 has been completed,
 thanm: Support for TH13 has been completed.
        One file is not properly reconstructed due to the same bug that affects
        TH12.
-
-What's new in thtk 4:
-
-thecl: Support for parsing of 16-bit values.
-thecl: Support for TH07, TH08, and TH09 has been added.
-thecl: The special syntax for encrypted strings was removed.
-thdat: Support for TH13 has been added.
-thmsg: Support for TH13 has been added.
-thanm: Support for TH13 has been added.
-thecl: Support for TH13 has been added.
