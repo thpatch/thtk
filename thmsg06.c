@@ -431,7 +431,7 @@ th06_read(FILE* in, FILE* out, unsigned int version)
                     }
                 }
                 disp = value_to_text(&values[i]);
-                fprintf(out, ",%s", disp);
+                fprintf(out, ";%s", disp);
                 value_free(&values[i]);
                 free(disp);
             }
@@ -536,7 +536,7 @@ th06_write(FILE* in, FILE* out, unsigned int version)
                 unsigned char temp[1024] = { '\0' };
                 value_t val;
 
-                charp = strchr(charp, ',');
+                charp = strchr(charp, ';');
                 if (!charp)
                     return 0;
 
