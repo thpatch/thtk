@@ -93,8 +93,8 @@ typedef struct {
     /* There doesn't seem to be a way of telling how many parameters there are
      * from the additional data. */
     uint8_t param_count;
-    /* For TH13 this field stores the number of current stack references in the
-     * parameter list. */
+    /* From TH13 on, this field stores the number of current stack references
+     * in the parameter list. */
     uint32_t zero;
     unsigned char data[];
 #ifdef PACK_PRAGMA
@@ -743,6 +743,21 @@ static const id_format_pair_t th13_fmts[] = {
     { -1, NULL }
 };
 
+/* Inherits th13_fmts */
+static const id_format_pair_t th14_fmts[] = {
+    { 315, "SSf" },
+    { 319, "Sf" },
+    { 408, "ffff" },
+    { 410, "ffff" },
+    { 424, "S" },
+    { 440, "f" },
+    { 441, "SSf" },
+    { 444, "f" },
+    { 445, "SSf" },
+    { 553, "S" },
+    { 565, "f" },
+    { -1, NULL }
+};
 static const char*
 th10_find_format(
     unsigned int version,
@@ -763,6 +778,9 @@ th10_find_format(
     case 12:
         if (!ret) ret = find_format(th12_fmts, id);
         break;
+    case 14:
+         if (!ret) ret = find_format(th14_fmts, id);
+         /* fallthrough */
     case 13:
         if (!ret) ret = find_format(th13_fmts, id);
         break;
@@ -1525,7 +1543,11 @@ th10_instr_serialize(
         } else
             param_data += value_to_data(&param->value, param_data, instr->size - (param_data - (unsigned char*)ret));
 
-        if (param->stack && version == 13) {
+        if (param->stack && (
+               version == 13 || 
+               version == 14
+           )
+        ) {
             if (param->type == 'f' && param->value.val.f == -(ret->zero + 1.0f)) {
                 ++ret->zero;
             } else if (param->type == 'S' && param->value.val.S == -(ret->zero + 1)) {
