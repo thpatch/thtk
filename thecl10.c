@@ -312,6 +312,23 @@ static const id_format_pair_t th10_fmts[] = {
     { -1, NULL }
 };
 
+static const id_format_pair_t alcostg_fmts[] = {
+    { 16, "mS*D" },
+    { 274, "SS" },
+    { 275, "SS" },
+    { 300, "ffffff" },
+    { 302, "ffffff" },
+    { 369, "SSSS" },
+    { 408, "SSS" },
+    { 437, "S" },
+    { 438, "SS" },
+    { 441, "S" },
+    { 442, "S" },
+    { 443, "S" },
+    { 444, "Sf" },
+    { -1, NULL }
+};
+
 static const id_format_pair_t th11_fmts[] = {
     { 66, "" },
     { 275, "fS" },
@@ -320,8 +337,6 @@ static const id_format_pair_t th11_fmts[] = {
     { 278, "S" },
     { 289, "SSfff" },
     { 291, "SSffS" },
-    { 300, "ffffff" },
-    { 302, "ffffff" },
     { 305, "Sffffff" },
     { 307, "" },
     { 369, "S" },
@@ -332,9 +347,6 @@ static const id_format_pair_t th11_fmts[] = {
     { 438, "Sf" },
     { 439, "Sff" },
     { 440, "fS" },
-    { 441, "S" },
-    { 442, "S" },
-    { 443, "S" },
     { 444, "S" },
     { 445, "S" },
     { 447, "f" },
@@ -766,23 +778,23 @@ th10_find_format(
     const char* ret = NULL;
 
     switch (version) {
-    case 11:
-        if (!ret) ret = find_format(th11_fmts, id);
-    case 10:
-        if (!ret) ret = find_format(th10_fmts, id);
-        break;
+    /* Intentional fallthroughs, obviously */
+    case 14:
+         if (!ret) ret = find_format(th14_fmts, id);
+    case 13:
+        if (!ret) ret = find_format(th13_fmts, id);
     case 128:
         if (!ret) ret = find_format(th128_fmts, id);
     case 125:
         if (!ret) ret = find_format(th125_fmts, id);
     case 12:
         if (!ret) ret = find_format(th12_fmts, id);
-        break;
-    case 14:
-         if (!ret) ret = find_format(th14_fmts, id);
-         /* fallthrough */
-    case 13:
-        if (!ret) ret = find_format(th13_fmts, id);
+    case 11:
+        if (!ret) ret = find_format(th11_fmts, id);
+    case 103:
+        if (!ret) ret = find_format(alcostg_fmts, id);
+    case 10:
+        if (!ret) ret = find_format(th10_fmts, id);
         break;
     default:
         fprintf(stderr, "%s: unsupported version: %u\n", argv0, version);
