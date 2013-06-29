@@ -100,6 +100,16 @@ thecl_instr_new(void)
 }
 
 thecl_instr_t*
+thecl_instr_main(unsigned int sub)
+{
+    thecl_instr_t* instr = thecl_instr_new();
+    instr->type = THECL_INSTR_MAIN;
+    instr->sub = sub;
+    list_init(&instr->params);
+    return instr;
+}
+
+thecl_instr_t*
 thecl_instr_time(unsigned int time)
 {
     thecl_instr_t* instr = thecl_instr_new();

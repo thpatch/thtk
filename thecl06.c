@@ -41,7 +41,7 @@ typedef struct {
 #pragma pack(push,1)
 #endif
     uint16_t sub_count;
-    uint16_t extra_count;
+    uint16_t main_count;
     uint32_t offsets[];
 #ifdef PACK_PRAGMA
 #pragma pack(pop)
@@ -62,6 +62,20 @@ typedef struct {
 #pragma pack(pop)
 #endif
 } PACK_ATTRIBUTE th06_instr_t;
+
+typedef struct {
+#ifdef PACK_PRAGMA
+#pragma pack(push,1)
+#endif
+    uint16_t time;
+    uint16_t sub;
+    uint16_t id;
+    uint16_t size;
+    unsigned char data[];
+#ifdef PACK_PRAGMA
+#pragma pack(pop)
+#endif
+} PACK_ATTRIBUTE th06_main_instr_t;
 
 static ssize_t
 th08_value_from_data(
@@ -259,6 +273,18 @@ static const id_format_pair_t th06_fmts[] = {
     { 0, 0 },
 };
 
+static const id_format_pair_t th06_main_fmts[] = {
+    { 0, "fffssS" },
+    { 2, "fffssS" },
+    { 4, "fffssS" },
+    { 6, "fffssS" },
+    { 8, "" },
+    { 9, "" },
+    { 10, "SS" },
+    { 12, "" },
+    { 0, 0 },
+};
+
 static const id_format_pair_t th07_fmts[] = {
     { 0, "" },
     { 1, "" },
@@ -402,6 +428,13 @@ static const id_format_pair_t th07_fmts[] = {
     { 160, "S" },
     { 161, "S" },
     { 0, 0 },
+};
+
+/* Inherits th06_main_fmts */
+static const id_format_pair_t th07_main_fmts[] = {
+    { 0, "fffSSS" },
+    { 2, "fffSSS" },
+    { 0, 0 }
 };
 
 static const id_format_pair_t th08_fmts[] = {
@@ -555,6 +588,23 @@ static const id_format_pair_t th08_fmts[] = {
     { 0, 0 },
 };
 
+/* Inherits th07_main_fmts */
+static const id_format_pair_t th08_main_fmts[] = {
+    { 0, "SffSSS" },
+    { 1, "SffSSS" },
+    { 2, "SfffSSS" },
+    { 4, "SfffSSS" },
+    { 6, "S" },
+    { 7, "" }, 
+    { 8, "SS" },
+    { 10, "S" },
+    { 13, "S" },
+    { 14, "S" },
+    { 15, "SffSSS" },
+    { 16, "" },
+    { 0, 0 }
+};
+
 static const id_format_pair_t th09_fmts[] = {
     { 14, "SS" },
     { 63, "Sf" },
@@ -648,6 +698,33 @@ th06_find_format(
     return ret;
 }
 
+static const char*
+th06_find_main_format(
+    unsigned int version,
+    unsigned int id)
+{
+    const char* ret = NULL;
+
+    switch (version) {
+    /* Intentional fallthroughs, obviously */
+    case 8:
+        if (!ret) ret = find_format(th08_main_fmts, id);
+    case 7:
+        if (!ret) ret = find_format(th07_main_fmts, id);
+    case 6:
+        if (!ret) ret = find_format(th06_main_fmts, id);
+        break;
+    default:
+        fprintf(stderr, "%s: unsupported version: %u\n", argv0, version);
+        return NULL;
+    }
+
+    if (!ret)
+        fprintf(stderr, "%s: id %d was not found in the main format table\n", argv0, id);
+
+    return ret;
+}
+
 static thecl_t*
 th06_open(
     FILE* stream,
@@ -672,17 +749,17 @@ th06_open(
     else
         header = (th06_header_t*)map;
 
-    size_t extra_count;
-    size_t extra_count_max;
+    size_t main_count;
+    size_t main_count_max;
     if (version == 9) {
-        extra_count = header->extra_count;
-        extra_count_max = header->extra_count;
+        main_count = header->main_count;
+        main_count_max = header->main_count;
     } else if (version == 6) {
-        extra_count = 1;
-        extra_count_max = 3;
+        main_count = 1;
+        main_count_max = 3;
     } else {
-        extra_count = header->extra_count;
-        extra_count_max = 16;
+        main_count = header->main_count;
+        main_count_max = 16;
     }
 
     thecl_t* ecl = thecl_new();
@@ -692,19 +769,15 @@ th06_open(
         unsigned int rank = 0xff << 8;
         char name[256];
         thecl_sub_t* sub = malloc(sizeof(*sub));
+        memset(sub, 0, sizeof(*sub));
         sprintf(name, "Sub%zu", s + 1);
         sub->name = strdup(name);
         list_init(&sub->instrs);
-        sub->stack = 0;
-        sub->arity = 0;
-        sub->var_count = 0;
-        sub->vars = NULL;
-        sub->offset = 0;
         list_init(&sub->labels);
         unsigned int time = 0;
 
         const th06_instr_t* raw_instr =
-            (th06_instr_t*)(map + header->offsets[extra_count_max + s]);
+            (th06_instr_t*)(map + header->offsets[main_count_max + s]);
         while (raw_instr->time != 0xffffffff && raw_instr->size) {
             if (raw_instr->time != time) {
                 thecl_instr_t* new = thecl_instr_time(raw_instr->time);
@@ -781,25 +854,81 @@ next:
 
         list_append_new(&ecl->subs, sub);
     }
-
-    thecl_local_data_t* local_data;
     
-    for (size_t e = 0; e < extra_count; ++e) {
+    for (size_t e = 0; e < main_count; ++e) {
         char name[128];
-        sprintf(name, "th%02u_extra%zu", version, e + 1);
+        unsigned int time = 0;
+        thecl_sub_t* sub = malloc(sizeof(*sub));
+        const th06_main_instr_t* raw_instr =
+            (th06_main_instr_t*)(map + header->offsets[e]);
 
-        size_t extra_length;
-        if (e >= (size_t)(extra_count - 1))
-            extra_length = file_size - header->offsets[e];
-        else
-            extra_length = header->offsets[e + 1] - header->offsets[e];
+        sprintf(name, "th%02u_main%zu", version, e + 1);
+        memset(sub, 0, sizeof(*sub));
+        sub->name = strdup(name);
+        list_init(&sub->instrs);
+        list_init(&sub->labels);
 
-        local_data = malloc(sizeof(*local_data) + extra_length);
-        strcpy(local_data->name, name);
-        local_data->data_length = extra_length;
-        memcpy(local_data->data, map + header->offsets[e], extra_length);
-        list_append_new(&ecl->local_data, local_data);
+        while (raw_instr->time != 0xffff /*&& raw_instr->sub != 4*/) {
+            const char* format;
+            thecl_instr_t* instr;
+            size_t instr_size = raw_instr->size;
+
+            if (version == 8)
+                instr_size &= 0x00ff;
+
+            size_t instr_data_size = instr_size - sizeof(th06_main_instr_t);
+
+            if (raw_instr->time != time) {
+                thecl_instr_t* new = thecl_instr_time(raw_instr->time);
+                list_append_new(&sub->instrs, new);
+                time = raw_instr->time;
+            }
+
+            instr = thecl_instr_main(raw_instr->sub);
+            instr->id = raw_instr->id;
+
+            format = th06_find_main_format(version, raw_instr->id);
+            
+            if (!format) {
+                fprintf(stderr, "%-3d %04zxB: ", raw_instr->id, instr_size);
+                for (size_t d = 0; d < instr_data_size; d += 4) {
+                    fprintf(stderr, " %08x (%d, %f)",
+                        *(uint32_t*)(raw_instr->data + d),
+                        *(int32_t*)(raw_instr->data + d),
+                        *(float*)(raw_instr->data + d)
+                        );
+                }
+
+                fprintf(stderr, "\n");
+                goto next_main;
+            }
+
+            if (instr_size > sizeof(th06_main_instr_t)) {
+                value_t* values;
+                value_t* value_iter;
+                if (version == 95)
+                    values = value_list_from_data(th95_value_from_data, raw_instr->data, instr_data_size, format);
+                else
+                    values = value_list_from_data(value_from_data, raw_instr->data, instr_data_size, format);
+                value_iter = values;
+                while (value_iter->type) {
+                    thecl_param_t* param = param_new((*value_iter).type);
+                    param->value = *value_iter;
+                    ++value_iter;
+                    list_append_new(&instr->params, param);
+                }
+                free(values);
+            }
+
+            list_append_new(&sub->instrs, instr);
+
+next_main:
+            raw_instr = (th06_main_instr_t*)((char*)raw_instr + instr_size);
+        }
+
+        list_append_new(&ecl->subs, sub);
     }
+    ecl->sub_count += main_count;
 
     file_munmap(map, file_size);
 
@@ -858,6 +987,17 @@ th06_dump(
                         param->stack ? "[" : "",
                         ret,
                         param->stack ? "]" : "");
+                    free(ret);
+                }
+                fprintf(out, ");\n");
+                break;
+            }
+            case THECL_INSTR_MAIN: {
+                fprintf(out, "    main_ins_%u(Sub%d", instr->id, instr->sub);
+                thecl_param_t* param;
+                list_for_each(&instr->params, param) {
+                    char* ret = th06_param_to_text(param);
+                    fprintf(out, ", %s", ret);
                     free(ret);
                 }
                 fprintf(out, ");\n");
@@ -1023,17 +1163,17 @@ th06_compile(
 
     thecl_local_data_t* local_data;
     list_for_each(&ecl->local_data, local_data)
-        ++header.extra_count;
+        ++header.main_count;
 
-    size_t extra_count;
+    size_t main_count;
     if (ecl->version == 9)
-        extra_count = header.extra_count;
+        main_count = header.main_count;
     else if (ecl->version == 6) {
-        extra_count = 3;
-        header.extra_count = 0;
+        main_count = 3;
+        header.main_count = 0;
     } else
-        extra_count = 16;
-    const size_t offset_count = extra_count + header.sub_count;
+        main_count = 16;
+    const size_t offset_count = main_count + header.sub_count;
 
     if (!file_seekable(out)) {
         fprintf(stderr, "%s: output is not seekable\n", argv0);
@@ -1047,7 +1187,7 @@ th06_compile(
     thecl_sub_t* sub;
     size_t s = 0;
     list_for_each(&ecl->subs, sub) {
-        offsets[extra_count + s] = file_tell(out);
+        offsets[main_count + s] = file_tell(out);
 
         thecl_instr_t* instr;
         list_for_each(&sub->instrs, instr) {

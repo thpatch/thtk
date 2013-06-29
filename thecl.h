@@ -36,6 +36,7 @@
 
 typedef enum {
     THECL_INSTR_INSTR,
+    THECL_INSTR_MAIN,
     THECL_INSTR_TIME,
     THECL_INSTR_RANK,
     THECL_INSTR_LABEL
@@ -73,6 +74,7 @@ typedef struct thecl_instr_t {
     int size;
 
     /* Etc.: */
+    unsigned int sub;
     unsigned int time;
     unsigned int rank;
     unsigned int offset;
@@ -80,6 +82,9 @@ typedef struct thecl_instr_t {
 
 thecl_instr_t* thecl_instr_new(
     void);
+
+thecl_instr_t* thecl_instr_main(
+    unsigned int sub);
 
 thecl_instr_t* thecl_instr_time(
     unsigned int time);
