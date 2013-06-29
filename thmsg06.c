@@ -208,7 +208,7 @@ static const id_format_pair_t th12_msg_fmts[] = {
     { 20, "" },
     { 21, "" },
     { 22, "" },
-    { 27, "S" },
+    { 27, "f" },
     { 0, NULL }
 };
 
