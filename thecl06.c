@@ -707,6 +707,7 @@ th06_find_main_format(
 
     switch (version) {
     /* Intentional fallthroughs, obviously */
+    case 95:
     case 8:
         if (!ret) ret = find_format(th08_main_fmts, id);
     case 7:
@@ -873,7 +874,7 @@ next:
             thecl_instr_t* instr;
             size_t instr_size = raw_instr->size;
 
-            if (version == 8)
+            if (version >= 8)
                 instr_size &= 0x00ff;
 
             size_t instr_data_size = instr_size - sizeof(th06_main_instr_t);
