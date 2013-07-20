@@ -124,7 +124,10 @@ typedef struct {
     /* 11 - Used mainly for backgrounds and ascii.png. */
     uint32_t unknown1;
     uint32_t thtxoffset;
-    uint32_t hasdata;
+    uint16_t hasdata;
+    /* TH14 starts using what was previously thought */
+    /* to be the upper 2 bytes of hasdata for something else. */
+    uint16_t unknown2;
     uint32_t nextoffset;
     uint32_t zero3;
 #ifdef PACK_PRAGMA
@@ -146,7 +149,8 @@ typedef struct {
     uint16_t x, y;
     uint32_t unknown1;
     uint32_t thtxoffset;
-    uint32_t hasdata;
+    uint16_t hasdata;
+    uint16_t unknown2;
     uint32_t nextoffset;
     uint32_t zero2[6];
 #ifdef PACK_PRAGMA
