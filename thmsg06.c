@@ -69,21 +69,8 @@ static const id_format_pair_t th06_msg_fmts[] = {
 };
 
 static const id_format_pair_t th08_msg_fmts[] = {
-    { 0, "" },
-    { 1, "ss" },
-    { 2, "ss" },
     { 3, "ssm" },
-    { 4, "S" },
-    { 5, "ss" },
-    { 6, "" },
-    { 7, "S" },
     { 8, "ssm" },
-    { 9, "S" },
-    { 10, "" },
-    { 11, "" },
-    { 12, "" },
-    { 13, "S" },
-    { 14, "" },
     { 15, "SSSSS" },
     { 16, "m" },
     { 17, "SS" },
@@ -96,23 +83,58 @@ static const id_format_pair_t th08_msg_fmts[] = {
 };
 
 static const id_format_pair_t th09_msg_fmts[] = {
-    { 0, "" },
-    { 1, "ss" },
-    { 4, "S" },
-    { 5, "ss" },
-    { 7, "S" },
     { 8, "" },
-    { 9, "S" },
-    { 11, "" },
-    { 13, "S" },
     { 15, "SSS" },
-    { 14, "" },
-    { 16, "m" },
-    { 17, "SS" },
     { 23, "S" },
     { 24, "" },
     { 25, "" },
     { 28, "S" },
+    { 0, NULL }
+};
+
+static const id_format_pair_t th10_msg_fmts[] = {
+    { 1, "S" },
+    { 2, "S" },
+    { 3, "" },
+    { 4, "" },
+    { 5, "" },
+    { 7, "" },
+    { 10, "S" },
+    { 12, "S" },
+    { 14, "S" },
+    { 17, "m" },
+    { 18, "" },
+    { 19, "" },
+    { 20, "" },
+    { 21, "" },
+    { 22, "" },
+    { 23, "" },
+    { 25, "S" },
+    { 0, NULL }
+};
+
+static const id_format_pair_t th11_msg_fmts[] = {
+    { 9, "" },
+    { 10, "S" },
+    { 11, "S" },
+    { 12, "" },
+    { 0, NULL }
+};
+
+static const id_format_pair_t th12_msg_fmts[] = {
+    { 27, "f" },
+    { 0, NULL }
+};
+
+static const id_format_pair_t th128_msg_fmts[] = {
+    { 28, "ff" },
+    { 29, "S" },
+    { 30, "" },
+    { 0, NULL }
+};
+
+static const id_format_pair_t th13_msg_fmts[] = {
+    { 31, "S" },
     { 0, NULL }
 };
 
@@ -131,140 +153,6 @@ static const id_format_pair_t th10_msg_ed_fmts[] = {
     { 15, "SSS" },
     { 16, "SSS" },
     { 17, "SSS" },
-    { 0, NULL }
-};
-
-static const id_format_pair_t th10_msg_fmts[] = {
-    { 0, "" },
-    { 1, "S" },
-    { 2, "S" },
-    { 3, "" },
-    { 4, "" },
-    { 5, "" },
-    { 6, "" },
-    { 7, "" },
-    { 8, "" },
-    { 9, "S" },
-    { 10, "S" },
-    { 11, "" },
-    { 12, "S" },
-    { 13, "S" },
-    { 14, "S" },
-    { 15, "SSS" },
-    { 16, "m" },
-    { 17, "m" },
-    { 18, "" },
-    { 19, "" },
-    { 20, "" },
-    { 21, "" },
-    { 22, "" },
-    { 23, "" },
-    { 25, "S" },
-    { 0, NULL }
-};
-
-static const id_format_pair_t th11_msg_fmts[] = {
-    { 0, "" },
-    { 1, "S" },
-    { 2, "S" },
-    { 3, "" },
-    { 4, "" },
-    { 5, "" },
-    { 6, "" },
-    { 7, "" },
-    { 8, "" },
-    { 9, "" },
-    { 10, "S" },
-    { 11, "S" },
-    { 12, "" },
-    { 13, "S" },
-    { 14, "S" },
-    { 17, "m" },
-    { 19, "" },
-    { 20, "" },
-    { 21, "" },
-    { 22, "" },
-    { 25, "S" },
-    { 0, NULL }
-};
-
-static const id_format_pair_t th12_msg_fmts[] = {
-    { 0, "" },
-    { 1, "S" },
-    { 2, "S" },
-    { 3, "" },
-    { 4, "" },
-    { 5, "" },
-    { 6, "" },
-    { 7, "" },
-    { 8, "" },
-    { 10, "S" },
-    { 11, "S" },
-    { 12, "" },
-    { 13, "S" },
-    { 14, "S" },
-    { 17, "m" },
-    { 19, "" },
-    { 20, "" },
-    { 21, "" },
-    { 22, "" },
-    { 27, "f" },
-    { 0, NULL }
-};
-
-static const id_format_pair_t th125_msg_fmts[] = {
-    { 0, "" },
-    { 1, "S" },
-    { 2, "S" },
-    { 3, "" },
-    { 4, "" },
-    { 5, "" },
-    { 6, "" },
-    { 7, "" },
-    { 8, "" },
-    { 10, "S" },
-    { 11, "S" },
-    { 12, "" },
-    { 13, "S" },
-    { 14, "S" },
-    { 17, "m" },
-    { 19, "" },
-    { 20, "" },
-    { 25, "S" },
-    { 0, NULL }
-};
-
-static const id_format_pair_t th128_msg_fmts[] = {
-    { 0, "" },
-    { 1, "S" },
-    { 2, "S" },
-    { 4, "" },
-    { 5, "" },
-    { 6, "" },
-    { 7, "" },
-    { 8, "" },
-    { 10, "S" },
-    { 11, "S" },
-    { 12, "" },
-    { 13, "S" },
-    { 14, "S" },
-    { 17, "m" },
-    { 18, "" },
-    { 19, "" },
-    { 20, "" },
-    { 21, "" },
-    { 22, "" },
-    { 28, "ff" },
-    { 29, "S" },
-    { 30, "" },
-    { 0, NULL }
-};
-
-static const id_format_pair_t th13_msg_fmts[] = {
-    { 9, "" },
-    { 23, "" },
-    { 24, "" },
-    { 31, "S" },
     { 0, NULL }
 };
 
@@ -303,6 +191,8 @@ thmsg_value_to_data(
 static const char*
 th06_find_format(unsigned int version, int id)
 {
+    const char* ret = NULL;
+
     if (thmsg_opt_end) {
         switch (version) {
         case 10:
@@ -317,34 +207,35 @@ th06_find_format(unsigned int version, int id)
         }
     } else {
         switch (version) {
-        case 6:
-        case 7:
-            return find_format(th06_msg_fmts, id);
-        case 8:
-            return find_format(th08_msg_fmts, id);
-        case 9:
-            return find_format(th09_msg_fmts, id);
-        case 10:
-            return find_format(th10_msg_fmts, id);
-        case 11:
-            return find_format(th11_msg_fmts, id);
-        case 12:
-            return find_format(th12_msg_fmts, id);
-        case 125:
-            return find_format(th125_msg_fmts, id);
+        case 13:
+            if (!ret) ret = find_format(th13_msg_fmts, id);
         case 128:
-            return find_format(th128_msg_fmts, id);
-        case 13: {
-            const char* ret;
-            ret = find_format(th13_msg_fmts, id);
             if (!ret) ret = find_format(th128_msg_fmts, id);
-            return ret;
-        }
+        case 125:
+        case 12:
+            if (!ret) ret = find_format(th12_msg_fmts, id);
+        case 11:
+            if (!ret) ret = find_format(th11_msg_fmts, id);
+        case 10:
+            if (!ret) ret = find_format(th10_msg_fmts, id);
+        case 9:
+            if (!ret) ret = find_format(th09_msg_fmts, id);
+        case 8:
+            if (!ret) ret = find_format(th08_msg_fmts, id);
+        case 7:
+        case 6:
+            if (!ret) ret = find_format(th06_msg_fmts, id);
+            break;
         default:
-            fprintf(stderr, "%s: id %d was not found in the format table\n", argv0, id);
+            fprintf(stderr, "%s: unsupported version: %u\n", argv0, version);
             return NULL;
         }
     }
+
+    if (!ret)
+        fprintf(stderr, "%s: id %d was not found in the main format table\n", argv0, id);
+
+    return ret;
 }
 
 static int
