@@ -1,16 +1,12 @@
-What's new in thtk 5:
+What's new in thtk-nmlgc 6:
 
-Make: --enable-combine was removed.
-thanm: The sentinel instructions are left out from the scripts.
-thecl: Bogus rank flags will not be displayed for TH07.
-thanm: The new format will be handled correctly (by ignoring the Format: field).
-thtk: The h command has been removed, run the program without a command to see the usage.
-thdat: The code has been refactored.
-thdat: A shared library is available.
-thdat: A command for listing the contents of archives was added.
-thmsg: Support for TH13 has been completed.
-thecl: Support for TH13 has been completed,
-       compatibility with the trial was lost.
-thanm: Support for TH13 has been completed.
-       One file is not properly reconstructed due to the same bug that affects
-       TH12.
+thmsg: Separate arguments by semicolons to interfer with text less.
+thecl: Support for Uwabami Breakers has been added.
+thecl: Support for the TH14 trial has been added.
+thanm: Support for the TH14 trial has been added.
+thmsg: Support for the TH14 web trial build (v0.01b) has been added.
+       The Reitaisai release (v0.01a) uses the same format as TH13.
+
+Furthermore, main ECL sub dumping for TH06, TH07 and TH08 has been added in the
+'th06-main-sub-dump' branch. Since it still lacks a compiler and is thus pretty
+useless, it is not yet available in the master branch and the binary releases.
