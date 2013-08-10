@@ -1,8 +1,8 @@
 AC_PREREQ(2.62) dnl 2.62 for AC_OPENMP.
 AC_INIT([Touhou Toolkit], [5],
-        [xarnonymous@gmail.com],
-        [thtk],
-        [http://code.google.com/p/thtk/])
+        [nmlgc@nmlgc.net],
+        [thtk-nmlgc],
+        [https://github.com/nmlgc/thtk])
 AM_INIT_AUTOMAKE([1.9 foreign])
 AC_CONFIG_SRCDIR([thdat.c])
 AC_CONFIG_HEADERS([config.h])
@@ -10,7 +10,7 @@ AC_CONFIG_MACRO_DIR([m4])
 
 dnl PACKAGE_URL was introduced in autoconf 2.64.
 m4_ifndef([AC_PACKAGE_URL],
-          [AC_DEFINE([PACKAGE_URL], ["http://code.google.com/p/thtk/"],
+          [AC_DEFINE([PACKAGE_URL], ["https://github.com/nmlgc/thtk"],
                      [Define to the home page for this package.])])
 
 AH_TEMPLATE([HAVE_LIBPNG],
