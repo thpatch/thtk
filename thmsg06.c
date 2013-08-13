@@ -143,6 +143,7 @@ static const id_format_pair_t th14_msg_fmts[] = {
     { 8, "S" },
     { 14, "SS" },
     { 20, "S" },
+    { 32, "S" },
     { 0, NULL }
 };
 
