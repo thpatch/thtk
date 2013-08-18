@@ -783,6 +783,8 @@ static const id_format_pair_t th14_fmts[] = {
     { 704, "Sff" },
     { 710, "S" },
     { 802, "S" },
+    { 901, "" },
+    { 902, "" },
     { -1, NULL }
 };
 static const char*
