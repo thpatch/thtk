@@ -324,6 +324,7 @@ static const id_format_pair_t formats_v8[] = {
     { 312, "SS" },
     { 313, "S" },
     { 314, "S" },
+    { 315, "S" },
     { 400, "fff" },
     { 401, "fff" },
     { 402, "ff" },
@@ -368,6 +369,8 @@ static const id_format_pair_t formats_v8[] = {
     { 605, "fS" },
     { 606, "ff" },
     { 608, "ff" },
+    { 609, "S" },
+    { 610, "S" },
     { 0xffff, "" },
     { 0, NULL }
 };
