@@ -28,6 +28,7 @@
  */
 #include <config.h>
 #include <stddef.h>
+#include "thecl.h"
 #include "ecsparse.h"
 #include "expr.h"
 

@@ -33,8 +33,8 @@
     #include <stdio.h>
     #include <stdlib.h>
     #include <string.h>
-    #include "ecsparse.h"
     #include "thecl.h"
+    #include "ecsparse.h"
     #include "util.h"
     void yyerror(parser_state_t*, const char*);
     /* yylloc.first_column is initialized to 1. */
