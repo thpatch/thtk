@@ -787,6 +787,17 @@ static const id_format_pair_t th14_fmts[] = {
     { 902, "" },
     { -1, NULL }
 };
+
+static const id_format_pair_t th143_fmts[] = {
+    { 303, "SS" },
+    { 322, "SS" },
+    { 303, "ff" },
+    { 323, "SS" },
+    { 423, "SSfffff" },
+    { 623, "fff" },
+    { 712, "ff" },
+    { -1, NULL }
+};
 static const char*
 th10_find_format(
     unsigned int version,
@@ -796,6 +807,8 @@ th10_find_format(
 
     switch (version) {
     /* Intentional fallthroughs, obviously */
+    case 143:
+         if (!ret) ret = find_format(th143_fmts, id);
     case 14:
          if (!ret) ret = find_format(th14_fmts, id);
     case 13:
@@ -1574,7 +1587,8 @@ th10_instr_serialize(
 
         if (param->stack && (
                version == 13 || 
-               version == 14
+               version == 14 ||
+               version == 143
            )
         ) {
             if (param->type == 'f' && param->value.val.f == -(ret->zero + 1.0f)) {

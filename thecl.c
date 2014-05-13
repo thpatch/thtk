@@ -168,7 +168,7 @@ print_usage(void)
            "  d  dump ECL file\n"
            "  V  display version information and exit\n"
            "OPTION can be:\n"
-           "  #  # can be 6, 7, 8, 9, 95, 10, 103 (for Uwabami Breakers), 11, 12, 125, 128, 13 or 14 (required)\n"
+           "  #  # can be 6, 7, 8, 9, 95, 10, 103 (for Uwabami Breakers), 11, 12, 125, 128, 13, 14, or 143 (required)\n"
            "Report bugs to <" PACKAGE_BUGREPORT ">.\n", argv0);
 }
 
@@ -205,6 +205,7 @@ main(int argc, char* argv[])
     case 128:
     case 13:
     case 14:
+    case 143:
         module = &th10_ecl;
         break;
     default:
