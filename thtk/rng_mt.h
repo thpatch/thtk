@@ -26,49 +26,27 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
  * DAMAGE.
  */
-#ifndef UTIL_H_
-#define UTIL_H_
 
-#include <config.h>
-#include <stdio.h>
+#ifndef RNG_MT_H_
+#define RNG_MT_H_
+
 #include <inttypes.h>
-#include <stddef.h>
 
-#ifndef MIN
-#  define MIN(a, b) ((a) < (b) ? (a) : (b))
-#endif
-#ifndef MAX
-#  define MAX(a, b) ((a) > (b) ? (a) : (b))
-#endif
+typedef struct {
+    uint32_t* mt;
+    int32_t mti;
+} rng_mt;
 
-/* Allocates memory and aborts with an error message if the allocation failed. */
-void* util_malloc(
-    size_t size);
+rng_mt*
+rng_mt_init(
+    uint32_t seed);
 
-void util_print_version(
-    void);
-
-/* Returns an unique string representation of a float.  Returns a pointer to a
- * static buffer, not thread-safe. */
-const char* util_printfloat(
-    const void* data);
-
-/* Creates all components of the path. */
-void util_makepath(
-    const char* path);
-
-/* Scan directories recursively.  After use, result should be freed manually. */
-int util_scan_files(
-    const char* dir,
-    char*** result);
-
-/* XOR each byte by key.  Key is incremented by step, which is in turn
- * incremented by step2. */
-void util_xor(
-    unsigned char* data,
-    size_t data_length,
-    unsigned char key,
-    unsigned char step,
-    unsigned char step2);
+int
+rng_mt_free(
+    rng_mt* rng);
+    
+uint32_t
+rng_mt_nextint(
+    rng_mt* rng);
 
 #endif
