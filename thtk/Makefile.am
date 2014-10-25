@@ -12,15 +12,20 @@ libthtk_la_SOURCES = \
 	io.c \
 	thcrypt.c \
 	thcrypt.h \
+	thcrypt105.c \
+	thcrypt105.h \
 	thdat.c \
 	thdat.h \
 	thdat02.c \
 	thdat06.c \
 	thdat08.c \
 	thdat95.c \
+	thdat105.c \
 	thlzss.c \
 	thlzss.h \
 	thrle.c \
 	thrle.h \
 	util.c \
-	util.h
+	util.h \
+	rng_mt.c \
+	rng_mt.h

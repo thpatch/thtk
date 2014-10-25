@@ -45,7 +45,7 @@ print_usage(
            "  x  extract an archive\n"
            "  V  display version information and exit\n"
            "OPTION can be:\n"
-           "  #  # can be 2, 3, 4, 5, 6, 7, 8, 9, 95, 10, 11, 12, 125, 128, or 13 defaults to the latest\n\n"
+           "  #  # can be 2, 3, 4, 5, 6, 7, 8, 9, 95, 10, 105, 11, 12, 123, 125, 128, 13, 14, or 143 defaults to the latest\n\n"
            "Report bugs to <" PACKAGE_BUGREPORT ">.\n", argv0);
 }
 
@@ -116,6 +116,9 @@ thdat_extract_file(
     if (!(entry_name = thdat_entry_get_name(state->thdat, entry_index, error)))
         return 0;
 
+    // For th105: Make sure that the directory exists
+    util_makepath(entry_name);
+
     if (!(entry_stream = thtk_io_open_file(entry_name, "wb", error)))
         return 0;
 
@@ -174,9 +177,16 @@ thdat_list(
         }
     }
 
-    printf("%-*s  %7s  %7s\n", name_width, "Name", "Size", "Stored");
+    // th105: Stored = Size
+    if (version == 105 || version == 123)
+        printf("%-*s  %7s\n", name_width, "Name", "Size");
+    else
+        printf("%-*s  %7s  %7s\n", name_width, "Name", "Size", "Stored");
     for (e = 0; e < entry_count; ++e) {
-        printf("%-*s  %7zd  %7zd\n", name_width, entries[e].name, entries[e].size, entries[e].zsize);
+        if (version == 105 || version == 123)
+            printf("%-*s  %7zd\n", name_width, entries[e].name, entries[e].size);
+        else
+            printf("%-*s  %7zd  %7zd\n", name_width, entries[e].name, entries[e].size, entries[e].zsize);
     }
 
     free(entries);
@@ -200,52 +210,93 @@ thdat_create_wrapper(
         exit(1);
     }
 
-    if (!(state->thdat = thdat_create(version, state->stream, entry_count, error))) { 
+    char*** entries = calloc(entry_count, sizeof(char**));
+    int* entries_count = calloc(entry_count, sizeof(int));
+    size_t real_entry_count = 0;
+    for (size_t i = 0; i < entry_count; i++) {
+        int n = util_scan_files(paths[i], &entries[i]);
+        if (n == -1) {
+            entries[i] = calloc(1, sizeof(char*));
+            entries[i][0] = malloc(strlen(paths[i])+1);
+            strcpy(entries[i][0], paths[i]);
+            n = 1;
+        }
+        entries_count[i] = n;
+        real_entry_count += n;
+    }
+
+    if (!(state->thdat = thdat_create(version, state->stream, real_entry_count, error))) { 
         thdat_state_free(state);
         exit(1);
     }
+    // Set entry names first...
+    size_t k = 0;
+    for (size_t i = 0; i < entry_count; ++i) {
+        thtk_error_t* error = NULL;
+        for (size_t j = 0; j < entries_count[i]; j++) {
+            if (!thdat_entry_set_name(state->thdat, k++, entries[i][j], &error)) {
+                print_error(error);
+                thtk_error_free(&error);
+                continue;
+            }
+        }
+    }
+    // ...and then module->create, if this is th105 archive.
+    // This is because the list of entries comes first in th105 archives.
+    if (version == 105 || version == 123) {
+        if (!thdat_init(state->thdat, error))
+        {
+            thdat_state_free(state);
+            exit(1);
+        }
+    }
 
+    k = 0;
     /* TODO: Properly indicate when insertion fails. */
 #pragma omp parallel for
     for (size_t i = 0; i < entry_count; ++i) {
         thtk_error_t* error = NULL;
-        thtk_io_t* entry_stream;
-        off_t entry_size;
+        for (size_t j = 0; j < entries_count[i]; j++) {
+            thtk_io_t* entry_stream;
+            off_t entry_size;
 
-        printf("%s...\n", paths[i]);
+            printf("%s...\n", entries[i][j]);
 
-        if (!(entry_stream = thtk_io_open_file(paths[i], "rb", &error))) {
-            print_error(error);
-            thtk_error_free(&error);
-            continue;
+            // Is entry name set?
+            if (!(thdat_entry_get_name(state->thdat, i, &error))[0])
+                continue;
+
+            if (!(entry_stream = thtk_io_open_file(entries[i][j], "rb", &error))) {
+                print_error(error);
+                thtk_error_free(&error);
+                continue;
+            }
+
+            if ((entry_size = thtk_io_seek(entry_stream, 0, SEEK_END, &error)) == -1) {
+                print_error(error);
+                thtk_error_free(&error);
+                continue;
+            }
+
+            if (thtk_io_seek(entry_stream, 0, SEEK_SET, &error) == -1) {
+                print_error(error);
+                thtk_error_free(&error);
+                continue;
+            }
+
+            if (thdat_entry_write_data(state->thdat, k++, entry_stream, entry_size, &error) == -1) {
+                print_error(error);
+                thtk_error_free(&error);
+                continue;
+            }
+
+            thtk_io_close(entry_stream);
+            free(entries[i][j]);
         }
-
-        if ((entry_size = thtk_io_seek(entry_stream, 0, SEEK_END, &error)) == -1) {
-            print_error(error);
-            thtk_error_free(&error);
-            continue;
-        }
-
-        if (thtk_io_seek(entry_stream, 0, SEEK_SET, &error) == -1) {
-            print_error(error);
-            thtk_error_free(&error);
-            continue;
-        }
-
-        if (!thdat_entry_set_name(state->thdat, i, paths[i], &error)) {
-            print_error(error);
-            thtk_error_free(&error);
-            continue;
-        }
-
-        if (thdat_entry_write_data(state->thdat, i, entry_stream, entry_size, &error) == -1) {
-            print_error(error);
-            thtk_error_free(&error);
-            continue;
-        }
-
-        thtk_io_close(entry_stream);
+        free(entries[i]);
     }
+    free(entries);
+    free(entries_count);
 
     int ret = 1;
 
@@ -264,7 +315,7 @@ main(
     char* argv[])
 {
     thtk_error_t* error = NULL;
-    unsigned int version = 13;
+    unsigned int version = 143;
     int mode;
 
     if (!(mode = parse_args(argc, argv, print_usage, "clxV", "", &version)))

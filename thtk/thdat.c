@@ -41,6 +41,7 @@ extern const thdat_module_t archive_th02;
 extern const thdat_module_t archive_th06;
 extern const thdat_module_t archive_th08;
 extern const thdat_module_t archive_th95;
+extern const thdat_module_t archive_th105;
 
 static const thdat_module_t*
 thdat_version_to_module(
@@ -66,7 +67,12 @@ thdat_version_to_module(
     case 125:
     case 128:
     case 13:
+    case 14:
+    case 143:
         return &archive_th95;
+    case 105:
+    case 123:
+        return &archive_th105;
     }
 
     thtk_error_new(error, "no module found for version %u", version);
@@ -130,6 +136,18 @@ thdat_open(
     return thdat;
 }
 
+int
+thdat_init(
+    thdat_t* thdat,
+    thtk_error_t** error)
+{
+    if (!thdat->module->create(thdat, error)) {
+        thdat_free(thdat);
+        return 0;
+    }
+    return 1;
+}
+
 thdat_t*
 thdat_create(
     unsigned int version,
@@ -148,9 +166,9 @@ thdat_create(
         return NULL;
     thdat->entry_count = entry_count;
     thdat->entries = calloc(entry_count, sizeof(thdat_entry_t));
-    if (!thdat->module->create(thdat, error)) {
-        thdat_free(thdat);
-        return NULL;
+    if (version != 105 && version != 123) {
+        if (!thdat_init(thdat, error))
+            return NULL;
     }
     return thdat;
 }

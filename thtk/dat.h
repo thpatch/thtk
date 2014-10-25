@@ -64,6 +64,16 @@ API_SYMBOL thdat_t* thdat_create(
     size_t entry_count,
     thtk_error_t** error);
 
+/* Initializes the given archive.
+ *
+ * This function should be called manually when you create th105 archive,
+ * after filling out entry names.
+ *
+ * 0 indicates an error. */
+API_SYMBOL int thdat_init(
+    thdat_t* thdat,
+    thtk_error_t** error);
+
 /* Writes out the final pieces of data for a created archive.  The stream is
  * not closed.  0 indicates an error. */
 API_SYMBOL int thdat_close(

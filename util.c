@@ -32,6 +32,7 @@
 #include <string.h>
 #include <inttypes.h>
 #include <errno.h>
+#include <dirent.h>
 #ifdef HAVE_SYS_STAT_H
 #include <sys/stat.h>
 #endif
@@ -108,6 +109,161 @@ util_makepath(
 
     free(name);
 }
+
+#ifdef WIN32
+int
+util_scan_files(
+    char* dir,
+    char*** result)
+{
+    WIN32_FIND_DATA wfd;
+    HANDLE h;
+
+    char* search_query = malloc(strlen(dir)+3);
+    strcpy(search_query, dir);
+    char t = dir[strlen(dir)-1];
+    if (t != '/' && t != '\\')
+        strcat(search_query, "/");
+    strcat(search_query, "*");
+    h = FindFirstFile(search_query, &wfd);
+    if (h == INVALID_HANDLE_VALUE) {
+        free(search_query);
+        return -1;
+    }
+    search_query[strlen(search_query)-1] = 0;
+
+    char** filelist;
+    int size = 0, capacity = 8;
+    filelist = malloc(capacity * sizeof(char*));
+
+    BOOL bResult = true;
+    while (bResult) {
+        const char* name = wfd.cFileName;
+        char* fullpath = malloc(strlen(search_query)+strlen(name)+2);
+        strcpy(fullpath, dir);
+        strcat(fullpath, name);
+        if (wfd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+            char** subdirs;
+            if (name[strlen(name)-1] != '/') strcat(fullpath, "/");
+            int new_cnt = util_scan_files(fullpath, &subdirs);
+            for (int j = 0; j < new_cnt; j++) {
+                filelist[size] = malloc(strlen(subdirs[j])+1);
+                strcpy(filelist[size++], subdirs[j]);
+                free(subdirs[j]);
+
+                if (size >= capacity) {
+                    capacity<<=1;
+                    char** newfiles = realloc(filelist, capacity*sizeof(char*));
+                    if (!newfiles) {
+                        free(filelist);
+                        return -1;
+                    }
+                    filelist = newfiles;
+                }
+            }
+            free(subdirs);
+            continue;
+        }
+        filelist[size++] = fullpath;
+        if (size >= capacity) {
+            capacity<<=1;
+            char** newfiles = realloc(filelist, capacity*sizeof(char*));
+            if (!newfiles) {
+                free(filelist);
+                return -1;
+            }
+            filelist = newfiles;
+        }
+
+        bResult = FindNextFile(hSrch, &wfd);
+    }
+    FindClose(hSrch);
+
+    *result = filelist;
+    return size;
+}
+#else
+static int
+util_scan_files_comp(
+    const struct dirent* file)
+{
+    // Ignore ".", "..", or hidden files
+    if (file->d_name[0] == '.')
+        return 0;
+    return 1;
+}
+
+int
+util_scan_files(
+    const char* dir,
+    char*** result)
+{
+    struct stat stat_buf;
+    if (stat(dir, &stat_buf) == -1)
+        return -1;
+    // We can only scan directories
+    if (!S_ISDIR(stat_buf.st_mode))
+        return -1;
+
+    struct dirent **files;
+    int n;
+    n = scandir(dir, &files, util_scan_files_comp, alphasort);
+    if (n < 0)
+        return -1;
+
+    char** filelist;
+    int size = 0, capacity = 8;
+    filelist = malloc(capacity * sizeof(char*));
+    for (int i = 0; i < n; ++i) {
+        const char* name = files[i]->d_name;
+        char* fullpath = malloc(strlen(dir)+strlen(name)+2);
+        strcpy(fullpath, dir);
+        strcat(fullpath, name);
+        if (stat(fullpath, &stat_buf) == -1) {
+            free(files[i]);
+            free(fullpath);
+            continue;
+        }
+        if (S_ISDIR(stat_buf.st_mode)) {
+            char** subdirs;
+            if (name[strlen(name)-1] != '/') strcat(fullpath, "/");
+            int new_cnt = util_scan_files(fullpath, &subdirs);
+            for (int j = 0; j < new_cnt; j++) {
+                filelist[size] = malloc(strlen(subdirs[j])+1);
+                strcpy(filelist[size++], subdirs[j]);
+                free(subdirs[j]);
+
+                if (size >= capacity) {
+                    capacity<<=1;
+                    char** newfiles = realloc(filelist, capacity*sizeof(char*));
+                    if (!newfiles) {
+                        free(filelist);
+                        return -1;
+                    }
+                    filelist = newfiles;
+                }
+            }
+            free(subdirs);
+            free(files[i]);
+            free(fullpath);
+            continue;
+        }
+        filelist[size++] = fullpath;
+        if (size >= capacity) {
+            capacity<<=1;
+            char** newfiles = realloc(filelist, capacity*sizeof(char*));
+            if (!newfiles) {
+                free(filelist);
+                return -1;
+            }
+            filelist = newfiles;
+        }
+        free(files[i]);
+    }
+    *result = filelist;
+    return size;
+}
+#endif // WIN32
 
 void
 util_xor(

@@ -26,49 +26,41 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
  * DAMAGE.
  */
-#ifndef UTIL_H_
-#define UTIL_H_
-
 #include <config.h>
-#include <stdio.h>
-#include <inttypes.h>
+#include <string.h>
 #include <stddef.h>
+#include <stdlib.h>
+#include "thcrypt105.h"
+#include "rng_mt.h"
 
-#ifndef MIN
-#  define MIN(a, b) ((a) < (b) ? (a) : (b))
-#endif
-#ifndef MAX
-#  define MAX(a, b) ((a) > (b) ? (a) : (b))
-#endif
-
-/* Allocates memory and aborts with an error message if the allocation failed. */
-void* util_malloc(
-    size_t size);
-
-void util_print_version(
-    void);
-
-/* Returns an unique string representation of a float.  Returns a pointer to a
- * static buffer, not thread-safe. */
-const char* util_printfloat(
-    const void* data);
-
-/* Creates all components of the path. */
-void util_makepath(
-    const char* path);
-
-/* Scan directories recursively.  After use, result should be freed manually. */
-int util_scan_files(
-    const char* dir,
-    char*** result);
-
-/* XOR each byte by key.  Key is incremented by step, which is in turn
- * incremented by step2. */
-void util_xor(
+/* These function can be used for encrypting and decrypting. */
+void
+th_crypt105_list(
     unsigned char* data,
-    size_t data_length,
+    unsigned int size,
     unsigned char key,
-    unsigned char step,
-    unsigned char step2);
+    unsigned char step1,
+    unsigned char step2)
+{
+    unsigned int i;
+    rng_mt* rng = rng_mt_init(6+size);
+    for (i = 0; i < size; i++) {
+        int ti = i-1;
+        data[i] ^= (key + i*step1 + (ti*ti+ti)/2 * step2);
+        data[i] ^= (rng_mt_nextint(rng) & 0xff);
+    }
+    rng_mt_free(rng);
+}
 
-#endif
+void
+th_crypt105_file(
+    unsigned char* data,
+    unsigned int size,
+    unsigned int offset)
+{
+    unsigned char key = ((offset>>1) | 0x23) & 0xff;
+    unsigned int i;
+    for (i = 0; i < size; i++) {
+        data[i] ^= key;
+    }
+}
