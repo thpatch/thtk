@@ -86,7 +86,7 @@ static const crypt_params_t th13_crypt_params[] = {
     { 0x99, 0x7d, 0x80,  0x4400 }  /* 77 */
 };
 
-static const crypt_params_t th15_crypt_params[] = {
+static const crypt_params_t th14_crypt_params[] = {
     /* key  step  block  limit */
     { 0x1b, 0x73, 0x100, 0x3800 }, /* aa */
     { 0x12, 0x43, 0x200, 0x3e00 }, /* ff */
@@ -198,10 +198,10 @@ th95_decrypt_data(
         crypt_params = th95_crypt_params;
     } else if (archive->version == 12 || archive->version == 125 || archive->version == 128) {
         crypt_params = th12_crypt_params;
-    } else if (archive->version == 13 || archive->version == 14 || archive->version == 143) {
+    } else if (archive->version == 13) {
         crypt_params = th13_crypt_params;
     } else {
-        crypt_params = th15_crypt_params;
+        crypt_params = th14_crypt_params;
     }
 
     th_decrypt(data, entry->zsize, crypt_params[i].key, crypt_params[i].step,
@@ -287,12 +287,10 @@ th95_encrypt_data(
                archive->version == 125 ||
                archive->version == 128) {
         crypt_params = th12_crypt_params;
-    } else if (archive->version == 13 ||
-               archive->version == 14 ||
-               archive->version == 143) {
+    } else if (archive->version == 13) {
         crypt_params = th13_crypt_params;
     } else {
-        crypt_params = th15_crypt_params;
+        crypt_params = th14_crypt_params;
     }
 
     th_encrypt(data, entry->zsize, crypt_params[i].key, crypt_params[i].step,
