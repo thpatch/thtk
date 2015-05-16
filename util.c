@@ -113,7 +113,7 @@ util_makepath(
 #ifdef WIN32
 int
 util_scan_files(
-    char* dir,
+    const char* dir,
     char*** result)
 {
     WIN32_FIND_DATA wfd;
@@ -136,7 +136,7 @@ util_scan_files(
     int size = 0, capacity = 8;
     filelist = malloc(capacity * sizeof(char*));
 
-    BOOL bResult = true;
+    BOOL bResult = TRUE;
     while (bResult) {
         const char* name = wfd.cFileName;
         char* fullpath = malloc(strlen(search_query)+strlen(name)+2);
@@ -175,9 +175,9 @@ util_scan_files(
             filelist = newfiles;
         }
 
-        bResult = FindNextFile(hSrch, &wfd);
+        bResult = FindNextFile(h, &wfd);
     }
-    FindClose(hSrch);
+    FindClose(h);
 
     *result = filelist;
     return size;
