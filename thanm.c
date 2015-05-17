@@ -672,34 +672,27 @@ anm_dump(
 
                 if (!format) {
                     fprintf(stderr, "%s: id %d was not found in the format table\n", argv0, instr->type);
-                    fprintf(stderr, "%s: DEBUG: keep dumping\n", argv0);
-                    // abort();
+                    abort();
                 }
 
                 fprintf(stream, "Instruction: %hu %hu %hu",
                     instr->time, instr->param_mask, instr->type);
 
                 if (instr->length > sizeof(anm_instr_t)) {
-                    if (!format) {
-                        for (size_t i = 0; i < instr->length - sizeof(anm_instr_t); i++) {
-                            fprintf(stream, " 0x%02x", *((unsigned char*)instr->data)+i);
-                        }
-                    } else {
-                        value_t* values;
-                        values = value_list_from_data(value_from_data, (unsigned char*)instr->data, instr->length - sizeof(anm_instr_t), format);
-                        if (!values)
-                            abort();
+                    value_t* values;
+                    values = value_list_from_data(value_from_data, (unsigned char*)instr->data, instr->length - sizeof(anm_instr_t), format);
+                    if (!values)
+                        abort();
 
-                        for (size_t i = 0; values[i].type; ++i) {
-                            char* disp;
-                            disp = value_to_text(&values[i]);
-                            fprintf(stream, " %s", disp);
-                            value_free(&values[i]);
-                            free(disp);
-                        }
-
-                        free(values);
+                    for (size_t i = 0; values[i].type; ++i) {
+                        char* disp;
+                        disp = value_to_text(&values[i]);
+                        fprintf(stream, " %s", disp);
+                        value_free(&values[i]);
+                        free(disp);
                     }
+
+                    free(values);
                 }
 
                 fprintf(stream, "\n");
