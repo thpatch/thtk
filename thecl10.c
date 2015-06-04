@@ -1596,7 +1596,8 @@ th10_instr_serialize(
         if (param->stack && (
                version == 13 || 
                version == 14 ||
-               version == 143
+               version == 143 ||
+               version == 15
            )
         ) {
             if (param->type == 'f' && param->value.val.f == -(ret->zero + 1.0f)) {
