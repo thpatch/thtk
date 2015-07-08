@@ -4,6 +4,7 @@ Build requirements:
 	[if building from repository] flex >=2.5.31
 	[if building from repository] bison
 	[if building from repository] libtool >=2.4
+	[if building from repository] pkg-config
 	zlib
 	libpng
 	Recent GCC
