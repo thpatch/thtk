@@ -215,6 +215,7 @@ th06_find_format(unsigned int version, int id)
         case 128:
         case 13:
         case 14:
+        case 15:
             return find_format(th10_msg_ed_fmts, id);
         default:
             fprintf(stderr, "%s: id %d was not found in the format table\n", argv0, id);
@@ -222,6 +223,7 @@ th06_find_format(unsigned int version, int id)
         }
     } else {
         switch (version) {
+        case 15:
         case 143:
             if (!ret) ret = find_format(th143_msg_fmts, id);
         case 14:
