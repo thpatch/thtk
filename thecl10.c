@@ -744,8 +744,15 @@ static const id_format_pair_t th13_fmts[] = {
     { 701, "SSSSSS" },
     { 702, "S" },
     { 703, "SS" },
+    { 704, "Sff" },
+    { 705, "Sff" },
+    { 706, "Sf" },
+    { 707, "Sf" },
     { 708, "Sf" },
+    { 709, "Sf" },
+    { 710, "S" },
     { 711, "S" },
+    { 712, "ff" },
     { 800, "Sm" },
     { 801, "ffS" },
     { 900, "S" },
@@ -780,8 +787,6 @@ static const id_format_pair_t th14_fmts[] = {
     { 567, "S" },
     { 568, "S" },
     { 641, "S" },
-    { 704, "Sff" },
-    { 710, "S" },
     { 802, "S" },
     { 901, "" },
     { 902, "" },
@@ -795,7 +800,6 @@ static const id_format_pair_t th143_fmts[] = {
     { 323, "SS" },
     { 423, "SSfffff" },
     { 623, "fff" },
-    { 712, "ff" },
     { -1, NULL }
 };
 
