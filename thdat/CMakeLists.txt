@@ -1,0 +1,5 @@
+include_directories(${CMAKE_SOURCE_DIR})
+add_executable(thdat thdat.c)
+target_link_libraries(thdat thtk util)
+install(TARGETS thdat DESTINATION bin)
+install(FILES thdat.1 DESTINATION share/man/man1)

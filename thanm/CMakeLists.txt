@@ -1,0 +1,5 @@
+include_directories(${PNG_INCLUDE_DIR})
+add_executable(thanm thanm.c image.c)
+target_link_libraries(thanm util ${PNG_LIBRARY})
+install(TARGETS thanm DESTINATION bin)
+install(FILES thanm.1 DESTINATION share/man/man1)

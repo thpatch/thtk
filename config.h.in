@@ -1,0 +1,28 @@
+#cmakedefine PACK_PRAGMA
+#define PACK_ATTRIBUTE @PACK_ATTRIBUTE@
+
+#cmakedefine PNG_FOUND
+#ifdef PNG_FOUND
+#define HAVE_LIBPNG
+#endif
+
+#cmakedefine HAVE_SYS_TYPES_H
+#cmakedefine HAVE_STDINT_H
+#cmakedefine HAVE_STDDEF_H
+#cmakedefine HAVE_LIBGEN_H
+#cmakedefine HAVE_SYS_STAT_H
+#cmakedefine HAVE_SYS_MMAN_H
+#cmakedefine HAVE__SPLITPATH
+#cmakedefine HAVE_MEMPCPY
+#cmakedefine HAVE_MMAP
+#cmakedefine HAVE_MUNMAP
+#cmakedefine HAVE_FEOF
+#cmakedefine HAVE_FILENO
+#cmakedefine HAVE_FREAD
+#cmakedefine HAVE_FWRITE
+#cmakedefine HAVE_GETC
+#cmakedefine HAVE_PUTC
+
+#define PACKAGE_NAME "@PROJECT_NAME@"
+#define PACKAGE_VERSION "@PROJECT_VERSION@"
+#define PACKAGE_BUGREPORT "@PROJECT_BUGREPORT@"

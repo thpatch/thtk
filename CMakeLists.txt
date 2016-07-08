@@ -1,0 +1,71 @@
+cmake_minimum_required(VERSION 3.0)
+set(CMP0048 NEW)
+
+project("Touhou Toolkit"
+  VERSION 7)
+set(PROJECT_URL "https://github.com/thpatch/thtk")
+set(PROJECT_BUGREPORT "chwo9843@gmail.com")
+
+include(CheckCSourceRuns)
+check_c_source_runs("
+#include <stddef.h>
+struct test_t { char a;
+#pragma pack(push,1)
+int b; };
+#pragma pack(pop)
+
+int main() {
+return offsetof(struct test_t, b) == 1 ? 0 : 1;
+}
+" PACK_PRAGMA)
+if (NOT ${PACK_PRAGMA})
+  check_c_source_runs("
+  #include <stddef.h>
+  struct test_t { char a; int b; } __attribute__((packed));
+
+  int main() {
+  return offsetof(struct test_t, b) == 1 ? 0 : 1;
+  }
+  " PACK_ATTRIBUTE_AVAILABLE)
+  if (${PACK_ATTRIBUTE_AVAILABLE})
+    set(PACK_ATTRIBUTE "__attribute__((packed))")
+  endif()
+endif()
+
+include(CheckTypeSize)
+check_type_size(off_t OFF_T)
+check_type_size(size_t SIZE_T)
+check_type_size(ssize_t SSIZE_T)
+
+include(CheckIncludeFile)
+check_include_file("libgen.h" HAVE_LIBGEN_H)
+check_include_file("sys/stat.h" HAVE_SYS_STAT_H)
+check_include_file("sys/mman.h" HAVE_SYS_MMAN_H)
+
+include(CheckFunctionExists)
+check_function_exists("_splitpath" HAVE__SPLITPATH)
+check_function_exists("mempcpy" HAVE_MEMPCPY)
+check_function_exists("mmap" HAVE_MMAP)
+check_function_exists("munmap" HAVE_MUNMAP)
+
+check_function_exists("feof" HAVE_FEOF)
+check_function_exists("fileno" HAVE_FILENO)
+check_function_exists("fread" HAVE_FREAD)
+check_function_exists("fwrite" HAVE_FWRITE)
+check_function_exists("getc" HAVE_GETC)
+check_function_exists("putc" HAVE_PUTC)
+
+find_package(PNG)
+configure_file(config.h.in config.h)
+
+set(CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_PREFIX}/lib)
+set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+
+include_directories(${CMAKE_CURRENT_BINARY_DIR})
+add_subdirectory(util)
+include_directories(util)
+add_subdirectory(thanm)
+add_subdirectory(thdat)
+add_subdirectory(thecl)
+add_subdirectory(thmsg)
+add_subdirectory(thtk)

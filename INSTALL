@@ -1,17 +1,16 @@
 Build requirements:
-	[if building from repository] autoconf >=2.62
-	[if building from repository] automake >=1.9
-	[if building from repository] flex >=2.5.31
-	[if building from repository] bison
-	[if building from repository] libtool >=2.4
-	[if building from repository] pkg-config
-	zlib
-	libpng
-	Recent GCC
-	Recent glibc
+  cmake >=3.0.0
+  flex >=2.5.31
+  bison
+  pkg-config
+  zlib
+  libpng
+  Recent GCC
+  Recent glibc
 
 Build instructions:
-	[if building from repository] $ autoreconf -fi
-	$ ./configure
-	$ make
-	# make install
+  $ mkdir -p build && cd build
+  $ cmake .. # append -DCMAKE_INSTALL_PREFIX=(directory) if you want to
+             # customize the install directory
+  $ make
+  # make install
