@@ -32,12 +32,13 @@
 #include <string.h>
 #include <inttypes.h>
 #include <errno.h>
-#include <dirent.h>
 #ifdef HAVE_SYS_STAT_H
 #include <sys/stat.h>
 #endif
 #ifdef WIN32
 #include <windows.h>
+#else
+#include <dirent.h>
 #endif
 #include "program.h"
 #include "util.h"
