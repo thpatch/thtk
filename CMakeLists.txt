@@ -7,6 +7,10 @@ set(PROJECT_URL "https://github.com/thpatch/thtk")
 set(PROJECT_BUGREPORT "chwo9843@gmail.com")
 
 include(CheckCSourceRuns)
+include(CheckTypeSize)
+include(CheckIncludeFile)
+include(CheckFunctionExists)
+
 check_c_source_runs("
 #include <stddef.h>
 struct test_t { char a;
@@ -32,7 +36,6 @@ if (NOT ${PACK_PRAGMA})
   endif()
 endif()
 
-include(CheckTypeSize)
 check_type_size(off_t OFF_T)
 check_type_size(size_t SIZE_T)
 if (NOT ${HAVE_SIZE_T})
@@ -67,13 +70,11 @@ if (NOT ${HAVE_SSIZE_T})
   " HAVE_SSIZE_T_BASETSD)
 endif()
 
-include(CheckIncludeFile)
 check_include_file("libgen.h" HAVE_LIBGEN_H)
 check_include_file("sys/stat.h" HAVE_SYS_STAT_H)
 check_include_file("sys/mman.h" HAVE_SYS_MMAN_H)
 check_include_file("unistd.h" HAVE_UNISTD_H)
 
-include(CheckFunctionExists)
 check_function_exists("_splitpath" HAVE__SPLITPATH)
 check_function_exists("mempcpy" HAVE_MEMPCPY)
 check_function_exists("mmap" HAVE_MMAP)
