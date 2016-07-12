@@ -2,15 +2,17 @@ Build requirements:
   cmake >=3.0.0
   flex >=2.5.31
   bison
-  pkg-config
-  zlib
-  libpng
   Recent GCC
   Recent glibc
+  (optional) pkg-config
+  (optional) zlib
+  (optional) libpng
 
 Build instructions:
   $ mkdir -p build && cd build
   $ cmake .. # append -DCMAKE_INSTALL_PREFIX=(directory) if you want to
              # customize the install directory
+             # append -DWITH_LIBPNG_SOURCE=OFF if you want to use an installed
+             # version of libpng
   $ make
   # make install

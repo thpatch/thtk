@@ -1,0 +1,6 @@
+[submodule "thanm/libpng"]
+	path = thanm/libpng
+	url = http://git.code.sf.net/p/libpng/code
+[submodule "thanm/zlib-ng"]
+	path = thanm/zlib-ng
+	url = https://github.com/Dead2/zlib-ng.git

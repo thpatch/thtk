@@ -55,11 +55,10 @@ check_function_exists("fwrite" HAVE_FWRITE)
 check_function_exists("getc" HAVE_GETC)
 check_function_exists("putc" HAVE_PUTC)
 
-find_package(PNG)
-configure_file(config.h.in config.h)
-
 set(CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_PREFIX}/lib)
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+
+option(WITH_LIBPNG_SOURCE "Compile libpng from source" ON)
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 add_subdirectory(util)
@@ -69,3 +68,5 @@ add_subdirectory(thdat)
 add_subdirectory(thecl)
 add_subdirectory(thmsg)
 add_subdirectory(thtk)
+
+configure_file(config.h.in config.h)
