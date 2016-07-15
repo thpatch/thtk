@@ -1,0 +1,4 @@
+add_executable(thmsg thmsg.c thmsg06.c thmsg95.c)
+target_link_libraries(thmsg util)
+install(TARGETS thmsg DESTINATION bin)
+install(FILES thmsg.1 DESTINATION share/man/man1)

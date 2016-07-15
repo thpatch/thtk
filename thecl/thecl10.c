@@ -1551,7 +1551,7 @@ normal:
 
 static size_t
 th10_instr_size(
-    unsigned int __attribute__((unused)) version,
+    unsigned int version,
     const thecl_instr_t* instr)
 {
     size_t ret = sizeof(th10_instr_t);

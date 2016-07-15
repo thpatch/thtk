@@ -1,0 +1,69 @@
+#cmakedefine PACK_PRAGMA
+#define PACK_ATTRIBUTE @PACK_ATTRIBUTE@
+
+#cmakedefine WITH_LIBPNG_SOURCE
+#cmakedefine PNG_FOUND
+#if defined(WITH_LIBPNG_SOURCE) || defined(PNG_FOUND)
+# define HAVE_LIBPNG
+#endif
+
+#cmakedefine HAVE_OFF_T
+#cmakedefine HAVE_SIZE_T
+#cmakedefine HAVE_SIZE_T_BASETSD
+#if !defined(HAVE_SIZE_T) && defined(HAVE_SIZE_T_BASETSD)
+# include <BaseTsd.h>
+  typedef SIZE_T size_t;
+#endif
+#cmakedefine HAVE_SSIZE_T
+#cmakedefine HAVE_SSIZE_T_BASETSD
+#if !defined(HAVE_SSIZE_T) && defined(HAVE_SSIZE_T_BASETSD)
+# include <BaseTsd.h>
+  typedef SSIZE_T ssize_t;
+#endif
+#cmakedefine HAVE_SYS_TYPES_H
+#cmakedefine HAVE_STDINT_H
+#cmakedefine HAVE_STDDEF_H
+#cmakedefine HAVE_LIBGEN_H
+#cmakedefine HAVE_SYS_STAT_H
+#cmakedefine HAVE_SYS_MMAN_H
+#cmakedefine HAVE_UNISTD_H
+#ifndef HAVE_UNISTD_H
+# define YY_NO_UNISTD_H
+#endif
+#cmakedefine HAVE__SPLITPATH
+#cmakedefine HAVE_MEMPCPY
+#cmakedefine HAVE_MMAP
+#cmakedefine HAVE_MUNMAP
+#cmakedefine HAVE_FEOF
+#cmakedefine HAVE_FILENO
+#cmakedefine HAVE_FREAD
+#cmakedefine HAVE_FWRITE
+#cmakedefine HAVE_GETC
+#cmakedefine HAVE_PUTC
+
+#ifdef HAVE_FEOF
+# define feof_unlocked feof
+#endif
+#ifdef HAVE_FILENO
+# define fileno_unlocked fileno
+#endif
+#ifdef HAVE_FREAD
+# define fread_unlocked fread
+#endif
+#ifdef HAVE_FWRITE
+# define fwrite_unlocked fwrite
+#endif
+#ifdef HAVE_GETC
+# define getc_unlocked getc
+#endif
+#ifdef HAVE_PUTC
+# define putc_unlocked putc
+#endif
+
+#ifdef _MSC_VER
+# define API_SYMBOL __declspec(dllexport)
+#endif
+
+#define PACKAGE_NAME "@PROJECT_NAME@"
+#define PACKAGE_VERSION "@PROJECT_VERSION@"
+#define PACKAGE_BUGREPORT "@PROJECT_BUGREPORT@"

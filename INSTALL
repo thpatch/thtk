@@ -1,17 +1,29 @@
 Build requirements:
-	[if building from repository] autoconf >=2.62
-	[if building from repository] automake >=1.9
-	[if building from repository] flex >=2.5.31
-	[if building from repository] bison
-	[if building from repository] libtool >=2.4
-	[if building from repository] pkg-config
-	zlib
-	libpng
-	Recent GCC
-	Recent glibc
+  cmake >=3.0.0
+  flex >=2.5.31
+  bison
+  (optional) pkg-config
+  (optional) zlib
+  (optional) libpng
 
-Build instructions:
-	[if building from repository] $ autoreconf -fi
-	$ ./configure
-	$ make
-	# make install
+Build instructions for Linux(GNU toolchain):
+  $ mkdir -p build && cd build
+  $ cmake .. # append -DCMAKE_INSTALL_PREFIX=(directory) if you want to
+             # customize the install directory
+             # append -DWITH_LIBPNG_SOURCE=OFF if you want to use an installed
+             # version of libpng
+  $ make
+  # make install
+
+Build instructions for Windows(MSVC toolchain):
+  1.   Download flex and bison(you can use win-flexbison) and add them to PATH.
+  2.   Run cmake-gui, select the source directory(the directory where this
+       instruction is located) and the build directory(wherever you want), and
+       click `Configure'.
+  2-1. You can specify the installation directory(CMAKE_INSTALL_PREFIX) after
+       the configuration is done.
+  3.   Generate build files, and you should be able to find .sln in the build
+       directory you specified.
+  4.   Open the solution and build.
+  4-1. If you want, build the project named `INSTALL'. It will install the
+       binaries and headers into the directory you specified at step 2-1.
