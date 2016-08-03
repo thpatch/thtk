@@ -7,8 +7,7 @@ Build requirements:
   (optional) libpng
 
 Build instructions for Linux(GNU toolchain):
-  $ mkdir -p build && cd build
-  $ cmake .. # append -DCMAKE_INSTALL_PREFIX=(directory) if you want to
+  $ cmake .  # append -DCMAKE_INSTALL_PREFIX=(directory) if you want to
              # customize the install directory
              # append -DWITH_LIBPNG_SOURCE=OFF if you want to use an installed
              # version of libpng
