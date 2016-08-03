@@ -92,6 +92,7 @@ set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
 option(WITH_LIBPNG_SOURCE "Compile libpng from source" ON)
 
+add_compile_options(-D_DEFAULT_SOURCE -std=c99)
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 add_subdirectory(util)
 include_directories(util)
