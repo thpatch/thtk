@@ -30,7 +30,6 @@
 #define UTIL_H_
 
 #include <config.h>
-#define _GNU_SOURCE
 #include <string.h>
 
 #ifndef HAVE_MEMPCPY
