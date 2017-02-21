@@ -907,6 +907,7 @@ static const id_format_pair_t th143_fmts[] = {
 };
 
 static const id_format_pair_t th15_fmts[] = {
+	{ 82, "f" },
     { 546, "SS" },
     { 549, "S" },
     { 569, "S" },
