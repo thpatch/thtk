@@ -5,7 +5,7 @@ if (WITH_LIBPNG_SOURCE)
   file(RENAME ${CMAKE_CURRENT_BINARY_DIR}/zlib-ng/zconf.h.in
               ${CMAKE_CURRENT_BINARY_DIR}/zlib-ng/zconf.h)
   include_directories(${CMAKE_CURRENT_BINARY_DIR}/zlib-ng)
-  file(GLOB ZLIB_SRC "zlib-ng/*.c")
+  file(GLOB ZLIB_SRC "zlib-ng/*.c" zlib-ng/zlib.h)
   add_library(z STATIC ${ZLIB_SRC})
   if (HAVE_UNISTD_H)
     set(Z_HAVE_UNISTD_H "Z_HAVE_UNISTD_H")
@@ -32,10 +32,13 @@ if (WITH_LIBPNG_SOURCE)
   file(RENAME ${CMAKE_CURRENT_BINARY_DIR}/libpng/pnglibconf.h.prebuilt
               ${CMAKE_CURRENT_BINARY_DIR}/libpng/pnglibconf.h)
   include_directories(${CMAKE_CURRENT_BINARY_DIR}/libpng)
-  add_library(png STATIC libpng/png.c libpng/pngerror.c libpng/pngget.c libpng/pngmem.c
-  libpng/pngpread.c libpng/pngread.c libpng/pngrio.c libpng/pngrtran.c libpng/pngrutil.c
-  libpng/pngset.c libpng/pngtrans.c libpng/pngwio.c libpng/pngwrite.c libpng/pngwtran.c
-  libpng/pngwutil.c)
+  add_library(png STATIC
+  libpng/png.c
+  libpng/png.h
+
+  libpng/pngerror.c libpng/pngget.c libpng/pngmem.c libpng/pngpread.c libpng/pngread.c
+  libpng/pngrio.c libpng/pngrtran.c libpng/pngrutil.c libpng/pngset.c libpng/pngtrans.c
+  libpng/pngwio.c libpng/pngwrite.c libpng/pngwtran.c libpng/pngwutil.c)
   target_link_libraries(png z ${LIBM})
   set(PNG_LIBRARY png)
 else()
@@ -46,7 +49,10 @@ else()
   endif()
 endif()
 
-add_executable(thanm thanm.c image.c)
+add_executable(thanm
+  thanm.c image.c
+  thanm.h image.h
+)
 target_link_libraries(thanm util ${PNG_LIBRARY})
 install(TARGETS thanm DESTINATION bin)
 install(FILES thanm.1 DESTINATION share/man/man1)

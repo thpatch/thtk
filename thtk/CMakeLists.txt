@@ -1,10 +1,19 @@
 include_directories(${CMAKE_SOURCE_DIR})
 add_library(thtk SHARED
   bits.c error.c io.c
+  bits.h error.h io.h
+
   thcrypt.c thcrypt105.c rng_mt.c
+  thcrypt.h thcrypt105.h rng_mt.h
+
   thdat.c thdat02.c thdat06.c thdat08.c thdat95.c thdat105.c
+  thdat.h
+
   thlzss.c thrle.c
-  util.c)
+  thlzss.h thrle.h
+
+  util.c
+  util.h thtk.h)
 find_package(OpenMP)
 if (OPENMP_FOUND)
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
