@@ -92,7 +92,14 @@ set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
 option(WITH_LIBPNG_SOURCE "Compile libpng from source" ON)
 
-add_compile_options(-D_GNU_SOURCE -std=c99)
+if(MSVC)
+  # Defining these here rather than in config.h.in also applies them to the
+  # zlib-ng and libpng build.
+  add_compile_options(-D_CRT_SECURE_NO_DEPRECATE -D_CRT_NONSTDC_NO_DEPRECATE)
+else()
+  add_compile_options(-D_GNU_SOURCE -std=c99)
+endif()
+
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 add_subdirectory(util)
 include_directories(util)
