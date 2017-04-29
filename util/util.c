@@ -148,12 +148,15 @@ util_scan_files(
     BOOL bResult = TRUE;
     while (bResult) {
         const char* name = wfd.cFileName;
-        char* fullpath = malloc(strlen(search_query)+strlen(name)+2);
+        char* fullpath = malloc(strlen(search_query)+strlen(name)+3);
         strcpy(fullpath, dir);
+        t = dir[strlen(dir)-1];
+        if (t != '/' || t != '\\') strcat(fullpath, "/");
         strcat(fullpath, name);
         if (wfd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
             char** subdirs;
-            if (name[strlen(name)-1] != '/') strcat(fullpath, "/");
+            t = name[strlen(name)-1];
+            if (t != '/' || t != '\\') strcat(fullpath, "/");
             int new_cnt = util_scan_files(fullpath, &subdirs);
             for (int j = 0; j < new_cnt; j++) {
                 filelist[size] = malloc(strlen(subdirs[j])+1);
@@ -225,8 +228,9 @@ util_scan_files(
     filelist = malloc(capacity * sizeof(char*));
     for (int i = 0; i < n; ++i) {
         const char* name = files[i]->d_name;
-        char* fullpath = malloc(strlen(dir)+strlen(name)+2);
+        char* fullpath = malloc(strlen(dir)+strlen(name)+3);
         strcpy(fullpath, dir);
+        if (dir[strlen(dir)-1] != '/') strcat(fullpath, "/");
         strcat(fullpath, name);
         if (stat(fullpath, &stat_buf) == -1) {
             free(files[i]);
