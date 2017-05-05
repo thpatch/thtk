@@ -1420,7 +1420,14 @@ th10_stringify_instr(
     if (instr->type != THECL_INSTR_INSTR)
         return;
 
-    sprintf(string, "ins_%u(", instr->id);
+    eclmap_entry_t *ent = eclmap_get(g_eclmap, instr->id);
+    if(ent->mnemonic) {
+        sprintf(string, "%s(", ent->mnemonic);
+    }
+    else {
+        sprintf(string, "ins_%u(", instr->id);
+    }
+
     for (p = 0; p < instr->param_count; ++p) {
         size_t removed = 0;
         char* param_string = th10_stringify_param(sub, node, p, NULL, &removed, 0);
