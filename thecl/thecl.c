@@ -38,6 +38,8 @@
 extern const thecl_module_t th06_ecl;
 extern const thecl_module_t th10_ecl;
 
+eclmap_t* g_eclmap = NULL;
+
 thecl_t*
 thecl_new(
     void)
@@ -180,11 +182,12 @@ main(int argc, char* argv[])
     unsigned int version = 0;
     int mode;
     const thecl_module_t* module = NULL;
+    char options[] = "m";
 
     current_input = "(stdin)";
     current_output = "(stdout)";
 
-    mode = parse_args(argc, argv, print_usage, "cdV", "", &version);
+    mode = parse_args(argc, argv, print_usage, "cdV", options, &version);
 
     if (!mode)
         exit(1);
@@ -223,20 +226,43 @@ main(int argc, char* argv[])
     {
     case 'c':
     case 'd': {
-        if (argc > 2) {
-            current_input = argv[2];
-            in = fopen(argv[2], "rb");
-            if (!in) {
-                fprintf(stderr, "%s: couldn't open %s for reading: %s\n",
-                    argv0, argv[2], strerror(errno));
+        int argp = 2;
+        if(!strchr(options, 'm')) {
+            g_eclmap = eclmap_new();
+            if(argc > argp) {
+                FILE* map_file = NULL;
+                map_file = fopen(argv[argp], "r");
+                if (!map_file) {
+                    fprintf(stderr, "%s: couldn't open %s for reading: %s\n",
+                        argv0, argv[argp], strerror(errno));
+                    exit(1);
+                }
+                eclmap_load(g_eclmap, map_file, argv[argp]);
+                fclose(map_file);
+            }
+            else {
+                fprintf(stderr, "%s: missing map filename\n",
+                    argv0);
                 exit(1);
             }
-            if (argc > 3) {
-                current_output = argv[3];
-                out = fopen(argv[3], "wb");
+            ++argp;
+        }
+
+        if (argc > argp) {
+            current_input = argv[argp];
+            in = fopen(argv[argp], "rb");
+            if (!in) {
+                fprintf(stderr, "%s: couldn't open %s for reading: %s\n",
+                    argv0, argv[argp], strerror(errno));
+                exit(1);
+            }
+            ++argp;
+            if (argc > argp) {
+                current_output = argv[argp];
+                out = fopen(argv[argp], "wb");
                 if (!out) {
                     fprintf(stderr, "%s: couldn't open %s for writing: %s\n",
-                        argv0, argv[3], strerror(errno));
+                        argv0, argv[argp], strerror(errno));
                     fclose(in);
                     exit(1);
                 }
@@ -259,6 +285,7 @@ main(int argc, char* argv[])
         }
         fclose(in);
         fclose(out);
+        eclmap_free(g_eclmap);
 
         exit(0);
     }

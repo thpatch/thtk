@@ -33,6 +33,7 @@
 #include <stdio.h>
 #include "list.h"
 #include "value.h"
+#include "eclmap.h"
 
 typedef enum {
     THECL_INSTR_INSTR,
@@ -166,5 +167,7 @@ typedef struct {
 
 extern FILE* yyin;
 extern int yyparse(parser_state_t*);
+
+extern eclmap_t* g_eclmap;
 
 #endif
