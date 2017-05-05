@@ -368,7 +368,25 @@ Instructions:
     /* TODO: Check the given parameters against the parameters expected for the
      *       instruction. */
 Instruction:
-      INSTRUCTION "(" Instruction_Parameters ")" {
+      IDENTIFIER "(" Instruction_Parameters ")" {
+        expression_t* expr;
+        list_for_each(&state->expressions, expr) {
+            expression_output(state, expr);
+            expression_free(expr);
+        }
+        list_free_nodes(&state->expressions);
+
+        eclmap_entry_t* ent = eclmap_find(g_eclmap, $1);
+        if(!ent) {
+            yyerror(state, "unknown mnemonic");
+        }
+        else {
+            instr_add(state->current_sub, instr_new_list(state, ent->opcode, $3));
+        }
+
+        free($3);
+      }
+    | INSTRUCTION "(" Instruction_Parameters ")" {
         expression_t* expr;
         list_for_each(&state->expressions, expr) {
             expression_output(state, expr);
