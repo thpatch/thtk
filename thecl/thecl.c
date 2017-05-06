@@ -226,9 +226,10 @@ main(int argc, char* argv[])
     {
     case 'c':
     case 'd': {
+        g_eclmap = eclmap_new();
+
         int argp = 2;
         if(!strchr(options, 'm')) {
-            g_eclmap = eclmap_new();
             if(argc > argp) {
                 FILE* map_file = NULL;
                 map_file = fopen(argv[argp], "r");
