@@ -191,16 +191,46 @@ eclmap_load(
             fprintf(stderr, "%s:%s:%u: not enough tokens\n",argv0,fn,linecount);
             continue;
         }
-        /* TODO: validate signature */
-        ent.signature = ptr[0] == '?' ? NULL : ptr;
+
+        /* validate signature */
+        if(ptr[0] == '?') {
+            ent.signature = NULL;
+        }
+        else {
+            ent.signature = ptr;
+            if(ptr[0] == '_') ptr[0] = '\0'; /* allow empty strings to be specified with "_" */
+            /* TODO: validate signature */
+            fprintf(stderr, "%s:%s:%u: warning: signature mapping is not yet implemented\n",argv0,fn,linecount);
+        }
 
         /* parse mnemonic */
         ptr = strtok(NULL, " \t\r\n");
         if(!ptr) {
             fprintf(stderr, "%s:%s:%u: not enough tokens\n",argv0,fn,linecount);
+            continue;
         }
-        /* TODO: validate mnemonic */
-        ent.mnemonic = ptr[0] == '?' ? NULL : ptr;
+
+        /* validate mnemonic */
+        if(ptr[0] == '?') {
+            ent.mnemonic = NULL;
+        }
+        else {
+            ent.mnemonic = ptr;
+            if(ptr[0] >= '0' && ptr[0] <= '9') { /* first character must not be digit */
+                fprintf(stderr, "%s:%s:%u: '%s' isn't valid identifier\n",argv0,fn,linecount,ent.mnemonic);
+                continue;
+            }
+            while(*ptr) {
+                if(!(*ptr >= '0' && *ptr <='9' || *ptr >= 'a' && *ptr <= 'z' || *ptr >= 'A' && *ptr <= 'Z' || *ptr == '_')) {
+                    break;
+                }
+                ptr++;
+            }
+            if(*ptr) {
+                fprintf(stderr, "%s:%s:%u: '%s' isn't valid identifier\n",argv0,fn,linecount,ent.mnemonic);
+                continue;
+            }
+        }
 
         eclmap_set(map, &ent);
     }
