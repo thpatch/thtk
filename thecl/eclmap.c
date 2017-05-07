@@ -230,6 +230,9 @@ eclmap_load(
                 fprintf(stderr, "%s:%s:%u: '%s' isn't valid identifier\n",argv0,fn,linecount,ent.mnemonic);
                 continue;
             }
+            if(!strncmp(ent.mnemonic, "ins_", 4)) {
+                fprintf(stderr, "%s:%s:%u: mnemonic can't start with 'ins_'\n",argv0,fn,linecount);
+            }
         }
 
         eclmap_set(map, &ent);
