@@ -152,6 +152,11 @@ static const id_format_pair_t th143_msg_fmts[] = {
     { 0, NULL }
 };
 
+static const id_format_pair_t th16_msg_fmts[] = {
+    { 34, "SS" },
+    { 0, NULL }
+};
+
 static const id_format_pair_t th10_msg_ed_fmts[] = {
     { 0, "" },
     { 3, "m" },
@@ -223,6 +228,8 @@ th06_find_format(unsigned int version, int id)
         }
     } else {
         switch (version) {
+        case 16:
+            if(!ret) ret = find_format(th16_msg_fmts, id);
         case 15:
         case 143:
             if (!ret) ret = find_format(th143_msg_fmts, id);
