@@ -1709,10 +1709,11 @@ th10_instr_serialize(
             param_data += value_to_data(&param->value, param_data, instr->size - (param_data - (unsigned char*)ret));
 
         if (param->stack && (
-               version == 13 || 
+               version == 13 ||
                version == 14 ||
                version == 143 ||
-               version == 15
+               version == 15 ||
+               version == 16
            )
         ) {
             if (param->type == 'f' && param->value.val.f == -(ret->zero + 1.0f)) {
