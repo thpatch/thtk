@@ -207,6 +207,7 @@ main(int argc, char* argv[])
     case 14:
     case 143:
     case 15:
+    case 16:
         module = &th10_ecl;
         break;
     default:

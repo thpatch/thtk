@@ -912,6 +912,11 @@ static const id_format_pair_t th15_fmts[] = {
     { -1, NULL }
 };
 
+static const id_format_pair_t th16_fmts[] = {
+    { 1000, "SSS" },
+    { -1, NULL }
+};
+
 static const char*
 th10_find_format(
     unsigned int version,
@@ -921,6 +926,8 @@ th10_find_format(
 
     switch (version) {
     /* Intentional fallthroughs, obviously */
+    case 16:
+        if (!ret) ret = find_format(th16_fmts, id);
     case 15:
         if (!ret) ret = find_format(th15_fmts, id);
     case 143:
