@@ -840,7 +840,13 @@ th06_dump(
                     !((instr->rank) & RANK_UNKNOWN4) ? "Z" : "");
                 break;
             case THECL_INSTR_INSTR: {
-                fprintf(out, "    ins_%u(", instr->id);
+                eclmap_entry_t *ent = eclmap_get(g_eclmap, instr->id);
+                if(ent->mnemonic) {
+                    fprintf(out, "    %s(", ent->mnemonic);
+                }
+                else {
+                    fprintf(out, "    ins_%u(", instr->id);
+                }
                 thecl_param_t* param;
                 int first = 1;
                 list_for_each(&instr->params, param) {
