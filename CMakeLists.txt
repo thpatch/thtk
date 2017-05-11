@@ -100,6 +100,12 @@ else()
   add_compile_options(-D_GNU_SOURCE -std=c99)
 endif()
 
+function(link_setargv target)
+  if(MSVC)
+    set_target_properties(${target} PROPERTIES LINK_FLAGS "setargv.obj")
+  endif()
+endfunction()
+
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 add_subdirectory(util)
 include_directories(util)

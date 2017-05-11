@@ -8,5 +8,6 @@ add_executable(thecl
   expr.c thecl.c eclmap.c thecl06.c thecl10.c
   expr.h thecl.h eclmap.h)
 target_link_libraries(thecl util)
+link_setargv(thecl)
 install(TARGETS thecl DESTINATION bin)
 install(FILES thecl.1 DESTINATION share/man/man1)
