@@ -27,6 +27,7 @@
  * DAMAGE.
  */
 #include <config.h>
+#include <string.h>
 #include <inttypes.h>
 #ifdef HAVE_LIBPNG
 #include <png.h>
