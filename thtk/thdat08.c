@@ -36,9 +36,7 @@
 #include "util.h"
 
 typedef struct {
-#ifdef PACK_PRAGMA
-#pragma pack(push,1)
-#endif
+PACK_BEGIN
     /* "PBGZ" */
     char magic[4];
     /* The following entries are also encrypted. */
@@ -48,9 +46,7 @@ typedef struct {
     uint32_t offset;
     /* Stored + 567891. */
     uint32_t size;
-#ifdef PACK_PRAGMA
-#pragma pack(pop)
-#endif
+PACK_END
 } PACK_ATTRIBUTE th08_archive_header_t;
 
 typedef struct {

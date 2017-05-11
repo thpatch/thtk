@@ -36,23 +36,17 @@
 #include "util.h"
 
 typedef struct {
-#ifdef PACK_PRAGMA
-#pragma pack(push,1)
-#endif
+PACK_BEGIN
     uint16_t stage;
     uint16_t scene;
     uint32_t face;
     uint32_t point;
     unsigned char text[192];
-#ifdef PACK_PRAGMA
-#pragma pack(pop)
-#endif
+PACK_END
 } PACK_ATTRIBUTE th95_msg_t;
 
 typedef struct {
-#ifdef PACK_PRAGMA
-#pragma pack(push,1)
-#endif
+PACK_BEGIN
     uint16_t stage;
     uint16_t scene;
     uint16_t player;
@@ -67,9 +61,7 @@ typedef struct {
     int32_t furi3a;
     int32_t furi3b;
     unsigned char text[384];
-#ifdef PACK_PRAGMA
-#pragma pack(pop)
-#endif
+PACK_END
 } PACK_ATTRIBUTE th125_msg_t;
 
 static int

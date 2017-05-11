@@ -37,15 +37,11 @@
 #include "value.h"
 
 typedef struct {
-#ifdef PACK_PRAGMA
-#pragma pack(push,1)
-#endif
+PACK_BEGIN
     uint16_t time;
     uint8_t type;
     uint8_t length;
-#ifdef PACK_PRAGMA
-#pragma pack(pop)
-#endif
+PACK_END
     unsigned char data[];
 } PACK_ATTRIBUTE th06_msg_t;
 

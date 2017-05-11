@@ -34,9 +34,7 @@
 #include "util.h"
 
 typedef struct {
-#ifdef PACK_PRAGMA
-#pragma pack(push,1)
-#endif
+PACK_BEGIN
     uint16_t magic;
     /* Appears unused. */
     uint8_t key;
@@ -45,29 +43,21 @@ typedef struct {
     uint32_t size;
     uint32_t offset;
     uint32_t zero;
-#ifdef PACK_PRAGMA
-#pragma pack(pop)
-#endif
+PACK_END
 } PACK_ATTRIBUTE th02_entry_header_t;
 
 typedef struct {
-#ifdef PACK_PRAGMA
-#pragma pack(push,1)
-#endif
+PACK_BEGIN
     uint16_t size;
     uint16_t unknown1;
     uint16_t count;
     uint8_t key;
     uint8_t zero2[9];
-#ifdef PACK_PRAGMA
-#pragma pack(pop)
-#endif
+PACK_END
 } PACK_ATTRIBUTE th03_archive_header_t;
 
 typedef struct {
-#ifdef PACK_PRAGMA
-#pragma pack(push,1)
-#endif
+PACK_BEGIN
     uint16_t magic;
     uint8_t key;
     unsigned char name[13];
@@ -75,9 +65,7 @@ typedef struct {
     uint16_t size;
     uint32_t offset;
     uint32_t zero[2];
-#ifdef PACK_PRAGMA
-#pragma pack(pop)
-#endif
+PACK_END
 } PACK_ATTRIBUTE th03_entry_header_t;
 
 /* TODO: These constants should be calculated instead. */

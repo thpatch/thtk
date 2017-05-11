@@ -1,7 +1,21 @@
 #ifndef THTK_CONFIG_H_
 #define THTK_CONFIG_H_
 
+#ifdef _MSC_VER
+# define PRAGMA(x) __pragma(x)
+#else
+# define PRAGMA(x) _Pragma(#x)
+#endif
+
 #cmakedefine PACK_PRAGMA
+#ifdef PACK_PRAGMA
+# define PACK_BEGIN PRAGMA(pack(push,1))
+# define PACK_END PRAGMA(pack(pop))
+#else
+# define PACK_BEGIN
+# define PACK_END
+#endif
+
 #define PACK_ATTRIBUTE @PACK_ATTRIBUTE@
 
 #cmakedefine WITH_LIBPNG_SOURCE

@@ -36,55 +36,39 @@
 extern unsigned int option_force;
 
 typedef struct {
-#ifdef PACK_PRAGMA
-#pragma pack(push,1)
-#endif
+PACK_BEGIN
     uint32_t id;
     float x, y, w, h;
-#ifdef PACK_PRAGMA
-#pragma pack(pop)
-#endif
+PACK_END
 } PACK_ATTRIBUTE sprite_t;
 
 typedef struct {
-#ifdef PACK_PRAGMA
-#pragma pack(push,1)
-#endif
+PACK_BEGIN
     uint16_t time;
     uint8_t type;
     /* XXX: data length. */
     uint8_t length;
-#ifdef PACK_PRAGMA
-#pragma pack(pop)
-#endif
+PACK_END
     unsigned char data[];
 } PACK_ATTRIBUTE anm_instr0_t;
 
 typedef struct {
-#ifdef PACK_PRAGMA
-#pragma pack(push,1)
-#endif
+PACK_BEGIN
     uint16_t type;
     uint16_t length;
     uint16_t time;
     /* TODO: Implement this, it works similarly to that one in ECL files. */
     uint16_t param_mask;
-#ifdef PACK_PRAGMA
-#pragma pack(pop)
-#endif
+PACK_END
     unsigned char data[];
 } PACK_ATTRIBUTE anm_instr_t;
 
 /* TODO: Rename this struct to _header_t something. */
 typedef struct {
-#ifdef PACK_PRAGMA
-#pragma pack(push,1)
-#endif
+PACK_BEGIN
     int32_t id;
     uint32_t offset;
-#ifdef PACK_PRAGMA
-#pragma pack(pop)
-#endif
+PACK_END
 } PACK_ATTRIBUTE anm_offset_t;
 
 typedef struct {
@@ -98,9 +82,7 @@ typedef struct {
 } opcode_fmt_t;
 
 typedef struct {
-#ifdef PACK_PRAGMA
-#pragma pack(push,1)
-#endif
+PACK_BEGIN
     uint32_t sprites;
     uint32_t scripts;
     uint32_t zero1;
@@ -130,15 +112,11 @@ typedef struct {
     uint16_t unknown2;
     uint32_t nextoffset;
     uint32_t zero3;
-#ifdef PACK_PRAGMA
-#pragma pack(pop)
-#endif
+PACK_END
 } PACK_ATTRIBUTE anm_header_t;
 
 typedef struct {
-#ifdef PACK_PRAGMA
-#pragma pack(push,1)
-#endif
+PACK_BEGIN
     uint32_t version;
     uint16_t sprites;
     uint16_t scripts;
@@ -153,24 +131,18 @@ typedef struct {
     uint16_t unknown2;
     uint32_t nextoffset;
     uint32_t zero2[6];
-#ifdef PACK_PRAGMA
-#pragma pack(pop)
-#endif
+PACK_END
 } PACK_ATTRIBUTE anm_header11_t;
 
 typedef struct {
-#ifdef PACK_PRAGMA
-#pragma pack(push,1)
-#endif
+PACK_BEGIN
     char magic[4];
     uint16_t zero;
     uint16_t format;
     /* These may be different from the parent entry. */
     uint16_t w, h;
     uint32_t size;
-#ifdef PACK_PRAGMA
-#pragma pack(pop)
-#endif
+PACK_END
     unsigned char data[];
 } PACK_ATTRIBUTE thtx_header_t;
 

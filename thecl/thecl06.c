@@ -37,30 +37,22 @@
 #include "util.h"
 
 typedef struct {
-#ifdef PACK_PRAGMA
-#pragma pack(push,1)
-#endif
+PACK_BEGIN
     uint16_t sub_count;
     uint16_t extra_count;
     uint32_t offsets[];
-#ifdef PACK_PRAGMA
-#pragma pack(pop)
-#endif
+PACK_END
 } PACK_ATTRIBUTE th06_header_t;
 
 typedef struct {
-#ifdef PACK_PRAGMA
-#pragma pack(push,1)
-#endif
+PACK_BEGIN
     uint32_t time;
     uint16_t id;
     uint16_t size;
     uint16_t rank_mask;
     uint16_t param_mask;
     unsigned char data[];
-#ifdef PACK_PRAGMA
-#pragma pack(pop)
-#endif
+PACK_END
 } PACK_ATTRIBUTE th06_instr_t;
 
 static ssize_t

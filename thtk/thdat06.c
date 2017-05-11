@@ -88,15 +88,11 @@ th06_write_string(
 }
 
 typedef struct {
-#ifdef PACK_PRAGMA
-#pragma pack(push,1)
-#endif
+PACK_BEGIN
     uint32_t count;
     uint32_t offset;
     uint32_t size;
-#ifdef PACK_PRAGMA
-#pragma pack(pop)
-#endif
+PACK_END
 } PACK_ATTRIBUTE th07_header_t;
 
 static int

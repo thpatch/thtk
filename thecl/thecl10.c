@@ -38,9 +38,7 @@
 #include "value.h"
 
 typedef struct {
-#ifdef PACK_PRAGMA
-#pragma pack(push,1)
-#endif
+PACK_BEGIN
     char magic[4];
     uint16_t unknown1; /* 1 */
     uint16_t include_length; /* include_offset + ANIM+ECLI length */
@@ -48,40 +46,28 @@ typedef struct {
     uint32_t zero1;
     uint32_t sub_count;
     uint32_t zero2[4];
-#ifdef PACK_PRAGMA
-#pragma pack(pop)
-#endif
+PACK_END
 } PACK_ATTRIBUTE th10_header_t;
 
 typedef struct {
-#ifdef PACK_PRAGMA
-#pragma pack(push,1)
-#endif
+PACK_BEGIN
     char magic[4];
     uint32_t count;
     unsigned char data[];
-#ifdef PACK_PRAGMA
-#pragma pack(pop)
-#endif
+PACK_END
 } PACK_ATTRIBUTE th10_list_t;
 
 typedef struct {
-#ifdef PACK_PRAGMA
-#pragma pack(push,1)
-#endif
+PACK_BEGIN
     char magic[4];
     uint32_t data_offset; /* sizeof(th10_sub_t) */
     uint32_t zero[2];
     unsigned char data[];
-#ifdef PACK_PRAGMA
-#pragma pack(pop)
-#endif
+PACK_END
 } PACK_ATTRIBUTE th10_sub_t;
 
 typedef struct {
-#ifdef PACK_PRAGMA
-#pragma pack(push,1)
-#endif
+PACK_BEGIN
     uint32_t time;
     uint16_t id;
     uint16_t size;
@@ -97,9 +83,7 @@ typedef struct {
      * in the parameter list. */
     uint32_t zero;
     unsigned char data[];
-#ifdef PACK_PRAGMA
-#pragma pack(pop)
-#endif
+PACK_END
 } PACK_ATTRIBUTE th10_instr_t;
 
 static ssize_t
