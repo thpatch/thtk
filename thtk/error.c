@@ -48,7 +48,6 @@ thtk_error_func_new(
     if (error) {
         char temp[1024];
         *error = malloc(sizeof(**error));
-        (*error)->message = strdup(message);
         (*error)->message = malloc(1024);
         va_start(ap, message);
         vsnprintf(temp, 1024, message, ap);
