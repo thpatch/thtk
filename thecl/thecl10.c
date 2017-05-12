@@ -1227,17 +1227,20 @@ str_replace(char* str, const char* pat, const char* rep)
     char* temp_org = strdup(str);
     char* temp = temp_org;
 
+    size_t pat_len = strlen(pat);
+    size_t rep_len = strlen(rep);
+
     for (;;) {
-        if (*temp == '\0') {
-            *str++ = '\0';
+        char* ntemp = strstr(temp, pat);
+        if (!ntemp) {
+            strcpy(str, temp);
             break;
-        } else if (strncmp(temp, pat, strlen(pat)) == 0) {
-            sprintf(str, "%s", rep);
-            str += strlen(rep);
-            temp += strlen(pat);
-        } else {
-            *str++ = *temp++;
         }
+        strncpy(str, temp, ntemp - temp);
+        str += ntemp - temp;
+        strcpy(str, rep);
+        str += rep_len;
+        temp = ntemp + pat_len;
     }
 
     free(temp_org);
