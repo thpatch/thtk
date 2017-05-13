@@ -230,7 +230,7 @@ th_lzss(
 
     bitstream_write1(&bs, 0);
     bitstream_write(&bs, 13, HASH_NULL);
-    bitstream_write(&bs, 4, 0);
+    bitstream_write(&bs, 4, 0); /* TODO: this might be unnescessary */
 
     bitstream_finish(&bs);
 
@@ -269,10 +269,10 @@ th_unlzss(
             dict_head = (dict_head + 1) & LZSS_DICTSIZE_MASK;
         } else {
             unsigned int match_offset = bitstream_read(&bs, 13);
-            unsigned int match_len = bitstream_read(&bs, 4) + LZSS_MIN_MATCH;
-
             if (!match_offset)
                 return bytes_written;
+
+            unsigned int match_len = bitstream_read(&bs, 4) + LZSS_MIN_MATCH;
 
             for (i = 0; i < match_len; ++i) {
                 unsigned char c = dict[(match_offset + i) & LZSS_DICTSIZE_MASK];
