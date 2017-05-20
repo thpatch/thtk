@@ -134,10 +134,17 @@ main(int argc, char* argv[])
             }
         }
 
-        if (mode == 'c')
+        if (mode == 'c') {
+#ifdef WIN32
+            _setmode(fileno(stdout), _O_BINARY);
+#endif
             ret = module->write(in, out, version);
-        else
+        } else {
+#ifdef WIN32
+            _setmode(fileno(stdin), _O_BINARY);
+#endif
             ret = module->read(in, out, version);
+        }
 
         fclose(in);
         fclose(out);

@@ -79,6 +79,9 @@
 # endif
 
 # define API_SYMBOL __declspec(dllexport)
+
+# include <io.h>
+# include <fcntl.h>
 #endif
 
 #define PACKAGE_NAME "@PROJECT_NAME@"
