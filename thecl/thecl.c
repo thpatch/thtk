@@ -170,7 +170,7 @@ print_usage(void)
            "  d  dump ECL file\n"
            "  V  display version information and exit\n"
            "OPTION can be:\n"
-           "  #  # can be 6, 7, 8, 9, 95, 10, 103 (for Uwabami Breakers), 11, 12, 125, 128, 13, 14, 143, or 15 (required)\n"
+           "  #  # can be 6, 7, 8, 9, 95, 10, 103 (for Uwabami Breakers), 11, 12, 125, 128, 13, 14, 143, 15, or 16 (required)\n"
            "  m  use map file for translating mnemonics\n"
            "Report bugs to <" PACKAGE_BUGREPORT ">.\n", argv0);
 }
