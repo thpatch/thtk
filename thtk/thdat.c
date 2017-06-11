@@ -49,6 +49,7 @@ thdat_version_to_module(
     thtk_error_t** error)
 {
     switch (version) {
+    case 1:
     case 2:
     case 3:
     case 4:
