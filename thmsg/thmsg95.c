@@ -124,9 +124,9 @@ th95_read(FILE* in, FILE* out, unsigned int version)
                 key += (line + 1) * 23 + j;
             }
             if (version == 95)
-                fprintf(out, "%s\n", msg95.text + line * 64);
+                fprintf(out, "%.64s\n", msg95.text + line * 64);
             else
-                fprintf(out, "%s\n", msg125.text + line * 64);
+                fprintf(out, "%.64s\n", msg125.text + line * 64);
         }
     }
 
