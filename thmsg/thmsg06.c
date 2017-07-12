@@ -452,6 +452,7 @@ th06_write(FILE* in, FILE* out, unsigned int version)
                 ssize_t templength;
                 unsigned char temp[1024] = { '\0' };
                 value_t val;
+                const char *charp_prev = charp;
 
                 charp = strchr(charp, ';');
                 if (!charp) {
@@ -461,6 +462,17 @@ th06_write(FILE* in, FILE* out, unsigned int version)
                         argv0, entry_num, msg.time, msg.type,
                         missing, missing == 1 ? "parameter" : "parameters");
 
+                    if(i == 0) {
+                        while ( (charp_prev = strchr(charp_prev, ',')) != NULL) {
+                            charp_prev++;
+                            i++;
+                        }
+                        if (i == param_count) {
+                            fprintf(stderr, "%s: entry %u, @%u, id %d: found %u %s instead, this is an old msg dump\n",
+                                argv0, entry_num, msg.time, msg.type,
+                                param_count, param_count == 1 ? "comma" : "commas");
+                        }
+                    }
                     return 0;
                 }
 
