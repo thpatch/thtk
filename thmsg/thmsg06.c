@@ -433,6 +433,7 @@ th06_write(FILE* in, FILE* out, unsigned int version)
             long header_offset, end_offset;
             const char* format;
             const char* charp = buffer;
+            size_t param_count;
 
             msg.type = msg_type;
             msg.length = 0;
@@ -446,14 +447,22 @@ th06_write(FILE* in, FILE* out, unsigned int version)
                 return 0;
             }
 
-            for (i = 0; i < strlen(format); ++i) {
+            param_count = strlen(format);
+            for (i = 0; i < param_count; ++i) {
                 ssize_t templength;
                 unsigned char temp[1024] = { '\0' };
                 value_t val;
 
                 charp = strchr(charp, ';');
-                if (!charp)
+                if (!charp) {
+                    size_t missing = param_count - i;
+
+                    fprintf(stderr, "%s: entry %u, @%u, id %d: expected %u more %s, separated with ;\n",
+                        argv0, entry_num, msg.time, msg.type,
+                        missing, missing == 1 ? "parameter" : "parameters");
+
                     return 0;
+                }
 
                 charp++;
 
