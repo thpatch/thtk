@@ -460,7 +460,7 @@ th06_write(FILE* in, FILE* out, unsigned int version)
 
                     fprintf(stderr, "%s: entry %u, @%u, id %d: expected %u more %s, separated with ;\n",
                         argv0, entry_num, msg.time, msg.type,
-                        missing, missing == 1 ? "parameter" : "parameters");
+                        (unsigned int)missing, missing == 1 ? "parameter" : "parameters");
 
                     if(i == 0) {
                         while ( (charp_prev = strchr(charp_prev, ',')) != NULL) {
@@ -470,7 +470,7 @@ th06_write(FILE* in, FILE* out, unsigned int version)
                         if (i == param_count) {
                             fprintf(stderr, "%s: entry %u, @%u, id %d: found %u %s instead, this is an old msg dump\n",
                                 argv0, entry_num, msg.time, msg.type,
-                                param_count, param_count == 1 ? "comma" : "commas");
+                                (unsigned int)param_count, param_count == 1 ? "comma" : "commas");
                         }
                     }
                     return 0;
