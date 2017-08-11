@@ -891,12 +891,21 @@ static const id_format_pair_t th15_fmts[] = {
     { 546, "SS" },
     { 549, "S" },
     { 569, "S" },
-	{ 570, "" },
-	{ 571, "" },
+	  { 570, "" },
+    { 571, "" },
     { -1, NULL }
 };
 
 static const id_format_pair_t th16_fmts[] = {
+    { 305, "mffSSS" },
+    { 326, "SSSSSS" },
+    { 337, "SS" },
+    { 338, "SSfff" },
+    { 339, "SSS" },
+    { 340, "S" },
+    { 413, "SSS" },
+    { 421, "SSfffff" },
+    { 572, "S" },
     { 1000, "SSS" },
     { -1, NULL }
 };
