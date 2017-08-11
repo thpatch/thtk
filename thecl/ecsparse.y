@@ -809,7 +809,23 @@ sub_begin(
     sub->vars = NULL;
     sub->offset = 0;
     list_init(&sub->labels);
+    
+    // Touhou expects the list of subs to be sorted by name.
+    thecl_sub_t* iter_sub;
+    list_for_each(&state->ecl->subs, iter_sub) {
+        int diff = strcmp(name, iter_sub->name);
+        if(diff == 0) {
+            char buf[256];
+            snprintf(buf, 256, "duplicate sub: %s", name);
+            yyerror(state, buf);
+            break;
+        } else if(diff < 0) {
+            list_prepend_to(&state->ecl->subs, sub, node);
+            goto no_append;
+        }
+    }
     list_append_new(&state->ecl->subs, sub);
+no_append:
 
     ++state->ecl->sub_count;
     state->instr_time = 0;
