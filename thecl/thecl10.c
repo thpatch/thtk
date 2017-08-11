@@ -164,7 +164,7 @@ static const id_format_pair_t th10_fmts[] = {
     { 14, "oS" },
     { 15, "m*D" },
     { 16, "mS*D" },
-    { 17, "f" },
+    { 17, "S" },
     { 21, "" },
     { 40, "S" },
     { 42, "S" },
