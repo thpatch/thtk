@@ -922,6 +922,8 @@ static const id_format_pair_t th14_fmts[] = {
 };
 
 static const id_format_pair_t th143_fmts[] = {
+    { 322, "SS" },
+    { 323, "SS" },
     { -1, NULL }
 };
 
@@ -941,6 +943,7 @@ static const id_format_pair_t th16_fmts[] = {
     { 338, "SSfff" },
     { 339, "SSS" },
     { 340, "S" },
+    { 413, "SSS" },
     { 572, "S" },
     { 1000, "SSS" },
     { -1, NULL }
