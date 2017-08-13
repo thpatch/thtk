@@ -662,6 +662,8 @@ static const id_format_pair_t th13_fmts[] = {
     { 13, "oS" },
     { 14, "oS" },
     { 15, "m*D" },
+    { 16, "mS*D" },
+    { 17, "S" },	
     { 21, "" },
     { 22, "Sm" },
     { 23, "S" },
