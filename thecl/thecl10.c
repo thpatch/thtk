@@ -969,6 +969,13 @@ static const id_format_pair_t th16_fmts[] = {
     { -1, NULL }
 };
 
+static bool th10_has_overdrive(unsigned int version) {
+    switch(version) {
+        case 10: case 103: case 11: case 12: case 125: case 128: return false;
+        default: return true;
+    }
+}
+
 static const char*
 th10_find_format(
     unsigned int version,
@@ -1570,16 +1577,31 @@ th10_dump(
                 instr->string = strdup(temp);
                 break;
             case THECL_INSTR_RANK:
-                sprintf(temp, "!%s%s%s%s%s%s%s%s",
-                    (instr->rank) & RANK_EASY    ? "E" : "",
-                    (instr->rank) & RANK_NORMAL  ? "N" : "",
-                    (instr->rank) & RANK_HARD    ? "H" : "",
-                    (instr->rank) & RANK_LUNATIC ? "L" : "",
-                    !((instr->rank) & RANK_UNKNOWN1) ? "W" : "",
-                    !((instr->rank) & RANK_UNKNOWN2) ? "X" : "",
-                    !((instr->rank) & RANK_UNKNOWN3) ? "Y" : "",
-                    !((instr->rank) & RANK_UNKNOWN4) ? "Z" : "");
-                instr->string = strdup(temp);
+                if(instr->rank == 0xFF) instr->string = strdup("!*");
+                else {
+                    if (th10_has_overdrive(ecl->version)) {
+                        sprintf(temp, "!%s%s%s%s%s%s%s%s",
+                                (instr->rank) & RANK_EASY      ? "E" : "",
+                                (instr->rank) & RANK_NORMAL    ? "N" : "",
+                                (instr->rank) & RANK_HARD      ? "H" : "",
+                                (instr->rank) & RANK_LUNATIC   ? "L" : "",
+                                (instr->rank) & RANK_EXTRA     ? "X" : "",
+                                (instr->rank) & RANK_OVERDRIVE ? "O" : "",
+                                !((instr->rank) & RANK_ID_6)   ? "6" : "",
+                                !((instr->rank) & RANK_ID_7)   ? "7" : "");
+                    } else {
+                        sprintf(temp, "!%s%s%s%s%s%s%s%s",
+                                (instr->rank) & RANK_EASY      ? "E" : "",
+                                (instr->rank) & RANK_NORMAL    ? "N" : "",
+                                (instr->rank) & RANK_HARD      ? "H" : "",
+                                (instr->rank) & RANK_LUNATIC   ? "L" : "",
+                                !((instr->rank) & RANK_ID_4)   ? "4" : "",
+                                !((instr->rank) & RANK_ID_5)   ? "5" : "",
+                                !((instr->rank) & RANK_ID_6)   ? "6" : "",
+                                !((instr->rank) & RANK_ID_7)   ? "7" : "");
+                    }
+                    instr->string = strdup(temp);
+                }
                 break;
             case THECL_INSTR_LABEL:
                 sprintf(temp, "%s_%u:", sub->name, instr->offset);
@@ -1702,6 +1724,7 @@ th10_parse(
     state.instr_time = 0;
     state.instr_rank = 0xff;
     state.version = version;
+    state.has_overdrive_difficulty = th10_has_overdrive(version);
     list_init(&state.expressions);
     state.current_sub = NULL;
     state.ecl = thecl_new();

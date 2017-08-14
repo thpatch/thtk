@@ -35,6 +35,7 @@
 #include "list.h"
 #include "value.h"
 #include "eclmap.h"
+#include "util.h"
 
 typedef enum {
     THECL_INSTR_INSTR,
@@ -43,14 +44,18 @@ typedef enum {
     THECL_INSTR_LABEL
 } thecl_instr_type;
 
-#define RANK_EASY    (1 << 0)
-#define RANK_NORMAL  (1 << 1)
-#define RANK_HARD    (1 << 2)
-#define RANK_LUNATIC (1 << 3)
-#define RANK_UNKNOWN1 (1 << 4)
-#define RANK_UNKNOWN2 (1 << 5)
-#define RANK_UNKNOWN3 (1 << 6)
-#define RANK_UNKNOWN4 (1 << 7)
+#define RANK_EASY      (1 << 0)
+#define RANK_NORMAL    (1 << 1)
+#define RANK_HARD      (1 << 2)
+#define RANK_LUNATIC   (1 << 3)
+#define RANK_EXTRA     (1 << 4)
+#define RANK_OVERDRIVE (1 << 5)
+
+// Used to describe unused ranks
+#define RANK_ID_4      (1 << 4)
+#define RANK_ID_5      (1 << 5)
+#define RANK_ID_6      (1 << 6)
+#define RANK_ID_7      (1 << 7)
 
 typedef struct thecl_param_t {
     int type;
@@ -157,6 +162,7 @@ typedef struct {
     int instr_time;
     int instr_rank/* = 0xff*/;
     unsigned int version;
+    bool has_overdrive_difficulty;
     list_t expressions;
     thecl_sub_t* current_sub;
     thecl_t* ecl;

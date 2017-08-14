@@ -69,6 +69,8 @@ typedef struct expression_t {
     int result_type;
 } expression_t;
 
+static int parse_rank(const parser_state_t* state, const char* value);
+
 static expression_t* expression_load_new(const parser_state_t* state, thecl_param_t* value);
 static expression_t* expression_operation_new(const parser_state_t* state, const int* symbols, expression_t** operands);
 static expression_t* expression_address_operation_new(const parser_state_t* state, const int* symbols, thecl_param_t* value);
@@ -132,7 +134,7 @@ void set_time(parser_state_t* state, int new_time);
 %token <string> TEXT "text"
 %token <integer> INTEGER "integer"
 %token <floating> FLOATING "float"
-%token <integer> RANK "rank"
+%token <string> RANK "rank"
 %token COMMA ","
 %token COLON ":"
 %token SEMICOLON ";"
@@ -366,8 +368,8 @@ Instructions:
     | Instructions INTEGER ":" { set_time(state, $2); }
     | Instructions IDENTIFIER ":" { label_create(state, $2); free($2); }
     | Instructions Instruction ";"
-    | RANK { state->instr_rank = $1; } Instruction ";"
-    | Instructions RANK { state->instr_rank = $2; } Instruction ";"
+    | RANK { state->instr_rank = parse_rank(state, $1); } Instruction ";"
+    | Instructions RANK { state->instr_rank = parse_rank(state, $2); } Instruction ";"
     ;
 
     /* TODO: Check the given parameters against the parameters expected for the
@@ -644,8 +646,8 @@ instr_set_types(
         else
             new_type = *format;
 
-        if (new_type != param->type && 
-            !(param->type == 'z' && (new_type == 'm' || new_type == 'x')) && 
+        if (new_type != param->type &&
+            !(param->type == 'z' && (new_type == 'm' || new_type == 'x')) &&
             !(param->type == 'S' && new_type == 's')) {
 
             fprintf(stderr, "%s:instr_set_types: in sub %s: wrong argument type for opcode %d (expected: %c, got: %c)\n", argv0, state->current_sub->name, instr->id, new_type, param->type);
@@ -656,7 +658,6 @@ instr_set_types(
         if (*format != '*')
             ++format;
     }
-    
 
     return;
 }
@@ -729,6 +730,65 @@ instr_add(
     list_append_new(&sub->instrs, instr);
     instr->offset = sub->offset;
     sub->offset += instr->size;
+}
+
+static bool
+check_rank_flag(
+    const parser_state_t* state,
+    const char* value,
+    char flag)
+{
+    int count = 0;
+    for (int i=0; value[i]; i++) if(value[i] == flag) count++;
+
+    if (count == 0) return false;
+    else if(count == 1) return true;
+    else {
+        fprintf(stderr, "%s:check_rank_flag: in sub %s: duplicate rank flag %c in %s\n", argv0, state->current_sub->name, flag, value);
+        return true;
+    }
+}
+
+static int
+parse_rank(
+    const parser_state_t* state,
+    const char* value)
+{
+    int rank = state->has_overdrive_difficulty? 0xC0 : 0xF0;
+
+    if (check_rank_flag(state, value, '*')) {
+        return 0xFF;
+    } else {
+        if (check_rank_flag(state, value, 'E')) rank |= RANK_EASY;
+        if (check_rank_flag(state, value, 'N')) rank |= RANK_NORMAL;
+        if (check_rank_flag(state, value, 'H')) rank |= RANK_HARD;
+        if (check_rank_flag(state, value, 'L')) rank |= RANK_LUNATIC;
+
+        if (state->has_overdrive_difficulty) {
+          if (check_rank_flag(state, value, 'X')) rank |= RANK_EXTRA;
+          if (check_rank_flag(state, value, 'O')) rank |= RANK_OVERDRIVE;
+        } else {
+          if (check_rank_flag(state, value, '4')) rank &= ~RANK_ID_4;
+          if (check_rank_flag(state, value, '5')) rank &= ~RANK_ID_5;
+        }
+
+        if (check_rank_flag(state, value, '6')) rank &= ~RANK_ID_6;
+        if (check_rank_flag(state, value, '7')) rank &= ~RANK_ID_7;
+
+        if (state->has_overdrive_difficulty && (check_rank_flag(state, value, '4') || check_rank_flag(state, value, '5')))
+            fprintf(stderr, "%s:parse_rank: in sub %s: Rank flags 4 and 5 are not used in TH13+. Use X for extra, and O for overdrive instead.\n",
+                    argv0, state->current_sub->name);
+        if (!state->has_overdrive_difficulty && (check_rank_flag(state, value, 'X') || check_rank_flag(state, value, 'O')))
+            fprintf(stderr, "%s:parse_rank: in sub %s: Rank flags X and O do not exist before TH13. Use 4 and 5 for the unused difficulties flags instead.\n",
+                    argv0, state->current_sub->name);
+        if (check_rank_flag(state, value, 'W') || check_rank_flag(state, value, 'Y') || check_rank_flag(state, value, 'Z'))
+            fprintf(stderr, "%s:parse_rank: in sub %s: Rank flags W, X, Y and Z no longer refer to unused difficulties 4-7. %s\n",
+                    argv0, state->current_sub->name,
+                    state->has_overdrive_difficulty ? "In TH13+, use 6 and 7 for the remaining two unused difficulties, X for extra, and O for overdrive."
+                                                    : "Before TH13, use 4, 5, 6, and 7 to refer to the unused difficulties.");
+
+        return rank;
+    }
 }
 
 static expression_t*
@@ -845,7 +905,7 @@ sub_begin(
     sub->vars = NULL;
     sub->offset = 0;
     list_init(&sub->labels);
-    
+
     // Touhou expects the list of subs to be sorted by name.
     thecl_sub_t* iter_sub;
     list_for_each(&state->ecl->subs, iter_sub) {

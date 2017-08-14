@@ -821,15 +821,18 @@ th06_dump(
                 fprintf(out, "%u:\n", instr->time);
                 break;
             case THECL_INSTR_RANK:
-                fprintf(out, "!%s%s%s%s%s%s%s%s",
-                    (instr->rank) & RANK_EASY    ? "E" : "",
-                    (instr->rank) & RANK_NORMAL  ? "N" : "",
-                    (instr->rank) & RANK_HARD    ? "H" : "",
-                    (instr->rank) & RANK_LUNATIC ? "L" : "",
-                    !((instr->rank) & RANK_UNKNOWN1) ? "W" : "",
-                    !((instr->rank) & RANK_UNKNOWN2) ? "X" : "",
-                    !((instr->rank) & RANK_UNKNOWN3) ? "Y" : "",
-                    !((instr->rank) & RANK_UNKNOWN4) ? "Z" : "");
+                if(instr->rank == 0xFF) fprintf(out, "!*");
+                else {
+                    fprintf(out, "!%s%s%s%s%s%s%s%s",
+                        (instr->rank) & RANK_EASY    ? "E" : "",
+                        (instr->rank) & RANK_NORMAL  ? "N" : "",
+                        (instr->rank) & RANK_HARD    ? "H" : "",
+                        (instr->rank) & RANK_LUNATIC ? "L" : "",
+                        !((instr->rank) & RANK_ID_4) ? "W" : "",
+                        !((instr->rank) & RANK_ID_5) ? "X" : "",
+                        !((instr->rank) & RANK_ID_6) ? "Y" : "",
+                        !((instr->rank) & RANK_ID_7) ? "Z" : "");
+                }
                 break;
             case THECL_INSTR_INSTR: {
                 eclmap_entry_t *ent = eclmap_get(g_eclmap, instr->id);
@@ -912,6 +915,7 @@ th06_parse(
     state.instr_time = 0;
     state.instr_rank = 0xff;
     state.version = version;
+    state.has_overdrive_difficulty = false;
     list_init(&state.expressions);
     state.current_sub = NULL;
     state.ecl = thecl_new();
