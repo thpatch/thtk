@@ -1236,7 +1236,7 @@ th10_trans(
     if (!ecl)
         return;
 
-    list_for_each(&ecl->subs, sub) {
+    if (!g_ecl_rawoutput) list_for_each(&ecl->subs, sub) {
         list_node_t* node;
         list_node_t* node_next;
         list_for_each_node_safe(&sub->instrs, node, node_next) {
@@ -1404,13 +1404,15 @@ th10_stringify_param(
     }
     default: {
         thecl_instr_t* rep = th10_stack_index(node, *removed);
-        if (param->value.type == 'S' &&
+        if (!g_ecl_rawoutput &&
+            param->value.type == 'S' &&
             param->stack &&
             param->value.val.S >= 0 &&
             (param->value.val.S % 4) == 0) {
             sprintf(temp, "$%c", 'A' + param->value.val.S / 4);
         } else if (
             /* TODO: Also check that it is a multiple of four. */
+            !g_ecl_rawoutput &&
             param->value.type == 'f' &&
             param->stack &&
             param->value.val.f >= 0.0f) {
@@ -1529,11 +1531,13 @@ th10_dump(
         }
         fprintf(out, ")\n{\n");
 
-        fprintf(out, "    var");
-        for (p = sub->arity * 4; p < sub->stack; p += 4) {
-            fprintf(out, " %c", 'A' + p / 4);
+        if(!g_ecl_rawoutput) {
+            fprintf(out, "    var");
+            for (p = sub->arity * 4; p < sub->stack; p += 4) {
+                fprintf(out, " %c", 'A' + p / 4);
+            }
+            fprintf(out, ";\n");
         }
-        fprintf(out, ";\n");
 
         list_node_t* node;
         list_node_t* node_next;
@@ -1564,7 +1568,7 @@ th10_dump(
                 instr->string = strdup(temp);
                 break;
             case THECL_INSTR_INSTR: {
-                const expr_t* expr = expr_get_by_id(10, instr->id);
+                const expr_t* expr = g_ecl_rawoutput ? NULL : expr_get_by_id(10, instr->id);
 
                 if (expr) {
                     char pat[4];

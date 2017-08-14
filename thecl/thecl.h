@@ -30,6 +30,7 @@
 #define THECL_H_
 
 #include <config.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include "list.h"
 #include "value.h"
@@ -169,5 +170,6 @@ extern FILE* yyin;
 extern int yyparse(parser_state_t*);
 
 extern eclmap_t* g_eclmap;
+extern bool g_ecl_rawoutput;
 
 #endif

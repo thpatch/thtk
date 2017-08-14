@@ -39,6 +39,7 @@ extern const thecl_module_t th06_ecl;
 extern const thecl_module_t th10_ecl;
 
 eclmap_t* g_eclmap = NULL;
+bool g_ecl_rawoutput = false;
 
 thecl_t*
 thecl_new(
@@ -172,6 +173,7 @@ print_usage(void)
            "OPTION can be:\n"
            "  #  # can be 6, 7, 8, 9, 95, 10, 103 (for Uwabami Breakers), 11, 12, 125, 128, 13, 14, 143, 15, or 16 (required)\n"
            "  m  use map file for translating mnemonics\n"
+           "  r  output raw ECL opcodes, applying minimal transformations\n"
            "Report bugs to <" PACKAGE_BUGREPORT ">.\n", argv0);
 }
 
@@ -183,7 +185,7 @@ main(int argc, char* argv[])
     unsigned int version = 0;
     int mode;
     const thecl_module_t* module = NULL;
-    char options[] = "m";
+    char options[] = "mr";
 
     current_input = "(stdin)";
     current_output = "(stdout)";
@@ -250,6 +252,8 @@ main(int argc, char* argv[])
             }
             ++argp;
         }
+
+        if(!strchr(options, 'r')) g_ecl_rawoutput = true;
 
         if (argc > argp) {
             current_input = argv[argp];
