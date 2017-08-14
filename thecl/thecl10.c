@@ -923,19 +923,23 @@ static const id_format_pair_t th13_fmts[] = {
 
 /* Inherits th13_fmts */
 static const id_format_pair_t th14_fmts[] = {
-    { 94, "ffff" },
     { 336, "SS" },
     { 337, "SSfff" },
     { 440, "f" },
     { 441, "SSf" },
+    { 442 "f" },
+    { 443 "SSf" },
     { 444, "f" },
     { 445, "SSf" },
+    { 446, "f" },
+    { 447, "SSf" }
+    { 563 "S },
     { 564, "f" },
     { 565, "f" },
+    { 566 "" },
     { 567, "S" },
     { 568, "S" },
     { 641, "S" },
-    { 802, "S" },
     { 901, "" },
     { 902, "" },
     { -1, NULL }
