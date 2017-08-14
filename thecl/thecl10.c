@@ -1061,6 +1061,7 @@ th10_open(
         return NULL;
 
     ecl = thecl_new();
+    ecl->version = version;
 
     header = (th10_header_t*)map;
     if (strncmp(header->magic, "SCPT", 4) != 0) {
@@ -1568,7 +1569,7 @@ th10_dump(
                 instr->string = strdup(temp);
                 break;
             case THECL_INSTR_INSTR: {
-                const expr_t* expr = g_ecl_rawoutput ? NULL : expr_get_by_id(10, instr->id);
+                const expr_t* expr = g_ecl_rawoutput ? NULL : expr_get_by_id(ecl->version, instr->id);
 
                 if (expr) {
                     char pat[4];

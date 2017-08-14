@@ -53,6 +53,11 @@ th10_alternatives[] = {
 };
 
 static const expr_t
+th10_no_expressions[] = {
+    { 0,           0,   0, NULL, 0, NULL, NULL }
+};
+
+static const expr_t
 th10_expressions[] = {
     /* The program checks against the number of params, as well as the
      * requested stack depth, and does the replacements. */
@@ -101,18 +106,18 @@ th10_expressions[] = {
 static const expr_t*
 expr_get_table(unsigned int version)
 {
-    if (   version != 10
-        && version != 11
-        && version != 12
-        && version != 125
-        && version != 128
-        && version != 13
-        && version != 14
-        && version != 143
-        && version != 15
-        && version != 16)
-        return NULL;
-    return th10_expressions;
+    if (   version == 10
+        || version == 11
+        || version == 12
+        || version == 125
+        || version == 128
+        || version == 13
+        || version == 14
+        || version == 143
+        || version == 15
+        || version == 16)
+        return th10_expressions;
+    return th10_no_expressions;
 }
 
 const expr_t*
