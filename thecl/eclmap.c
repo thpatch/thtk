@@ -98,6 +98,8 @@ eclmap_set(
     if(!ent2) {
         ent2 = eclmap_append_new(map, ent1->opcode);
     }
+    
+    ent2->type = ent1->type;
 
     if(ent1->signature) {
         free(ent2->signature);
@@ -113,30 +115,27 @@ eclmap_set(
 eclmap_entry_t*
 eclmap_get(
     eclmap_t* map,
-    int opcode)
+    int opcode,
+    eclmap_entry_type_t type)
 {
     eclmap_entry_t* ent;
     list_for_each(map, ent) {
-        if(ent && ent->opcode == opcode) {
+        if(ent && ent->type == type && ent->opcode == opcode) {
             break;
         }
     }
-
-    if(!ent) {
-        ent = eclmap_append_new(map, opcode);
-    }
-
     return ent;
 }
 
 eclmap_entry_t*
 eclmap_find(
     eclmap_t* map,
-    const char* mnemonic)
+    const char* mnemonic,
+    eclmap_entry_type_t type)
 {
     eclmap_entry_t* ent;
     list_for_each(map, ent) {
-        if(ent && ent->mnemonic && !strcmp(ent->mnemonic, mnemonic)) {
+        if(ent && ent->type == type && ent->mnemonic && !strcmp(ent->mnemonic, mnemonic)) {
             break;
         }
     }
@@ -195,12 +194,16 @@ eclmap_load(
         /* validate signature */
         if(ptr[0] == '?') {
             ent.signature = NULL;
-        }
-        else {
+            ent.type = ECLMAP_OPCODE;
+        } else if(ptr[0] == '$' || ptr[0] == '%') {
+            ent.signature = ptr;
+            ent.type = ECLMAP_PARAM;
+        } else {
             ent.signature = ptr;
             if(ptr[0] == '_') ptr[0] = '\0'; /* allow empty strings to be specified with "_" */
             /* TODO: validate signature */
             fprintf(stderr, "%s:%s:%u: warning: signature mapping is not yet implemented\n",argv0,fn,linecount);
+            ent.type = ECLMAP_OPCODE;
         }
 
         /* parse mnemonic */

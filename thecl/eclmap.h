@@ -31,11 +31,17 @@
 #define ECLMAP_H_
 
 #include <config.h>
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
 #include "list.h"
 
+typedef enum eclmap_entry_type_t {
+    ECLMAP_OPCODE, ECLMAP_PARAM
+} eclmap_entry_type_t;
+
 typedef struct eclmap_entry_t {
+    eclmap_entry_type_t type;
     int opcode;
     char* signature;
     char* mnemonic;
@@ -50,9 +56,9 @@ void eclmap_free(eclmap_t* map);
 /* Sets an entry in a eclmap */
 void eclmap_set(eclmap_t* map, const eclmap_entry_t* ent);
 /* Finds an entry in a eclmap by opcode */
-eclmap_entry_t* eclmap_get(eclmap_t* map, int opcode);
+eclmap_entry_t* eclmap_get(eclmap_t* map, int opcode, eclmap_entry_type_t type);
 /* Finds an entry in a eclmap by mnemonic */
-eclmap_entry_t* eclmap_find(eclmap_t* map, const char* mnemonic);
+eclmap_entry_t* eclmap_find(eclmap_t* map, const char* mnemonic, eclmap_entry_type_t type);
 /* Loads entries from eclmap file (thread unsafe) */
 void eclmap_load(eclmap_t* map, FILE* f, const char* fn);
 

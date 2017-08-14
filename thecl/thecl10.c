@@ -30,6 +30,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 #include "expr.h"
 #include "file.h"
 #include "program.h"
@@ -1465,6 +1466,15 @@ th10_stringify_param(
             else
                 sprintf(temp, "_f(%s)", rep->string);
         } else {
+            if (param->stack && (param->value.type == 'f' || param->value.type == 'S')) {
+                int val = param->value.type == 'f' ? floor(param->value.val.f) : param->value.val.S;
+                eclmap_entry_t* ent = eclmap_get(g_eclmap, val, ECLMAP_PARAM);
+                if (ent && ent->mnemonic) {
+                    sprintf(temp, "%c%s", param->value.type == 'f' ? '%' : '$', ent->mnemonic);
+                    return strdup(temp);
+                }
+            }
+            
             char* ret = th10_param_to_text(param);
             sprintf(temp, "%s%s%s",
                 param->stack ? "[" : "",
@@ -1472,7 +1482,7 @@ th10_stringify_param(
                 param->stack ? "]" : "");
             free(ret);
         }
-
+        
         return strdup(temp);
     }
     }
@@ -1492,8 +1502,8 @@ th10_stringify_instr(
     if (instr->type != THECL_INSTR_INSTR)
         return;
 
-    eclmap_entry_t *ent = eclmap_get(g_eclmap, instr->id);
-    if(ent->mnemonic) {
+    eclmap_entry_t *ent = eclmap_get(g_eclmap, instr->id, ECLMAP_OPCODE);
+    if(ent && ent->mnemonic) {
         sprintf(string, "%s(", ent->mnemonic);
     }
     else {

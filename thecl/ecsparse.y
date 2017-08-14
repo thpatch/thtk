@@ -383,7 +383,7 @@ Instruction:
         }
         list_free_nodes(&state->expressions);
 
-        eclmap_entry_t* ent = eclmap_find(g_eclmap, $1);
+        eclmap_entry_t* ent = eclmap_find(g_eclmap, $1, ECLMAP_OPCODE);
         if(!ent) {
             yyerror(state, "unknown mnemonic");
         }
@@ -958,6 +958,11 @@ var_find(
     thecl_sub_t* sub,
     const char* name)
 {
+    // TODO: Check if a local is shadowed by a global.
+
+    eclmap_entry_t* ent = eclmap_find(g_eclmap, name, ECLMAP_PARAM);
+    if (ent) return ent->opcode;
+
     char buf[256];
     unsigned int i;
     for (i = 0; i < sub->var_count; ++i) {

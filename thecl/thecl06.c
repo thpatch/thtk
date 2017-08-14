@@ -836,8 +836,8 @@ th06_dump(
                 }
                 break;
             case THECL_INSTR_INSTR: {
-                eclmap_entry_t *ent = eclmap_get(g_eclmap, instr->id);
-                if(ent->mnemonic) {
+                eclmap_entry_t *ent = eclmap_get(g_eclmap, instr->id, ECLMAP_OPCODE);
+                if(ent && ent->mnemonic) {
                     fprintf(out, "    %s(", ent->mnemonic);
                 }
                 else {
@@ -851,6 +851,7 @@ th06_dump(
                     } else {
                         first = 0;
                     }
+
                     char* ret = th06_param_to_text(param);
                     fprintf(out, "%s%s%s",
                         param->stack ? "[" : "",
