@@ -97,6 +97,7 @@
 "||"       return OR;
 "&&"       return AND;
 "^"        return XOR;
+"--"       return DEC;
 
 "$"        return DOLLAR;
 

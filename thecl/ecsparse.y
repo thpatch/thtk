@@ -71,6 +71,7 @@ typedef struct expression_t {
 
 static expression_t* expression_load_new(const parser_state_t* state, thecl_param_t* value);
 static expression_t* expression_operation_new(const parser_state_t* state, const int* symbols, expression_t** operands);
+static expression_t* expression_address_operation_new(const parser_state_t* state, const int* symbols, thecl_param_t* value);
 static void expression_output(parser_state_t* state, expression_t* expr);
 static void expression_free(expression_t* expr);
 #define EXPR_22(a, b, A, B) \
@@ -79,6 +80,8 @@ static void expression_free(expression_t* expr);
     expression_operation_new(state, (int[]){ a, 0 }, (expression_t*[]){ A, B, NULL })
 #define EXPR_11(a, A) \
     expression_operation_new(state, (int[]){ a, 0 }, (expression_t*[]){ A, NULL })
+#define EXPR_1A(a, A) \
+    expression_address_operation_new(state, (int[]){ a, 0 }, A)
 
 /* Bison things. */
 void yyerror(parser_state_t*, const char*);
@@ -198,6 +201,7 @@ void set_time(parser_state_t* state, int new_time);
 %token AND "&&"
 %token OR "||"
 %token XOR "^"
+%token DEC "--"
 
 %token DOLLAR "$"
 
@@ -225,6 +229,7 @@ void set_time(parser_state_t* state, int new_time);
 
 %nonassoc ADD ADDI ADDF SUBTRACT SUBTRACTI SUBTRACTF MULTIPLY MULTIPLYI MULTIPLYF DIVIDE DIVIDEI DIVIDEF EQUAL EQUALI EQUALF INEQUAL INEQUALI INEQUALF LT LTI LTF LTEQ LTEQI LTEQF GT GTI GTF GTEQ GTEQI GTEQF MODULO OR AND XOR
 %left NOT
+%right DEC
 
 %%
 
@@ -522,6 +527,7 @@ Expression:
     | Expression "||"  Expression { $$ = EXPR_12(OR,                   $1, $3); }
     | Expression "&&"  Expression { $$ = EXPR_12(AND,                  $1, $3); }
     | Expression "^"   Expression { $$ = EXPR_12(XOR,                  $1, $3); }
+    | Address "--"                { $$ = EXPR_1A(DEC,                  $1); }
     ;
 
 Address:
@@ -736,6 +742,30 @@ expression_load_new(
 }
 
 static expression_t*
+expression_address_operation_new(
+    const parser_state_t* state,
+    const int* symbols,
+    thecl_param_t* value)
+{
+    for (; *symbols; ++symbols) {
+        const expr_t* expr = expr_get_by_symbol(state->version, *symbols);
+
+        if (value->type != expr->param_format[0])
+            continue;
+
+        expression_t* ret = malloc(sizeof(expression_t));
+        ret->type = EXPRESSION_VAL;
+        ret->id = expr->id;
+        ret->value = value;
+        ret->result_type = expr->return_type;
+
+        return ret;
+    }
+
+    return NULL;
+}
+
+static expression_t*
 expression_operation_new(
     const parser_state_t* state,
     const int* symbols,
@@ -744,21 +774,23 @@ expression_operation_new(
     for (; *symbols; ++symbols) {
         const expr_t* expr = expr_get_by_symbol(state->version, *symbols);
 
-        for (size_t s = 0; s < expr->stack_arity; ++s) {
-            if (operands[s]->result_type == expr->stack_formats[s]) {
-                expression_t* ret = malloc(sizeof(expression_t));
-                ret->type = EXPRESSION_OP;
-                ret->id = expr->id;
-                ret->value = NULL;
-                list_init(&ret->children);
-                for (size_t o = 0; o < expr->stack_arity; ++o) {
-                    list_append_new(&ret->children, operands[o]);
-                }
-                ret->result_type = expr->return_type;
+        for (size_t s = 0; s < expr->stack_arity; ++s)
+            if (operands[s]->result_type != expr->stack_formats[s])
+                goto continue_outer;
 
-                return ret;
-            }
+        expression_t* ret = malloc(sizeof(expression_t));
+        ret->type = EXPRESSION_OP;
+        ret->id = expr->id;
+        ret->value = NULL;
+        list_init(&ret->children);
+        for (size_t o = 0; o < expr->stack_arity; ++o) {
+            list_append_new(&ret->children, operands[o]);
         }
+        ret->result_type = expr->return_type;
+
+        return ret;
+
+        continue_outer: ;
     }
 
     return NULL;

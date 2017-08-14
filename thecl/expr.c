@@ -100,6 +100,7 @@ th10_expressions[] = {
     { OR,         73, 'S', NULL, 2, "SS", "s1 || s0" },
     { AND,        74, 'S', NULL, 2, "SS", "s1 && s0" },
     { XOR,        75, 'S', NULL, 2, "SS", "s1 ^ s0" },
+    { DEC,        78, 'S',  "S", 0, NULL, "p0--" },
     { 0,           0,   0, NULL, 0, NULL, NULL }
 };
 
