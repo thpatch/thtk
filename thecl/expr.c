@@ -95,7 +95,7 @@ th10_expressions[] = {
     { GTF,        68, 'S', NULL, 2, "ff", "s1 > s0" },
     { GTEQI,      69, 'S', NULL, 2, "SS", "s1 >= s0" },
     { GTEQF,      70, 'S', NULL, 2, "ff", "s1 >= s0" },
-    { NOT,        71, 'S', NULL, 1, "SS", "!s0" },
+    { NOT,        71, 'S', NULL, 1,  "S", "!s0" },
 /*  { XXX,        72,   0, NULL, 0, NULL, NULL },*/
     { OR,         73, 'S', NULL, 2, "SS", "s1 || s0" },
     { AND,        74, 'S', NULL, 2, "SS", "s1 && s0" },
