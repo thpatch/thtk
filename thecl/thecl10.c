@@ -1577,7 +1577,10 @@ th10_dump(
                 instr->string = strdup(temp);
                 break;
             case THECL_INSTR_RANK:
-                if(instr->rank == 0xFF) instr->string = strdup("!*");
+                if(instr->rank == 0xFF) 
+                    instr->string = strdup("!*");
+                else if(instr->rank == (th10_has_overdrive(ecl->version) ? 0xC0 : 0xF0)) 
+                    instr->string = strdup("!-");
                 else {
                     if (th10_has_overdrive(ecl->version)) {
                         sprintf(temp, "!%s%s%s%s%s%s%s%s",

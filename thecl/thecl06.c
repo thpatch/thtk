@@ -822,6 +822,7 @@ th06_dump(
                 break;
             case THECL_INSTR_RANK:
                 if(instr->rank == 0xFF) fprintf(out, "!*");
+                else if(instr->rank == 0xF0) fprintf(out, "!-");
                 else {
                     fprintf(out, "!%s%s%s%s%s%s%s%s",
                         (instr->rank) & RANK_EASY    ? "E" : "",

@@ -124,7 +124,7 @@ ins_[0-9]+ {
     yylval.integer = strtol(yytext, NULL, 16);
     return INTEGER;
 }
-![*ENHLWXYZO4567]+ {
+![-*ENHLWXYZO4567]+ {
     yylval.string = strdup(yytext + 1);
     return RANK;
 }

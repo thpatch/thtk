@@ -744,7 +744,7 @@ check_rank_flag(
     if (count == 0) return false;
     else if(count == 1) return true;
     else {
-        fprintf(stderr, "%s:check_rank_flag: in sub %s: duplicate rank flag %c in %s\n", argv0, state->current_sub->name, flag, value);
+        fprintf(stderr, "%s:check_rank_flag: in sub %s: duplicate rank flag %c in '%s'\n", argv0, state->current_sub->name, flag, value);
         return true;
     }
 }
@@ -757,7 +757,13 @@ parse_rank(
     int rank = state->has_overdrive_difficulty? 0xC0 : 0xF0;
 
     if (check_rank_flag(state, value, '*')) {
+        if (strlen(value) != 1) 
+            fprintf(stderr, "%s:parse_rank: in sub %s: * should not be used with other rank flags.\n", argv0, state->current_sub->name);
         return 0xFF;
+    } else if (check_rank_flag(state, value, '-')) {
+        if (strlen(value) != 1) 
+            fprintf(stderr, "%s:parse_rank: in sub %s: - should not be used with other rank flags.\n", argv0, state->current_sub->name);
+        return rank;
     } else {
         if (check_rank_flag(state, value, 'E')) rank |= RANK_EASY;
         if (check_rank_flag(state, value, 'N')) rank |= RANK_NORMAL;
