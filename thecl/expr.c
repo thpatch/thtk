@@ -107,6 +107,7 @@ static const expr_t*
 expr_get_table(unsigned int version)
 {
     if (   version == 10
+        || version == 103
         || version == 11
         || version == 12
         || version == 125
