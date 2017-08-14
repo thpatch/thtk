@@ -1344,7 +1344,7 @@ th10_stack_size(
         if (!instr->op_type)
             break;
         ++ret;
-        node = node->next;
+        node = node->prev;
     }
 
     return ret;
