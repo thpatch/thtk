@@ -946,6 +946,9 @@ static const id_format_pair_t th14_fmts[] = {
 };
 
 static const id_format_pair_t th143_fmts[] = {
+    { 1004, "" },
+    { 1005, "" },
+    { 1006, "" },
     { -1, NULL }
 };
 
