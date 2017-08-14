@@ -253,7 +253,13 @@ main(int argc, char* argv[])
             ++argp;
         }
 
-        if(!strchr(options, 'r')) g_ecl_rawoutput = true;
+        if(!strchr(options, 'r')) {
+            if (mode != 'd') {
+                fprintf(stderr, "%s: 'r' option cannot be used while compiling\n", argv0);
+                exit(1);
+            }
+            g_ecl_rawoutput = true;
+        }
 
         if (argc > argp) {
             current_input = argv[argp];
