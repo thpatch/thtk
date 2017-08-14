@@ -727,7 +727,7 @@ static const id_format_pair_t th13_fmts[] = {
     { 313, "S" },
     { 316, "SS" },
     { 317, "SS" },
-    { 318, "SS" },
+    { 318, "" },
     { 320, "Sff" },
     { 321, "mSSSSS" },
     { 322, "SS" },
