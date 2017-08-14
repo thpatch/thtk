@@ -1736,6 +1736,19 @@ th10_instr_serialize(
     unsigned char* param_data = ret->data;
     int param_count = 0;
 
+    const char* expected_format = th10_find_format(version, instr->id);
+    if (expected_format == NULL)
+        fprintf(stderr, "%s:th10_instr_serialize: in sub %s: instruction with id %d is not known to exist in version %d\n", argv0, sub->name, instr->id, version);
+    else {
+        list_for_each(&instr->params, param) {
+            if (expected_format[0] == 0)
+                fprintf(stderr, "%s:th10_instr_serialize: in sub %s: too many arguments for opcode %d\n", argv0, sub->name, instr->id);
+            if (expected_format[0] != '*') expected_format++;
+        }
+        if (expected_format[0] != '*' && expected_format[0] != 0)  
+            fprintf(stderr, "%s:th10_instr_serialize: in sub %s: too few arguments for opcode %d\n", argv0, sub->name, instr->id);
+    }
+
     list_for_each(&instr->params, param) {
         if (param->stack)
             ret->param_mask |= 1 << param_count;

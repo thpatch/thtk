@@ -644,8 +644,12 @@ instr_set_types(
         else
             new_type = *format;
 
-        if ((new_type != param->type) && (param->type != 'z' && (new_type == 'm' || new_type == 'x')))
-            fprintf(stderr, "%c -> %c\n", param->type, new_type);
+        if (new_type != param->type && 
+            !(param->type == 'z' && (new_type == 'm' || new_type == 'x')) && 
+            !(param->type == 'S' && new_type == 's')) {
+
+            fprintf(stderr, "%s:instr_set_types: in sub %s: wrong argument type for opcode %d (expected: %c, got: %c)\n", argv0, state->current_sub->name, instr->id, new_type, param->type);
+        }
 
         param->type = new_type;
 
