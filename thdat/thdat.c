@@ -263,8 +263,9 @@ thdat_create_wrapper(
 
     k = 0;
     /* TODO: Properly indicate when insertion fails. */
-#pragma omp parallel for
-    for (size_t i = 0; i < real_entry_count; ++i) {
+	ssize_t i;
+#pragma omp parallel for schedule(dynamic)
+    for (i = 0; i < real_entry_count; ++i) {
         thtk_error_t* error = NULL;
         thtk_io_t* entry_stream;
         off_t entry_size;
@@ -373,8 +374,9 @@ main(
         }
 
         if (argc > 3) {
-#pragma omp parallel for
-            for (int a = 3; a < argc; ++a) {
+			ssize_t a;
+#pragma omp parallel for schedule(dynamic)
+            for (a = 3; a < argc; ++a) {
                 thtk_error_t* error = NULL;
                 int entry_index;
 
@@ -398,8 +400,9 @@ main(
                 exit(1);
             }
 
-#pragma omp parallel for
-            for (ssize_t entry_index = 0; entry_index < entry_count; ++entry_index) {
+			ssize_t entry_index;
+#pragma omp parallel for schedule(dynamic)
+            for (entry_index = 0; entry_index < entry_count; ++entry_index) {
                 thtk_error_t* error = NULL;
                 if (!thdat_extract_file(state, entry_index, &error)) {
                     print_error(error);
