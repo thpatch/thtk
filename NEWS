@@ -1,6 +1,9 @@
 What's new in thtk 8
 ====================
 
+#### thanm
+- Support for TH16 has been added.
+
 #### thdat
 - Support for TH01 and TH16 has been added.
 - Fixed multi-threading support.
