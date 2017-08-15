@@ -11,6 +11,8 @@ What's new in thtk 8
 #### thecl
 - Support for TH16 has been added.
 - Many fixes to opcode parameter formats.
+- Improved difficulty flag handling in TH13+. This is a breaking change and
+  may cause issues when compiling existing ECL sources.
 - Added support for mapping ECL global variables and opcodes to human readable
   names.
 - Fixed the long broken expression decompilation support.
