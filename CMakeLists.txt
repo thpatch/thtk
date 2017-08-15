@@ -106,6 +106,11 @@ function(link_setargv target)
   endif()
 endfunction()
 
+if(MSVC)
+  set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MD")
+  set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MDd")
+endif()
+
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 add_subdirectory(util)
 include_directories(util)
