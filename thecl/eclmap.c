@@ -28,6 +28,7 @@
  */
 
 #include <config.h>
+#include <stdbool.h>
 #include <stddef.h>
 #include <string.h>
 #include <stdlib.h>
@@ -98,8 +99,6 @@ eclmap_set(
     if(!ent2) {
         ent2 = eclmap_append_new(map, ent1->opcode);
     }
-    
-    ent2->type = ent1->type;
 
     if(ent1->signature) {
         free(ent2->signature);
@@ -115,12 +114,11 @@ eclmap_set(
 eclmap_entry_t*
 eclmap_get(
     eclmap_t* map,
-    int opcode,
-    eclmap_entry_type_t type)
+    int opcode)
 {
     eclmap_entry_t* ent;
     list_for_each(map, ent) {
-        if(ent && ent->type == type && ent->opcode == opcode) {
+        if(ent && ent->opcode == opcode) {
             break;
         }
     }
@@ -130,12 +128,11 @@ eclmap_get(
 eclmap_entry_t*
 eclmap_find(
     eclmap_t* map,
-    const char* mnemonic,
-    eclmap_entry_type_t type)
+    const char* mnemonic)
 {
     eclmap_entry_t* ent;
     list_for_each(map, ent) {
-        if(ent && ent->type == type && ent->mnemonic && !strcmp(ent->mnemonic, mnemonic)) {
+        if(ent && ent->mnemonic && !strcmp(ent->mnemonic, mnemonic)) {
             break;
         }
     }
@@ -144,7 +141,8 @@ eclmap_find(
 
 void
 eclmap_load(
-    eclmap_t* map,
+    eclmap_t* opcodes,
+    eclmap_t* globals,
     FILE* f,
     const char* fn)
 {
@@ -164,6 +162,8 @@ eclmap_load(
 
     int linecount = 1;
     while(fgets(buffer, sizeof(buffer), f)) {
+        bool is_global = false;
+      
         char *ptr, *ptrend;
         eclmap_entry_t ent;
 
@@ -194,16 +194,14 @@ eclmap_load(
         /* validate signature */
         if(ptr[0] == '?') {
             ent.signature = NULL;
-            ent.type = ECLMAP_OPCODE;
         } else if(ptr[0] == '$' || ptr[0] == '%') {
             ent.signature = ptr;
-            ent.type = ECLMAP_PARAM;
+            is_global = true;
         } else {
             ent.signature = ptr;
             if(ptr[0] == '_') ptr[0] = '\0'; /* allow empty strings to be specified with "_" */
             /* TODO: validate signature */
             fprintf(stderr, "%s:%s:%u: warning: signature mapping is not yet implemented\n",argv0,fn,linecount);
-            ent.type = ECLMAP_OPCODE;
         }
 
         /* parse mnemonic */
@@ -238,6 +236,6 @@ eclmap_load(
             }
         }
 
-        eclmap_set(map, &ent);
+        eclmap_set(is_global ? globals : opcodes, &ent);
     }
 }

@@ -1468,7 +1468,7 @@ th10_stringify_param(
         } else {
             if (param->stack && (param->value.type == 'f' || param->value.type == 'S')) {
                 int val = param->value.type == 'f' ? floor(param->value.val.f) : param->value.val.S;
-                eclmap_entry_t* ent = eclmap_get(g_eclmap, val, ECLMAP_PARAM);
+                eclmap_entry_t* ent = eclmap_get(g_eclmap_global, val);
                 if (ent && ent->mnemonic) {
                     sprintf(temp, "%c%s", param->value.type == 'f' ? '%' : '$', ent->mnemonic);
                     return strdup(temp);
@@ -1502,7 +1502,7 @@ th10_stringify_instr(
     if (instr->type != THECL_INSTR_INSTR)
         return;
 
-    eclmap_entry_t *ent = eclmap_get(g_eclmap, instr->id, ECLMAP_OPCODE);
+    eclmap_entry_t *ent = eclmap_get(g_eclmap_opcode, instr->id);
     if(ent && ent->mnemonic) {
         sprintf(string, "%s(", ent->mnemonic);
     }

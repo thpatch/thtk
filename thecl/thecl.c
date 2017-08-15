@@ -38,7 +38,8 @@
 extern const thecl_module_t th06_ecl;
 extern const thecl_module_t th10_ecl;
 
-eclmap_t* g_eclmap = NULL;
+eclmap_t* g_eclmap_opcode = NULL;
+eclmap_t* g_eclmap_global = NULL;
 bool g_ecl_rawoutput = false;
 
 thecl_t*
@@ -230,7 +231,8 @@ main(int argc, char* argv[])
     {
     case 'c':
     case 'd': {
-        g_eclmap = eclmap_new();
+        g_eclmap_opcode = eclmap_new();
+        g_eclmap_global = eclmap_new();
 
         int argp = 2;
         if(!strchr(options, 'm')) {
@@ -242,7 +244,7 @@ main(int argc, char* argv[])
                         argv0, argv[argp], strerror(errno));
                     exit(1);
                 }
-                eclmap_load(g_eclmap, map_file, argv[argp]);
+                eclmap_load(g_eclmap_opcode, g_eclmap_global, map_file, argv[argp]);
                 fclose(map_file);
             }
             else {
@@ -304,7 +306,9 @@ main(int argc, char* argv[])
         }
         fclose(in);
         fclose(out);
-        eclmap_free(g_eclmap);
+        
+        eclmap_free(g_eclmap_opcode);
+        eclmap_free(g_eclmap_global);
 
         exit(0);
     }

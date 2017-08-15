@@ -836,7 +836,7 @@ th06_dump(
                 }
                 break;
             case THECL_INSTR_INSTR: {
-                eclmap_entry_t *ent = eclmap_get(g_eclmap, instr->id, ECLMAP_OPCODE);
+                eclmap_entry_t *ent = eclmap_get(g_eclmap_opcode, instr->id);
                 if(ent && ent->mnemonic) {
                     fprintf(out, "    %s(", ent->mnemonic);
                 }
