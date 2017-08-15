@@ -1,13 +1,45 @@
-What's new in thtk 7:
+What's new in thtk 8
+====================
 
-thdat: Support for TH14, TH143, TH15 has been added.
-thdat: Support for TH105, TH123 has been added. These are not tested, and may
-       behave wrongly.
-thdat: You can archive the whole directory now. Pass the directory name as the
-       argument.
-thecl: Support for TH14, TH143, TH15 has been added.
-thanm: Support for TH15 has been added.
-thmsg: Support for TH15 has been added.
+#### thdat
+- Support for TH01 and TH16 has been added.
+- Fixed multi-threading support.
+
+#### thecl
+- Support for TH16 has been added.
+- Many fixes to opcode parameter formats.
+- Added support for mapping ECL global variables and opcodes to human readable
+  names.
+- Fixed the long broken expression decompilation support.
+
+#### thmsg
+- Support for TH16 has been added.
+
+Please submit an issue at GitHub (https://github.com/thpatch/thtk/issues) if
+you find a bug.
+
+
+-------------------------------------------------------------------------------
+
+
+What's new in thtk 7
+====================
+
+#### thanm
+- Support for TH15 has been added.
+
+#### thdat
+- Support for TH14, TH143, TH15 has been added.
+- Support for TH105, TH123 has been added. These are not tested, and may
+  behave wrongly.
+- You can archive the whole directory now. Pass the directory name as the
+  argument.
+
+#### thecl  
+- Support for TH14, TH143, TH15 has been added.
+
+#### thmsg
+- Support for TH15 has been added.
 
 Support for TH143 is not tested. Please submit the issue at the GitHub project
 page(https://github.com/thpatch/thtk/issues) if you found a bug.
