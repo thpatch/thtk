@@ -1739,7 +1739,7 @@ th10_parse(
     state.instr_rank = 0xff;
     state.version = version;
     state.has_overdrive_difficulty = th10_is_post_th13(version);
-    state.uses_stack_offsets = th10_is_post_th13(version);version
+    state.uses_stack_offsets = th10_is_post_th13(version);
     list_init(&state.expressions);
     state.current_sub = NULL;
     state.ecl = thecl_new();
