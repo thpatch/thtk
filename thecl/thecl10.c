@@ -440,7 +440,7 @@ static const id_format_pair_t th12_fmts[] = {
     { 86, "fff" },
     { 87, "fffff" },
     { 88, "" },
-    { 89, "SSS" },
+    { 89, "fff" },
     { 256, "mffSSS" },
     { 257, "mffSSS" },
     { 258, "S" },
