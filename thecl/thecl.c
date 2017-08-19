@@ -152,6 +152,7 @@ param_new(
     thecl_param_t* param = calloc(1, sizeof(thecl_param_t));
     param->type = type;
     param->value.type = type;
+    param->is_expression_param = 0;
     return param;
 }
 

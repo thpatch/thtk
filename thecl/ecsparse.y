@@ -468,6 +468,7 @@ Cast_Type:
 
         $$ = param_new($2->result_type);
         $$->stack = 1;
+        $$->is_expression_param = $2->result_type;
         if ($2->result_type == 'S') {
             $$->value.val.S = -1;
         } else {
@@ -485,6 +486,7 @@ Instruction_Parameter:
     | Cast_Target2 Cast_Type {
         $$ = param_new('D');
         $$->stack = $2->stack;
+        $$->is_expression_param = $2->is_expression_param;
         $$->value.type = 'm';
         $$->value.val.m.length = 2 * sizeof(int32_t);
         $$->value.val.m.data = malloc(2 * sizeof(int32_t));
@@ -502,6 +504,7 @@ Instruction_Parameter:
 
         $$ = param_new($1);
         $$->stack = 1;
+        $$->is_expression_param = $1;
         if ($1 == 'S') {
             $$->value.val.S = -1;
         } else {
@@ -708,6 +711,24 @@ instr_new_list(
 
     instr->id = id;
     if (list) {
+        int param_id = -1;
+        if(state->uses_stack_offsets)
+            list_for_each(list, param) if(param->is_expression_param) {
+                if(param->value.type == 'S') {
+                    param->value.val.S = param_id;
+                } else if(param->value.type == 'f') {
+                    param->value.val.f = param_id;
+                } else if(param->value.type == 'D') {
+                    int32_t* D = (int32_t*) param->value.val.m.data;
+                    if (param->is_expression_param == 'S') {
+                        D[1] = param_id;
+                    } else {
+                        float as_float = param_id;
+                        memcpy(&D[1], &as_float, sizeof(float));
+                    }
+                }
+                param_id--;
+            }
         list_for_each(list, param) {
             ++instr->param_count;
             list_append_new(&instr->params, param);
@@ -754,7 +775,7 @@ parse_rank(
     const parser_state_t* state,
     const char* value)
 {
-    int rank = state->has_overdrive_difficulty? 0xC0 : 0xF0;
+    int rank = state->has_overdrive_difficulty ? 0xC0 : 0xF0;
 
     if (check_rank_flag(state, value, '*')) {
         if (strlen(value) != 1) 

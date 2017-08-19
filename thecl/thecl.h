@@ -61,6 +61,7 @@ typedef struct thecl_param_t {
     int type;
     value_t value;
     int stack;
+    char is_expression_param; // Temporary variable for ecsparse.y
 } thecl_param_t;
 
 thecl_param_t* param_new(
@@ -163,6 +164,7 @@ typedef struct {
     int instr_rank/* = 0xff*/;
     unsigned int version;
     bool has_overdrive_difficulty;
+    bool uses_stack_offsets;
     list_t expressions;
     thecl_sub_t* current_sub;
     thecl_t* ecl;

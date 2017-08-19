@@ -970,7 +970,7 @@ static const id_format_pair_t th16_fmts[] = {
     { -1, NULL }
 };
 
-static bool th10_has_overdrive(unsigned int version) {
+static bool th10_is_post_th13(unsigned int version) {
     switch(version) {
         case 10: case 103: case 11: case 12: case 125: case 128: return false;
         default: return true;
@@ -1379,6 +1379,7 @@ th10_stack_size(
  *       Have the p function wrap the param function. */
 static char*
 th10_stringify_param(
+    int version,
     thecl_sub_t* sub,
     list_node_t* node,
     size_t p,
@@ -1422,7 +1423,7 @@ th10_stringify_param(
         temp_param.type = new_value.type;
         temp_param.value = new_value;
         strcat(temp, " ");
-        char* str_temp = th10_stringify_param(sub, node, 0, &temp_param, removed, 1);
+        char* str_temp = th10_stringify_param(version, sub, node, 0, &temp_param, removed, 1);
         strcat(temp, str_temp);
         free(str_temp);
 
@@ -1446,7 +1447,7 @@ th10_stringify_param(
         } else if (
             param->value.type == 'S' &&
             param->stack &&
-            (param->value.val.S == -1 || param->value.val.S == -(*removed + 1)) &&
+            (th10_is_post_th13(version) ? param->value.val.S == -(*removed + 1) : param->value.val.S == -1) &&
             rep &&
             rep->op_type) {
             ++*removed;
@@ -1457,7 +1458,7 @@ th10_stringify_param(
         } else if (
             param->value.type == 'f' &&
             param->stack &&
-            (param->value.val.f == -1.0f || param->value.val.f == -(*removed + 1.0f)) &&
+            (th10_is_post_th13(version) ? param->value.val.f == -(*removed + 1.0f) : param->value.val.f == -1.0f) &&
             rep &&
             rep->op_type) {
             ++*removed;
@@ -1492,6 +1493,7 @@ th10_stringify_param(
 
 static void
 th10_stringify_instr(
+    int version,
     thecl_sub_t* sub,
     list_node_t* node)
 {
@@ -1510,19 +1512,18 @@ th10_stringify_instr(
         sprintf(string, "ins_%u(", instr->id);
     }
 
+    size_t removed = 0;
     for (p = 0; p < instr->param_count; ++p) {
-        size_t removed = 0;
-        char* param_string = th10_stringify_param(sub, node, p, NULL, &removed, 0);
+        char* param_string = th10_stringify_param(version, sub, node, p, NULL, &removed, 0);
         if (p != 0)
             strcat(string, ", ");
         strcat(string, param_string);
         free(param_string);
-
-        for (size_t s = 0; s < removed; ++s) {
-            list_node_t* prev = node->prev;
-            thecl_instr_free(prev->data);
-            list_del(&sub->instrs, prev);
-        }
+    }
+    for (size_t s = 0; s < removed; ++s) {
+        list_node_t* prev = node->prev;
+        thecl_instr_free(prev->data);
+        list_del(&sub->instrs, prev);
     }
     strcat(string, ")");
 
@@ -1589,10 +1590,10 @@ th10_dump(
             case THECL_INSTR_RANK:
                 if(instr->rank == 0xFF) 
                     instr->string = strdup("!*");
-                else if(instr->rank == (th10_has_overdrive(ecl->version) ? 0xC0 : 0xF0)) 
+                else if(instr->rank == (th10_is_post_th13(ecl->version) ? 0xC0 : 0xF0)) 
                     instr->string = strdup("!-");
                 else {
-                    if (th10_has_overdrive(ecl->version)) {
+                    if (th10_is_post_th13(ecl->version)) {
                         sprintf(temp, "!%s%s%s%s%s%s%s%s",
                                 (instr->rank) & RANK_EASY      ? "E" : "",
                                 (instr->rank) & RANK_NORMAL    ? "N" : "",
@@ -1670,7 +1671,7 @@ th10_dump(
                     for (size_t p = 0; p < param_count; ++p) {
                         size_t removed = 0;
                         sprintf(pat, "p%zu", p);
-                        char* rep_str = th10_stringify_param(sub, node, p, NULL, &removed, 0);
+                        char* rep_str = th10_stringify_param(ecl->version, sub, node, p, NULL, &removed, 0);
                         str_replace(temp, pat, rep_str);
                         free(rep_str);
 
@@ -1685,7 +1686,7 @@ th10_dump(
                     instr->op_type = expr->return_type;
                 } else {
 normal:
-                    th10_stringify_instr(sub, node);
+                    th10_stringify_instr(ecl->version, sub, node);
                 }
                 break;
             }
@@ -1737,7 +1738,8 @@ th10_parse(
     state.instr_time = 0;
     state.instr_rank = 0xff;
     state.version = version;
-    state.has_overdrive_difficulty = th10_has_overdrive(version);
+    state.has_overdrive_difficulty = th10_is_post_th13(version);
+    state.uses_stack_offsets = th10_is_post_th13(version);version
     list_init(&state.expressions);
     state.current_sub = NULL;
     state.ecl = thecl_new();

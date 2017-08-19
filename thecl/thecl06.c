@@ -918,6 +918,7 @@ th06_parse(
     state.instr_rank = 0xff;
     state.version = version;
     state.has_overdrive_difficulty = false;
+    state.uses_stack_offsets = false;
     list_init(&state.expressions);
     state.current_sub = NULL;
     state.ecl = thecl_new();
