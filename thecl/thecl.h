@@ -163,6 +163,7 @@ typedef struct {
     int instr_time;
     int instr_rank/* = 0xff*/;
     unsigned int version;
+    bool uses_numbered_subs;
     bool has_overdrive_difficulty;
     bool uses_stack_offsets;
     list_t expressions;

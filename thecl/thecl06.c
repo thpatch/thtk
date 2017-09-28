@@ -917,6 +917,7 @@ th06_parse(
     state.instr_time = 0;
     state.instr_rank = 0xff;
     state.version = version;
+    state.uses_numbered_subs = true;
     state.has_overdrive_difficulty = false;
     state.uses_stack_offsets = false;
     list_init(&state.expressions);

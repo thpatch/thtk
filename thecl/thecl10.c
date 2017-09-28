@@ -1738,6 +1738,7 @@ th10_parse(
     state.instr_time = 0;
     state.instr_rank = 0xff;
     state.version = version;
+    state.uses_numbered_subs = false;
     state.has_overdrive_difficulty = th10_is_post_th13(version);
     state.uses_stack_offsets = th10_is_post_th13(version);
     list_init(&state.expressions);
