@@ -39,6 +39,10 @@
 #define API_SYMBOL /* */
 #endif
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef struct thdat_t thdat_t;
 
 /* Opens an existing archive file read from the input stream.  The stream has
