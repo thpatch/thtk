@@ -30,16 +30,11 @@
 #define IMAGE_H_
 
 #include <config.h>
-#include <inttypes.h>
+#include <anm_types.h>
 #include <stdio.h>
 
-typedef enum {
-    FORMAT_RGBA8888 = -1, /* Internal use only. */
-    FORMAT_BGRA8888 = 1,
-    FORMAT_BGR565   = 3,
-    FORMAT_BGRA4444 = 5,
-    FORMAT_GRAY8    = 7
-} format_t;
+ /* Internal use only. */
+#define FORMAT_RGBA8888 ((format_t)-1)
 
 unsigned int
 format_Bpp(

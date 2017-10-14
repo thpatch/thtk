@@ -4,3 +4,6 @@
 [submodule "thanm/zlib-ng"]
 	path = extlib/zlib-ng
 	url = https://github.com/Dead2/zlib-ng.git
+[submodule "thtypes"]
+	path = extlib/thtypes
+	url = https://github.com/thpatch/thtypes

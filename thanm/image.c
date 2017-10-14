@@ -46,8 +46,8 @@ format_Bpp(
     case FORMAT_RGBA8888:
     case FORMAT_BGRA8888:
         return 4;
-    case FORMAT_BGRA4444:
-    case FORMAT_BGR565:
+    case FORMAT_ARGB4444:
+    case FORMAT_RGB565:
         return 2;
     case FORMAT_GRAY8:
         return 1;
@@ -82,7 +82,7 @@ format_from_rgba(
             out[i * sizeof(uint32_t) + 2] = data8[i * sizeof(uint32_t) + 0];
             out[i * sizeof(uint32_t) + 3] = data8[i * sizeof(uint32_t) + 3];
         }
-    } else if (format == FORMAT_BGRA4444) {
+    } else if (format == FORMAT_ARGB4444) {
         out = malloc(sizeof(uint16_t) * pixels);
         for (i = 0; i < pixels; ++i) {
             /* Use the extra precision for rounding. */
@@ -94,7 +94,7 @@ format_from_rgba(
             out[i * sizeof(uint16_t) + 0] = (b << 4) | g;
             out[i * sizeof(uint16_t) + 1] = (r << 4) | a;
         }
-    } else if (format == FORMAT_BGR565) {
+    } else if (format == FORMAT_RGB565) {
         uint16_t* out16;
         out = malloc(sizeof(uint16_t) * pixels);
         out16 = (uint16_t*)out;
@@ -141,7 +141,7 @@ format_to_rgba(
             out8[i * sizeof(uint32_t) + 2] = data[i * sizeof(uint32_t) + 0];
             out8[i * sizeof(uint32_t) + 3] = data[i * sizeof(uint32_t) + 3];
         }
-    } else if (format == FORMAT_BGRA4444) {
+    } else if (format == FORMAT_ARGB4444) {
         for (i = 0; i < pixels; ++i) {
             /* Extends like this: 0x0 -> 0x00, 0x3 -> 0x33, 0xf -> 0xff.
              * It's required for proper alpha. */
@@ -154,7 +154,7 @@ format_to_rgba(
                    | ((data[i * sizeof(uint16_t) + 1] & 0x0f) <<  4 &       0xf0)
                    | ((data[i * sizeof(uint16_t) + 1] & 0x0f) <<  0 &       0x0f);
         }
-    } else if (format == FORMAT_BGR565) {
+    } else if (format == FORMAT_RGB565) {
         uint16_t* u16 = (uint16_t*)data;
         for (i = 0; i < pixels; ++i) {
             /* Bit-extends channels: 00001b -> 00001111b. */

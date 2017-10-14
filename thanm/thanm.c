@@ -389,7 +389,7 @@ static const id_format_pair_t formats_v8[] = {
 /* The order and sizes of fields changed for TH11. */
 static void
 convert_header_to_old(
-    anm_header_t* header)
+    anm_header06_t* header)
 {
     anm_header11_t th11 = *(anm_header11_t*)header;
     header->sprites = th11.sprites;
@@ -414,9 +414,9 @@ convert_header_to_old(
 #ifdef HAVE_LIBPNG
 static void
 convert_header_to_11(
-    anm_header_t* oldheader)
+    anm_header06_t* oldheader)
 {
-    anm_header_t header = *oldheader;
+    anm_header06_t header = *oldheader;
     anm_header11_t* th11 = (anm_header11_t*)oldheader;
     memset(th11, 0, sizeof(anm_header11_t));
     th11->sprites = header.sprites;
@@ -471,7 +471,7 @@ anm_read_file(
 
     for (;;) {
         anm_entry_t* entry = malloc(sizeof(*entry));
-        anm_header_t* header = (anm_header_t*)map;
+        anm_header06_t* header = (anm_header06_t*)map;
 
         list_append_new(&archive->entries, entry);
 
@@ -584,8 +584,8 @@ anm_read_file(
             assert(thtx->w * thtx->h * format_Bpp(thtx->format) <= thtx->size);
             assert(
                 thtx->format == FORMAT_BGRA8888 ||
-                thtx->format == FORMAT_BGR565 ||
-                thtx->format == FORMAT_BGRA4444 ||
+                thtx->format == FORMAT_RGB565 ||
+                thtx->format == FORMAT_ARGB4444 ||
                 thtx->format == (uint16_t)FORMAT_RGBA8888 ||
                 thtx->format == FORMAT_GRAY8);
 
@@ -751,8 +751,8 @@ anm_replace(
     const format_t formats[] = {
         FORMAT_RGBA8888,
         FORMAT_BGRA8888,
-        FORMAT_BGR565,
-        FORMAT_BGRA4444,
+        FORMAT_RGB565,
+        FORMAT_ARGB4444,
         FORMAT_GRAY8
     };
     unsigned int f;
@@ -822,8 +822,8 @@ anm_extract(
 {
     const format_t formats[] = {
         FORMAT_GRAY8,
-        FORMAT_BGRA4444,
-        FORMAT_BGR565,
+        FORMAT_ARGB4444,
+        FORMAT_RGB565,
         FORMAT_BGRA8888,
         FORMAT_RGBA8888
     };
@@ -1074,7 +1074,7 @@ anm_write(
             ++script_count;
 
         file_seek(stream, base +
-                          sizeof(anm_header_t) +
+                          sizeof(anm_header06_t) +
                           sprite_count * sizeof(uint32_t) +
                           script_count * sizeof(anm_offset_t));
 
@@ -1156,10 +1156,10 @@ anm_write(
 
         if (entry->header->version >= 7) {
             convert_header_to_11(entry->header);
-            file_write(stream, entry->header, sizeof(anm_header_t));
+            file_write(stream, entry->header, sizeof(anm_header06_t));
             convert_header_to_old(entry->header);
         } else {
-            file_write(stream, entry->header, sizeof(anm_header_t));
+            file_write(stream, entry->header, sizeof(anm_header06_t));
         }
 
         for (j = 0; j < sprite_count; ++j) {

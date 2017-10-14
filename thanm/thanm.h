@@ -30,46 +30,10 @@
 #define THANM_H_
 
 #include <config.h>
-#include <inttypes.h>
+#include <anm_types.h>
 #include "list.h"
 
 extern unsigned int option_force;
-
-typedef struct {
-PACK_BEGIN
-    uint32_t id;
-    float x, y, w, h;
-PACK_END
-} PACK_ATTRIBUTE sprite_t;
-
-typedef struct {
-PACK_BEGIN
-    uint16_t time;
-    uint8_t type;
-    /* XXX: data length. */
-    uint8_t length;
-PACK_END
-    unsigned char data[];
-} PACK_ATTRIBUTE anm_instr0_t;
-
-typedef struct {
-PACK_BEGIN
-    uint16_t type;
-    uint16_t length;
-    uint16_t time;
-    /* TODO: Implement this, it works similarly to that one in ECL files. */
-    uint16_t param_mask;
-PACK_END
-    unsigned char data[];
-} PACK_ATTRIBUTE anm_instr_t;
-
-/* TODO: Rename this struct to _header_t something. */
-typedef struct {
-PACK_BEGIN
-    int32_t id;
-    uint32_t offset;
-PACK_END
-} PACK_ATTRIBUTE anm_offset_t;
 
 typedef struct {
     anm_offset_t* offset;
@@ -82,72 +46,7 @@ typedef struct {
 } opcode_fmt_t;
 
 typedef struct {
-PACK_BEGIN
-    uint32_t sprites;
-    uint32_t scripts;
-    uint32_t zero1;
-    uint32_t w, h;
-    uint32_t format;
-    uint32_t zero2; /* XXX: A few are 0xff000000. */
-    uint32_t nameoffset;
-    /* XXX: X is unused here. */
-    /* XXX: Y stores the secondary name offset for TH06.
-     *      There is no secondary name when it is zero. */
-    uint32_t x, y;
-    /* 0: TH06
-     * 2: TH07
-     * 3: TH08, TH09
-     * 4: TH95, TH10
-     * 7: TH11, TH12, TH125 */
-    uint32_t version;
-    /* 0  - Random things, everything in TH06. */
-    /* 1  - data/ascii/loading.png for TH08 and TH09. */
-    /* 10 - Mostly sprites? */
-    /* 11 - Used mainly for backgrounds and ascii.png. */
-    uint32_t unknown1;
-    uint32_t thtxoffset;
-    uint16_t hasdata;
-    /* TH14 starts using what was previously thought */
-    /* to be the upper 2 bytes of hasdata for something else. */
-    uint16_t unknown2;
-    uint32_t nextoffset;
-    uint32_t zero3;
-PACK_END
-} PACK_ATTRIBUTE anm_header_t;
-
-typedef struct {
-PACK_BEGIN
-    uint32_t version;
-    uint16_t sprites;
-    uint16_t scripts;
-    uint16_t zero1;
-    uint16_t w, h;
-    uint16_t format;
-    uint32_t nameoffset;
-    uint16_t x, y;
-    uint32_t unknown1;
-    uint32_t thtxoffset;
-    uint16_t hasdata;
-    uint16_t unknown2;
-    uint32_t nextoffset;
-    uint32_t zero2[6];
-PACK_END
-} PACK_ATTRIBUTE anm_header11_t;
-
-typedef struct {
-PACK_BEGIN
-    char magic[4];
-    uint16_t zero;
-    uint16_t format;
-    /* These may be different from the parent entry. */
-    uint16_t w, h;
-    uint32_t size;
-PACK_END
-    unsigned char data[];
-} PACK_ATTRIBUTE thtx_header_t;
-
-typedef struct {
-    anm_header_t* header;
+    anm_header06_t* header;
     thtx_header_t* thtx;
 
     char* name;
