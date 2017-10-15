@@ -915,6 +915,7 @@ anm_create(
     anm_entry_t* entry = NULL;
     anm_script_t* script = NULL;
     anm_instr_t* instr = NULL;
+    unsigned int linenum = 1;
 
     f = fopen(spec, "r");
     if (!f) {
@@ -922,6 +923,9 @@ anm_create(
             argv0, spec, strerror(errno));
         exit(1);
     }
+
+#define ERROR(text, ...) fprintf(stderr, \
+    "%s: %s:%d: " text "\n", argv0, spec, linenum, ##__VA_ARGS__)
 
     anm = malloc(sizeof(anm_archive_t));
     anm->map = NULL;
@@ -960,8 +964,7 @@ anm_create(
             if (5 != sscanf(line, "Sprite: %u %f*%f+%f+%f",
                          &sprite->id, &sprite->w, &sprite->h,
                          &sprite->x, &sprite->y)) {
-                fprintf(stderr, "%s: Sprite parsing failed for %s\n",
-                    argv0, line);
+                ERROR("Sprite parsing failed for %s", line);
                 exit(1);
             }
         } else if (util_strcmp_ref(line, stringref("Script: ")) == 0) {
@@ -970,8 +973,7 @@ anm_create(
             list_init(&script->instrs);
             list_append_new(&entry->scripts, script);
             if (1 != sscanf(line, "Script: %d", &script->offset->id)) {
-                fprintf(stderr, "%s: Script parsing failed for %s\n",
-                    argv0, line);
+                ERROR("Script parsing failed for %s", line);
                 exit(1);
             }
         } else if (util_strcmp_ref(line, stringref("Instruction: ")) == 0) {
@@ -1032,7 +1034,10 @@ anm_create(
             sscanf(line, "THTX-Height: %hu", &entry->thtx->h);
             sscanf(line, "THTX-Zero: %hu", &entry->thtx->zero);
         }
+        linenum++;
     }
+
+#undef ERROR
 
     fclose(f);
 
