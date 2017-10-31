@@ -13,9 +13,9 @@ mkdir $releasepath
 for i in thanm thecl thdat thmsg; do
   echo $i
   groff -mdoc -Tutf8 $i/$i.1 | perl -pe 's/\e\[?.*?[\@-~]//g' | unix2dos > $releasepath/README.$i.txt
-  cp build/$i/Release/$i.exe $releasepath/
+  cp build/$i/RelWithDebInfo/$i.{exe,pdb} $releasepath/
 done
-cp build/thtk/Release/thtk.dll $releasepath/
+cp build/thtk/RelWithDebInfo/thtk.{dll,pdb} $releasepath/
 cp "$(cygpath "$VSSDK140Install")/../VC/redist/x86/Microsoft.VC140.OPENMP/vcomp140.dll" $releasepath/
 
 copy_doc() {
