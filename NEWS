@@ -1,3 +1,15 @@
+What's new in thtk 9
+====================
+
+#### thecl
+- Fixed compiling TH06-095 ECL files.
+
+Please submit an issue at GitHub (https://github.com/thpatch/thtk/issues) if
+you find a bug.
+
+
+-------------------------------------------------------------------------------
+
 What's new in thtk 8
 ====================
 
