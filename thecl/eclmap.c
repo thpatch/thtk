@@ -35,6 +35,7 @@
 #include <errno.h>
 #include "eclmap.h"
 #include "program.h"
+#include "util.h"
 
 static void
 eclmap_dump(
@@ -155,7 +156,7 @@ eclmap_load(
         return;
     }
 
-    if(strncmp(buffer, "eclmap", 6)) {
+    if(util_strcmp_ref(buffer, stringref("eclmap"))) {
         fprintf(stderr, "%s:%s:1: invalid magic\n",argv0,fn);
         return;
     }
@@ -231,7 +232,7 @@ eclmap_load(
                 fprintf(stderr, "%s:%s:%u: '%s' isn't valid identifier\n",argv0,fn,linecount,ent.mnemonic);
                 continue;
             }
-            if(!strncmp(ent.mnemonic, "ins_", 4)) {
+            if(!util_strcmp_ref(ent.mnemonic, stringref("ins_"))) {
                 fprintf(stderr, "%s:%s:%u: mnemonic can't start with 'ins_'\n",argv0,fn,linecount);
             }
         }

@@ -1089,14 +1089,14 @@ th10_open(
     ecl->version = version;
 
     header = (th10_header_t*)map;
-    if (strncmp(header->magic, "SCPT", 4) != 0) {
+    if (util_strcmp_ref(header->magic, stringref("SCPT")) != 0) {
         fprintf(stderr, "%s:%s: SCPT signature missing\n",
             argv0, current_input);
         return NULL;
     }
 
     anim_list = (th10_list_t*)(map + header->include_offset);
-    if (strncmp(anim_list->magic, "ANIM", 4) != 0) {
+    if (util_strcmp_ref(anim_list->magic, stringref("ANIM")) != 0) {
         fprintf(stderr, "%s:%s: ANIM signature missing\n",
             argv0, current_input);
         return NULL;
@@ -1113,7 +1113,7 @@ th10_open(
     while ((ptrdiff_t)string_data % 4)
         ++string_data;
     ecli_list = (th10_list_t*)string_data;
-    if (strncmp(ecli_list->magic, "ECLI", 4) != 0) {
+    if (util_strcmp_ref(ecli_list->magic, stringref("ECLI")) != 0) {
         fprintf(stderr, "%s:%s: ECLI signature missing\n",
             argv0, current_input);
         return NULL;
@@ -1156,7 +1156,7 @@ th10_open(
         string_data += strlen(sub->name) + 1;
 
         raw_sub = (th10_sub_t*)(map + sub_offsets[i]);
-        if (strncmp(raw_sub->magic, "ECLH", 4) != 0) {
+        if (util_strcmp_ref(raw_sub->magic, stringref("ECLH")) != 0) {
             fprintf(stderr, "%s:%s: ECLH signature missing\n",
                 argv0, current_input);
             return NULL;

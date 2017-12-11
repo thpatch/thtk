@@ -521,7 +521,7 @@ th06_write(FILE* in, FILE* out, unsigned int version)
                 return 0;
 
             file_seek(out, end_offset);
-        } else if (strncmp(buffer, "//", 2) == 0) {
+        } else if (util_strcmp_ref(buffer, stringref("//")) == 0) {
             continue;
         } else {
             fprintf(stderr, "%s:%s: no parse: %s\n", argv0, current_input, buffer);

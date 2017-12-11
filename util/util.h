@@ -41,6 +41,17 @@
 #  define MAX(a, b) ((a) > (b) ? (a) : (b))
 #endif
 
+typedef struct {
+    const char *str;
+    size_t len;
+} stringref_t;
+
+#define stringref(str) (const stringref_t) { str, strlen(str) }
+
+int util_strcmp_ref(
+    const char *str,
+    const stringref_t ref);
+
 /* Allocates memory and aborts with an error message if the allocation failed. */
 void* util_malloc(
     size_t size);

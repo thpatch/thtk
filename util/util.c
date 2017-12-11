@@ -43,6 +43,14 @@
 #include "program.h"
 #include "util.h"
 
+int
+util_strcmp_ref(
+    const char *str,
+    const stringref_t ref)
+{
+    return strncmp(str, ref.str, ref.len);
+}
+
 void*
 util_malloc(
     size_t size)

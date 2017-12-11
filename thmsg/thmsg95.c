@@ -151,7 +151,7 @@ th95_write(FILE* in, FILE* out, unsigned int version)
 
     /* Count entries. */
     while (fgets(buffer, 1024, in)) {
-        if (strncmp("entry", buffer, 5) == 0) {
+        if (util_strcmp_ref(buffer, stringref("entry")) == 0) {
             ++entry_count;
         }
     }
@@ -211,7 +211,7 @@ th95_write(FILE* in, FILE* out, unsigned int version)
             msg125.furi2b = msg_furi2b;
             msg125.furi3a = msg_furi3a;
             msg125.furi3b = msg_furi3b;
-        } else if (strncmp(buffer, "//", 2) == 0) {
+        } else if (util_strcmp_ref(buffer, stringref("//")) == 0) {
             continue;
         } else {
             if (version == 95)

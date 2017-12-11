@@ -575,7 +575,7 @@ anm_read_file(
         if (header->hasdata) {
             thtx_header_t* thtx = entry->thtx =
                 (thtx_header_t*)(map + header->thtxoffset);
-            assert(strncmp(thtx->magic, "THTX", 4) == 0);
+            assert(util_strcmp_ref(thtx->magic, stringref("THTX")) == 0);
             assert(thtx->zero == 0);
             assert(thtx->w * thtx->h * format_Bpp(thtx->format) <= thtx->size);
             assert(
@@ -906,7 +906,7 @@ anm_create(
     while (fgets(line, 4096, f)) {
         char* linep = line;
 
-        if (strncmp(linep, "ENTRY ", 6) == 0) {
+        if (util_strcmp_ref(linep, stringref("ENTRY ")) == 0) {
             entry = malloc(sizeof(*entry));
             entry->header = calloc(1, sizeof(*entry->header));
             entry->thtx = calloc(1, sizeof(*entry->thtx));
@@ -921,15 +921,15 @@ anm_create(
             entry->data = NULL;
             list_append_new(&anm->entries, entry);
             sscanf(linep, "ENTRY %u", &entry->header->version);
-        } else if (strncmp(linep, "Name: ", 6) == 0) {
+        } else if (util_strcmp_ref(linep, stringref("Name: ")) == 0) {
             char name[256];
             sscanf(linep, "Name: %s", name);
             entry->name = anm_get_name(anm, name);
-        } else if (strncmp(linep, "Name2: ", 6) == 0) {
+        } else if (util_strcmp_ref(linep, stringref("Name2: ")) == 0) {
             char name[256];
             sscanf(linep, "Name2: %s", name);
             entry->name2 = strdup(name);
-        } else if (strncmp(linep, "Sprite: ", 8) == 0) {
+        } else if (util_strcmp_ref(linep, stringref("Sprite: ")) == 0) {
             sprite_t* sprite = malloc(sizeof(*sprite));
             list_append_new(&entry->sprites, sprite);
 
@@ -940,7 +940,7 @@ anm_create(
                     argv0, linep);
                 exit(1);
             }
-        } else if (strncmp(linep, "Script: ", 8) == 0) {
+        } else if (util_strcmp_ref(linep, stringref("Script: ")) == 0) {
             script = malloc(sizeof(*script));
             script->offset = malloc(sizeof(*script->offset));
             list_init(&script->instrs);
@@ -950,8 +950,8 @@ anm_create(
                     argv0, linep);
                 exit(1);
             }
-        } else if (strncmp(linep, "Instruction: ", 13) == 0) {
-            char* tmp = linep + 13;
+        } else if (util_strcmp_ref(linep, stringref("Instruction: ")) == 0) {
+            char* tmp = linep + stringref("Instruction: ").len;
             char* before;
             char* after = NULL;
 
