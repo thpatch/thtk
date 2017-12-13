@@ -27,6 +27,7 @@
  * DAMAGE.
  */
 #include <config.h>
+#include <ctype.h>
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -879,6 +880,44 @@ anm_extract(
     free(image.data);
 }
 
+static char*
+filename_cut(
+    char *line,
+    size_t len)
+{
+    char *p = line;
+
+    assert(line);
+
+    if(len == 0) {
+        return line;
+    }
+
+    /* isspace(3) is only asking for trouble; we don't parse Unicode anyway. */
+#define is_space(c) (c == ' ' || c == '\t')
+
+    while(len > 0 && is_space(*p)) {
+        len--;
+        p++;
+    }
+
+    char *start = p;
+    char *end = p;
+
+    while(len > 0 && *p != '\n') {
+        if(!is_space(*p)) {
+            end = p;
+        }
+        len--;
+        p++;
+    }
+
+#undef is_space
+
+    end[len == 0 ? 0 : 1] = '\0';
+    return start;
+}
+
 static anm_archive_t*
 anm_create(
     const char* spec)
@@ -903,7 +942,7 @@ anm_create(
     list_init(&anm->names);
     list_init(&anm->entries);
 
-    while (fgets(line, 4096, f)) {
+    while (fgets(line, sizeof(line), f)) {
         char* linep = line;
 
         if (util_strcmp_ref(linep, stringref("ENTRY ")) == 0) {
@@ -922,12 +961,12 @@ anm_create(
             list_append_new(&anm->entries, entry);
             sscanf(linep, "ENTRY %u", &entry->header->version);
         } else if (util_strcmp_ref(linep, stringref("Name: ")) == 0) {
-            char name[256];
-            sscanf(linep, "Name: %s", name);
+            size_t offset = stringref("Name: ").len;
+            char *name = filename_cut(linep + offset, sizeof(linep) - offset);
             entry->name = anm_get_name(anm, name);
         } else if (util_strcmp_ref(linep, stringref("Name2: ")) == 0) {
-            char name[256];
-            sscanf(linep, "Name2: %s", name);
+            size_t offset = stringref("Name2: ").len;
+            char *name = filename_cut(linep + offset, sizeof(linep) - offset);
             entry->name2 = strdup(name);
         } else if (util_strcmp_ref(linep, stringref("Sprite: ")) == 0) {
             sprite_t* sprite = malloc(sizeof(*sprite));
