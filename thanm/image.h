@@ -66,12 +66,12 @@ typedef struct {
 
 image_t*
 png_read(
-    FILE* stream,
+    const char* filename,
     format_t format);
 
 void
 png_write(
-    FILE* stream,
+    const char* filename,
     image_t* image);
 
 #endif

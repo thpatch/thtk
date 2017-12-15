@@ -755,7 +755,6 @@ anm_replace(
     unsigned int f;
     unsigned int width = 0;
     unsigned int height = 0;
-    FILE* stream;
     image_t* image;
 
     util_total_entry_size(anm, name, &width, &height);
@@ -764,14 +763,7 @@ anm_replace(
         return;
     }
 
-    stream = fopen(filename, "rb");
-    if (!stream) {
-        fprintf(stderr, "%s: couldn't open %s for reading: %s\n",
-            argv0, filename, strerror(errno));
-        exit(1);
-    }
-    image = png_read(stream, FORMAT_RGBA8888);
-    fclose(stream);
+    image = png_read(filename, FORMAT_RGBA8888);
 
     if (width != image->width || height != image->height) {
         fprintf(stderr,
@@ -832,7 +824,6 @@ anm_extract(
         FORMAT_BGRA8888,
         FORMAT_RGBA8888
     };
-    FILE* stream;
     image_t image;
 
     unsigned int f, y;
@@ -868,14 +859,7 @@ anm_extract(
     }
 
     util_makepath(name);
-    stream = fopen(name, "wb");
-    if (!stream) {
-        fprintf(stderr, "%s: couldn't open %s for writing: %s\n",
-            argv0, name, strerror(errno));
-        return;
-    }
-    png_write(stream, &image);
-    fclose(stream);
+    png_write(name, &image);
 
     free(image.data);
 }

@@ -184,14 +184,22 @@ format_to_rgba(
 
 image_t*
 png_read(
-    FILE* stream,
+    const char* filename,
     format_t format)
 {
+    FILE* stream;
     unsigned int y;
     image_t* image;
     png_structp png_ptr;
     png_infop info_ptr;
     png_bytepp row_pointers;
+
+    stream = fopen(filename, "rb");
+    if(!stream) {
+        fprintf(stderr, "%s: couldn't open %s for reading: %s\n",
+            argv0, filename, strerror(errno));
+        exit(1);
+    }
 
     png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
     info_ptr = png_create_info_struct(png_ptr);
@@ -227,15 +235,17 @@ png_read(
     }
 
     png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
+    fclose(stream);
 
     return image;
 }
 
 void
 png_write(
-    FILE* stream,
+    const char* filename,
     image_t* image)
 {
+    FILE* stream;
     png_structp png_ptr;
     png_infop info_ptr;
     png_bytepp imagep;
@@ -243,6 +253,13 @@ png_write(
     int bit_depth;
     int color_type;
     int bytes_per_pixel;
+
+    stream = fopen(filename, "wb");
+    if(!stream) {
+        fprintf(stderr, "%s: couldn't open %s for writing: %s\n",
+            argv0, filename, strerror(errno));
+        return;
+    }
 
     if (image->format == FORMAT_GRAY8) {
         bit_depth = 8;
@@ -273,5 +290,7 @@ png_write(
     free(imagep);
     png_write_end(png_ptr, info_ptr);
     png_destroy_write_struct(&png_ptr, &info_ptr);
+
+    fclose(stream);
 }
 #endif
