@@ -6,12 +6,42 @@ if (WITH_LIBPNG_SOURCE)
               ${CMAKE_CURRENT_BINARY_DIR}/zlib-ng/zconf.h)
   include_directories(${CMAKE_CURRENT_BINARY_DIR}/zlib-ng)
   file(GLOB ZLIB_SRC "zlib-ng/*.c" zlib-ng/zlib.h)
-  add_library(z STATIC ${ZLIB_SRC})
+
+  add_library(z STATIC
+  zlib-ng/adler32.c
+  zlib-ng/compress.c
+  zlib-ng/crc32.c
+  zlib-ng/crc32.h
+  zlib-ng/deflate.c
+  zlib-ng/deflate.h
+  zlib-ng/deflate_fast.c
+  zlib-ng/deflate_medium.c
+  zlib-ng/deflate_p.h
+  zlib-ng/deflate_slow.c
+  zlib-ng/functable.c
+  zlib-ng/functable.h
+  zlib-ng/infback.c
+  zlib-ng/inffast.c
+  zlib-ng/inffast.h
+  zlib-ng/inffixed.h
+  zlib-ng/inflate.c
+  zlib-ng/inflate.h
+  zlib-ng/inftrees.c
+  zlib-ng/inftrees.h
+  zlib-ng/match.c
+  zlib-ng/match.h
+  zlib-ng/memcopy.h
+  zlib-ng/trees.c
+  zlib-ng/trees.h
+  zlib-ng/uncompr.c
+  zlib-ng/zutil.c
+  zlib-ng/zutil.h
+
+  zlib-ng/zlib.h)
   if (HAVE_UNISTD_H)
     set(Z_HAVE_UNISTD_H "Z_HAVE_UNISTD_H")
   endif()
   target_compile_definitions(z
-    PUBLIC WITH_GZFILEOP
     PUBLIC ${Z_HAVE_UNISTD_H})
 
   include(CheckFunctionExists)
