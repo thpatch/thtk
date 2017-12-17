@@ -763,7 +763,7 @@ anm_replace(
         return;
     }
 
-    image = png_read(filename, FORMAT_RGBA8888);
+    image = png_read(filename);
 
     if (width != image->width || height != image->height) {
         fprintf(stderr,

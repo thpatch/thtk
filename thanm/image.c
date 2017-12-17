@@ -33,6 +33,7 @@
 #include <png.h>
 #endif
 #include <stdlib.h>
+#include <errno.h>
 #include "image.h"
 #include "program.h"
 #include "thanm.h"
@@ -184,15 +185,14 @@ format_to_rgba(
 
 image_t*
 png_read(
-    const char* filename,
-    format_t format)
+    const char* filename)
 {
     FILE* stream;
-    unsigned int y;
     image_t* image;
-    png_structp png_ptr;
-    png_infop info_ptr;
-    png_bytepp row_pointers;
+    png_image png = {
+        .version = PNG_IMAGE_VERSION,
+        .opaque = NULL
+    };
 
     stream = fopen(filename, "rb");
     if(!stream) {
@@ -201,41 +201,27 @@ png_read(
         exit(1);
     }
 
-    png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
-    info_ptr = png_create_info_struct(png_ptr);
-    png_init_io(png_ptr, stream);
-    png_read_png(png_ptr, info_ptr, PNG_TRANSFORM_IDENTITY, NULL);
-
-    /* XXX: Consider just converting everything ... */
-    if (png_get_color_type(png_ptr, info_ptr) != PNG_COLOR_TYPE_RGB_ALPHA) {
-        /* XXX: current_input? exit(1)? */
-        fprintf(stderr, "%s: %s must be RGBA\n", argv0, current_input);
-        exit(1);
+#define ERR_WRAP(x) \
+    x; \
+    if(PNG_IMAGE_FAILED(png)) { \
+        fprintf(stderr, "%s: error reading %s: %s\n", \
+            argv0, filename, png.message); \
+        exit(1); \
     }
 
-    row_pointers = png_get_rows(png_ptr, info_ptr);
+    ERR_WRAP(png_image_begin_read_from_stdio(&png, stream));
+    png.format = PNG_FORMAT_RGBA;
 
     image = malloc(sizeof(image_t));
-    image->width = png_get_image_width(png_ptr, info_ptr);
-    image->height = png_get_image_height(png_ptr, info_ptr);
-    image->format = format;
-    image->data = malloc(image->width * image->height * format_Bpp(image->format));
+    image->width = png.width;
+    image->height = png.height;
+    image->format = FORMAT_RGBA8888;
+    image->data = malloc(PNG_IMAGE_SIZE(png));
 
-    for (y = 0; y < image->height; ++y) {
-        if (format == FORMAT_RGBA8888) {
-            memcpy(image->data + y * image->width * format_Bpp(image->format),
-                row_pointers[y], image->width * format_Bpp(image->format));
-        } else {
-            unsigned char* converted_data =
-                format_from_rgba((uint32_t*)row_pointers[y], image->width, image->format);
-            memcpy(image->data + y * image->width * format_Bpp(image->format),
-                converted_data, image->width * format_Bpp(image->format));
-            free(converted_data);
-        }
-    }
-
-    png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
+    ERR_WRAP(png_image_finish_read(&png, 0, image->data, 0, NULL));
     fclose(stream);
+
+#undef ERR_WRAP
 
     return image;
 }

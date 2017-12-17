@@ -66,8 +66,7 @@ typedef struct {
 
 image_t*
 png_read(
-    const char* filename,
-    format_t format);
+    const char* filename);
 
 void
 png_write(
