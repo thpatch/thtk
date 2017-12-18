@@ -4,7 +4,7 @@ set(CMP0048 NEW)
 project("Touhou Toolkit"
   VERSION 9)
 set(PROJECT_URL "https://github.com/thpatch/thtk")
-set(PROJECT_BUGREPORT "chwo9843@gmail.com")
+set(PROJECT_BUGREPORT "https://github.com/thpatch/thtk/issues")
 
 include(CheckCSourceRuns)
 include(CheckTypeSize)
