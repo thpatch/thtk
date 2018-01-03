@@ -76,6 +76,7 @@ else()
   if (PNG_FOUND)
     include_directories(${PNG_INCLUDE_DIRS})
     set(PNG_LIBRARY ${PNG_LIBRARIES})
+    set(PNG_FOUND ${PNG_FOUND} PARENT_SCOPE)
   endif()
 endif()
 
