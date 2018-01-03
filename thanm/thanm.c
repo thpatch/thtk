@@ -927,9 +927,7 @@ anm_create(
     list_init(&anm->entries);
 
     while (fgets(line, sizeof(line), f)) {
-        char* linep = line;
-
-        if (util_strcmp_ref(linep, stringref("ENTRY ")) == 0) {
+        if (util_strcmp_ref(line, stringref("ENTRY ")) == 0) {
             entry = malloc(sizeof(*entry));
             entry->header = calloc(1, sizeof(*entry->header));
             entry->thtx = calloc(1, sizeof(*entry->thtx));
@@ -943,38 +941,38 @@ anm_create(
             list_init(&entry->scripts);
             entry->data = NULL;
             list_append_new(&anm->entries, entry);
-            sscanf(linep, "ENTRY %u", &entry->header->version);
-        } else if (util_strcmp_ref(linep, stringref("Name: ")) == 0) {
+            sscanf(line, "ENTRY %u", &entry->header->version);
+        } else if (util_strcmp_ref(line, stringref("Name: ")) == 0) {
             size_t offset = stringref("Name: ").len;
-            char *name = filename_cut(linep + offset, sizeof(linep) - offset);
+            char *name = filename_cut(line + offset, sizeof(line) - offset);
             entry->name = anm_get_name(anm, name);
-        } else if (util_strcmp_ref(linep, stringref("Name2: ")) == 0) {
+        } else if (util_strcmp_ref(line, stringref("Name2: ")) == 0) {
             size_t offset = stringref("Name2: ").len;
-            char *name = filename_cut(linep + offset, sizeof(linep) - offset);
+            char *name = filename_cut(line + offset, sizeof(line) - offset);
             entry->name2 = strdup(name);
-        } else if (util_strcmp_ref(linep, stringref("Sprite: ")) == 0) {
+        } else if (util_strcmp_ref(line, stringref("Sprite: ")) == 0) {
             sprite_t* sprite = malloc(sizeof(*sprite));
             list_append_new(&entry->sprites, sprite);
 
-            if (5 != sscanf(linep, "Sprite: %u %f*%f+%f+%f",
+            if (5 != sscanf(line, "Sprite: %u %f*%f+%f+%f",
                          &sprite->id, &sprite->w, &sprite->h,
                          &sprite->x, &sprite->y)) {
                 fprintf(stderr, "%s: Sprite parsing failed for %s\n",
-                    argv0, linep);
+                    argv0, line);
                 exit(1);
             }
-        } else if (util_strcmp_ref(linep, stringref("Script: ")) == 0) {
+        } else if (util_strcmp_ref(line, stringref("Script: ")) == 0) {
             script = malloc(sizeof(*script));
             script->offset = malloc(sizeof(*script->offset));
             list_init(&script->instrs);
             list_append_new(&entry->scripts, script);
-            if (1 != sscanf(linep, "Script: %d", &script->offset->id)) {
+            if (1 != sscanf(line, "Script: %d", &script->offset->id)) {
                 fprintf(stderr, "%s: Script parsing failed for %s\n",
-                    argv0, linep);
+                    argv0, line);
                 exit(1);
             }
-        } else if (util_strcmp_ref(linep, stringref("Instruction: ")) == 0) {
-            char* tmp = linep + stringref("Instruction: ").len;
+        } else if (util_strcmp_ref(line, stringref("Instruction: ")) == 0) {
+            char* tmp = line + stringref("Instruction: ").len;
             char* before;
             char* after = NULL;
 
@@ -1014,22 +1012,22 @@ anm_create(
 
             list_append_new(&script->instrs, instr);
         } else {
-            sscanf(linep, "Format: %u", &entry->header->format);
-            sscanf(linep, "Width: %u", &entry->header->w);
-            sscanf(linep, "Height: %u", &entry->header->h);
-            sscanf(linep, "X-Offset: %u", &entry->header->x);
-            sscanf(linep, "Y-Offset: %u", &entry->header->y);
-            sscanf(linep, "Zero1: %u", &entry->header->zero1);
-            sscanf(linep, "Zero2: %u", &entry->header->zero2);
-            sscanf(linep, "Zero3: %u", &entry->header->zero3);
-            sscanf(linep, "Unknown1: %u", &entry->header->unknown1);
-            sscanf(linep, "Unknown2: %hu", &entry->header->unknown2);
-            sscanf(linep, "HasData: %hu", &entry->header->hasdata);
-            sscanf(linep, "THTX-Size: %u", &entry->thtx->size);
-            sscanf(linep, "THTX-Format: %hu", &entry->thtx->format);
-            sscanf(linep, "THTX-Width: %hu", &entry->thtx->w);
-            sscanf(linep, "THTX-Height: %hu", &entry->thtx->h);
-            sscanf(linep, "THTX-Zero: %hu", &entry->thtx->zero);
+            sscanf(line, "Format: %u", &entry->header->format);
+            sscanf(line, "Width: %u", &entry->header->w);
+            sscanf(line, "Height: %u", &entry->header->h);
+            sscanf(line, "X-Offset: %u", &entry->header->x);
+            sscanf(line, "Y-Offset: %u", &entry->header->y);
+            sscanf(line, "Zero1: %u", &entry->header->zero1);
+            sscanf(line, "Zero2: %u", &entry->header->zero2);
+            sscanf(line, "Zero3: %u", &entry->header->zero3);
+            sscanf(line, "Unknown1: %u", &entry->header->unknown1);
+            sscanf(line, "Unknown2: %hu", &entry->header->unknown2);
+            sscanf(line, "HasData: %hu", &entry->header->hasdata);
+            sscanf(line, "THTX-Size: %u", &entry->thtx->size);
+            sscanf(line, "THTX-Format: %hu", &entry->thtx->format);
+            sscanf(line, "THTX-Width: %hu", &entry->thtx->w);
+            sscanf(line, "THTX-Height: %hu", &entry->thtx->h);
+            sscanf(line, "THTX-Zero: %hu", &entry->thtx->zero);
         }
     }
 
