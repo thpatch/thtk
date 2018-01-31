@@ -117,6 +117,7 @@ if(MSVC)
 endif()
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
+add_subdirectory(extlib)
 add_subdirectory(util)
 include_directories(util)
 add_subdirectory(thanm)
