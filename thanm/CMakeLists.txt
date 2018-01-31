@@ -1,3 +1,4 @@
+include_directories(${PNG_INCLUDE_DIRS})
 add_executable(thanm
   thanm.c image.c
   thanm.h image.h

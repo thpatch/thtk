@@ -61,7 +61,8 @@ if (WITH_LIBPNG_SOURCE)
        DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/libpng)
   file(RENAME ${CMAKE_CURRENT_BINARY_DIR}/libpng/pnglibconf.h.prebuilt
               ${CMAKE_CURRENT_BINARY_DIR}/libpng/pnglibconf.h)
-  include_directories(${CMAKE_CURRENT_BINARY_DIR}/libpng)
+  set(PNG_INCLUDE_DIRS ${CMAKE_CURRENT_BINARY_DIR}/libpng PARENT_SCOPE)
+  include_directories(${PNG_INCLUDE_DIRS})
   add_library(png STATIC
   libpng/png.c
   libpng/png.h
@@ -74,7 +75,7 @@ if (WITH_LIBPNG_SOURCE)
 else()
   find_package(PNG 1.6)
   if (PNG_FOUND)
-    include_directories(${PNG_INCLUDE_DIRS})
+    set(PNG_INCLUDE_DIRS ${PNG_INCLUDE_DIRS} PARENT_SCOPE)
     set(PNG_LIBRARY ${PNG_LIBRARIES} PARENT_SCOPE)
     set(PNG_FOUND ${PNG_FOUND} PARENT_SCOPE)
   endif()
