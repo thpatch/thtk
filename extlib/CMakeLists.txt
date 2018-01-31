@@ -62,7 +62,7 @@ if (WITH_LIBPNG_SOURCE)
   file(RENAME ${CMAKE_CURRENT_BINARY_DIR}/libpng/pnglibconf.h.prebuilt
               ${CMAKE_CURRENT_BINARY_DIR}/libpng/pnglibconf.h)
   set(PNG_INCLUDE_DIRS ${CMAKE_CURRENT_BINARY_DIR}/libpng PARENT_SCOPE)
-  include_directories(${PNG_INCLUDE_DIRS})
+  include_directories(${CMAKE_CURRENT_BINARY_DIR}/libpng)
   add_library(png STATIC
   libpng/png.c
   libpng/png.h
