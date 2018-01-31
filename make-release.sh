@@ -19,6 +19,7 @@ for i in thanm thecl thdat thmsg; do
   cp build/$i/RelWithDebInfo/$i.pdb $releasepath-pdbs/
 done
 cp build/thtk/RelWithDebInfo/thtk.dll $releasepath/
+cp build/thtk/RelWithDebInfo/thtk.lib $releasepath/
 cp build/thtk/RelWithDebInfo/thtk.pdb $releasepath-pdbs/
 cp "$(cygpath "$VSSDK140Install")/../VC/redist/x86/Microsoft.VC140.OPENMP/vcomp140.dll" $releasepath/
 
