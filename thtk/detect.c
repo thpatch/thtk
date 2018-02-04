@@ -35,35 +35,35 @@
 
 #define DETECT_DEF(x) \
     /* thdat02 */ \
-    x(0, 1,1) \
-    x(1, 2,2) \
-    x(2, 3,3) \
-    x(3, 3,4) \
-    x(4, 3,5) \
+    x(0, 1,1, NULL) \
+    x(1, 2,2, NULL) \
+    x(2, 3,3, NULL) \
+    x(3, 3,4, NULL) \
+    x(4, 3,5, NULL) \
     /* thdat06 */ \
-    x(5, 6,6) \
-    x(6, 7,7) \
+    x(5, 6,6, NULL) \
+    x(6, 7,7, "th07.dat") \
     /* thdat08 */ \
-    x(7, 8,8) \
-    x(8, 9,9) \
+    x(7, 8,8, "th08.dat") \
+    x(8, 9,9, "th09.dat") \
     /* thdat95 */ \
-    x(9, 95,95) \
-    x(10, 95,10) \
-    x(11, 95,11) \
-    x(12, 12,12) \
-    x(13, 12,125) \
-    x(14, 12,128) \
-    x(15, 13,13) \
-    x(16, 14,14) \
-    x(17, 14,143) \
-    x(18, 14,15) \
-    x(19, 14,16) \
+    x(9, 95,95, "th095.dat") \
+    x(10, 95,10, "th10.dat") \
+    x(11, 95,11, "th11.dat") \
+    x(12, 12,12, "th12.dat") \
+    x(13, 12,125, "th125.dat") \
+    x(14, 12,128, "th128.dat") \
+    x(15, 13,13, "th13.dat") \
+    x(16, 14,14, "th14.dat") \
+    x(17, 14,143, "th143.dat") \
+    x(18, 14,15, "th15.dat") \
+    x(19, 14,16, "th16.dat") \
     /* thdat105 */ \
-    x(20, 105,105) \
-    x(21, 123,123) 
+    x(20, 105,105, NULL) \
+    x(21, 123,123, NULL) 
     
 static const thdat_detect_entry_t detect_table[] = {
-#define x(idx, var, alias) {var,alias},
+#define x(idx, var, alias, filename) {var,alias,filename},
         DETECT_DEF(x)
         {0,0},       
 #undef x
@@ -73,7 +73,7 @@ static const thdat_detect_entry_t detect_table[] = {
 static int detect_ver_to_idx(int ver) {
     switch(ver) {
     default:return -1;
-#define x(idx, var, alias) case alias:return idx;
+#define x(idx, var, alias, filename) case alias:return idx;
     DETECT_DEF(x)
 #undef x
     }
@@ -83,6 +83,21 @@ static int detect_ver_to_idx(int ver) {
    int macrotemp = detect_ver_to_idx(x); \
    out[macrotemp/32] |= 1 << (macrotemp%32); \
 } while(0)
+
+int
+detect_filename(
+        const char* filename)
+{
+    const thdat_detect_entry_t* ent = detect_table;
+    while(ent->variant) {
+        if(ent->filename && !strcmp(filename,ent->filename)) {
+            return ent->alias;
+        }
+        ent++;
+    }
+    
+    return -1;
+}
 
 int
 thdat_detect(
@@ -137,19 +152,31 @@ thdat_detect(
     uint32_t out2[4];
     memcpy(out2,out,sizeof(out2));
     const thdat_detect_entry_t* ent;
-    /* TODO: filename heur */
+    int fnheur = filename ? detect_filename(filename) : -1; /* detect filename */
     int variant=-1;
     int alias=-1;
     int count = 0;
     while((ent = thdat_detect_iter(out2))) {
+        if(ent->alias == fnheur) {
+            *heur = fnheur;
+            return 0;
+        }
+        
         count++;
-        alias = ent->alias;
-        if(variant == -1) {
+        alias = ent->alias; /* save the exact alias, if this is the only entry */
+        if(variant == -1) { /* set the initial variant */
             variant = ent->variant;
         }
-        else if(variant != ent->variant) {
+        else if(variant != ent->variant) { /* multiple variants -> unconclusive result */
             variant = -1;
             break;
+        }
+    }
+    /* check the remaining entries for match with filename */
+    while((ent = thdat_detect_iter(out2))) {
+        if(ent->alias == fnheur) {
+            *heur = fnheur;
+            return 0;
         }
     }
     if(count == 1) {

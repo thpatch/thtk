@@ -43,6 +43,7 @@ extern "C" {
 typedef struct {
 	unsigned int variant; /* the smallest version which is equvivalent to alias */
 	unsigned int alias;
+	const char* filename; /* NULL if there are multiple filenames */
 } thdat_detect_entry_t;
 
 

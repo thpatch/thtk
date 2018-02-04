@@ -347,8 +347,14 @@ main(
         uint32_t out[4];
         unsigned int heur;
         
-        /* TODO: filename */
-        if (-1 == thdat_detect(NULL, file, out, &heur, &error)) {
+        /* TODO: util func for this? */
+        const char* bs = strrchr(argv[2], '\\');
+        bs = bs ? bs+1 : argv[2];
+        const char* fs = strrchr(argv[2],'/');
+        fs = fs ? fs+1 : argv[2];
+        const char* name = (bs > fs) ? bs : fs;
+        
+        if (-1 == thdat_detect(name, file, out, &heur, &error)) {
             thtk_io_close(file);
             print_error(error);
             thtk_error_free(&error);
