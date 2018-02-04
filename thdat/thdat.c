@@ -325,13 +325,46 @@ main(
     unsigned int version = 16;
     int mode;
 
-    if (!(mode = parse_args(argc, argv, print_usage, "clxV", "", &version)))
+    if (!(mode = parse_args(argc, argv, print_usage, "clxVd", "", &version)))
         exit(1);
 
     switch (mode) {
     case 'V':
         util_print_version();
         exit(0);
+    case 'd': {
+        if (argc < 3) {
+            print_usage();
+            exit(1);
+        }
+        thtk_io_t* file;
+        if (!(file = thtk_io_open_file(argv[2], "rb", &error))) {
+            print_error(error);
+            thtk_error_free(&error);
+            exit(1);
+        }
+        
+        uint32_t out[4];
+        unsigned int heur;
+        
+        /* TODO: filename */
+        if (-1 == thdat_detect(NULL, file, out, &heur, &error)) {
+            thtk_io_close(file);
+            print_error(error);
+            thtk_error_free(&error);
+            exit(1);
+        }
+        
+        const thdat_detect_entry_t* ent;
+        printf("Possible versions: ");
+        while((ent = thdat_detect_iter(out))) {
+            printf("%d,",ent->alias);
+        }
+        printf("\nResult: %d\n", heur);
+        
+        thtk_io_close(file);
+        exit(0);
+    }
     case 'l': {
         if (argc < 3) {
             print_usage();

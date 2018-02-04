@@ -12,6 +12,9 @@ add_library(thtk SHARED
   thlzss.c thrle.c
   thlzss.h thrle.h
 
+  detect.c
+  detect.h
+
   util.c
   util.h thtk.h)
 find_package(OpenMP)
@@ -30,4 +33,4 @@ endif()
 set_property(TARGET thtk PROPERTY VERSION "1.0.0")
 set_property(TARGET thtk PROPERTY SOVERSION 1)
 install(TARGETS thtk DESTINATION lib)
-install(FILES thtk.h error.h io.h dat.h DESTINATION include/thtk)
+install(FILES thtk.h error.h io.h dat.h detect.h DESTINATION include/thtk)
