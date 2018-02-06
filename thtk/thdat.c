@@ -63,6 +63,7 @@ thdat_version_to_module(
         return &archive_th08;
     case 95:
     case 10:
+    case 103:
     case 11:
     case 12:
     case 125:

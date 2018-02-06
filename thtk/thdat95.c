@@ -133,7 +133,7 @@ th95_decrypt_data(
 {
     const unsigned int i = th95_get_crypt_param_index(entry->name);
     const crypt_params_t* crypt_params;
-    if (archive->version == 95 || archive->version == 10 || archive->version == 11) {
+    if (archive->version == 95 || archive->version == 10 || archive->version == 103 || archive->version == 11) {
         crypt_params = th95_crypt_params;
     } else if (archive->version == 12 || archive->version == 125 || archive->version == 128) {
         crypt_params = th12_crypt_params;
@@ -220,6 +220,7 @@ th95_encrypt_data(
     const crypt_params_t* crypt_params;
     if (archive->version == 95 ||
         archive->version == 10 ||
+        archive->version == 103 ||
         archive->version == 11) {
         crypt_params = th95_crypt_params;
     } else if (archive->version == 12 ||

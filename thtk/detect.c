@@ -49,18 +49,19 @@
     /* thdat95 */ \
     x(9, 95,95, "th095.dat") \
     x(10, 95,10, "th10.dat") \
-    x(11, 95,11, "th11.dat") \
-    x(12, 12,12, "th12.dat") \
-    x(13, 12,125, "th125.dat") \
-    x(14, 12,128, "th128.dat") \
-    x(15, 13,13, "th13.dat") \
-    x(16, 14,14, "th14.dat") \
-    x(17, 14,143, "th143.dat") \
-    x(18, 14,15, "th15.dat") \
-    x(19, 14,16, "th16.dat") \
+    x(11, 95,103, "alcostg.dat") \
+    x(12, 95,11, "th11.dat") \
+    x(13, 12,12, "th12.dat") \
+    x(14, 12,125, "th125.dat") \
+    x(15, 12,128, "th128.dat") \
+    x(16, 13,13, "th13.dat") \
+    x(17, 14,14, "th14.dat") \
+    x(18, 14,143, "th143.dat") \
+    x(19, 14,15, "th15.dat") \
+    x(20, 14,16, "th16.dat") \
     /* thdat105 */ \
-    x(20, 105,105, NULL) \
-    x(21, 123,123, NULL) 
+    x(21, 105,105, NULL) \
+    x(22, 123,123, NULL) 
     
 static const thdat_detect_entry_t detect_table[] = {
 #define x(idx, var, alias, filename) {var,alias,filename},
@@ -265,6 +266,7 @@ notth03:
     if(!memcmp(magic,"THA1",4)) {
         SET_OUT(95);
         SET_OUT(10);
+        SET_OUT(103);
         SET_OUT(11);
         SET_OUT(12);
         SET_OUT(125);
