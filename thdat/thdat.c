@@ -354,7 +354,9 @@ main(
         fs = fs ? fs+1 : argv[2];
         const char* name = (bs > fs) ? bs : fs;
         
+        printf("Detecting '%s'... ",name);
         if (-1 == thdat_detect(name, file, out, &heur, &error)) {
+            printf("\n");
             thtk_io_close(file);
             print_error(error);
             thtk_error_free(&error);
@@ -362,12 +364,11 @@ main(
         }
         
         const thdat_detect_entry_t* ent;
-        printf("Possible versions: ");
+        printf("%d | possible versions: ", heur);
         while((ent = thdat_detect_iter(out))) {
             printf("%d,",ent->alias);
         }
-        printf("\nResult: %d\n", heur);
-        
+        printf(" | filename: %d\n", thdat_detect_filename(name));
         thtk_io_close(file);
         exit(0);
     }

@@ -46,6 +46,11 @@ typedef struct {
 	const char* filename; /* NULL if there are multiple filenames */
 } thdat_detect_entry_t;
 
+/* Detects version of archive, based on its filename
+ *
+ * Returns -1 if unconclusive. */
+API_SYMBOL int thdat_detect_filename(
+	const char* filename);
 
 /* Detects version of archive.
  *

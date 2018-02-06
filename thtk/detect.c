@@ -32,7 +32,7 @@
 #include <stdio.h> /* for SEEK_SET */ 
 #include "thcrypt.h"
 #include "thlzss.h"
-
+#include "dattypes.h"
 #define DETECT_DEF(x) \
     /* thdat02 */ \
     x(0, 1,1, NULL) \
@@ -85,7 +85,7 @@ static int detect_ver_to_idx(int ver) {
 } while(0)
 
 int
-detect_filename(
+thdat_detect_filename(
         const char* filename)
 {
     const thdat_detect_entry_t* ent = detect_table;
@@ -94,6 +94,59 @@ detect_filename(
             return ent->alias;
         }
         ent++;
+    }
+    /* SJIS filenames */
+    struct {
+        unsigned int alias;
+        const unsigned char filename[8+3+2];
+    } static const multi[] = {
+        {1, {0x93,0x8c,0x95,0xfb,0xe8,0xcb,0x88,0xd9,'.',0x93,0x60,0}},
+        {2, {0x93,0x8c,0x95,0xfb,0x95,0x95,0x96,0x82,'.',0x98,0x5e,0}},
+        {3, {0x96,0xb2,0x83,0x9e,0x8b,0xf3,'1','.','D','A','T',0}},
+        {3, {0x96,0xb2,0x83,0x9e,0x8b,0xf3,'2','.','D','A','T',0}},
+        {4, {0x93,0x8c,0x95,0xfb,0x8c,0xb6,0x91,0x7a,'.',0x8b,0xbd,0}},
+        {4, {0x8c,0xb6,0x91,0x7a,0x8b,0xbd,'E','D','.','D','A','T',0}},
+        {5, {0x89,0xf6,0xe3,0x59,0x92,0x6b,'1','.','D','A','T',0}},
+        {5, {0x89,0xf6,0xe3,0x59,0x92,0x6b,'2','.','D','A','T',0}},
+        {0},
+    }, *mp = multi;
+    while(mp->alias) {
+        if(!strcmp(filename,mp->filename)) {
+            return mp->alias;
+        }
+        mp++;
+    }
+    /* Unicode filenames */
+    /* TODO: make this work on windows */
+    struct {
+        unsigned int alias;
+        const unsigned char *filename;
+    } static const multi2[] = {
+        /* SJIS translated to Unicode */
+        {1, "東方靈異.伝"},
+        {2, "東方封魔.録"},
+        {3, "夢時空1.DAT"},
+        {3, "夢時空2.DAT"},
+        {4, "東方幻想.郷"},
+        {4, "幻想郷ED.DAT"},
+        {5, "怪綺談1.DAT"},
+        {5, "怪綺談2.DAT"},
+        /* SJIS interpreted as CP1251 translated to Unicode */
+        {1, "“Œ•ûèËˆÙ.“`"},
+        {2, "“Œ•û••–‚.˜^"},
+        {3, "–²Žž‹ó1.DAT"},
+        {3, "–²Žž‹ó2.DAT"},
+        {4, "“Œ•ûŒ¶‘z.‹½"},
+        {4, "Œ¶‘z‹½ED.DAT"},
+        {5, "‰öãY’k1.DAT"},
+        {5, "‰öãY’k1.DAT"},
+        {0},
+    }, *mp2 = multi2;
+    while(mp2->alias) {
+        if(!strcmp(filename,mp2->filename)) {
+            return mp2->alias;
+        }
+        mp2++;
     }
     
     return -1;
@@ -109,14 +162,90 @@ thdat_detect(
 {
     out[0]=out[1]=out[2]=out[3]=0;
     *heur = -1;
-    /* TODO: th02dat */
+
+    union {
+        th02_entry_header_t head2[256];
+        th03_entry_header_t head3[256];
+    } uni;
+    th02_entry_header_t *head2 = uni.head2, emptyhead2={0};
+    th03_entry_header_t *head3 = uni.head3, emptyhead3={0};
+    /* Note that failed header reads are fatal, and make us immediately return
+     * The rationale for this is that if file can't fit a header (regardless of format)
+     * then it's probably not an archive
+     *
+     * Entry table reads, on the other hand, are considered nonfatal */
+
+    /* th02 */
+    if(-1 == thtk_io_seek(input, 0, SEEK_SET, error)) {
+        return -1;
+    }
+    if(-1 == thtk_io_read(input, head2, sizeof(head2[0]), error)) {
+        return -1;
+    }
+    if(head2[0].magic != magic1 && head2[0].magic != magic2) {
+        goto notth02;
+    }
+    if(head2[0].offset % sizeof(head2[0])) {
+        goto notth02;
+    }
+    int entry_count = head2[0].offset/sizeof(head2[0]);
+    if(entry_count > 256) { // maximum in vanilla archives is 180+1 (th03)
+        goto notth02;
+    }
+    if(-1 == thtk_io_read(input, &head2[1], head2[0].offset-sizeof(head2[0]), error)) {
+        goto notth02;
+    }
+    for(int i=1;i<entry_count-1;i++) {
+        if(head2[i].magic != magic1 && head2[i].magic != magic2) {
+            goto notth02;
+        }    
+    }
+    if(memcmp(&head2[entry_count],&emptyhead2, sizeof(emptyhead2))) {
+        goto notth02;
+    }
+    /* TODO: differentiate */
+    SET_OUT(1);
+    SET_OUT(2);
+notth02:
+    /* th03 */
+    if(-1 == thtk_io_seek(input, 0, SEEK_SET, error)) {
+        return -1;
+    }
+    th03_archive_header_t ahead;
+    if(-1 == thtk_io_read(input, &ahead, sizeof(ahead), error)) {
+        return -1;
+    }
+    if(++ahead.count > 256) {
+        goto notth03;
+    }
+    if(-1 == thtk_io_read(input, &head3[0], sizeof(head3[0])*ahead.count, error)) {
+        goto notth03;
+    }
+    unsigned char* data = (unsigned char*)head3;
+    for(int i=0;i<ahead.count*sizeof(head3[0]);i++) {
+        data[i] ^= ahead.key;
+        ahead.key -= data[i];
+    }
+    for(int i=0;i<ahead.count-1;i++) {
+        if(head3[i].magic != magic1 && head3[i].magic != magic2) {
+            goto notth03;
+        }
+    }
+    if(head3[ahead.count-1].magic != 0) {
+        goto notth03;
+    }
+    SET_OUT(3);
+    SET_OUT(4);
+    SET_OUT(5);
+notth03:
+
     if(-1 == thtk_io_seek(input, 0, SEEK_SET, error)) {
         return -1;
     }
     
     /* read magic for TSA 06+ */
-    char magic[16]; /* 16 for THA1 header */
-    if(-1 == thtk_io_read(input, magic, 16, error)) {
+    char magic[sizeof(th95_archive_header_t)];
+    if(-1 == thtk_io_read(input, magic, sizeof(magic), error)) {
         return -1;
     }
     /* th06 */
@@ -132,7 +261,7 @@ thdat_detect(
         SET_OUT(9);
     }
     /* th095+ */
-    th_decrypt((unsigned char*)magic,16,0x1b,0x37,16,16); /* 16 is sizeof(th95_archive_header_t) */
+    th_decrypt((unsigned char*)magic,sizeof(th95_archive_header_t),0x1b,0x37,sizeof(th95_archive_header_t),sizeof(th95_archive_header_t));
     if(!memcmp(magic,"THA1",4)) {
         SET_OUT(95);
         SET_OUT(10);
@@ -147,12 +276,11 @@ thdat_detect(
         SET_OUT(16);
     }
     
-    
     /* heur */
     uint32_t out2[4];
     memcpy(out2,out,sizeof(out2));
     const thdat_detect_entry_t* ent;
-    int fnheur = filename ? detect_filename(filename) : -1; /* detect filename */
+    int fnheur = filename ? thdat_detect_filename(filename) : -1; /* detect filename */
     int variant=-1;
     int alias=-1;
     int count = 0;
