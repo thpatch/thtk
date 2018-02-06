@@ -109,6 +109,12 @@ thdat_detect_filename(
         {4, {0x8c,0xb6,0x91,0x7a,0x8b,0xbd,'E','D','.','D','A','T',0}},
         {5, {0x89,0xf6,0xe3,0x59,0x92,0x6b,'1','.','D','A','T',0}},
         {5, {0x89,0xf6,0xe3,0x59,0x92,0x6b,'2','.','D','A','T',0}},
+        {6, {0x8d,0x67,0x96,0x82,0x8b,0xbd,'C','M','.','D','A','T',0}},
+        {6, {0x8d,0x67,0x96,0x82,0x8b,0xbd,'E','D','.','D','A','T',0}},
+        {6, {0x8d,0x67,0x96,0x82,0x8b,0xbd,'I','N','.','D','A','T',0}},
+        {6, {0x8d,0x67,0x96,0x82,0x8b,0xbd,'M','D','.','D','A','T',0}},
+        {6, {0x8d,0x67,0x96,0x82,0x8b,0xbd,'S','T','.','D','A','T',0}},
+        {6, {0x8d,0x67,0x96,0x82,0x8b,0xbd,'T','L','.','D','A','T',0}},
         {0},
     }, *mp = multi;
     while(mp->alias) {
@@ -132,6 +138,12 @@ thdat_detect_filename(
         {4, "幻想郷ED.DAT"},
         {5, "怪綺談1.DAT"},
         {5, "怪綺談2.DAT"},
+        {6, "紅魔郷CM.DAT"},
+        {6, "紅魔郷ED.DAT"},
+        {6, "紅魔郷IN.DAT"},
+        {6, "紅魔郷MD.DAT"},
+        {6, "紅魔郷ST.DAT"},
+        {6, "紅魔郷TL.DAT"},
         /* SJIS interpreted as CP1251 translated to Unicode */
         {1, "“Œ•ûèËˆÙ.“`"},
         {2, "“Œ•û••–‚.˜^"},
@@ -141,6 +153,20 @@ thdat_detect_filename(
         {4, "Œ¶‘z‹½ED.DAT"},
         {5, "‰öãY’k1.DAT"},
         {5, "‰öãY’k1.DAT"},
+        /* WARNING: U+008D ahead, be careful */
+        {6, "g–‚‹½CM.DAT"},
+        {6, "g–‚‹½ED.DAT"},
+        {6, "g–‚‹½IN.DAT"},
+        {6, "g–‚‹½MD.DAT"},
+        {6, "g–‚‹½ST.DAT"},
+        {6, "g–‚‹½TL.DAT"},
+        /* Static patch */
+        {6, "th06e_CM.DAT"},
+        {6, "th06e_ED.DAT"},
+        {6, "th06e_IN.DAT"},
+        {6, "th06e_MD.DAT"},
+        {6, "th06e_ST.DAT"},
+        {6, "th06e_TL.DAT"},
         {0},
     }, *mp2 = multi2;
     while(mp2->alias) {
