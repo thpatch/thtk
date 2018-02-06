@@ -32,52 +32,7 @@
 #include "thdat.h"
 #include "thrle.h"
 #include "util.h"
-
-typedef struct {
-PACK_BEGIN
-    uint16_t magic;
-    /* Appears unused. */
-    uint8_t key;
-    unsigned char name[13];
-    uint32_t zsize;
-    uint32_t size;
-    uint32_t offset;
-    uint32_t zero;
-PACK_END
-} PACK_ATTRIBUTE th02_entry_header_t;
-
-typedef struct {
-PACK_BEGIN
-    uint16_t size;
-    uint16_t unknown1;
-    uint16_t count;
-    uint8_t key;
-    uint8_t zero2[9];
-PACK_END
-} PACK_ATTRIBUTE th03_archive_header_t;
-
-typedef struct {
-PACK_BEGIN
-    uint16_t magic;
-    uint8_t key;
-    unsigned char name[13];
-    uint16_t zsize;
-    uint16_t size;
-    uint32_t offset;
-    uint32_t zero[2];
-PACK_END
-} PACK_ATTRIBUTE th03_entry_header_t;
-
-/* TODO: These constants should be calculated instead. */
-static const uint8_t archive_key = 0x12;
-static const uint8_t entry_key = 0x34;
-
-static const uint8_t th02_keys[2] = { 0x76, 0x12 };
-
-/* Used for uncompressed entries. */
-static const uint16_t magic1 = 0xf388;
-/* Used for compressed entries. */
-static const uint16_t magic2 = 0x9595;
+#include "dattypes.h"
 
 static int
 th02_open(

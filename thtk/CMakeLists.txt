@@ -7,7 +7,7 @@ add_library(thtk SHARED
   thcrypt.h thcrypt105.h rng_mt.h
 
   thdat.c thdat02.c thdat06.c thdat08.c thdat95.c thdat105.c
-  thdat.h
+  thdat.h dattypes.h
 
   thlzss.c thrle.c
   thlzss.h thrle.h
