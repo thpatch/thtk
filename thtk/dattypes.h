@@ -199,8 +199,10 @@ static const crypt_params_t th14_crypt_params[] = {
 };
 
 typedef struct {
+PACK_BEGIN
     unsigned char magic[4];
     uint32_t size;
     uint32_t zsize;
     uint32_t entry_count;
-} th95_archive_header_t;
+PACK_END
+} PACK_ATTRIBUTE th95_archive_header_t;
