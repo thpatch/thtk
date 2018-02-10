@@ -1,0 +1,15 @@
+== thtkpp (c++ binding) ==
+
+== uthdat (midnight commander extfs plugin) ==
+Supports list and copyout commands.
+
+If your midnight commander is installed without local prefix, while thtk is 
+installed with one (or vice versa), you need to symlink uthdat like so:
+# ln -s /usr/local/lib/mc/extfs.d/uthdat /usr/lib/mc/extfs.d/uthdat
+Alternatively you might link it localy for your user like so
+$ ln -s /usr/local/lib/mc/extfs.d/uthdat ~/.local/share/mc/extfs.d/uthdat
+
+For your ext file:
+regex/\.(伝|録|郷|“\`|\˜\^|‹½|DAT|dat)$
+	Open=%cd %p/uthdat://
+

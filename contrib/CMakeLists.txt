@@ -1,0 +1,7 @@
+include_directories(${CMAKE_SOURCE_DIR})
+if(CONTRIB_UTHDAT)
+  add_executable(uthdat uthdat.cc thtkpp.hh)
+  find_package(OpenMP)
+  target_link_libraries(uthdat thtk util)
+  install(TARGETS uthdat DESTINATION lib/mc/extfs.d)
+endif()

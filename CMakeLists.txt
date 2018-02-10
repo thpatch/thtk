@@ -91,6 +91,9 @@ set(CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_PREFIX}/lib)
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
 option(WITH_LIBPNG_SOURCE "Compile libpng from source" ON)
+if(UNIX)
+  option(CONTRIB_UTHDAT "Build midnight commander plugin" ON)
+endif()
 
 if(MSVC)
   # Defining these here rather than in config.h.in also applies them to the
@@ -125,5 +128,6 @@ add_subdirectory(thdat)
 add_subdirectory(thecl)
 add_subdirectory(thmsg)
 add_subdirectory(thtk)
+add_subdirectory(contrib)
 
 configure_file(config.h.in config.h)
