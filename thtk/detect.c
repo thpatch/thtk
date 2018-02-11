@@ -33,6 +33,10 @@
 #include "thcrypt.h"
 #include "thlzss.h"
 #include "dattypes.h"
+#ifdef _WIN32
+# include <windows.h>
+# include <assert.h>
+#endif
 #define DETECT_DEF(x) \
     /* thdat02 */ \
     x(0, 1,1, NULL) \
@@ -85,13 +89,59 @@ static int detect_ver_to_idx(int ver) {
    out[macrotemp/32] |= 1 << (macrotemp%32); \
 } while(0)
 
-int
-thdat_detect_filename(
-        const char* filename)
+/* Define a few things for filename strings:
+* fnchar - filename character type on local system (wchar_t/ucs2 on windows, char/utf-8 assumed on linux)
+* FN - prefix for defining character string constants of type fnchar
+* fnscmp - compare fnchar strings
+* fnsucmp - compare fnchar string with a raw string, without any conversion (except for zero extension).
+* fnsacmp - compare fnchar string with a string converted from local codepage
+*/
+#ifndef _WIN32
+    typedef char fnchar;
+#   define FN
+#   define fnscmp strcmp
+#   define fnsucmp strcmp
+#   define fnsacmp(a,b) !0 /* noop */
+#else
+    static wchar_t* str2wcs(const char* str) {
+        int size = MultiByteToWideChar(CP_ACP, 0, str, -1, NULL, 0);
+        assert(size);
+        if(!size) return NULL;
+        wchar_t* wcs = malloc(sizeof(wchar_t) * size);
+        size = MultiByteToWideChar(CP_ACP, 0, str, -1, wcs, size);
+        assert(size);
+        if(!size) {
+            free(wcs);
+            return NULL;
+        }
+        return wcs;
+    }
+    typedef wchar_t fnchar;
+#   define FN L
+#   define fnscmp wcscmp
+    static int fnsucmp(const fnchar* a,const unsigned char* b) {
+        int diff;
+        while(!(diff=*a-*b) && *a++ && *b++);
+        return diff;
+    }
+    static int fnsacmp(const fnchar* a, const char* b) {
+        wchar_t *wb = str2wcs(b);
+        if(!wb) return !0;
+        int rv = wcscmp(a,wb);
+        free(wb);
+        return rv;
+    }
+#endif
+
+static int
+thdat_detect_filename_fn(
+        const fnchar* filename)
 {
+    if(!filename) return -1;
+    
     const thdat_detect_entry_t* ent = detect_table;
     while(ent->variant) {
-        if(ent->filename && !strcmp(filename,ent->filename)) {
+        if(ent->filename && !fnsucmp(filename,ent->filename)) {
             return ent->alias;
         }
         ent++;
@@ -118,59 +168,58 @@ thdat_detect_filename(
         {0},
     }, *mp = multi;
     while(mp->alias) {
-        if(!strcmp(filename,mp->filename)) {
+        if(!fnsucmp(filename,mp->filename) || !fnsacmp(filename,mp->filename)) {
             return mp->alias;
         }
         mp++;
     }
     /* Unicode filenames */
-    /* TODO: make this work on windows */
     struct {
         unsigned int alias;
-        const unsigned char *filename;
+        const fnchar *filename;
     } static const multi2[] = {
         /* SJIS translated to Unicode */
-        {1, "東方靈異.伝"},
-        {2, "東方封魔.録"},
-        {3, "夢時空1.DAT"},
-        {3, "夢時空2.DAT"},
-        {4, "東方幻想.郷"},
-        {4, "幻想郷ED.DAT"},
-        {5, "怪綺談1.DAT"},
-        {5, "怪綺談2.DAT"},
-        {6, "紅魔郷CM.DAT"},
-        {6, "紅魔郷ED.DAT"},
-        {6, "紅魔郷IN.DAT"},
-        {6, "紅魔郷MD.DAT"},
-        {6, "紅魔郷ST.DAT"},
-        {6, "紅魔郷TL.DAT"},
+        {1, FN"東方靈異.伝"},
+        {2, FN"東方封魔.録"},
+        {3, FN"夢時空1.DAT"},
+        {3, FN"夢時空2.DAT"},
+        {4, FN"東方幻想.郷"},
+        {4, FN"幻想郷ED.DAT"},
+        {5, FN"怪綺談1.DAT"},
+        {5, FN"怪綺談2.DAT"},
+        {6, FN"紅魔郷CM.DAT"},
+        {6, FN"紅魔郷ED.DAT"},
+        {6, FN"紅魔郷IN.DAT"},
+        {6, FN"紅魔郷MD.DAT"},
+        {6, FN"紅魔郷ST.DAT"},
+        {6, FN"紅魔郷TL.DAT"},
         /* SJIS interpreted as CP1251 translated to Unicode */
-        {1, "“Œ•ûèËˆÙ.“`"},
-        {2, "“Œ•û••–‚.˜^"},
-        {3, "–²Žž‹ó1.DAT"},
-        {3, "–²Žž‹ó2.DAT"},
-        {4, "“Œ•ûŒ¶‘z.‹½"},
-        {4, "Œ¶‘z‹½ED.DAT"},
-        {5, "‰öãY’k1.DAT"},
-        {5, "‰öãY’k1.DAT"},
+        {1, FN"“Œ•ûèËˆÙ.“`"},
+        {2, FN"“Œ•û••–‚.˜^"},
+        {3, FN"–²Žž‹ó1.DAT"},
+        {3, FN"–²Žž‹ó2.DAT"},
+        {4, FN"“Œ•ûŒ¶‘z.‹½"},
+        {4, FN"Œ¶‘z‹½ED.DAT"},
+        {5, FN"‰öãY’k1.DAT"},
+        {5, FN"‰öãY’k1.DAT"},
         /* WARNING: U+008D ahead, be careful */
-        {6, "g–‚‹½CM.DAT"},
-        {6, "g–‚‹½ED.DAT"},
-        {6, "g–‚‹½IN.DAT"},
-        {6, "g–‚‹½MD.DAT"},
-        {6, "g–‚‹½ST.DAT"},
-        {6, "g–‚‹½TL.DAT"},
+        {6, FN"g–‚‹½CM.DAT"},
+        {6, FN"g–‚‹½ED.DAT"},
+        {6, FN"g–‚‹½IN.DAT"},
+        {6, FN"g–‚‹½MD.DAT"},
+        {6, FN"g–‚‹½ST.DAT"},
+        {6, FN"g–‚‹½TL.DAT"},
         /* Static patch */
-        {6, "th06e_CM.DAT"},
-        {6, "th06e_ED.DAT"},
-        {6, "th06e_IN.DAT"},
-        {6, "th06e_MD.DAT"},
-        {6, "th06e_ST.DAT"},
-        {6, "th06e_TL.DAT"},
+        {6, FN"th06e_CM.DAT"},
+        {6, FN"th06e_ED.DAT"},
+        {6, FN"th06e_IN.DAT"},
+        {6, FN"th06e_MD.DAT"},
+        {6, FN"th06e_ST.DAT"},
+        {6, FN"th06e_TL.DAT"},
         {0},
     }, *mp2 = multi2;
     while(mp2->alias) {
-        if(!strcmp(filename,mp2->filename)) {
+        if(!fnscmp(filename,mp2->filename)) {
             return mp2->alias;
         }
         mp2++;
@@ -179,9 +228,36 @@ thdat_detect_filename(
     return -1;
 }
 
+#ifndef _WIN32
 int
-thdat_detect(
-        const char* filename,
+thdat_detect_filename(
+        const char* filename)
+{
+    return thdat_detect_filename_fn(filename);
+}
+#else
+int
+thdat_detect_filename(
+        const char* filename)
+{
+    if(!filename) return -1;
+    wchar_t* wfn = str2wcs(filename);
+    if(!wfn) return -1;
+    int rv = thdat_detect_filename_fn(wfn);
+    free(wfn);
+    return rv;
+}
+int
+thdat_detect_filename_w(
+        const wchar_t* filename)
+{
+    return thdat_detect_filename_fn(filename);
+}
+#endif
+
+static int
+thdat_detect_base(
+        int fnheur,
 	thtk_io_t* input,
 	uint32_t out[4],
         unsigned int *heur,
@@ -308,7 +384,6 @@ notth03:
     uint32_t out2[4];
     memcpy(out2,out,sizeof(out2));
     const thdat_detect_entry_t* ent;
-    int fnheur = filename ? thdat_detect_filename(filename) : -1; /* detect filename */
     int variant=-1;
     int alias=-1;
     int count = 0;
@@ -343,6 +418,29 @@ notth03:
     }
     return 0;
 }
+
+int
+thdat_detect(
+        const char* filename,
+	thtk_io_t* input,
+	uint32_t out[4],
+        unsigned int *heur,
+	thtk_error_t** error)
+{
+    thdat_detect_base(thdat_detect_filename(filename),input,out,heur,error);
+}
+#ifdef _WIN32
+int
+thdat_detect_w(
+        const wchar_t* filename,
+	thtk_io_t* input,
+	uint32_t out[4],
+        unsigned int *heur,
+	thtk_error_t** error)
+{
+    thdat_detect_base(thdat_detect_filename_w(filename),input,out,heur,error);
+}
+#endif
 
 const thdat_detect_entry_t*
 thdat_detect_iter(

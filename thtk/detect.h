@@ -34,6 +34,7 @@
 #endif
 
 #include <stdint.h>
+#include <wchar.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -43,7 +44,7 @@ extern "C" {
 typedef struct {
 	unsigned int variant; /* the smallest version which is equvivalent to alias */
 	unsigned int alias;
-	const char* filename; /* NULL if there are multiple filenames */
+	const char* filename; /* NULL if there are multiple filenames, or if filename is non-ascii */
 } thdat_detect_entry_t;
 
 /* Detects version of archive, based on its filename
@@ -51,6 +52,11 @@ typedef struct {
  * Returns -1 if unconclusive. */
 API_SYMBOL int thdat_detect_filename(
 	const char* filename);
+
+#ifdef _WIN32
+API_SYMBOL int thdat_detect_filename_w(
+	const wchar_t* filename);
+#endif
 
 /* Detects version of archive.
  *
@@ -73,6 +79,15 @@ API_SYMBOL int thdat_detect(
 	uint32_t out[4],
 	unsigned int *heur, 
 	thtk_error_t** error);
+
+#ifdef _WIN32
+API_SYMBOL int thdat_detect_w(
+	const wchar_t* filename,
+	thtk_io_t* input,
+	uint32_t out[4],
+	unsigned int *heur, 
+	thtk_error_t** error);
+#endif
 
 /* Iterate through detect bits
  * 
