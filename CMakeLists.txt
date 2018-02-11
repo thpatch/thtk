@@ -94,6 +94,9 @@ option(WITH_LIBPNG_SOURCE "Compile libpng from source" ON)
 if(UNIX)
   option(CONTRIB_UTHDAT "Build midnight commander plugin" ON)
 endif()
+if(WIN32)
+  option(CONTRIB_WCTHDAT "Build total commander plugin" ON)
+endif()
 
 if(MSVC)
   # Defining these here rather than in config.h.in also applies them to the

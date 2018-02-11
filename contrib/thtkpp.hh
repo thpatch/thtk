@@ -99,6 +99,13 @@ namespace Thtk {
             io = thtk_io_open_file(path,mode,&err);
             if(!io) throw Thtk::Error(err);
         }
+#ifdef _WIN32
+        Io(const wchar_t* path, const wchar_t* mode) {
+            thtk_error_t* err;
+            io = thtk_io_open_file_w(path, mode, &err);
+            if (!io) throw Thtk::Error(err);
+        }
+#endif
         Io(void* buf, size_t size) {
             thtk_error_t* err;
             io = thtk_io_open_memory(buf,size,&err);
@@ -212,8 +219,22 @@ namespace Thtk {
                 throw Thtk::Error(err);
             return heur;
         }
-        
+#ifdef _WIN32
+        static int detect_filename(const wchar_t* filename) {
+            return thdat_detect_filename_w(filename);
+        }
+
+        static int detect(const wchar_t* filename, Thtk::Io& input) {
+            uint32_t out[4];
+            unsigned int heur;
+            thtk_error_t* err;
+            if (-1 == thdat_detect_w(filename, input.io, out, &heur, &err))
+                throw Thtk::Error(err);
+            return heur;
+        }
+#endif
+
         friend Thtk::Entry;
     };
-};
+}
 #endif
