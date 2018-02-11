@@ -303,7 +303,7 @@ thdat_detect_base(
             goto notth02;
         }    
     }
-    if(memcmp(&head2[entry_count],&emptyhead2, sizeof(emptyhead2))) {
+    if(memcmp(&head2[entry_count-1],&emptyhead2, sizeof(emptyhead2))) {
         goto notth02;
     }
     /* TODO: differentiate */
