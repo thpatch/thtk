@@ -98,7 +98,7 @@ static int detect_ver_to_idx(int ver) {
 */
 #ifndef _WIN32
     typedef char fnchar;
-#   define FN
+#   define FN(x) x
 #   define fnscmp strcmp
 #   define fnsucmp strcmp
 #   define fnsacmp(a,b) !0 /* noop */
@@ -117,7 +117,7 @@ static int detect_ver_to_idx(int ver) {
         return wcs;
     }
     typedef wchar_t fnchar;
-#   define FN L
+#   define FN(x) L##x
 #   define fnscmp wcscmp
     static int fnsucmp(const fnchar* a,const unsigned char* b) {
         int diff;
@@ -179,43 +179,43 @@ thdat_detect_filename_fn(
         const fnchar *filename;
     } static const multi2[] = {
         /* SJIS translated to Unicode */
-        {1, FN"東方靈異.伝"},
-        {2, FN"東方封魔.録"},
-        {3, FN"夢時空1.DAT"},
-        {3, FN"夢時空2.DAT"},
-        {4, FN"東方幻想.郷"},
-        {4, FN"幻想郷ED.DAT"},
-        {5, FN"怪綺談1.DAT"},
-        {5, FN"怪綺談2.DAT"},
-        {6, FN"紅魔郷CM.DAT"},
-        {6, FN"紅魔郷ED.DAT"},
-        {6, FN"紅魔郷IN.DAT"},
-        {6, FN"紅魔郷MD.DAT"},
-        {6, FN"紅魔郷ST.DAT"},
-        {6, FN"紅魔郷TL.DAT"},
+        {1, FN("東方靈異.伝")},
+        {2, FN("東方封魔.録")},
+        {3, FN("夢時空1.DAT")},
+        {3, FN("夢時空2.DAT")},
+        {4, FN("東方幻想.郷")},
+        {4, FN("幻想郷ED.DAT")},
+        {5, FN("怪綺談1.DAT")},
+        {5, FN("怪綺談2.DAT")},
+        {6, FN("紅魔郷CM.DAT")},
+        {6, FN("紅魔郷ED.DAT")},
+        {6, FN("紅魔郷IN.DAT")},
+        {6, FN("紅魔郷MD.DAT")},
+        {6, FN("紅魔郷ST.DAT")},
+        {6, FN("紅魔郷TL.DAT")},
         /* SJIS interpreted as CP1251 translated to Unicode */
-        {1, FN"“Œ•ûèËˆÙ.“`"},
-        {2, FN"“Œ•û••–‚.˜^"},
-        {3, FN"–²Žž‹ó1.DAT"},
-        {3, FN"–²Žž‹ó2.DAT"},
-        {4, FN"“Œ•ûŒ¶‘z.‹½"},
-        {4, FN"Œ¶‘z‹½ED.DAT"},
-        {5, FN"‰öãY’k1.DAT"},
-        {5, FN"‰öãY’k2.DAT"},
+        {1, FN("“Œ•ûèËˆÙ.“`")},
+        {2, FN("“Œ•û••–‚.˜^")},
+        {3, FN("–²Žž‹ó1.DAT")},
+        {3, FN("–²Žž‹ó2.DAT")},
+        {4, FN("“Œ•ûŒ¶‘z.‹½")},
+        {4, FN("Œ¶‘z‹½ED.DAT")},
+        {5, FN("‰öãY’k1.DAT")},
+        {5, FN("‰öãY’k2.DAT")},
         /* WARNING: U+008D ahead, be careful */
-        {6, FN"g–‚‹½CM.DAT"},
-        {6, FN"g–‚‹½ED.DAT"},
-        {6, FN"g–‚‹½IN.DAT"},
-        {6, FN"g–‚‹½MD.DAT"},
-        {6, FN"g–‚‹½ST.DAT"},
-        {6, FN"g–‚‹½TL.DAT"},
+        {6, FN("g–‚‹½CM.DAT")},
+        {6, FN("g–‚‹½ED.DAT")},
+        {6, FN("g–‚‹½IN.DAT")},
+        {6, FN("g–‚‹½MD.DAT")},
+        {6, FN("g–‚‹½ST.DAT")},
+        {6, FN("g–‚‹½TL.DAT")},
         /* Static patch */
-        {6, FN"th06e_CM.DAT"},
-        {6, FN"th06e_ED.DAT"},
-        {6, FN"th06e_IN.DAT"},
-        {6, FN"th06e_MD.DAT"},
-        {6, FN"th06e_ST.DAT"},
-        {6, FN"th06e_TL.DAT"},
+        {6, FN("th06e_CM.DAT")},
+        {6, FN("th06e_ED.DAT")},
+        {6, FN("th06e_IN.DAT")},
+        {6, FN("th06e_MD.DAT")},
+        {6, FN("th06e_ST.DAT")},
+        {6, FN("th06e_TL.DAT")},
         {0},
     }, *mp2 = multi2;
     while(mp2->alias) {
@@ -427,7 +427,7 @@ thdat_detect(
         unsigned int *heur,
 	thtk_error_t** error)
 {
-    thdat_detect_base(thdat_detect_filename(filename),input,out,heur,error);
+    return thdat_detect_base(thdat_detect_filename(filename),input,out,heur,error);
 }
 #ifdef _WIN32
 int
@@ -438,7 +438,7 @@ thdat_detect_w(
         unsigned int *heur,
 	thtk_error_t** error)
 {
-    thdat_detect_base(thdat_detect_filename_w(filename),input,out,heur,error);
+    return thdat_detect_base(thdat_detect_filename_w(filename),input,out,heur,error);
 }
 #endif
 
