@@ -201,7 +201,7 @@ thdat_detect_filename_fn(
         {4, FN"“Œ•ûŒ¶‘z.‹½"},
         {4, FN"Œ¶‘z‹½ED.DAT"},
         {5, FN"‰öãY’k1.DAT"},
-        {5, FN"‰öãY’k1.DAT"},
+        {5, FN"‰öãY’k2.DAT"},
         /* WARNING: U+008D ahead, be careful */
         {6, FN"g–‚‹½CM.DAT"},
         {6, FN"g–‚‹½ED.DAT"},
