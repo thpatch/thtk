@@ -38,12 +38,10 @@ template<>
 struct Helper<char> {
     constexpr static char*rb = "rb";
     constexpr static char*wb = "wb";
-    typedef tChangeVolProc ChangeVolProcType;
-    typedef tProcessDataProc ProcessDataProc;
-    void cpy_s(char *dest, size_t destsz, const char *src) {
+    static void cpy_s(char *dest, size_t destsz, const char *src) {
         strcpy_s(dest,destsz,src);
     }
-    void cpy_widen_s(char *dest, size_t destsz, const char *src) {
+    static void cpy_widen_s(char *dest, size_t destsz, const char *src) {
         strcpy_s(dest,destsz,src);
     }
 };
@@ -51,13 +49,11 @@ template<>
 struct Helper<wchar_t> {
     constexpr static wchar_t*rb = L"rb";
     constexpr static wchar_t*wb = L"wb";
-    typedef tChangeVolProcW ChangeVolProcType;
-    typedef tProcessDataProcW ProcessDataProc;
-    void cpy_s(wchar_t *dest, size_t destsz, const wchar_t *src) {
+    static void cpy_s(wchar_t *dest, size_t destsz, const wchar_t *src) {
         wcscpy_s(dest,destsz,src);
     }
-    void cpy_widen_s(wchar_t *dest, size_t destsz, const char *src) {
-        for (int i = 0; i < destsz && *entName; i++, src++) {
+    static void cpy_widen_s(wchar_t *dest, size_t destsz, const char *src) {
+        for (int i = 0; i < destsz && *src; i++, src++) {
             dest[i] = (wchar_t)(unsigned char)*src; // treat name as Latin1
         }
     }
@@ -74,8 +70,12 @@ Thtk::Dat* open_and_detect(const CTYPE* filename, Thtk::Io& io) {
     return new Thtk::Dat(version, io);
 }
 
+struct DeletableBase {
+    virtual ~DeletableBase() {}
+};
+
 template<typename CTYPE>
-struct ThdatContext {
+struct ThdatContext : DeletableBase {
     CTYPE arcname[MAX_PATH];
 
     int openmode;
@@ -84,9 +84,6 @@ struct ThdatContext {
     int cur_entry;
     int entries;
     int size;
-    /* Unused stuff, but totalcmd makes us save those*/
-    Helper<CTYPE>::ChangeVolProcType pChangeVolProc1;
-    Helper<CTYPE>::ProcessDataProcType pProcessDataProc;
 };
 
 
@@ -163,7 +160,7 @@ template<typename CTYPE>
 BOOL CanYouHandleThisFileTemplate(CTYPE* filename) {
     try {
         Thtk::Io io(filename, Helper<CTYPE>::rb);
-        return -1 != Thtk::Dat::detect(getFilename(filename), io);
+        return -1 != Thtk::Dat::detect(filename, io);
     }
     catch (...)
     {
@@ -186,12 +183,8 @@ extern "C" {
         return ProcessFileTemplate<char>(hArcData, Operation, DestPath, DestName);
     }
     void API_SYMBOL __stdcall SetChangeVolProc(HANDLE hArcData, tChangeVolProc pChangeVolProc1) {
-        ThdatContext<CTYPE>* ctx = (ThdatContext<CTYPE>*)hArcData;
-        ctx->pChangeVolProc1 = pChangeVolProc1;
     }
     void API_SYMBOL __stdcall SetProcessDataProc(HANDLE hArcData, tProcessDataProc pProcessDataProc) {
-        ThdatContext<CTYPE>* ctx = (ThdatContext<CTYPE>*)hArcData;
-        ctx->pProcessDataProc = pProcessDataProc;
     }
     BOOL API_SYMBOL __stdcall CanYouHandleThisFile(char* filename) {
         return CanYouHandleThisFileTemplate<char>(filename);
@@ -207,12 +200,8 @@ extern "C" {
         return ProcessFileTemplate<wchar_t>(hArcData, Operation, DestPath, DestName);
     }
     void API_SYMBOL __stdcall SetChangeVolProcW(HANDLE hArcData, tChangeVolProcW pChangeVolProc1) {
-        ThdatContext<CTYPE>* ctx = (ThdatContext<CTYPE>*)hArcData;
-        ctx->pChangeVolProc1 = pChangeVolProc1;
     }
     void API_SYMBOL __stdcall SetProcessDataProcW(HANDLE hArcData, tProcessDataProcW pProcessDataProc) {
-        ThdatContext<CTYPE>* ctx = (ThdatContext<CTYPE>*)hArcData;
-        ctx->pProcessDataProc = pProcessDataProc;
     }
     BOOL API_SYMBOL __stdcall CanYouHandleThisFileW(wchar_t* filename) {
         return CanYouHandleThisFileTemplate<wchar_t>(filename);
@@ -222,7 +211,7 @@ extern "C" {
         return PK_CAPS_BY_CONTENT;
     }
     int API_SYMBOL __stdcall CloseArchive(HANDLE hArcData) {
-        ThdatContext* ctx = (ThdatContext*)hArcData;
+        DeletableBase* ctx = (DeletableBase*)hArcData;
         delete ctx;
         return 0;
     }

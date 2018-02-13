@@ -320,24 +320,3 @@ util_printfloat(
 
     return buf;
 }
-
-const char*
-util_basename(
-    const char* path)
-{
-    const char* bs = strrchr(path, '\\');
-    bs = bs ? bs+1 : path;
-    const char* fs = strrchr(path, '/');
-    fs = fs ? fs+1 : path;
-    return (bs > fs) ? bs : fs;
-}
-const wchar_t*
-util_basename_w(
-    const wchar_t* path)
-{
-    const wchar_t* bs = wcsrchr(path, L'\\');
-    bs = bs ? bs+1 : path;
-    const wchar_t* fs = wcsrchr(path, L'/');
-    fs = fs ? fs+1 : path;
-    return (bs > fs) ? bs : fs;
-}

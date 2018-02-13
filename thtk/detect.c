@@ -33,7 +33,6 @@
 #include "thcrypt.h"
 #include "thlzss.h"
 #include "dattypes.h"
-#include "util.h"
 #ifdef _WIN32
 # include <windows.h>
 # include <assert.h>
@@ -229,12 +228,33 @@ thdat_detect_filename_fn(
     return -1;
 }
 
+const char*
+detect_basename(
+    const char* path)
+{
+    const char* bs = strrchr(path, '\\');
+    bs = bs ? bs + 1 : path;
+    const char* fs = strrchr(path, '/');
+    fs = fs ? fs + 1 : path;
+    return (bs > fs) ? bs : fs;
+}
+const wchar_t*
+detect_basename_w(
+    const wchar_t* path)
+{
+    const wchar_t* bs = wcsrchr(path, L'\\');
+    bs = bs ? bs + 1 : path;
+    const wchar_t* fs = wcsrchr(path, L'/');
+    fs = fs ? fs + 1 : path;
+    return (bs > fs) ? bs : fs;
+}
+
 #ifndef _WIN32
 int
 thdat_detect_filename(
         const char* filename)
 {
-    filename = util_basename(filename);
+    filename = detect_basename(filename);
     return thdat_detect_filename_fn(filename);
 }
 #else
@@ -243,7 +263,7 @@ thdat_detect_filename(
         const char* filename)
 {
     if(!filename) return -1;
-    filename = util_basename(filename);
+    filename = detect_basename(filename);
     wchar_t* wfn = str2wcs(filename);
     if(!wfn) return -1;
     int rv = thdat_detect_filename_fn(wfn);
@@ -254,7 +274,7 @@ int
 thdat_detect_filename_w(
         const wchar_t* filename)
 {
-    filename = util_basename_w(filename);
+    filename = detect_basename_w(filename);
     return thdat_detect_filename_fn(filename);
 }
 #endif

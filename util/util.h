@@ -83,10 +83,4 @@ void util_xor(
     unsigned char step,
     unsigned char step2);
 
-/* Returns substring which contains the filename portion of the path */
-const char* util_basename(
-    const char* path);
-const wchar_t* util_basename_w(
-    const wchar_t* path);
-
 #endif
