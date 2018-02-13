@@ -32,6 +32,7 @@
 #include <wchar.h>
 #include <string.h>
 #include <memory>
+#include <stdexcept>
 
 template<typename CTYPE> struct Helper {};
 template<>
@@ -63,9 +64,7 @@ template<typename CTYPE>
 Thtk::Dat* open_and_detect(const CTYPE* filename, Thtk::Io& io) {
     int version = Thtk::Dat::detect(filename, io);
     if (-1 == version) {
-        thtk_error_t* err;
-        thtk_error_new(&err, "couldn't detect version");
-        throw Thtk::Error(err);
+        throw std::runtime_error("couldn't detect version");
     }
     return new Thtk::Dat(version, io);
 }
@@ -168,8 +167,12 @@ BOOL CanYouHandleThisFileTemplate(CTYPE* filename) {
     }
 }
 
+void thtk_wrapper_preinit(HMODULE mod);
 extern "C" {
     BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved) {
+        if (fdwReason == DLL_PROCESS_ATTACH) {
+            thtk_wrapper_preinit((HMODULE)hinstDLL);
+        }
         return TRUE;
     }
     // ANSI functions
