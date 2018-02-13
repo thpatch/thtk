@@ -105,7 +105,8 @@ void thtk_wrapper_auto_load() {
         wchar_t* path2 = wcsrchr(path, '\\');
         if (!path2)
             throw std::runtime_error("thtk_wrapper: couldn't find parent directory of current dll");
-        if (wcscpy_s(++path2, MAX_PATH-(path2-path), L"thtk.dll"))
+        ++path2;
+        if (wcscpy_s(path2, MAX_PATH-(path2-path), L"thtk.dll"))
             throw std::runtime_error("thtk_wrapper: MAX_PATH");
         thtkmodule = LoadLibraryW(path);
         if (!thtkmodule)
