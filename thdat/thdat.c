@@ -347,15 +347,8 @@ main(
         uint32_t out[4];
         unsigned int heur;
         
-        /* TODO: util func for this? */
-        const char* bs = strrchr(argv[2], '\\');
-        bs = bs ? bs+1 : argv[2];
-        const char* fs = strrchr(argv[2],'/');
-        fs = fs ? fs+1 : argv[2];
-        const char* name = (bs > fs) ? bs : fs;
-        
-        printf("Detecting '%s'... ",name);
-        if (-1 == thdat_detect(name, file, out, &heur, &error)) {
+        printf("Detecting '%s'... ",argv[2]);
+        if (-1 == thdat_detect(argv[2], file, out, &heur, &error)) {
             printf("\n");
             thtk_io_close(file);
             print_error(error);
@@ -368,7 +361,7 @@ main(
         while((ent = thdat_detect_iter(out))) {
             printf("%d,",ent->alias);
         }
-        printf(" | filename: %d\n", thdat_detect_filename(name));
+        printf(" | filename: %d\n", thdat_detect_filename(argv[2]));
         thtk_io_close(file);
         exit(0);
     }

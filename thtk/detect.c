@@ -33,6 +33,7 @@
 #include "thcrypt.h"
 #include "thlzss.h"
 #include "dattypes.h"
+#include "util.h"
 #ifdef _WIN32
 # include <windows.h>
 # include <assert.h>
@@ -233,6 +234,7 @@ int
 thdat_detect_filename(
         const char* filename)
 {
+    filename = util_basename(filename);
     return thdat_detect_filename_fn(filename);
 }
 #else
@@ -241,6 +243,7 @@ thdat_detect_filename(
         const char* filename)
 {
     if(!filename) return -1;
+    filename = util_basename(filename);
     wchar_t* wfn = str2wcs(filename);
     if(!wfn) return -1;
     int rv = thdat_detect_filename_fn(wfn);
@@ -251,6 +254,7 @@ int
 thdat_detect_filename_w(
         const wchar_t* filename)
 {
+    filename = util_basename_w(filename);
     return thdat_detect_filename_fn(filename);
 }
 #endif

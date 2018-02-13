@@ -30,6 +30,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <wchar.h>
 #include <inttypes.h>
 #include <errno.h>
 #ifdef HAVE_SYS_STAT_H
@@ -318,4 +319,25 @@ util_printfloat(
     /* XXX: What about errors? */
 
     return buf;
+}
+
+const char*
+util_basename(
+    const char* path)
+{
+    const char* bs = strrchr(path, '\\');
+    bs = bs ? bs+1 : path;
+    const char* fs = strrchr(path, '/');
+    fs = fs ? fs+1 : path;
+    return (bs > fs) ? bs : fs;
+}
+const wchar_t*
+util_basename_w(
+    const wchar_t* path)
+{
+    const wchar_t* bs = wcsrchr(path, L'\\');
+    bs = bs ? bs+1 : path;
+    const wchar_t* fs = wcsrchr(path, L'/');
+    fs = fs ? fs+1 : path;
+    return (bs > fs) ? bs : fs;
 }

@@ -34,23 +34,17 @@
 #include <utility>
 #include <memory>
 #include "thtkpp.hh"
-//#include "program.h"
-//#include "util.h"
 
 Thtk::Dat* open_and_detect(const char* filename, Thtk::Io& io) {
-    const char* bs = strrchr(filename, '\\');
-    bs = bs ? bs+1 : filename;
-    const char* fs = strrchr(filename,'/');
-    fs = fs ? fs+1 : filename;
-    const char* name = (bs > fs) ? bs : fs;
-    int version = Thtk::Dat::detect(name, io);
+    int version = Thtk::Dat::detect(filename, io);
     if(-1 == version) {
         thtk_error_t* err;
-        thtk_error_new(&err, "couldn't detect version. filename: %s", name);
+        thtk_error_new(&err, "couldn't detect version");
         throw Thtk::Error(err);
     }
     return new Thtk::Dat(version, io);
 }
+
 int main(int argc, char** argv) {
     try {
         if(argc < 3) return 1;
