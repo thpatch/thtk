@@ -92,10 +92,10 @@ set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
 option(WITH_LIBPNG_SOURCE "Compile libpng from source" ON)
 if(UNIX)
-  option(CONTRIB_UTHDAT "Build midnight commander plugin" ON)
+  option(CONTRIB_UTHDAT "Build midnight commander plugin" OFF)
 endif()
 if(WIN32)
-  option(CONTRIB_WCTHDAT "Build total commander plugin" ON)
+  option(CONTRIB_WCTHDAT "Build total commander plugin" OFF)
 endif()
 
 if(MSVC)
