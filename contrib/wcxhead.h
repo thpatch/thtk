@@ -163,8 +163,8 @@ typedef struct {
 	char DefaultIniName[MAX_PATH];
 } PackDefaultParamStruct;
 
-/* Definition of callback functions called by the DLL
-Ask to swap disk for multi-volume archive */
+/* Definition of callback functions called by the DLL */
+/* Ask to swap disk for multi-volume archive */
 typedef int (__stdcall *tChangeVolProc)(char *ArcName,int Mode);
 typedef int (__stdcall *tChangeVolProcW)(WCHAR *ArcName,int Mode);
 /* Notify that data is processed - used for progress dialog */

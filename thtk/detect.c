@@ -90,12 +90,12 @@ static int detect_ver_to_idx(int ver) {
 } while(0)
 
 /* Define a few things for filename strings:
-* fnchar - filename character type on local system (wchar_t/ucs2 on windows, char/utf-8 assumed on linux)
-* FN - prefix for defining character string constants of type fnchar
-* fnscmp - compare fnchar strings
-* fnsucmp - compare fnchar string with a raw string, without any conversion (except for zero extension).
-* fnsacmp - compare fnchar string with a string converted from local codepage
-*/
+ * fnchar - filename character type on local system (wchar_t/ucs2 on windows, char/utf-8 assumed on linux)
+ * FN - prefix for defining character string constants of type fnchar
+ * fnscmp - compare fnchar strings
+ * fnsucmp - compare fnchar string with a raw string, without any conversion (except for zero extension).
+ * fnsacmp - compare fnchar string with a string converted from local codepage
+ */
 #ifndef _WIN32
     typedef char fnchar;
 #   define FN(x) x
