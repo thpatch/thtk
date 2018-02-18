@@ -48,14 +48,14 @@ Thtk::Dat* open_and_detect(const char* filename, Thtk::Io& io) {
 int main(int argc, char** argv) {
     try {
         if(argc < 3) return 1;
-    
+
         if(!strcmp(argv[1],"list")) {
             char date[13];
             time_t t = time(NULL);
             struct tm tm;
             localtime_r(&t,&tm);
             strftime(date,sizeof(date),"%b %d %H:%M",&tm);
-            
+
             Thtk::Io io(argv[2],"rb");
             std::unique_ptr<Thtk::Dat> dat(open_and_detect(argv[2],io));
             ssize_t count = dat-> entry_count();
@@ -67,7 +67,7 @@ int main(int argc, char** argv) {
             if(argc < 5) return 1;
             Thtk::Io io(argv[2],"rb");
             std::unique_ptr<Thtk::Dat> dat(open_and_detect(argv[2],io));
-	    Thtk::Entry e = dat->entry(argv[3]);
+            Thtk::Entry e = dat->entry(argv[3]);
             Thtk::Io io2(argv[4],"wb");
             e.read(io2);
         }

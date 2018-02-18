@@ -47,7 +47,7 @@ namespace Thtk {
             else {
                 _msg = new char[strlen(errm)+1];
                 strcpy(_msg, errm);
-            } 
+            }
             if(err) thtk_error_free(&err);
         }
         virtual ~Error() {
@@ -66,7 +66,7 @@ namespace Thtk {
             return _msg;
         }
     };
-    
+
     class Dat;
     class Entry;
     class Io {
@@ -93,7 +93,7 @@ namespace Thtk {
         ~Io() {
             if(io) thtk_io_close(io);
         }
-        
+
         Io(const char* path, const char* mode) {
             thtk_error_t* err;
             io = thtk_io_open_file(path,mode,&err);
@@ -116,13 +116,13 @@ namespace Thtk {
             io = thtk_io_open_growing_memory(&err);
             if(!io) throw Thtk::Error(err);
         }
-        
+
         Io(const Io&) = delete;
         Io& operator=(const Io&) = delete;
         friend Thtk::Dat;
         friend Thtk::Entry;
     };
-    
+
     class Entry {
         thdat_t* dat;
         int idx;
@@ -190,7 +190,7 @@ namespace Thtk {
             }
         }
         Dat(const Dat&) = delete;
-        Dat& operator=(const Dat&) = delete; 
+        Dat& operator=(const Dat&) = delete;
         ssize_t entry_count() {
             thtk_error_t* err;
             ssize_t rv = thdat_entry_count(dat,&err);
@@ -206,11 +206,11 @@ namespace Thtk {
             if(-1 == index) throw Thtk::Error(err);
             return entry(index);
         }
-        
+
         static int detect_filename(const char* filename) {
             return thdat_detect_filename(filename);
         }
-        
+
         static int detect(const char* filename, Thtk::Io& input) {
             uint32_t out[4];
             unsigned int heur;

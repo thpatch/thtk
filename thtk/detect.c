@@ -29,7 +29,7 @@
 #include <config.h>
 #include <string.h>
 #include <thtk/thtk.h>
-#include <stdio.h> /* for SEEK_SET */ 
+#include <stdio.h> /* for SEEK_SET */
 #include "thcrypt.h"
 #include "thlzss.h"
 #include "dattypes.h"
@@ -65,12 +65,12 @@
     x(20, 14,16, "th16.dat") \
     /* thdat105 */ \
     x(21, 105,105, NULL) \
-    x(22, 123,123, NULL) 
-    
+    x(22, 123,123, NULL)
+
 static const thdat_detect_entry_t detect_table[] = {
 #define x(idx, var, alias, filename) {var,alias,filename},
         DETECT_DEF(x)
-        {0,0},       
+        {0,0},
 #undef x
 };
 #define DETECT_ENTRIES (sizeof(detect_table)/sizeof(detect_table[0]) - 1)
@@ -135,10 +135,10 @@ static int detect_ver_to_idx(int ver) {
 
 static int
 thdat_detect_filename_fn(
-        const fnchar* filename)
+    const fnchar* filename)
 {
     if(!filename) return -1;
-    
+
     const thdat_detect_entry_t* ent = detect_table;
     while(ent->variant) {
         if(ent->filename && !fnsucmp(filename,ent->filename)) {
@@ -224,7 +224,7 @@ thdat_detect_filename_fn(
         }
         mp2++;
     }
-    
+
     return -1;
 }
 
@@ -252,7 +252,7 @@ detect_basename_w(
 #ifndef _WIN32
 int
 thdat_detect_filename(
-        const char* filename)
+    const char* filename)
 {
     filename = detect_basename(filename);
     return thdat_detect_filename_fn(filename);
@@ -260,7 +260,7 @@ thdat_detect_filename(
 #else
 int
 thdat_detect_filename(
-        const char* filename)
+    const char* filename)
 {
     if(!filename) return -1;
     filename = detect_basename(filename);
@@ -272,7 +272,7 @@ thdat_detect_filename(
 }
 int
 thdat_detect_filename_w(
-        const wchar_t* filename)
+    const wchar_t* filename)
 {
     filename = detect_basename_w(filename);
     return thdat_detect_filename_fn(filename);
@@ -281,11 +281,11 @@ thdat_detect_filename_w(
 
 static int
 thdat_detect_base(
-        int fnheur,
-	thtk_io_t* input,
-	uint32_t out[4],
-        unsigned int *heur,
-	thtk_error_t** error)
+    int fnheur,
+    thtk_io_t* input,
+    uint32_t out[4],
+    unsigned int *heur,
+    thtk_error_t** error)
 {
     out[0]=out[1]=out[2]=out[3]=0;
     *heur = -1;
@@ -325,7 +325,7 @@ thdat_detect_base(
     for(int i=1;i<entry_count-1;i++) {
         if(head2[i].magic != magic1 && head2[i].magic != magic2) {
             goto notth02;
-        }    
+        }
     }
     if(memcmp(&head2[entry_count-1],&emptyhead2, sizeof(emptyhead2))) {
         goto notth02;
@@ -369,7 +369,7 @@ notth03:
     if(-1 == thtk_io_seek(input, 0, SEEK_SET, error)) {
         return -1;
     }
-    
+
     /* read magic for TSA 06+ */
     char magic[sizeof(th95_archive_header_t)];
     if(-1 == thtk_io_read(input, magic, sizeof(magic), error)) {
@@ -403,7 +403,7 @@ notth03:
         SET_OUT(15);
         SET_OUT(16);
     }
-    
+
     /* heur */
     uint32_t out2[4];
     memcpy(out2,out,sizeof(out2));
@@ -416,7 +416,7 @@ notth03:
             *heur = fnheur;
             return 0;
         }
-        
+
         count++;
         alias = ent->alias; /* save the exact alias, if this is the only entry */
         if(variant == -1) { /* set the initial variant */
@@ -445,22 +445,22 @@ notth03:
 
 int
 thdat_detect(
-        const char* filename,
-	thtk_io_t* input,
-	uint32_t out[4],
-        unsigned int *heur,
-	thtk_error_t** error)
+    const char* filename,
+    thtk_io_t* input,
+    uint32_t out[4],
+    unsigned int *heur,
+    thtk_error_t** error)
 {
     return thdat_detect_base(thdat_detect_filename(filename),input,out,heur,error);
 }
 #ifdef _WIN32
 int
 thdat_detect_w(
-        const wchar_t* filename,
-	thtk_io_t* input,
-	uint32_t out[4],
-        unsigned int *heur,
-	thtk_error_t** error)
+    const wchar_t* filename,
+    thtk_io_t* input,
+    uint32_t out[4],
+    unsigned int *heur,
+    thtk_error_t** error)
 {
     return thdat_detect_base(thdat_detect_filename_w(filename),input,out,heur,error);
 }

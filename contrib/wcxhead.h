@@ -157,10 +157,10 @@ typedef struct {
 } tOpenArchiveDataW;
 
 typedef struct {
-	int size;
-	DWORD PluginInterfaceVersionLow;
-	DWORD PluginInterfaceVersionHi;
-	char DefaultIniName[MAX_PATH];
+    int size;
+    DWORD PluginInterfaceVersionLow;
+    DWORD PluginInterfaceVersionHi;
+    char DefaultIniName[MAX_PATH];
 } PackDefaultParamStruct;
 
 /* Definition of callback functions called by the DLL */

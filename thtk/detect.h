@@ -42,20 +42,20 @@ extern "C" {
 
 /* Detect table is guaranteed to be grouped by variant */
 typedef struct {
-	unsigned int variant; /* the smallest version which is equvivalent to alias */
-	unsigned int alias;
-	const char* filename; /* NULL if there are multiple filenames, or if filename is non-ascii */
+    unsigned int variant; /* the smallest version which is equvivalent to alias */
+    unsigned int alias;
+    const char* filename; /* NULL if there are multiple filenames, or if filename is non-ascii */
 } thdat_detect_entry_t;
 
 /* Detects version of archive, based on its filename
  *
  * Returns -1 if unconclusive. */
 API_SYMBOL int thdat_detect_filename(
-	const char* filename);
+    const char* filename);
 
 #ifdef _WIN32
 API_SYMBOL int thdat_detect_filename_w(
-	const wchar_t* filename);
+    const wchar_t* filename);
 #endif
 
 /* Detects version of archive.
@@ -63,7 +63,7 @@ API_SYMBOL int thdat_detect_filename_w(
  * Returns 0 if successful, and -1 if io error happened (check thtk_error_t)
  *
  * Filename heur is optional, use NULL as filename to disable it.
- * 
+ *
  * out is bits corresponding to entries in detect_table.
  * Note that out array is only based on file contents.
  *
@@ -74,30 +74,30 @@ API_SYMBOL int thdat_detect_filename_w(
  *   (in that case heur is set to variant number)
  * Otherwise it is set to -1, and the detection shall be considered unconclusive */
 API_SYMBOL int thdat_detect(
-	const char* filename,
-	thtk_io_t* input,
-	uint32_t out[4],
-	unsigned int *heur, 
-	thtk_error_t** error);
+    const char* filename,
+    thtk_io_t* input,
+    uint32_t out[4],
+    unsigned int *heur,
+    thtk_error_t** error);
 
 #ifdef _WIN32
 API_SYMBOL int thdat_detect_w(
-	const wchar_t* filename,
-	thtk_io_t* input,
-	uint32_t out[4],
-	unsigned int *heur, 
-	thtk_error_t** error);
+    const wchar_t* filename,
+    thtk_io_t* input,
+    uint32_t out[4],
+    unsigned int *heur,
+    thtk_error_t** error);
 #endif
 
 /* Iterate through detect bits
- * 
+ *
  * Returns NULL when no bits left, otherwise returns entry from detect table
  *
  * Note that it will modify the out array.
- * 
+ *
  * Usage: while((ent = thdat_detect_iter(out))) ...; */
 API_SYMBOL const thdat_detect_entry_t* thdat_detect_iter(
-	uint32_t out[4]);
+    uint32_t out[4]);
 #ifdef __cplusplus
 }
 #endif

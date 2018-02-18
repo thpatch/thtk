@@ -343,10 +343,10 @@ main(
             thtk_error_free(&error);
             exit(1);
         }
-        
+
         uint32_t out[4];
         unsigned int heur;
-        
+
         printf("Detecting '%s'... ",argv[2]);
         if (-1 == thdat_detect(argv[2], file, out, &heur, &error)) {
             printf("\n");
@@ -355,7 +355,7 @@ main(
             thtk_error_free(&error);
             exit(1);
         }
-        
+
         const thdat_detect_entry_t* ent;
         printf("%d | possible versions: ", heur);
         while((ent = thdat_detect_iter(out))) {
