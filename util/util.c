@@ -30,7 +30,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <wchar.h>
 #include <inttypes.h>
 #include <errno.h>
 #ifdef HAVE_SYS_STAT_H

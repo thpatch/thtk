@@ -31,7 +31,6 @@
 
 #include <config.h>
 #include <stdio.h>
-#include <wchar.h>
 #include <inttypes.h>
 #include <stddef.h>
 
