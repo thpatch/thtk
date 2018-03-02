@@ -91,13 +91,20 @@ set(CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_PREFIX}/lib)
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
 option(WITH_LIBPNG_SOURCE "Compile libpng from source" ON)
+if(UNIX)
+  option(CONTRIB_UTHDAT "Build midnight commander plugin" OFF)
+endif()
+if(WIN32)
+  option(CONTRIB_WCTHDAT "Build total commander plugin" OFF)
+endif()
 
 if(MSVC)
   # Defining these here rather than in config.h.in also applies them to the
   # zlib-ng and libpng build.
-  add_compile_options(-D_CRT_SECURE_NO_DEPRECATE -D_CRT_NONSTDC_NO_DEPRECATE)
+  # Character set options were introduced in Visual Studio 2015 Update 2
+  add_compile_options(-D_CRT_SECURE_NO_DEPRECATE -D_CRT_NONSTDC_NO_DEPRECATE /source-charset:utf-8 /execution-charset:utf-8)
 else()
-  add_compile_options(-D_GNU_SOURCE -std=c99)
+  add_compile_options(-D_GNU_SOURCE -std=c99 -finput-charset=utf-8 -fexec-charset=utf-8)
 endif()
 
 function(link_setargv target)
@@ -125,5 +132,6 @@ add_subdirectory(thdat)
 add_subdirectory(thecl)
 add_subdirectory(thmsg)
 add_subdirectory(thtk)
+add_subdirectory(contrib)
 
 configure_file(config.h.in config.h)

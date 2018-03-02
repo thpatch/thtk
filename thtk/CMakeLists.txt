@@ -7,10 +7,13 @@ add_library(thtk SHARED
   thcrypt.h thcrypt105.h rng_mt.h
 
   thdat.c thdat02.c thdat06.c thdat08.c thdat95.c thdat105.c
-  thdat.h
+  thdat.h dattypes.h
 
   thlzss.c thrle.c
   thlzss.h thrle.h
+
+  detect.c
+  detect.h
 
   util.c
   util.h thtk.h)
@@ -30,4 +33,4 @@ endif()
 set_property(TARGET thtk PROPERTY VERSION "1.0.0")
 set_property(TARGET thtk PROPERTY SOVERSION 1)
 install(TARGETS thtk DESTINATION lib)
-install(FILES thtk.h error.h io.h dat.h DESTINATION include/thtk)
+install(FILES thtk.h error.h io.h dat.h detect.h DESTINATION include/thtk)

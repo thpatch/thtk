@@ -1,0 +1,16 @@
+LIBRARY
+EXPORTS
+OpenArchive
+ReadHeader
+ProcessFile
+SetChangeVolProc
+SetProcessDataProc
+CanYouHandleThisFile
+OpenArchiveW
+ReadHeaderExW
+ProcessFileW
+SetChangeVolProcW
+SetProcessDataProcW
+CanYouHandleThisFileW
+GetPackerCaps
+CloseArchive

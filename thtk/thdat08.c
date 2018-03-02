@@ -34,60 +34,7 @@
 #include "thdat.h"
 #include "thlzss.h"
 #include "util.h"
-
-typedef struct {
-PACK_BEGIN
-    /* "PBGZ" */
-    char magic[4];
-    /* The following entries are also encrypted. */
-    /* Stored + 123456. */
-    uint32_t count;
-    /* Stored + 345678. */
-    uint32_t offset;
-    /* Stored + 567891. */
-    uint32_t size;
-PACK_END
-} PACK_ATTRIBUTE th08_archive_header_t;
-
-typedef struct {
-    unsigned char type;
-    unsigned char key;
-    unsigned char step;
-    unsigned int block;
-    unsigned int limit;
-} crypt_params;
-
-/* Indices into th??_crypt_params. */
-#define TYPE_ETC 0
-#define TYPE_ANM 1
-#define TYPE_ECL 2
-#define TYPE_JPG 3
-#define TYPE_MSG 4
-#define TYPE_TXT 5
-#define TYPE_WAV 6
-
-/* XXX: { '*', 0x99, 0x37, 0x400, 0x1000 } is listed by Brightmoon. */
-static const crypt_params
-th08_crypt_params[] = {
-    { '-', 0x35, 0x97,   0x80, 0x2800 }, /* .*   */
-    { 'A', 0xc1, 0x51, 0x1400, 0x2000 }, /* .anm */
-    { 'E', 0xab, 0xcd,  0x200, 0x1000 }, /* .ecl */
-    { 'J', 0x03, 0x19, 0x1400, 0x7800 }, /* .jpg */
-    { 'M', 0x1b, 0x37,   0x40, 0x2000 }, /* .msg */
-    { 'T', 0x51, 0xe9,   0x40, 0x3000 }, /* .txt */
-    { 'W', 0x12, 0x34,  0x400, 0x2800 }, /* .wav */
-};
-
-static const crypt_params
-th09_crypt_params[] = {
-    { '-', 0x35, 0x97,  0x80, 0x2800 },
-    { 'A', 0xc1, 0x51, 0x400,  0x400 },
-    { 'E', 0xab, 0xcd, 0x200, 0x1000 },
-    { 'J', 0x03, 0x19, 0x400,  0x400 },
-    { 'M', 0x1b, 0x37,  0x40, 0x2800 },
-    { 'T', 0x51, 0xe9,  0x40, 0x3000 },
-    { 'W', 0x12, 0x34, 0x400,  0x400 }
-};
+#include "dattypes.h"
 
 static void
 tolowerstr(

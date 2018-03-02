@@ -1,0 +1,35 @@
+== thtkpp (c++ binding) ==
+
+== uthdat (midnight commander extfs plugin) ==
+Supports list and copyout commands.
+
+If your midnight commander is installed without local prefix, while thtk is 
+installed with one (or vice versa), you need to symlink uthdat like so:
+# ln -s /usr/local/lib/mc/extfs.d/uthdat /usr/lib/mc/extfs.d/uthdat
+Alternatively you might link it localy for your user like so
+$ ln -s /usr/local/lib/mc/extfs.d/uthdat ~/.local/share/mc/extfs.d/uthdat
+
+For your ext file:
+regex/\.(伝|録|郷|“\`|\˜\^|‹½|DAT|dat)$
+	Open=%cd %p/uthdat://
+
+== wcthdat (total commander wcx plugin) ==
+Read-only. Supports Unicode plugin interface.
+
+Make sure you have thtk.dll in the same directory as wcthdat.dll
+
+Rename DLL to wcthdat.wcx (or .wcx64 if you're brave enough to compile 64-bit
+version)
+In total commander go to
+ Configuration -> Options -> Plugins -> Packer plugins (.WCX) -> Configure
+You will be presented with the most counterintuitive UI for plugin selection.
+I usually just click all over it until it works.
+
+Alternatively you may add this to your wincmd.ini:
+
+[PackerPlugins]
+dat=64,C:\Users\ZUN\tannedcirno\thtk\build\contrib\RelWithDebInfo\wcthdat.dll
+
+64 means that this plugin supports detection by content. Usually totalcmd gets
+this number from GetPackerCaps function. If you want to disable that, change it
+to 0.

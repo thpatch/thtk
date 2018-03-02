@@ -34,4 +34,6 @@
 
 #include <thtk/dat.h>
 
+#include <thtk/detect.h>
+
 #endif

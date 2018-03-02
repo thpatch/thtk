@@ -244,6 +244,27 @@ thtk_io_open_file(
     return io;
 }
 
+#ifdef _WIN32
+thtk_io_t*
+thtk_io_open_file_w(
+    const wchar_t* path,
+    const wchar_t* mode,
+    thtk_error_t** error)
+{
+    thtk_io_t* io = malloc(sizeof(*io));
+    *io = thtk_io_file_template;
+    io->private = _wfopen(path, mode);
+
+    if (!io->private) {
+        thtk_error_new(error, "error while opening file `%S': %s", path, strerror(errno));
+        free(io);
+        return NULL;
+    }
+
+    return io;
+}
+#endif
+
 typedef struct {
     off_t offset;
     ssize_t size;

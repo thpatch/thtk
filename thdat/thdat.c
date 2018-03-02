@@ -45,7 +45,7 @@ print_usage(
            "  x  extract an archive\n"
            "  V  display version information and exit\n"
            "OPTION can be:\n"
-           "  #  # can be 1, 2, 3, 4, 5, 6, 7, 8, 9, 95, 10, 105, 11, 12, 123, 125, 128, 13, 14, 143, 15, or 16 defaults to the latest\n\n"
+           "  #  # can be 1, 2, 3, 4, 5, 6, 7, 8, 9, 95, 10, 103 (for Uwabami Breakers), 105, 11, 12, 123, 125, 128, 13, 14, 143, 15, or 16 defaults to the latest\n\n"
            "Report bugs to <" PACKAGE_BUGREPORT ">.\n", argv0);
 }
 
@@ -325,13 +325,46 @@ main(
     unsigned int version = 16;
     int mode;
 
-    if (!(mode = parse_args(argc, argv, print_usage, "clxV", "", &version)))
+    if (!(mode = parse_args(argc, argv, print_usage, "clxVd", "", &version)))
         exit(1);
 
     switch (mode) {
     case 'V':
         util_print_version();
         exit(0);
+    case 'd': {
+        if (argc < 3) {
+            print_usage();
+            exit(1);
+        }
+        thtk_io_t* file;
+        if (!(file = thtk_io_open_file(argv[2], "rb", &error))) {
+            print_error(error);
+            thtk_error_free(&error);
+            exit(1);
+        }
+
+        uint32_t out[4];
+        unsigned int heur;
+
+        printf("Detecting '%s'... ",argv[2]);
+        if (-1 == thdat_detect(argv[2], file, out, &heur, &error)) {
+            printf("\n");
+            thtk_io_close(file);
+            print_error(error);
+            thtk_error_free(&error);
+            exit(1);
+        }
+
+        const thdat_detect_entry_t* ent;
+        printf("%d | possible versions: ", heur);
+        while((ent = thdat_detect_iter(out))) {
+            printf("%d,",ent->alias);
+        }
+        printf(" | filename: %d\n", thdat_detect_filename(argv[2]));
+        thtk_io_close(file);
+        exit(0);
+    }
     case 'l': {
         if (argc < 3) {
             print_usage();

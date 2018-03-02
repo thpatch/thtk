@@ -33,6 +33,7 @@
 #include <sys/types.h>
 #endif
 #include <thtk/error.h>
+#include <wchar.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -58,6 +59,9 @@ API_SYMBOL int thtk_io_close(thtk_io_t* io);
 
 /* Opens a file in the mode specified, the mode works as it does for fopen. */
 API_SYMBOL thtk_io_t* thtk_io_open_file(const char* path, const char* mode, thtk_error_t** error);
+#ifdef _WIN32
+API_SYMBOL thtk_io_t* thtk_io_open_file_w(const wchar_t* path, const wchar_t* mode, thtk_error_t** error);
+#endif
 /* Opens a memory buffer for IO. */
 API_SYMBOL thtk_io_t* thtk_io_open_memory(void* buf, size_t size, thtk_error_t** error);
 /* Creates a new memory buffer that automatically expands. */
