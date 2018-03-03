@@ -39,6 +39,7 @@
 #include "program.h"
 #include "util.h"
 #include "value.h"
+#include "mygetopt.h"
 
 unsigned int option_force;
 
@@ -1252,13 +1253,12 @@ main(
     int argc,
     char* argv[])
 {
-    const char commands[] = "l"
+    const char commands[] = ":l"
 #ifdef HAVE_LIBPNG
                             "xrc"
 #endif
-                            "V";
-    char options[] = "f";
-    int command = 0;
+                            "Vf";
+    int command = -1;
 
     FILE* in;
 
@@ -1271,28 +1271,58 @@ main(
     int i;
 #endif
 
-    command = parse_args(argc, argv, print_usage, commands, options, NULL);
-
-    if (!command)
-        exit(1);
-
-    if (!strchr(options, 'f'))
-        option_force = 1;
+    argv0 = argv[0];
+    char opt;
+    int ind=0;
+    while(argv[util_optind]) {
+        switch(opt = util_getopt(argc,argv,commands)) {
+        case 'V':
+            util_print_version();
+            exit(0);
+        case 'l':
+        case 'x':
+        case 'r':
+        case 'c':
+            if(command != -1) {
+                fprintf(stderr,"%s: More than one mode specified\n",argv0);
+                print_usage();
+                exit(1);
+            }
+            command = opt;
+            break;
+        case 'f':
+            option_force = 1;
+            break;
+        case '?':
+            fprintf(stderr,"%s: Unknown option '%c'\n",argv0,util_optopt);
+            print_usage();
+            exit(1);
+        case -1:
+            if(!strcmp(argv[util_optind-1], "--")) {
+                while(argv[util_optind]) {
+                    argv[ind++] = argv[util_optind++];
+                }
+            }
+            else {
+                argv[ind++] = argv[util_optind++];
+            }
+            break;
+        }
+    }
+    argc = ind;
+    argv[argc] = NULL;
 
     switch (command) {
-    case 'V':
-        util_print_version();
-        exit(0);
     case 'l':
-        if (argc != 3) {
+        if (argc != 1) {
             print_usage();
             exit(1);
         }
 
-        current_input = argv[2];
-        in = fopen(argv[2], "rb");
+        current_input = argv[0];
+        in = fopen(argv[0], "rb");
         if (!in) {
-            fprintf(stderr, "%s: couldn't open %s for reading\n", argv[2], current_input);
+            fprintf(stderr, "%s: couldn't open %s for reading\n", argv[0], current_input);
             exit(1);
         }
         anm = anm_read_file(in);
@@ -1302,21 +1332,21 @@ main(
         exit(0);
 #ifdef HAVE_LIBPNG
     case 'x':
-        if (argc < 3) {
+        if (argc < 1) {
             print_usage();
             exit(1);
         }
 
-        current_input = argv[2];
-        in = fopen(argv[2], "rb");
+        current_input = argv[0];
+        in = fopen(argv[0], "rb");
         if (!in) {
-            fprintf(stderr, "%s: couldn't open %s for reading\n", argv[2], current_input);
+            fprintf(stderr, "%s: couldn't open %s for reading\n", argv[0], current_input);
             exit(1);
         }
         anm = anm_read_file(in);
         fclose(in);
 
-        if (argc == 3) {
+        if (argc == 1) {
             /* Extract all files. */
             list_for_each(&anm->names, name) {
                 current_output = name;
@@ -1325,7 +1355,7 @@ main(
             }
         } else {
             /* Extract all listed files. */
-            for (i = 3; i < argc; ++i) {
+            for (i = 1; i < argc; ++i) {
                 list_for_each(&anm->names, name) {
                     if (strcmp(argv[i], name) == 0) {
                         current_output = name;
@@ -1344,22 +1374,22 @@ extract_next:
         anm_free(anm);
         exit(0);
     case 'r':
-        if (argc != 5) {
+        if (argc != 3) {
             print_usage();
             exit(1);
         }
 
-        current_output = argv[4];
-        current_input = argv[2];
-        in = fopen(argv[2], "rb");
+        current_output = argv[2];
+        current_input = argv[0];
+        in = fopen(argv[0], "rb");
         if (!in) {
-            fprintf(stderr, "%s: couldn't open %s for reading\n", argv[2], current_input);
+            fprintf(stderr, "%s: couldn't open %s for reading\n", argv[0], current_input);
             exit(1);
         }
         anm = anm_read_file(in);
         fclose(in);
 
-        anmfp = fopen(argv[2], "rb+");
+        anmfp = fopen(argv[0], "rb+");
         if (!anmfp) {
             fprintf(stderr, "%s: couldn't open %s for writing: %s\n",
                 argv0, current_input, strerror(errno));
@@ -1367,14 +1397,14 @@ extract_next:
         }
 
         list_for_each(&anm->names, name) {
-            if (strcmp(argv[3], name) == 0) {
-                anm_replace(anm, anmfp, name, argv[4]);
+            if (strcmp(argv[1], name) == 0) {
+                anm_replace(anm, anmfp, name, argv[2]);
                 goto replace_done;
             }
         }
 
         fprintf(stderr, "%s:%s: %s not found in archive\n",
-            argv0, current_input, argv[3]);
+            argv0, current_input, argv[1]);
 
 replace_done:
 
@@ -1384,7 +1414,7 @@ replace_done:
         offset = 0;
         list_for_each(&anm->entries, entry) {
             unsigned int nextoffset = entry->header->nextoffset;
-            if (strcmp(argv[3], entry->name) == 0 && entry->header->hasdata) {
+            if (strcmp(argv[1], entry->name) == 0 && entry->header->hasdata) {
                 if (!file_seek(anmfp,
                     offset + entry->header->thtxoffset + 4 + sizeof(thtx_header_t)))
                     exit(1);
@@ -1398,12 +1428,12 @@ replace_done:
         anm_free(anm);
         exit(0);
     case 'c':
-        if (argc != 4) {
+        if (argc != 2) {
             print_usage();
             exit(1);
         }
-        current_input = argv[3];
-        anm = anm_create(argv[3]);
+        current_input = argv[1];
+        anm = anm_create(argv[1]);
 
         /* Allocate enough space for the THTX data. */
         list_for_each(&anm->entries, entry) {
@@ -1417,13 +1447,14 @@ replace_done:
         list_for_each(&anm->names, name)
             anm_replace(anm, NULL, name, name);
 
-        current_output = argv[2];
-        anm_write(anm, argv[2]);
+        current_output = argv[0];
+        anm_write(anm, argv[0]);
 
         anm_free(anm);
         exit(0);
 #endif
     default:
-        abort();
+        print_usage();
+        exit(1);
     }
 }
