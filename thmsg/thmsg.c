@@ -29,9 +29,11 @@
 #include <config.h>
 #include <errno.h>
 #include <string.h>
+#include <stdlib.h>
 #include "program.h"
 #include "thmsg.h"
 #include "util.h"
+#include "mygetopt.h"
 
 int thmsg_opt_end = 0;
 
@@ -58,20 +60,59 @@ main(int argc, char* argv[])
     FILE* in = stdin;
     FILE* out = stdout;
     unsigned int version = 0;
-    int mode;
+    int mode = -1;
     const thmsg_module_t* module = NULL;
-    char options[] = "e";
 
     current_input = "(stdin)";
     current_output = "(stdout)";
 
-    mode = parse_args(argc, argv, print_usage, "cdV", options, &version);
-
-    if (!mode)
-        return 1;
-
-    if (!strchr(options, 'e'))
-        thmsg_opt_end = 1;
+    argv0 = argv[0];
+    char opt;
+    int ind=0;
+    while(argv[util_optind]) {
+        switch(opt = util_getopt(argc, argv, ":c:d:Ve")) {
+        case 'V':
+            util_print_version();
+            exit(0);
+        case 'c':
+        case 'd':
+            if(mode != -1) {
+                fprintf(stderr,"%s: More than one mode specified\n", argv0);
+                print_usage();
+                exit(1);
+            }
+            mode = opt;
+            version = atoi(util_optarg);
+            break;
+        case ':':
+            if(mode != -1) {
+                fprintf(stderr,"%s: More than one mode specified\n", argv0);
+                print_usage();
+                exit(1);
+            }
+            mode = util_optopt;
+            break;
+        case 'e':
+            thmsg_opt_end = 1;
+            break;
+        case '?':
+            fprintf(stderr,"%s: Unknown option '%c'\n",argv0,util_optopt);
+            print_usage();
+            exit(1);
+        case -1:
+            if(!strcmp(argv[util_optind-1], "--")) {
+                while(argv[util_optind]) {
+                    argv[ind++] = argv[util_optind++];
+                }
+            }
+            else {
+                argv[ind++] = argv[util_optind++];
+            }
+            break;
+        }
+    }
+    argc = ind;
+    argv[argc] = NULL;
 
     switch (version) {
     case 6:
@@ -114,20 +155,20 @@ main(int argc, char* argv[])
     case 'd': {
         int ret;
 
-        if (argc > 2) {
-            current_input = argv[2];
-            in = fopen(argv[2], "rb");
+        if (argc > 0) {
+            current_input = argv[0];
+            in = fopen(argv[0], "rb");
             if (!in) {
                 fprintf(stderr, "%s: couldn't open %s for reading: %s\n",
-                    argv0, argv[2], strerror(errno));
+                    argv0, argv[0], strerror(errno));
                 return 1;
             }
-            if (argc > 3) {
-                current_output = argv[3];
-                out = fopen(argv[3], "wb");
+            if (argc > 1) {
+                current_output = argv[1];
+                out = fopen(argv[1], "wb");
                 if (!out) {
                     fprintf(stderr, "%s: couldn't open %s for writing: %s\n",
-                        argv0, argv[3], strerror(errno));
+                        argv0, argv[1], strerror(errno));
                     fclose(in);
                     return 1;
                 }
@@ -154,10 +195,8 @@ main(int argc, char* argv[])
 
         return 0;
     }
-    case 'V':
-        util_print_version();
-        return 0;
     default:
+        print_usage();
         return 1;
     }
 }
