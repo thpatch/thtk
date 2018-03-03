@@ -326,7 +326,7 @@ main(
     unsigned int version = 16;
     int mode = -1;
 
-    argv0 = argv[0];
+    argv0 = util_shortname(argv[0]);
     int opt;
     int ind=0;
     while(argv[util_optind]) {

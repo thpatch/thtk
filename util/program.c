@@ -43,7 +43,7 @@ const char* current_output = NULL;
 /* Returns a pointer to after the last directory separator in path. */
 /* TODO: Use util_basename if it can be made to return a pointer to inside of
  * path. */
-static const char*
+const char*
 util_shortname(
     const char* path)
 {

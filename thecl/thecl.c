@@ -203,7 +203,7 @@ main(int argc, char* argv[])
     g_eclmap_global = eclmap_new();
     atexit(free_eclmaps);
 
-    argv0 = argv[0];
+    argv0 = util_shortname(argv[0]);
     int opt;
     int ind=0;
     while(argv[util_optind]) {

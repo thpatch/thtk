@@ -31,6 +31,9 @@
 
 #include <config.h>
 
+const char* util_shortname(
+        const char* path);
+
 void util_getopt_default(
     int *ind,
     char **argv,
