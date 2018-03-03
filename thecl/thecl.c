@@ -204,13 +204,10 @@ main(int argc, char* argv[])
     atexit(free_eclmaps);
 
     argv0 = argv[0];
-    char opt;
+    int opt;
     int ind=0;
     while(argv[util_optind]) {
         switch(opt = util_getopt(argc, argv, ":c:d:Vm:r")) {
-        case 'V':
-            util_print_version();
-            exit(0);
         case 'c':
         case 'd':
             if(mode != -1) {
@@ -220,19 +217,6 @@ main(int argc, char* argv[])
             }
             mode = opt;
             version = atoi(util_optarg);
-            break;
-        case ':':
-            if(util_optopt == 'm') {
-                fprintf(stderr,"%s: Missing required argument for option '%c'\n",argv0,util_optopt);
-                print_usage();
-                exit(1);
-            }
-            if(mode != -1) {
-                fprintf(stderr,"%s: More than one mode specified\n", argv0);
-                print_usage();
-                exit(1);
-            }
-            mode = util_optopt;
             break;
         case 'm': {
             FILE* map_file = NULL;
@@ -249,20 +233,8 @@ main(int argc, char* argv[])
         case 'r':
             g_ecl_rawoutput = true;
             break;
-        case '?':
-            fprintf(stderr,"%s: Unknown option '%c'\n",argv0,util_optopt);
-            print_usage();
-            exit(1);
-        case -1:
-            if(!strcmp(argv[util_optind-1], "--")) {
-                while(argv[util_optind]) {
-                    argv[ind++] = argv[util_optind++];
-                }
-            }
-            else {
-                argv[ind++] = argv[util_optind++];
-            }
-            break;
+        default:
+            util_getopt_default(&ind,argv,opt,print_usage);
         }
     }
     argc = ind;

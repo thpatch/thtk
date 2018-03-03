@@ -31,21 +31,11 @@
 
 #include <config.h>
 
-/* Parses the arguments, the expected format is
- * "argv0 COMMAND[OPTIONS...] [...]".
- *
- * OPTIONS can contain a number which is assigned to version.  Enabled options
- * are replaced by spaces in the passed string so that they can be checked by
- * "!strchr(options, option)".
- *
- * Also sets the global argv0. */
-int parse_args(
-    int argc,
-    char* argv[],
-    void (*usage)(void),
-    const char* commands,
-    char* options,
-    unsigned int* version);
+void util_getopt_default(
+    int *ind,
+    char **argv,
+    int opt,
+    void (*usage)(void));
 
 extern const char* argv0;
 extern const char* current_input;
