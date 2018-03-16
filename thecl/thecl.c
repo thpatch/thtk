@@ -175,15 +175,15 @@ free_eclmaps(void)
 static void
 print_usage(void)
 {
-    printf("Usage: %s COMMAND[OPTION...] [MAPFILE] [INPUT [OUTPUT]]\n"
-           "COMMAND can be:\n"
-           "  c  create ECL file\n"
-           "  d  dump ECL file\n"
-           "  V  display version information and exit\n"
-           "OPTION can be:\n"
-           "  #  # can be 6, 7, 8, 9, 95, 10, 103 (for Uwabami Breakers), 11, 12, 125, 128, 13, 14, 143, 15, or 16 (required)\n"
-           "  m  use map file for translating mnemonics\n"
-           "  r  output raw ECL opcodes, applying minimal transformations\n"
+    printf("Usage: %s [-Vr] [[-c | -d] VERSION] [-m ECLMAP]... [INPUT [OUTPUT]]\n"
+           "Options:\n"
+           "  -c  create ECL file\n"
+           "  -d  dump ECL file\n"
+           "  -V  display version information and exit\n"
+           "  -m  use map file for translating mnemonics\n"
+           "  -r  output raw ECL opcodes, applying minimal transformations\n"
+           "VERSION can be:\n"
+           "  6, 7, 8, 9, 95, 10, 103 (for Uwabami Breakers), 11, 12, 125, 128, 13, 14, 143, 15, or 16\n"
            "Report bugs to <" PACKAGE_BUGREPORT ">.\n", argv0);
 }
 

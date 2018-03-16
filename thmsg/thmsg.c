@@ -43,14 +43,14 @@ extern const thmsg_module_t th95_msg;
 static void
 print_usage(void)
 {
-    printf("Usage: %s COMMAND[OPTION...] [INPUT [OUTPUT]]\n"
-           "COMMAND can be:\n"
-           "  c  create a dialogue file\n"
-           "  d  dump a dialogue file\n"
-           "  V  display version information and exit\n"
-           "OPTION can be:\n"
-           "  e  extract or create ending dialogue\n"
-           "  #  # can be 6, 7, 8, 9, 95, 10, 11, 12, 125, 128, 13, 14, 143, 15, or 16 (required)\n"
+    printf("Usage: %s [-Ve] [[-c | -d] VERSION] [INPUT [OUTPUT]]\n"
+           "Options:\n"
+           "  -c  create a dialogue file\n"
+           "  -d  dump a dialogue file\n"
+           "  -V  display version information and exit\n"
+           "  -e  extract or create ending dialogue\n"
+           "VERSION can be:\n"
+           "  6, 7, 8, 9, 95, 10, 11, 12, 125, 128, 13, 14, 143, 15, or 16\n"
            "Report bugs to <" PACKAGE_BUGREPORT ">.\n", argv0);
 }
 

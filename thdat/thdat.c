@@ -39,14 +39,14 @@ static void
 print_usage(
     void)
 {
-    printf("Usage: %s COMMAND[OPTION...] [ARCHIVE [FILE...]]\n"
-           "COMMAND can be:\n"
-           "  c  create an archive\n"
-           "  l  list the contents of an archive\n"
-           "  x  extract an archive\n"
-           "  V  display version information and exit\n"
-           "OPTION can be:\n"
-           "  #  # can be 1, 2, 3, 4, 5, 6, 7, 8, 9, 95, 10, 103 (for Uwabami Breakers), 105, 11, 12, 123, 125, 128, 13, 14, 143, 15, or 16 defaults to the latest\n\n"
+    printf("Usage: %s [-V] [[-c | -l | -x] VERSION] [ARCHIVE [FILE...]]\n"
+           "Options:\n"
+           "  -c  create an archive\n"
+           "  -l  list the contents of an archive\n"
+           "  -x  extract an archive\n"
+           "  -V  display version information and exit\n"
+           "VERSION can be:\n"
+           "  1, 2, 3, 4, 5, 6, 7, 8, 9, 95, 10, 103 (for Uwabami Breakers), 105, 11, 12, 123, 125, 128, 13, 14, 143, 15, or 16\n\n"
            "Report bugs to <" PACKAGE_BUGREPORT ">.\n", argv0);
 }
 
