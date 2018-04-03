@@ -34,6 +34,7 @@
 #include <string.h>
 #include "program.h"
 #include "util.h"
+#include "mygetopt.h"
 
 const char* argv0 = NULL;
 const char* current_input = NULL;
@@ -42,7 +43,7 @@ const char* current_output = NULL;
 /* Returns a pointer to after the last directory separator in path. */
 /* TODO: Use util_basename if it can be made to return a pointer to inside of
  * path. */
-static const char*
+const char*
 util_shortname(
     const char* path)
 {
@@ -59,55 +60,34 @@ util_shortname(
     return ret ? ret + 1 : path;
 }
 
-int
-parse_args(
-    int argc,
-    char* argv[],
-    void (*usage)(void),
-    const char* commands,
-    char* options,
-    unsigned int* version)
+void
+util_getopt_default(
+    int *ind,
+    char **argv,
+    int opt,
+    void (*usage)(void))
 {
-    int command;
-    char* argp;
-
-    /* TODO: Some kind of check here first. */
-    argv0 = util_shortname(argv[0]);
-
-    if (argc < 2) {
+    switch(opt) {
+    case 'V':
+        util_print_version();
+        exit(0);
+    case ':':
+        fprintf(stderr,"%s: Missing required argument for option '%c'\n",argv0,util_optopt);
         usage();
-        return 0;
-    }
-
-    command = argv[1][0];
-
-    if (!command) {
-        fprintf(stderr, "%s: command missing\n", argv0);
-        return 0;
-    }
-
-    if (!strchr(commands, command)) {
-        fprintf(stderr, "%s: unknown command '%c'\n", argv0, command);
+        exit(1);
+    case '?':
+        fprintf(stderr,"%s: Unknown option '%c'\n",argv0,util_optopt);
         usage();
-        return 0;
-    }
-
-    for (argp = argv[1] + 1; *argp;) {
-        char* optionp = strchr(options, *argp);
-        if (optionp) {
-            *optionp = ' ';
-            argp++;
-        } else {
-            long int parsed_version = strtol(argp, &argp, 10);
-            if (!version || parsed_version == 0 || parsed_version == LONG_MIN
-                || parsed_version == LONG_MAX) {
-                fprintf(stderr, "%s: unrecognized option '%c'\n", argv0, *argp);
-                usage();
-                return 0;
-            } else
-                *version = parsed_version;
+        exit(1);
+    case -1:
+        if(!strcmp(argv[util_optind-1], "--")) {
+            while(argv[util_optind]) {
+                argv[(*ind)++] = argv[util_optind++];
+            }
         }
+        else {
+            argv[(*ind)++] = argv[util_optind++];
+        }
+        break;
     }
-
-    return command;
 }

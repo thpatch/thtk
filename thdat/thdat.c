@@ -33,19 +33,20 @@
 #include <thtk/thtk.h>
 #include "program.h"
 #include "util.h"
+#include "mygetopt.h"
 
 static void
 print_usage(
     void)
 {
-    printf("Usage: %s COMMAND[OPTION...] [ARCHIVE [FILE...]]\n"
-           "COMMAND can be:\n"
-           "  c  create an archive\n"
-           "  l  list the contents of an archive\n"
-           "  x  extract an archive\n"
-           "  V  display version information and exit\n"
-           "OPTION can be:\n"
-           "  #  # can be 1, 2, 3, 4, 5, 6, 7, 8, 9, 95, 10, 103 (for Uwabami Breakers), 105, 11, 12, 123, 125, 128, 13, 14, 143, 15, or 16 defaults to the latest\n\n"
+    printf("Usage: %s [-V] [[-c | -l | -x] VERSION] [ARCHIVE [FILE...]]\n"
+           "Options:\n"
+           "  -c  create an archive\n"
+           "  -l  list the contents of an archive\n"
+           "  -x  extract an archive\n"
+           "  -V  display version information and exit\n"
+           "VERSION can be:\n"
+           "  1, 2, 3, 4, 5, 6, 7, 8, 9, 95, 10, 103 (for Uwabami Breakers), 105, 11, 12, 123, 125, 128, 13, 14, 143, 15, or 16\n\n"
            "Report bugs to <" PACKAGE_BUGREPORT ">.\n", argv0);
 }
 
@@ -263,7 +264,7 @@ thdat_create_wrapper(
 
     k = 0;
     /* TODO: Properly indicate when insertion fails. */
-	ssize_t i;
+    ssize_t i;
 #pragma omp parallel for schedule(dynamic)
     for (i = 0; i < real_entry_count; ++i) {
         thtk_error_t* error = NULL;
@@ -323,22 +324,48 @@ main(
 {
     thtk_error_t* error = NULL;
     unsigned int version = 16;
-    int mode;
+    int mode = -1;
 
-    if (!(mode = parse_args(argc, argv, print_usage, "clxVd", "", &version)))
-        exit(1);
+    argv0 = util_shortname(argv[0]);
+    int opt;
+    int ind=0;
+    while(argv[util_optind]) {
+        switch(opt = util_getopt(argc, argv, ":c:l:x:Vd")) {
+        case 'c':
+        case 'l':
+        case 'x':
+        case 'd':
+            if(mode != -1) {
+                fprintf(stderr,"%s: More than one mode specified\n",argv0);
+                print_usage();
+                exit(1);
+            }
+            mode = opt;
+            if(opt != 'd') version = atoi(util_optarg);
+            break;
+        case ':':
+            if(mode != -1) {
+                fprintf(stderr,"%s: More than one mode specified\n",argv0);
+                print_usage();
+                exit(1);
+            }
+            mode = util_optopt;
+            break;
+        default:
+            util_getopt_default(&ind,argv,opt,print_usage);
+        }
+    }
+    argc = ind;
+    argv[argc] = NULL;
 
     switch (mode) {
-    case 'V':
-        util_print_version();
-        exit(0);
     case 'd': {
-        if (argc < 3) {
+        if (argc < 1) {
             print_usage();
             exit(1);
         }
         thtk_io_t* file;
-        if (!(file = thtk_io_open_file(argv[2], "rb", &error))) {
+        if (!(file = thtk_io_open_file(argv[0], "rb", &error))) {
             print_error(error);
             thtk_error_free(&error);
             exit(1);
@@ -347,8 +374,8 @@ main(
         uint32_t out[4];
         unsigned int heur;
 
-        printf("Detecting '%s'... ",argv[2]);
-        if (-1 == thdat_detect(argv[2], file, out, &heur, &error)) {
+        printf("Detecting '%s'... ",argv[0]);
+        if (-1 == thdat_detect(argv[0], file, out, &heur, &error)) {
             printf("\n");
             thtk_io_close(file);
             print_error(error);
@@ -366,12 +393,12 @@ main(
         exit(0);
     }
     case 'l': {
-        if (argc < 3) {
+        if (argc < 1) {
             print_usage();
             exit(1);
         }
 
-        if (!thdat_list(version, argv[2], &error)) {
+        if (!thdat_list(version, argv[0], &error)) {
             print_error(error);
             thtk_error_free(&error);
             exit(1);
@@ -380,12 +407,12 @@ main(
         exit(0);
     }
     case 'c': {
-        if (argc < 4) {
+        if (argc < 2) {
             print_usage();
             exit(1);
         }
 
-        if (!thdat_create_wrapper(version, argv[2], (const char**)&argv[3], argc - 3, &error)) {
+        if (!thdat_create_wrapper(version, argv[0], (const char**)&argv[1], argc - 1, &error)) {
             print_error(error);
             thtk_error_free(&error);
             exit(1);
@@ -394,22 +421,22 @@ main(
         exit(0);
     }
     case 'x': {
-        if (argc < 3) {
+        if (argc < 1) {
             print_usage();
             exit(1);
         }
 
-        thdat_state_t* state = thdat_open_file(version, argv[2], &error);
+        thdat_state_t* state = thdat_open_file(version, argv[1], &error);
         if (!state) {
             print_error(error);
             thtk_error_free(&error);
             exit(1);
         }
 
-        if (argc > 3) {
-			ssize_t a;
+        if (argc > 1) {
+            ssize_t a;
 #pragma omp parallel for schedule(dynamic)
-            for (a = 3; a < argc; ++a) {
+            for (a = 1; a < argc; ++a) {
                 thtk_error_t* error = NULL;
                 int entry_index;
 
@@ -433,7 +460,7 @@ main(
                 exit(1);
             }
 
-			ssize_t entry_index;
+            ssize_t entry_index;
 #pragma omp parallel for schedule(dynamic)
             for (entry_index = 0; entry_index < entry_count; ++entry_index) {
                 thtk_error_t* error = NULL;
@@ -449,6 +476,7 @@ main(
         exit(0);
     }
     default:
+    print_usage();
         exit(1);
     }
 }

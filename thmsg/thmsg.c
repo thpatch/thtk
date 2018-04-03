@@ -29,9 +29,11 @@
 #include <config.h>
 #include <errno.h>
 #include <string.h>
+#include <stdlib.h>
 #include "program.h"
 #include "thmsg.h"
 #include "util.h"
+#include "mygetopt.h"
 
 int thmsg_opt_end = 0;
 
@@ -41,14 +43,14 @@ extern const thmsg_module_t th95_msg;
 static void
 print_usage(void)
 {
-    printf("Usage: %s COMMAND[OPTION...] [INPUT [OUTPUT]]\n"
-           "COMMAND can be:\n"
-           "  c  create a dialogue file\n"
-           "  d  dump a dialogue file\n"
-           "  V  display version information and exit\n"
-           "OPTION can be:\n"
-           "  e  extract or create ending dialogue\n"
-           "  #  # can be 6, 7, 8, 9, 95, 10, 11, 12, 125, 128, 13, 14, 143, 15, or 16 (required)\n"
+    printf("Usage: %s [-Ve] [[-c | -d] VERSION] [INPUT [OUTPUT]]\n"
+           "Options:\n"
+           "  -c  create a dialogue file\n"
+           "  -d  dump a dialogue file\n"
+           "  -V  display version information and exit\n"
+           "  -e  extract or create ending dialogue\n"
+           "VERSION can be:\n"
+           "  6, 7, 8, 9, 95, 10, 11, 12, 125, 128, 13, 14, 143, 15, or 16\n"
            "Report bugs to <" PACKAGE_BUGREPORT ">.\n", argv0);
 }
 
@@ -58,20 +60,36 @@ main(int argc, char* argv[])
     FILE* in = stdin;
     FILE* out = stdout;
     unsigned int version = 0;
-    int mode;
+    int mode = -1;
     const thmsg_module_t* module = NULL;
-    char options[] = "e";
 
     current_input = "(stdin)";
     current_output = "(stdout)";
 
-    mode = parse_args(argc, argv, print_usage, "cdV", options, &version);
-
-    if (!mode)
-        return 1;
-
-    if (!strchr(options, 'e'))
-        thmsg_opt_end = 1;
+    argv0 = util_shortname(argv[0]);
+    int opt;
+    int ind=0;
+    while(argv[util_optind]) {
+        switch(opt = util_getopt(argc, argv, ":c:d:Ve")) {
+        case 'c':
+        case 'd':
+            if(mode != -1) {
+                fprintf(stderr,"%s: More than one mode specified\n", argv0);
+                print_usage();
+                exit(1);
+            }
+            mode = opt;
+            version = atoi(util_optarg);
+            break;
+        case 'e':
+            thmsg_opt_end = 1;
+            break;
+        default:
+            util_getopt_default(&ind,argv,opt,print_usage);
+        }
+    }
+    argc = ind;
+    argv[argc] = NULL;
 
     switch (version) {
     case 6:
@@ -114,20 +132,20 @@ main(int argc, char* argv[])
     case 'd': {
         int ret;
 
-        if (argc > 2) {
-            current_input = argv[2];
-            in = fopen(argv[2], "rb");
+        if (argc > 0) {
+            current_input = argv[0];
+            in = fopen(argv[0], "rb");
             if (!in) {
                 fprintf(stderr, "%s: couldn't open %s for reading: %s\n",
-                    argv0, argv[2], strerror(errno));
+                    argv0, argv[0], strerror(errno));
                 return 1;
             }
-            if (argc > 3) {
-                current_output = argv[3];
-                out = fopen(argv[3], "wb");
+            if (argc > 1) {
+                current_output = argv[1];
+                out = fopen(argv[1], "wb");
                 if (!out) {
                     fprintf(stderr, "%s: couldn't open %s for writing: %s\n",
-                        argv0, argv[3], strerror(errno));
+                        argv0, argv[1], strerror(errno));
                     fclose(in);
                     return 1;
                 }
@@ -154,10 +172,8 @@ main(int argc, char* argv[])
 
         return 0;
     }
-    case 'V':
-        util_print_version();
-        return 0;
     default:
+        print_usage();
         return 1;
     }
 }

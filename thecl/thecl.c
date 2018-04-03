@@ -34,6 +34,7 @@
 #include "program.h"
 #include "thecl.h"
 #include "util.h"
+#include "mygetopt.h"
 
 extern const thecl_module_t th06_ecl;
 extern const thecl_module_t th10_ecl;
@@ -165,17 +166,24 @@ param_free(
 }
 
 static void
+free_eclmaps(void)
+{
+    eclmap_free(g_eclmap_opcode);
+    eclmap_free(g_eclmap_global);
+}
+
+static void
 print_usage(void)
 {
-    printf("Usage: %s COMMAND[OPTION...] [MAPFILE] [INPUT [OUTPUT]]\n"
-           "COMMAND can be:\n"
-           "  c  create ECL file\n"
-           "  d  dump ECL file\n"
-           "  V  display version information and exit\n"
-           "OPTION can be:\n"
-           "  #  # can be 6, 7, 8, 9, 95, 10, 103 (for Uwabami Breakers), 11, 12, 125, 128, 13, 14, 143, 15, or 16 (required)\n"
-           "  m  use map file for translating mnemonics\n"
-           "  r  output raw ECL opcodes, applying minimal transformations\n"
+    printf("Usage: %s [-Vr] [[-c | -d] VERSION] [-m ECLMAP]... [INPUT [OUTPUT]]\n"
+           "Options:\n"
+           "  -c  create ECL file\n"
+           "  -d  dump ECL file\n"
+           "  -V  display version information and exit\n"
+           "  -m  use map file for translating mnemonics\n"
+           "  -r  output raw ECL opcodes, applying minimal transformations\n"
+           "VERSION can be:\n"
+           "  6, 7, 8, 9, 95, 10, 103 (for Uwabami Breakers), 11, 12, 125, 128, 13, 14, 143, 15, or 16\n"
            "Report bugs to <" PACKAGE_BUGREPORT ">.\n", argv0);
 }
 
@@ -185,17 +193,52 @@ main(int argc, char* argv[])
     FILE* in = stdin;
     FILE* out = stdout;
     unsigned int version = 0;
-    int mode;
+    int mode = -1;
     const thecl_module_t* module = NULL;
-    char options[] = "mr";
 
     current_input = "(stdin)";
     current_output = "(stdout)";
 
-    mode = parse_args(argc, argv, print_usage, "cdV", options, &version);
+    g_eclmap_opcode = eclmap_new();
+    g_eclmap_global = eclmap_new();
+    atexit(free_eclmaps);
 
-    if (!mode)
-        exit(1);
+    argv0 = util_shortname(argv[0]);
+    int opt;
+    int ind=0;
+    while(argv[util_optind]) {
+        switch(opt = util_getopt(argc, argv, ":c:d:Vm:r")) {
+        case 'c':
+        case 'd':
+            if(mode != -1) {
+                fprintf(stderr,"%s: More than one mode specified\n", argv0);
+                print_usage();
+                exit(1);
+            }
+            mode = opt;
+            version = atoi(util_optarg);
+            break;
+        case 'm': {
+            FILE* map_file = NULL;
+            map_file = fopen(util_optarg, "r");
+            if (!map_file) {
+                fprintf(stderr, "%s: couldn't open %s for reading: %s\n",
+                    argv0, util_optarg, strerror(errno));
+                exit(1);
+            }
+            eclmap_load(g_eclmap_opcode, g_eclmap_global, map_file, util_optarg);
+            fclose(map_file);
+            break;
+        }
+        case 'r':
+            g_ecl_rawoutput = true;
+            break;
+        default:
+            util_getopt_default(&ind,argv,opt,print_usage);
+        }
+    }
+    argc = ind;
+    argv[argc] = NULL;
 
     switch (version) {
     case 6:
@@ -232,53 +275,27 @@ main(int argc, char* argv[])
     {
     case 'c':
     case 'd': {
-        g_eclmap_opcode = eclmap_new();
-        g_eclmap_global = eclmap_new();
-
-        int argp = 2;
-        if(!strchr(options, 'm')) {
-            if(argc > argp) {
-                FILE* map_file = NULL;
-                map_file = fopen(argv[argp], "r");
-                if (!map_file) {
-                    fprintf(stderr, "%s: couldn't open %s for reading: %s\n",
-                        argv0, argv[argp], strerror(errno));
-                    exit(1);
-                }
-                eclmap_load(g_eclmap_opcode, g_eclmap_global, map_file, argv[argp]);
-                fclose(map_file);
-            }
-            else {
-                fprintf(stderr, "%s: missing map filename\n",
-                    argv0);
-                exit(1);
-            }
-            ++argp;
-        }
-
-        if(!strchr(options, 'r')) {
+        if(g_ecl_rawoutput) {
             if (mode != 'd') {
                 fprintf(stderr, "%s: 'r' option cannot be used while compiling\n", argv0);
                 exit(1);
             }
-            g_ecl_rawoutput = true;
         }
 
-        if (argc > argp) {
-            current_input = argv[argp];
-            in = fopen(argv[argp], "rb");
+        if (0 < argc) {
+            current_input = argv[0];
+            in = fopen(argv[0], "rb");
             if (!in) {
                 fprintf(stderr, "%s: couldn't open %s for reading: %s\n",
-                    argv0, argv[argp], strerror(errno));
+                    argv0, argv[0], strerror(errno));
                 exit(1);
             }
-            ++argp;
-            if (argc > argp) {
-                current_output = argv[argp];
-                out = fopen(argv[argp], "wb");
+            if (1 < argc) {
+                current_output = argv[1];
+                out = fopen(argv[1], "wb");
                 if (!out) {
                     fprintf(stderr, "%s: couldn't open %s for writing: %s\n",
-                        argv0, argv[argp], strerror(errno));
+                        argv0, argv[1], strerror(errno));
                     fclose(in);
                     exit(1);
                 }
@@ -308,15 +325,10 @@ main(int argc, char* argv[])
         fclose(in);
         fclose(out);
         
-        eclmap_free(g_eclmap_opcode);
-        eclmap_free(g_eclmap_global);
-
         exit(0);
     }
-    case 'V':
-        util_print_version();
-        exit(0);
     default:
+        print_usage();
         exit(1);
     }
 }
