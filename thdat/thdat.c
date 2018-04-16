@@ -345,7 +345,7 @@ main(
             if(opt == 'x' && *util_optarg == 'd') {
                 version = ~0;
             }
-            else if(opt != 'd') version = atoi(util_optarg);
+            else if(opt != 'd') version = parse_version(util_optarg);
             break;
         default:
             util_getopt_default(&ind,argv,opt,print_usage);

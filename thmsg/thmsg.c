@@ -79,7 +79,7 @@ main(int argc, char* argv[])
                 exit(1);
             }
             mode = opt;
-            version = atoi(util_optarg);
+            version = parse_version(util_optarg);
             break;
         case 'e':
             thmsg_opt_end = 1;

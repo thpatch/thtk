@@ -216,7 +216,7 @@ main(int argc, char* argv[])
                 exit(1);
             }
             mode = opt;
-            version = atoi(util_optarg);
+            version = parse_version(util_optarg);
             break;
         case 'm': {
             FILE* map_file = NULL;

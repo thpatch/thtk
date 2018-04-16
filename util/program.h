@@ -40,6 +40,9 @@ void util_getopt_default(
     int opt,
     void (*usage)(void));
 
+unsigned int parse_version(
+    char *str);
+
 extern const char* argv0;
 extern const char* current_input;
 extern const char* current_output;

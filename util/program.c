@@ -32,6 +32,7 @@
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 #include "program.h"
 #include "util.h"
 #include "mygetopt.h"
@@ -90,4 +91,53 @@ util_getopt_default(
         }
         break;
     }
+}
+
+unsigned int parse_version(char *str) {
+    struct {
+        unsigned int version;
+        char name[6];
+    } static const vers[] = {
+        {1, "hrtp"},
+        {2, "soew"},
+        {3, "podd"},
+        {4, "lls"},
+        {5, "ms"},
+        {6, "eosd"},
+        {7, "pcb"},
+        {75, "iamp"},
+        {8, "in"},
+        {9, "pofv"},
+        {95, "stb"},
+        {10, "mof"},
+        {103, "alco"},
+        {105, "swr"},
+        {11, "sa"},
+        {12, "ufo"},
+        {123, "soku"},
+        {125, "ds"},
+        {128, "fw"},
+        {13, "td"},
+        {135, "hm"},
+        {14, "ddc"},
+        {143, "isc"},
+        {145, "ulil"},
+        {15, "lolk"},
+        {155, "aocf"},
+        {16, "hsifs"},
+        {0}
+    }, *vp = vers;
+
+    if(!str) return 0;
+    unsigned int version = strtoul(str, NULL, 10);
+    if(version) return version;
+
+    char *str2 = str;
+    for(;*str2;str2++) *str2 = tolower(*str2);
+
+    while(vp->version) {
+        if(!strcmp(str,vp->name)) break;
+        vp++;
+    }
+    return vp->version;
 }
