@@ -388,7 +388,7 @@ main(
         while((ent = thdat_detect_iter(out))) {
             printf("%d,",ent->alias);
         }
-        printf(" | filename: %d\n", thdat_detect_filename(argv[2]));
+        printf(" | filename: %d\n", thdat_detect_filename(argv[0]));
         thtk_io_close(file);
         exit(0);
     }
@@ -426,7 +426,7 @@ main(
             exit(1);
         }
 
-        thdat_state_t* state = thdat_open_file(version, argv[1], &error);
+        thdat_state_t* state = thdat_open_file(version, argv[0], &error);
         if (!state) {
             print_error(error);
             thtk_error_free(&error);
