@@ -47,7 +47,7 @@ print_usage(
            "  -V  display version information and exit\n"
            "VERSION can be:\n"
            "  1, 2, 3, 4, 5, 6, 7, 8, 9, 95, 10, 103 (for Uwabami Breakers), 105, 11, 12, 123, 125, 128, 13, 14, 143, 15, or 16\n"
-	   "For extraction mode, VERSION can also be set to 'd' to enable automatic file detection\n\n"
+	   "Specify 'd' as VERSION to automatically detect archive format. (-l and -x only)\n\n"
            "Report bugs to <" PACKAGE_BUGREPORT ">.\n", argv0);
 }
 
@@ -345,7 +345,7 @@ main(
                 exit(1);
             }
             mode = opt;
-            if(opt == 'x' && *util_optarg == 'd') {
+            if((opt == 'x' || mode == 'l') && *util_optarg == 'd') {
                 version = ~0;
             }
             else if(opt != 'd') version = parse_version(util_optarg);
@@ -356,6 +356,40 @@ main(
     }
     argc = ind;
     argv[argc] = NULL;
+
+    /* detect version */
+    if(argc && (mode == 'x' || mode == 'l') && version == ~0) {
+        thtk_io_t* file;
+        if(!(file = thtk_io_open_file(argv[0], "rb", &error))) {
+            print_error(error);
+            thtk_error_free(&error);
+            exit(1);
+        }
+        uint32_t out[4];
+        unsigned int heur;
+        printf("Detecting '%s'...\n",argv[0]);
+        if(-1 == thdat_detect(argv[0], file, out, &heur, &error)) {
+            thtk_io_close(file);
+            print_error(error);
+            thtk_error_free(&error);
+            exit(1);
+        }
+        if(heur == -1) {
+            const thdat_detect_entry_t* ent;
+            printf("Couldn't detect version!\nPossible versions: ");
+            while((ent = thdat_detect_iter(out))) {
+                printf("%d,",ent->alias);
+            }
+            printf("\n");
+            thtk_io_close(file);
+            exit(1);
+        }
+        else {
+            printf("Detected version %d\n",heur);
+            version = heur;
+        }
+        thtk_io_close(file);
+    }
 
     switch (mode) {
     case 'd': {
@@ -423,39 +457,6 @@ main(
         if (argc < 1) {
             print_usage();
             exit(1);
-        }
-
-        if(version == ~0) {
-            thtk_io_t* file;
-            if(!(file = thtk_io_open_file(argv[0], "rb", &error))) {
-                print_error(error);
-                thtk_error_free(&error);
-                exit(1);
-            }
-            uint32_t out[4];
-            unsigned int heur;
-            printf("Detecting '%s'...\n",argv[0]);
-            if(-1 == thdat_detect(argv[0], file, out, &heur, &error)) {
-                thtk_io_close(file);
-                print_error(error);
-                thtk_error_free(&error);
-                exit(1);
-            }
-            if(heur == -1) {
-                const thdat_detect_entry_t* ent;
-                printf("Couldn't detect version!\nPossible versions: ");
-                while((ent = thdat_detect_iter(out))) {
-                    printf("%d,",ent->alias);
-                }
-                printf("\n");
-                thtk_io_close(file);
-                exit(1);
-            }
-            else {
-                printf("Detected version %d\n",heur);
-                version = heur;
-            }
-            thtk_io_close(file);
         }
 
         thdat_state_t* state = thdat_open_file(version, argv[0], &error);

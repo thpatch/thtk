@@ -33,7 +33,7 @@
 .Sh SYNOPSIS
 .Nm
 .Op Fl V
-.Op Oo Fl c | l | x Oc Ar version
+.Op Oo Fl c | l | x Oc Oo Li d | Ar version Oc
 .Op Ar archive Op Ar
 .Sh DESCRIPTION
 The
@@ -43,20 +43,21 @@ The following commands are available:
 .Bl -tag -width Ds
 .It Nm Fl c Ar version Ar archive Ar file Op Ar
 Archives the specified files.
-.It Nm Fl l Ar version Ar archive
+.It Nm Fl l Oo Li d | Ar version Oc Ar archive
 Lists the contents of the archive.
 .It Nm Fl x Oo Li d | Ar version Oc Ar archive Op Ar
 Extracts files.
 If no files are specified, all files are extracted.
+.El
+.Pp
+The version specifies which archive format to use.
+Running the program without a command will list the supported formats.
 .No If Li d is specified instead of Ar version ,
 .Nm
 automatically detects the file format.
 .It Nm Fl V
 Displays the program version.
-.El
-.Pp
-The version specifies which archive format to use.
-Running the program without a command will list the supported formats.
+
 .Sh ENVIRONMENT
 .Bl -tag -width OMP_NUM_THREADS
 .It Ev OMP_NUM_THREADS
