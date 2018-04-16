@@ -143,6 +143,9 @@ thdat_list(
     thtk_error_t** error)
 {
     thdat_state_t* state = thdat_open_file(version, path, error);
+    if(!state) {
+        return 0;
+    }
     ssize_t entry_count;
     struct {
         const char* name;
