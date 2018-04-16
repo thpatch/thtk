@@ -323,7 +323,7 @@ main(
     char* argv[])
 {
     thtk_error_t* error = NULL;
-    unsigned int version = 16;
+    unsigned int version = 0;
     int mode = -1;
 
     argv0 = util_shortname(argv[0]);
@@ -342,14 +342,6 @@ main(
             }
             mode = opt;
             if(opt != 'd') version = atoi(util_optarg);
-            break;
-        case ':':
-            if(mode != -1) {
-                fprintf(stderr,"%s: More than one mode specified\n",argv0);
-                print_usage();
-                exit(1);
-            }
-            mode = util_optopt;
             break;
         default:
             util_getopt_default(&ind,argv,opt,print_usage);
