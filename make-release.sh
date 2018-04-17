@@ -21,7 +21,7 @@ done
 cp build/thtk/RelWithDebInfo/thtk.dll $releasepath/
 cp build/thtk/RelWithDebInfo/thtk.lib $releasepath/
 cp build/thtk/RelWithDebInfo/thtk.pdb $releasepath-pdbs/
-cp "$(cygpath "$VSSDK140Install")/../VC/redist/x86/Microsoft.VC140.OPENMP/vcomp140.dll" $releasepath/
+cp "$(cygpath "$VCToolsRedistDir")/x86/Microsoft.VC141.OPENMP/vcomp140.dll" $releasepath/
 
 copy_doc() {
   while [ "$1" != "" ]; do
