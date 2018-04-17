@@ -1,3 +1,41 @@
+What's new in thtk 10
+====================
+
+This release introduces a new syntax for all commands, incompatible with
+previous versions. Please refer to the manpages for new syntax.
+
+Mnemonic version names (such as HSiFS or LoLK) are now supported by all
+commands.
+
+#### thanm
+- Support spaces in image file names.
+
+#### thecl
+- Multiple eclmaps can be specified on the command line now.
+- Added unused instruction formats (th07)
+
+#### thdat
+- Added support for Uwabami Breakers
+- Added automatic version detection, using -xd and -ld parameters
+- Fixed crash when trying to list archive of wrong version
+
+#### thtk
+- Added support for wide filenames
+- Functions for detecting the version of dat file
+- Import lib is now included with the release
+
+#### contrib
+Added a contrib directory with a bunch of goodies.
+- C++ wrapper for thtk library
+- thdat plugin for Midnight Commander
+- thdat plugin for Total Commander
+
+Please submit an issue at GitHub (https://github.com/thpatch/thtk/issues) if
+you find a bug.
+
+
+-------------------------------------------------------------------------------
+
 What's new in thtk 9
 ====================
 
