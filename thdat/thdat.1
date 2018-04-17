@@ -48,6 +48,8 @@ Lists the contents of the archive.
 .It Nm Fl x Oo Li d | Ar version Oc Ar archive Op Ar
 Extracts files.
 If no files are specified, all files are extracted.
+.It Nm Fl V
+Displays the program version.
 .El
 .Pp
 The version specifies which archive format to use.
@@ -55,9 +57,6 @@ Running the program without a command will list the supported formats.
 .No If Li d is specified instead of Ar version ,
 .Nm
 automatically detects the file format.
-.It Nm Fl V
-Displays the program version.
-
 .Sh ENVIRONMENT
 .Bl -tag -width OMP_NUM_THREADS
 .It Ev OMP_NUM_THREADS
