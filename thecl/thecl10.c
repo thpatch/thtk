@@ -970,6 +970,19 @@ static const id_format_pair_t th16_fmts[] = {
     { -1, NULL }
 };
 
+static const id_format_pair_t th165_fmts[] = {
+    { 1005, "S" },
+    { 1006, "f" },
+    { 1007, "S" },
+    { 1008, "S" },
+    { 1009, "S" },
+    { 1010, "f" },
+    { 1011, "S" },
+    { 1012, "S" },
+    { 1014, "S" },
+    { -1, NULL }
+};
+
 static bool th10_is_post_th13(unsigned int version) {
     switch(version) {
         case 10: case 103: case 11: case 12: case 125: case 128: return false;
@@ -986,6 +999,8 @@ th10_find_format(
 
     switch (version) {
     /* Intentional fallthroughs, obviously */
+    case 165:
+        if(!ret) ret = find_format(th165_fmts, id);
     case 16:
         if (!ret) ret = find_format(th16_fmts, id);
     case 15:
@@ -1832,7 +1847,8 @@ th10_instr_serialize(
                version == 14 ||
                version == 143 ||
                version == 15 ||
-               version == 16
+               version == 16 ||
+               version == 165
            )
         ) {
             if (param->type == 'f' && param->value.val.f == -(ret->zero + 1.0f)) {

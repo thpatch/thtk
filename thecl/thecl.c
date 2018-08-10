@@ -183,7 +183,7 @@ print_usage(void)
            "  -m  use map file for translating mnemonics\n"
            "  -r  output raw ECL opcodes, applying minimal transformations\n"
            "VERSION can be:\n"
-           "  6, 7, 8, 9, 95, 10, 103 (for Uwabami Breakers), 11, 12, 125, 128, 13, 14, 143, 15, or 16\n"
+           "  6, 7, 8, 9, 95, 10, 103 (for Uwabami Breakers), 11, 12, 125, 128, 13, 14, 143, 15, 16, or 165\n"
            "Report bugs to <" PACKAGE_BUGREPORT ">.\n", argv0);
 }
 
@@ -259,6 +259,7 @@ main(int argc, char* argv[])
     case 143:
     case 15:
     case 16:
+    case 165:
         module = &th10_ecl;
         break;
     default:
