@@ -50,7 +50,7 @@ print_usage(void)
            "  -V  display version information and exit\n"
            "  -e  extract or create ending dialogue\n"
            "VERSION can be:\n"
-           "  6, 7, 8, 9, 95, 10, 11, 12, 125, 128, 13, 14, 143, 15, or 16\n"
+           "  6, 7, 8, 9, 95, 10, 11, 12, 125, 128, 13, 14, 143, 15, 16, or 165\n"
            "Report bugs to <" PACKAGE_BUGREPORT ">.\n", argv0);
 }
 
@@ -105,6 +105,7 @@ main(int argc, char* argv[])
     case 143:
     case 15:
     case 16:
+    case 165:
         module = &th06_msg;
         break;
     case 95:
