@@ -394,7 +394,7 @@ convert_header_to_old(
     anm_header11_t th11 = *(anm_header11_t*)header;
     header->sprites = th11.sprites;
     header->scripts = th11.scripts;
-    header->zero1 = th11.zero1;
+    header->rt_textureslot = 0;
     header->w = th11.w;
     header->h = th11.h;
     header->format = th11.format;
@@ -421,7 +421,7 @@ convert_header_to_11(
     memset(th11, 0, sizeof(anm_header11_t));
     th11->sprites = header.sprites;
     th11->scripts = header.scripts;
-    th11->zero1 = header.zero1;
+    th11->zero1 = 0;
     th11->w = header.w;
     th11->h = header.h;
     th11->format = header.format;
@@ -475,7 +475,7 @@ anm_read_file(
 
         list_append_new(&archive->entries, entry);
 
-        if (header->zero1 != 0) {
+        if(header->rt_textureslot != 0) {
             header = malloc(sizeof(*header));
             memcpy(header, map, sizeof(*header));
             convert_header_to_old(header);
@@ -500,7 +500,7 @@ anm_read_file(
         assert((header->hasdata == 0) == (header->thtxoffset == 0));
 
         assert(header->hasdata == 0 || header->hasdata == 1);
-        assert(header->zero1 == 0);
+        assert(header->rt_textureslot == 0);
         assert(header->zero3 == 0);
 
         /* Lengths, including padding, observed are: 16, 32, 48. */
@@ -639,8 +639,6 @@ anm_dump(
             fprintf(stream, "X-Offset: %u\n", entry->header->x);
         if (!entry->name2 && entry->header->y != 0)
             fprintf(stream, "Y-Offset: %u\n", entry->header->y);
-        if (entry->header->zero1 != 0)
-            fprintf(stream, "Zero1: %u\n", entry->header->zero1);
         if (entry->header->zero2 != 0)
             fprintf(stream, "Zero2: %u\n", entry->header->zero2);
         if (entry->header->zero3 != 0)
@@ -1022,7 +1020,6 @@ anm_create(
             sscanf(line, "Height: %u", &entry->header->h);
             sscanf(line, "X-Offset: %u", &entry->header->x);
             sscanf(line, "Y-Offset: %u", &entry->header->y);
-            sscanf(line, "Zero1: %u", &entry->header->zero1);
             sscanf(line, "Zero2: %u", &entry->header->zero2);
             sscanf(line, "Zero3: %u", &entry->header->zero3);
             sscanf(line, "Unknown1: %u", &entry->header->unknown1);
