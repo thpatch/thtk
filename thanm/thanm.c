@@ -398,7 +398,7 @@ convert_header_to_old(
     header->w = th11.w;
     header->h = th11.h;
     header->format = th11.format;
-    header->zero2 = 0;
+    header->colorkey = 0;
     header->nameoffset = th11.nameoffset;
     header->x = th11.x;
     header->y = th11.y;
@@ -639,8 +639,9 @@ anm_dump(
             fprintf(stream, "X-Offset: %u\n", entry->header->x);
         if (!entry->name2 && entry->header->y != 0)
             fprintf(stream, "Y-Offset: %u\n", entry->header->y);
-        if (entry->header->zero2 != 0)
-            fprintf(stream, "Zero2: %u\n", entry->header->zero2);
+        if (entry->header->version < 7) {
+            fprintf(stream, "ColorKey: %08x\n", entry->header->colorkey);
+        }
         if (entry->header->zero3 != 0)
             fprintf(stream, "Zero3: %u\n", entry->header->zero3);
         if (entry->header->unknown1 != 0)
@@ -925,6 +926,11 @@ anm_create(
 #define ERROR(text, ...) fprintf(stderr, \
     "%s: %s:%d: " text "\n", argv0, spec, linenum, ##__VA_ARGS__)
 
+#define SCAN_DEPRECATED(fieldstr, format, field) \
+    if (sscanf(line, fieldstr ": " format, &entry->header->field) > 0) { \
+        ERROR("warning: " fieldstr " is an old field written by thanm <= 10; re-dump the spec after ANM creation to remove this warning"); \
+    };
+
     anm = malloc(sizeof(anm_archive_t));
     anm->map = NULL;
     anm->map_size = 0;
@@ -1020,7 +1026,12 @@ anm_create(
             sscanf(line, "Height: %u", &entry->header->h);
             sscanf(line, "X-Offset: %u", &entry->header->x);
             sscanf(line, "Y-Offset: %u", &entry->header->y);
-            sscanf(line, "Zero2: %u", &entry->header->zero2);
+
+            SCAN_DEPRECATED("Zero2", "%u", colorkey);
+            if (sscanf(line, "ColorKey: %08x", &entry->header->colorkey) > 0
+                && entry->header->version >= 7)
+                ERROR("ColorKey is no longer supported in ANM versions >= 7");
+
             sscanf(line, "Zero3: %u", &entry->header->zero3);
             sscanf(line, "Unknown1: %u", &entry->header->unknown1);
             sscanf(line, "Unknown2: %hu", &entry->header->unknown2);
@@ -1034,6 +1045,8 @@ anm_create(
         linenum++;
     }
 
+#undef SCAN_OLD
+#undef SCAN_DEPRECATED
 #undef ERROR
 
     fclose(f);
