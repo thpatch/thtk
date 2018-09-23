@@ -497,8 +497,6 @@ anm_read_file(
             header->unknown1 == 10 ||
             header->unknown1 == 11);
 
-        assert((header->hasdata == 0) == (header->thtxoffset == 0));
-
         assert(header->hasdata == 0 || header->hasdata == 1);
         assert(header->rt_textureslot == 0);
         assert(header->zero3 == 0);
@@ -509,6 +507,10 @@ anm_read_file(
             entry->name2 = (char*)map + header->y;
         else
             entry->name2 = NULL;
+
+        assert(
+            (header->hasdata == 0 || (entry->name && entry->name[0] == '@')) ==
+            (header->thtxoffset == 0));
 
         list_init(&entry->sprites);
         if (header->sprites) {
