@@ -403,7 +403,7 @@ convert_header_to_old(
     header->x = th11.x;
     header->y = th11.y;
     header->version = th11.version;
-    header->unknown1 = th11.unknown1;
+    header->memorypriority = th11.memorypriority;
     header->thtxoffset = th11.thtxoffset;
     header->hasdata = th11.hasdata;
     header->unknown2 = th11.unknown2;
@@ -429,7 +429,7 @@ convert_header_to_11(
     th11->x = header.x;
     th11->y = header.y;
     th11->version = header.version;
-    th11->unknown1 = header.unknown1;
+    th11->memorypriority = header.memorypriority;
     th11->thtxoffset = header.thtxoffset;
     th11->hasdata = header.hasdata;
     th11->unknown2 = header.unknown2;
@@ -490,12 +490,6 @@ anm_read_file(
             header->version == 4 ||
             header->version == 7 ||
             header->version == 8);
-
-        assert(
-            header->unknown1 == 0 ||
-            header->unknown1 == 1 ||
-            header->unknown1 == 10 ||
-            header->unknown1 == 11);
 
         assert(header->hasdata == 0 || header->hasdata == 1);
         assert(header->rt_textureslot == 0);
@@ -646,8 +640,8 @@ anm_dump(
         }
         if (entry->header->zero3 != 0)
             fprintf(stream, "Zero3: %u\n", entry->header->zero3);
-        if (entry->header->unknown1 != 0)
-            fprintf(stream, "Unknown1: %u\n", entry->header->unknown1);
+        if (entry->header->version >= 1)
+            fprintf(stream, "MemoryPriority: %u\n", entry->header->memorypriority);
         if (entry->header->unknown2 != 0)
             fprintf(stream, "Unknown2: %u\n", entry->header->unknown2);
         if (entry->header->hasdata) {
@@ -1035,7 +1029,12 @@ anm_create(
                 ERROR("ColorKey is no longer supported in ANM versions >= 7");
 
             sscanf(line, "Zero3: %u", &entry->header->zero3);
-            sscanf(line, "Unknown1: %u", &entry->header->unknown1);
+
+            SCAN_DEPRECATED("Unknown1", "%u", memorypriority);
+            if (sscanf(line, "MemoryPriority: %u", &entry->header->memorypriority)
+                && entry->header->version == 0)
+                ERROR("MemoryPriority is ignored in ANM version 0");
+
             sscanf(line, "Unknown2: %hu", &entry->header->unknown2);
             sscanf(line, "HasData: %hu", &entry->header->hasdata);
             sscanf(line, "THTX-Size: %u", &entry->thtx->size);
