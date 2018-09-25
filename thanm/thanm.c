@@ -406,7 +406,7 @@ convert_header_to_old(
     header->memorypriority = th11.memorypriority;
     header->thtxoffset = th11.thtxoffset;
     header->hasdata = th11.hasdata;
-    header->unknown2 = th11.unknown2;
+    header->lowresscale = th11.lowresscale;
     header->nextoffset = th11.nextoffset;
     header->zero3 = 0;
 }
@@ -432,7 +432,7 @@ convert_header_to_11(
     th11->memorypriority = header.memorypriority;
     th11->thtxoffset = header.thtxoffset;
     th11->hasdata = header.hasdata;
-    th11->unknown2 = header.unknown2;
+    th11->lowresscale = header.lowresscale;
     th11->nextoffset = header.nextoffset;
 }
 #endif
@@ -494,6 +494,9 @@ anm_read_file(
         assert(header->hasdata == 0 || header->hasdata == 1);
         assert(header->rt_textureslot == 0);
         assert(header->zero3 == 0);
+
+        if(header->version == 8)
+            assert(header->lowresscale == 0 || header->lowresscale == 1);
 
         /* Lengths, including padding, observed are: 16, 32, 48. */
         entry->name = anm_get_name(archive, (const char*)map + header->nameoffset);
@@ -642,8 +645,8 @@ anm_dump(
             fprintf(stream, "Zero3: %u\n", entry->header->zero3);
         if (entry->header->version >= 1)
             fprintf(stream, "MemoryPriority: %u\n", entry->header->memorypriority);
-        if (entry->header->unknown2 != 0)
-            fprintf(stream, "Unknown2: %u\n", entry->header->unknown2);
+        if (entry->header->version >= 8)
+            fprintf(stream, "LowResScale: %u\n", entry->header->lowresscale);
         if (entry->header->hasdata) {
             fprintf(stream, "HasData: %u\n", entry->header->hasdata);
             fprintf(stream, "THTX-Size: %u\n", entry->thtx->size);
@@ -1035,7 +1038,11 @@ anm_create(
                 && entry->header->version == 0)
                 ERROR("MemoryPriority is ignored in ANM version 0");
 
-            sscanf(line, "Unknown2: %hu", &entry->header->unknown2);
+            SCAN_DEPRECATED("Unknown2", "%hu", lowresscale);
+            if(sscanf(line, "LowResScale: %hu", &entry->header->lowresscale)
+                && entry->header->version < 8)
+                ERROR("LowResScale is ignored in ANM versions < 8");
+
             sscanf(line, "HasData: %hu", &entry->header->hasdata);
             sscanf(line, "THTX-Size: %u", &entry->thtx->size);
             sscanf(line, "THTX-Format: %hu", &entry->thtx->format);
