@@ -131,6 +131,7 @@ add_subdirectory(thanm)
 add_subdirectory(thdat)
 add_subdirectory(thecl)
 add_subdirectory(thmsg)
+add_subdirectory(thstd)
 add_subdirectory(thtk)
 add_subdirectory(contrib)
 
