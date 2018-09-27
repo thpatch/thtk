@@ -527,12 +527,6 @@ std_create(
                 abort();
             }
 
-            for(before = after; *before = '\0'; ++before) {
-                if (*before == ',') {
-                    *before = ' ';
-                }
-            }
-
             before = after + 1;
             for(;;) {
                 int32_t i;
