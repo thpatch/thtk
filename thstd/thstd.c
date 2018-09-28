@@ -72,6 +72,37 @@ static const id_format_pair_t formats_v1[] = {
     { 7, "f" },
     { 8, "Sff" },
     { 9, "SSSff" },
+    { 10, "SSfffffffff" },
+    { 12, "S" },
+    { 13, "S" },
+    { 14, "SS" },
+    { 16, "S" },
+    { 17, "S" },
+    { 18, "SSfff" },
+    { 19, "S" },
+    { 0, NULL }
+};
+
+
+static const id_format_pair_t formats_v2[] = {
+    { 0, "" },
+    { 1, "SS" },
+    { 2, "fff" },
+    { 3, "SSfff" },
+    { 4, "fff" },
+    { 5, "SSfff" },
+    { 6, "fff" },
+    { 7, "f" },
+    { 8, "Sff" },
+    { 9, "SSSff" },
+    { 10, "SSfffffffff" },
+    { 12, "S" },
+    { 13, "S" },
+    { 14, "SSS" },
+    { 16, "S" },
+    { 17, "S" },
+    { 18, "SSfff" },
+    { 19, "S" },
     { 0, NULL }
 };
 
@@ -187,7 +218,7 @@ std_dump(
 
     const id_format_pair_t *formats =
         option_version == 0 ? formats_v0 :
-                              formats_v1;
+      option_version == 1 ? formats_v1 : formats_v2;
 
     uint16_t object_id;
     uint32_t time;
@@ -797,12 +828,14 @@ main(
     case 125:
     case 128:
     case 13:
+      option_version = 1;
+      break;
     case 14:
     case 143:
     case 15:
     case 16:
     case 165:
-        option_version = 1;
+        option_version = 2;
         break;
     default:
         if (command == 'c' || command == 'd') {
