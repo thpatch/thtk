@@ -54,6 +54,7 @@ typedef struct value_t {
         uint32_t U;
         int32_t S;
         char* z;
+        char C[4];
         struct {
             size_t length;
             unsigned char* data;

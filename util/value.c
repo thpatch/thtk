@@ -79,6 +79,9 @@ value_from_data(
         READ(U, sizeof(uint32_t));
     case 'S':
         READ(S, sizeof(int32_t));
+    case 'C':
+        READ(C, sizeof(int32_t));
+        break;
     case 'z':
         value->val.z = malloc(data_length);
         memcpy(value->val.z, data, data_length);
@@ -253,6 +256,10 @@ value_to_text(
         memcpy(temp, value->val.m.data, value->val.m.length);
         temp[value->val.m.length] = '\0';
         break;
+    case 'C':
+        snprintf(temp, 256, "#%02hhx%02hhx%02hhx%02hhx",
+                 value->val.C[0], value->val.C[1], value->val.C[2], value->val.C[3]);
+      break;
     default:
         fprintf(stderr, "%s:value_to_text: invalid type '%c'\n", argv0, value->type);
         return NULL;

@@ -70,8 +70,8 @@ static const id_format_pair_t formats_v1[] = {
     { 5, "SSfff" },
     { 6, "fff" },
     { 7, "f" },
-    { 8, "Sff" },
-    { 9, "SSSff" },
+    { 8, "Cff" },
+    { 9, "SSCff" },
     { 10, "SSfffffffff" },
     { 12, "S" },
     { 13, "S" },
@@ -93,8 +93,8 @@ static const id_format_pair_t formats_v2[] = {
     { 5, "SSfff" },
     { 6, "fff" },
     { 7, "f" },
-    { 8, "Sff" },
-    { 9, "SSSff" },
+    { 8, "Cff" },
+    { 9, "SSCff" },
     { 10, "SSfffffffff" },
     { 12, "S" },
     { 13, "S" },
@@ -237,7 +237,7 @@ std_dump(
     } else {
         fprintf(stream, "ANM: %s\n", std->header_10->anm_name);
         fprintf(stream, "Std_unknown: %i\n", std->header_10->unknown);
-    } 
+    }
 
     object_id = 0;
     list_for_each(&std->entries, entry) {
@@ -562,25 +562,34 @@ std_create(
             for(;;) {
                 int32_t i;
                 float f;
+                uint8_t C;
 
                 i = strtol(before, &after, 10);
-                if (after == before) {
+                if (after == before && *before != '#') {
                     break;
-                } else {
-                    instr->size = instr->size + (uint16_t)sizeof(int32_t);
-                    instr = realloc(instr, instr->size);
-                    if (*after == 'f' || *after == '.') {
-                        f = strtof(before, &after);
-                        memcpy((void*)((uintptr_t)instr + instr->size - (uintptr_t)sizeof(float)),
-                               &f, sizeof(float));
-                        ++after;
-                    } else {
-                        memcpy((void*)((uintptr_t)instr + instr->size - (uintptr_t)sizeof(int32_t)),
-                               &i, sizeof(int32_t));
+                }
+                instr->size = instr->size + (uint16_t)sizeof(int32_t);
+                instr = realloc(instr, instr->size);
+                if(*before == '#') {
+                    for(size_t pos = 0; pos < 4; pos++) {
+                        if(1 != sscanf(before + (pos*2) + 1, "%02hhx", &C)) {
+                            fprintf(stderr, "%s: malformed color structure\n", argv0);
+                            abort();
+                        }
+                        memcpy((char*)((uintptr_t)instr + instr->size - (uintptr_t)sizeof(int32_t)) + pos*sizeof(uint8_t), &C, sizeof(uint8_t));
                     }
+                    after = before + stringref("#RRBBGGAA").len;
+                } else if (*after == 'f' || *after == '.') {
+                    f = strtof(before, &after);
+                    memcpy((void*)((uintptr_t)instr + instr->size - (uintptr_t)sizeof(float)),
+                           &f, sizeof(float));
+                    ++after;
+                } else {
+                    memcpy((void*)((uintptr_t)instr + instr->size - (uintptr_t)sizeof(int32_t)),
+                           &i, sizeof(int32_t));
                 }
                 before = after;
-                if (before[1] == ' ') {
+                while (before[0] == ',' || before[0] == ' ') {
                     before++;
                 }
             }
@@ -612,16 +621,16 @@ std_create(
 
     if (option_version == 0)
         std->header_06->faces_offset = (sizeof(std_header_06_t) +
-                                     sizeof(int32_t) * std->header->nb_objects +
-                                     sizeof(std_entry_header_t) * std->header->nb_objects +
-                                     sizeof(int32_t) * std->header->nb_objects +
-                                     sizeof(std_object_t) * std->header->nb_faces);
+                                        sizeof(int32_t) * std->header->nb_objects +
+                                        sizeof(std_entry_header_t) * std->header->nb_objects +
+                                        sizeof(int32_t) * std->header->nb_objects +
+                                        sizeof(std_object_t) * std->header->nb_faces);
     else
         std->header_10->faces_offset = (sizeof(std_header_10_t) +
-                                     sizeof(int32_t) * std->header->nb_objects +
-                                     sizeof(std_entry_header_t) * std->header->nb_objects +
-                                     sizeof(int32_t) * std->header->nb_objects +
-                                     sizeof(std_object_t) * std->header->nb_faces);
+                                        sizeof(int32_t) * std->header->nb_objects +
+                                        sizeof(std_entry_header_t) * std->header->nb_objects +
+                                        sizeof(int32_t) * std->header->nb_objects +
+                                        sizeof(std_object_t) * std->header->nb_faces);
 
     int inst_test = 0;
     list_for_each(&std->instances, instance) {
@@ -828,8 +837,8 @@ main(
     case 125:
     case 128:
     case 13:
-      option_version = 1;
-      break;
+        option_version = 1;
+        break;
     case 14:
     case 143:
     case 15:
