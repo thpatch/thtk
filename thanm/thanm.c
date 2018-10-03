@@ -674,6 +674,7 @@ anm_dump(
 
             fprintf(stream, "Script: %d\n", script->offset->id);
 
+            unsigned int instr_num = 0;
             anm_instr_t* instr;
             list_for_each(&script->instrs, instr) {
                 const char* format = find_format(formats, instr->type);
@@ -683,8 +684,8 @@ anm_dump(
                     abort();
                 }
 
-                fprintf(stream, "Instruction: %hu %hu %hu",
-                    instr->time, instr->param_mask, instr->type);
+                fprintf(stream, "Instruction #%u: %hu %hu %hu",
+                    instr_num++, instr->time, instr->param_mask, instr->type);
 
                 if (instr->length > sizeof(anm_instr_t)) {
                     value_t* values;
@@ -986,10 +987,17 @@ anm_create(
                 ERROR("Script parsing failed for %s", line);
                 exit(1);
             }
-        } else if (util_strcmp_ref(line, stringref("Instruction: ")) == 0) {
-            char* tmp = line + stringref("Instruction: ").len;
+        } else if (util_strcmp_ref(line, stringref("Instruction")) == 0) {
+            char* tmp = line + stringref("Instruction").len;
             char* before;
             char* after = NULL;
+
+            tmp = strchr(tmp, ':');
+            if (!tmp) {
+                ERROR("Instruction parsing failed for %s", line);
+                exit(1);
+            }
+            tmp++;
 
             instr = malloc(sizeof(*instr));
 
