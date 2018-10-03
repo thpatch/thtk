@@ -605,6 +605,7 @@ anm_dump(
     FILE* stream,
     const anm_archive_t* anm)
 {
+    unsigned int entry_num = 0;
     anm_entry_t* entry;
 
     list_for_each(&anm->entries, entry) {
@@ -627,7 +628,7 @@ anm_dump(
             abort();
         }
 
-        fprintf(stream, "ENTRY %u\n", entry->header->version);
+        fprintf(stream, "ENTRY #%u, VERSION %u\n", entry_num++, entry->header->version);
         fprintf(stream, "Name: %s\n", entry->name);
         if (entry->name2)
             fprintf(stream, "Name2: %s\n", entry->name2);
@@ -951,7 +952,13 @@ anm_create(
             list_init(&entry->scripts);
             entry->data = NULL;
             list_append_new(&anm->entries, entry);
-            sscanf(line, "ENTRY %u", &entry->header->version);
+
+            if(sscanf(line, "ENTRY %u", &entry->header->version) > 0) {
+                ERROR("warning: No entry number detected. This spec was written by thanm <= 10; re-dump it after ANM creation to remove this warning");
+            } else {
+                unsigned int temp;
+                sscanf(line, "ENTRY #%u, VERSION %u", &temp, &entry->header->version);
+            }
         } else if (util_strcmp_ref(line, stringref("Name: ")) == 0) {
             size_t offset = stringref("Name: ").len;
             char *name = filename_cut(line + offset, sizeof(line) - offset);
@@ -1053,7 +1060,6 @@ anm_create(
         linenum++;
     }
 
-#undef SCAN_OLD
 #undef SCAN_DEPRECATED
 #undef ERROR
 
