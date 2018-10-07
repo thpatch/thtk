@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.0)
 set(CMP0048 NEW)
 
 project("Touhou Toolkit"
-  VERSION 10)
+  VERSION 11)
 set(PROJECT_URL "https://github.com/thpatch/thtk")
 set(PROJECT_BUGREPORT "https://github.com/thpatch/thtk/issues")
 

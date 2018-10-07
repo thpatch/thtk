@@ -1,3 +1,37 @@
+What's new in thtk 11
+=====================
+
+This release adds thstd, a new tool to dump and recreate the background
+scripts found in the *.std files. Further changes to existing tools:
+
+#### thanm
+In preparation of thcrap's upcoming support for ANM header patching, more
+thorough reverse-engineering went into the various ANM structures.
+All previously unknown fields have now been identified and named.
+Additionally, index numbers are now dumped for entries and instruction lines,
+as this is the only reliable way to address them in an ANM header patch.
+Creating new ANM archives from old spec dumps will show backwards-compatibility
+warnings to ease the transition to the new, more correct dump format.
+
+Thanks to GhostPhanom for funding this development!
+
+- Type declarations are now taken from the thtypes repository, which has been
+  added as an additional Git submodule.
+
+- Support for TH16.5 has been added.
+
+#### thecl
+- Support for TH16.5 has been added.
+
+#### thmsg
+- Support for TH16.5 has been added.
+
+Please submit an issue at GitHub (https://github.com/thpatch/thtk/issues) if
+you find a bug.
+
+
+-------------------------------------------------------------------------------
+
 What's new in thtk 10
 ====================
 
@@ -90,7 +124,7 @@ What's new in thtk 7
 - You can archive the whole directory now. Pass the directory name as the
   argument.
 
-#### thecl  
+#### thecl
 - Support for TH14, TH143, TH15 has been added.
 
 #### thmsg
