@@ -684,7 +684,7 @@ anm_dump(
                     abort();
                 }
 
-                fprintf(stream, "Instruction #%u: %hu %hu %hu",
+                fprintf(stream, "Instruction #%u: %hd %hu %hu",
                     instr_num++, instr->time, instr->param_mask, instr->type);
 
                 if (instr->length > sizeof(anm_instr_t)) {
@@ -1002,7 +1002,7 @@ anm_create(
             instr = malloc(sizeof(*instr));
 
             instr->length = 0;
-            instr->time = strtol(tmp, &tmp, 10);
+            instr->time = (int16_t)strtol(tmp, &tmp, 10);
             instr->param_mask = strtol(tmp, &tmp, 10);
             instr->type = strtol(tmp, &tmp, 10);
 
