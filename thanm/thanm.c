@@ -907,7 +907,7 @@ filename_cut(
 
 static anm_archive_t*
 anm_create(
-    const char* spec)
+    const fnchar* spec)
 {
     FILE* f;
     char line[4096];
@@ -917,15 +917,15 @@ anm_create(
     anm_instr_t* instr = NULL;
     unsigned int linenum = 1;
 
-    f = fopen(spec, "r");
+    f = fnfopen(spec, "r");
     if (!f) {
-        fprintf(stderr, "%s: couldn't open %s for reading: %s\n",
+        fprintf(stderr, "%s: couldn't open " PRIfns " for reading: %s\n",
             argv0, spec, strerror(errno));
         exit(1);
     }
 
 #define ERROR(text, ...) fprintf(stderr, \
-    "%s: %s:%d: " text "\n", argv0, spec, linenum, ##__VA_ARGS__)
+    "%s: " PRIfns ":%d: " text "\n", argv0, spec, linenum, ##__VA_ARGS__)
 
 #define SCAN_DEPRECATED(fieldstr, format, field) \
     if (sscanf(line, fieldstr ": " format, &entry->header->field) > 0) { \
@@ -1079,13 +1079,13 @@ anm_create(
 static void
 anm_write(
     anm_archive_t* anm,
-    const char* filename)
+    const fnchar* filename)
 {
     FILE* stream;
 
-    stream = fopen(filename, "wb");
+    stream = fnfopen(filename, "wb");
     if (!stream) {
-        fprintf(stderr, "%s: couldn't open %s for writing: %s\n",
+        fprintf(stderr, "%s: couldn't open " PRIfns " for writing: %s\n",
             argv0, filename, strerror(errno));
         exit(1);
     }
@@ -1348,9 +1348,9 @@ main(
         }
 
         current_input = argv[0];
-        in = fopen(argv[0], "rb");
+        in = fnfopen(fnargv[0], "rb");
         if (!in) {
-            fprintf(stderr, "%s: couldn't open %s for reading\n", argv[0], current_input);
+            fprintf(stderr, "%s: couldn't open " PRIfns " for reading\n", argv0, fnargv[0]);
             exit(1);
         }
         anm = anm_read_file(in);
@@ -1366,9 +1366,9 @@ main(
         }
 
         current_input = argv[0];
-        in = fopen(argv[0], "rb");
+        in = fnfopen(fnargv[0], "rb");
         if (!in) {
-            fprintf(stderr, "%s: couldn't open %s for reading\n", argv[0], current_input);
+            fprintf(stderr, "%s: couldn't open " PRIfns " for reading\n", argv0, fnargv[0]);
             exit(1);
         }
         anm = anm_read_file(in);
@@ -1409,18 +1409,18 @@ extract_next:
 
         current_output = argv[2];
         current_input = argv[0];
-        in = fopen(argv[0], "rb");
+        in = fnfopen(fnargv[0], "rb");
         if (!in) {
-            fprintf(stderr, "%s: couldn't open %s for reading\n", argv[0], current_input);
+            fprintf(stderr, "%s: couldn't open " PRIfns " for reading\n", argv0, fnargv[0]);
             exit(1);
         }
         anm = anm_read_file(in);
         fclose(in);
 
-        anmfp = fopen(argv[0], "rb+");
+        anmfp = fnfopen(fnargv[0], "rb+");
         if (!anmfp) {
-            fprintf(stderr, "%s: couldn't open %s for writing: %s\n",
-                argv0, current_input, strerror(errno));
+            fprintf(stderr, "%s: couldn't open " PRIfns " for writing: %s\n",
+                argv0, fnargv[0], strerror(errno));
             exit(1);
         }
 
@@ -1461,7 +1461,7 @@ replace_done:
             exit(1);
         }
         current_input = argv[1];
-        anm = anm_create(argv[1]);
+        anm = anm_create(fnargv[1]);
 
         /* Allocate enough space for the THTX data. */
         list_for_each(&anm->entries, entry) {
@@ -1476,7 +1476,7 @@ replace_done:
             anm_replace(anm, NULL, name, name);
 
         current_output = argv[0];
-        anm_write(anm, argv[0]);
+        anm_write(anm, fnargv[0]);
 
         anm_free(anm);
         exit(0);

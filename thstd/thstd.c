@@ -363,7 +363,7 @@ filename_cut(
 
 static thstd_t *
 std_create(
-    const char *spec)
+    const fnchar *spec)
 {
     FILE *f;
     char line[4096];
@@ -382,9 +382,9 @@ std_create(
         option_version == 0 ? formats_v0 :
         formats_v1;
 
-    f = fopen(spec, "r");
+    f = fnfopen(spec, "r");
     if (!f) {
-        fprintf(stderr, "%s: couldn't open %s for reading: %s\n",
+        fprintf(stderr, "%s: couldn't open " PRIfns " for reading: %s\n",
                 argv0, spec, strerror(errno));
         exit(1);
     }
@@ -651,7 +651,7 @@ std_create(
 static void
 std_write(
           thstd_t* std,
-          const char *filename)
+          const fnchar *filename)
 {
     FILE *stream;
     size_t i;
@@ -663,9 +663,9 @@ std_write(
     uint32_t entry_offset;
     int32_t endcode;
 
-    stream = fopen(filename, "wb");
+    stream = fnfopen(filename, "wb");
     if (!stream) {
-        fprintf(stderr, "%s: couldn't open %s for writing: %s\n",
+        fprintf(stderr, "%s: couldn't open " PRIfns " for writing: %s\n",
                 argv0, filename, strerror(errno));
     }
 
@@ -864,17 +864,17 @@ main(
         }
 
         current_input = argv[0];
-        in = fopen(argv[0], "rb");
+        in = fnfopen(fnargv[0], "rb");
         if (!in) {
-            fprintf(stderr, "%s: couldn't open %s for reading\n", argv[0], current_input);
+            fprintf(stderr, "%s: couldn't open " PRIfns " for reading\n", argv0, fnargv[0]);
             exit(1);
         }
 
         if (argc > 1) {
-            out = fopen(argv[1], "wb");
+            out = fnfopen(fnargv[1], "wb");
             if (!out) {
-                fprintf(stderr, "%s: couldn't open %s for writing: %s\n",
-                        argv0, argv[1], strerror(errno));
+                fprintf(stderr, "%s: couldn't open " PRIfns " for writing: %s\n",
+                        argv0, fnargv[1], strerror(errno));
                 fclose(in);
                 exit(1);
             }
@@ -892,8 +892,8 @@ main(
             exit(1);
         }
 
-        std = std_create(argv[0]);
-        std_write(std, argv[1]);
+        std = std_create(fnargv[0]);
+        std_write(std, fnargv[1]);
         std_free(std);
         exit(0);
         break;

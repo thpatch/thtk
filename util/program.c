@@ -83,11 +83,11 @@ util_getopt_default(
     case -1:
         if(!strcmp(argv[util_optind-1], "--")) {
             while(argv[util_optind]) {
-                argv[(*ind)++] = argv[util_optind++];
+                SET_ARGV((*ind)++, util_optind++);
             }
         }
         else {
-            argv[(*ind)++] = argv[util_optind++];
+            SET_ARGV((*ind)++, util_optind++);
         }
         break;
     }
@@ -141,3 +141,82 @@ unsigned int parse_version(char *str) {
     }
     return vp->version;
 }
+
+#ifdef _WIN32
+// I don't want to deal with improper UTF-16, so surrogate codepoints are left as-is.
+static size_t utf8len(wchar_t *str) {
+    size_t sz = 0;
+    do {
+        if (*str & 0xF800) sz++;
+        if (*str & 0xFF80) sz++;
+        sz++;
+    } while (*str++);
+    return sz;
+}
+static void utf8cpy(char *out, wchar_t *str) {
+    do {
+        if (*str & 0xF800) {
+            *out++ = 0xE0 | 0x0F & (*str >> 12);
+            *out++ = 0x80 | 0x3F & (*str >> 6);
+            *out++ = 0x80 | 0x3F & (*str);
+        }
+        else if (*str & 0xFF80) {
+            *out++ = 0xC0 | 0x1F & (*str >> 6);
+            *out++ = 0x80 | 0x3F & (*str);
+        }
+        else {
+            *out++ = (char)*str;
+        }
+    } while (*str++);
+}
+#define UTF8CPLEN(init) (\
+    ((init)&0x80) == 0x00 ? 1 : \
+    ((init)&0xE0) == 0xC0 ? 2 : \
+    ((init)&0xF0) == 0xE0 ? 3 : 4)
+fnchar *mkfnchar(const char* str) {
+    int len = 0;
+    for(;;) {
+        int x = UTF8CPLEN(*str);
+        len += x;
+        str += x;
+        if (!*(str - x)) break;
+    }
+    str -= len; // rewind
+    wchar_t *wcs = malloc(sizeof(wchar_t)*len);
+    for (int i = 0; i < len; i++) {
+        switch (UTF8CPLEN(*str)) {
+        case 1:
+            *wcs++ = (wchar_t)str[0];
+            str += 1;
+            break;
+        case 2:
+            *wcs++ = (wchar_t)(0x7FF & (str[0] << 6 | str[1] & 0x3f));
+            str += 2;
+            break;
+        case 3:
+            *wcs++ = (wchar_t)(0xFFFF & (str[0] << 12 | (str[1] & 0x3f) << 6 | str[2] & 0x3f));
+            str += 3;
+            break;
+        default: abort();
+        }
+    }
+    return wcs;
+}
+#pragma comment( linker, "/entry:\"wmainCRTStartup\"" )
+wchar_t **wargv = NULL;
+int wmain(int argc, wchar_t **_wargv) {
+    wargv = _wargv;
+
+    char **argv = malloc(sizeof(char*) * (argc + 1));
+    argv[argc] = NULL;
+
+    for (int i = 0; i < argc; i++) {
+        int len = utf8len(wargv[i]);
+        argv[i] = malloc(len);
+        utf8cpy(argv[i], wargv[i]);
+    }
+
+    int rv = main(argc, argv);
+    return rv;
+}
+#endif

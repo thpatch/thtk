@@ -47,4 +47,48 @@ extern const char* argv0;
 extern const char* current_input;
 extern const char* current_output;
 
+/**
+ * Definitions for argument parsing on Windows
+ *
+ * The goal is to add ability to access wide arguments (specifically,
+ * for filenames,) while leaving the argument parsing code narrow.
+ *
+ * On Unix, everything is left as-is.
+ */
+#ifdef _WIN32
+extern wchar_t **wargv;
+#define main fakemain
+int main(int argc, char **argv);
+
+typedef wchar_t fnchar;
+fnchar *mkfnchar(const char* str);
+#define freefnchar(str) do{ free(str); } while(0)
+#define SET_ARGV(_to,_from) do { \
+    int to = (_to), from = (_from); \
+    argv[to] = argv[from]; \
+    wargv[to] = wargv[from]; \
+} while(0)
+#define fnargv wargv
+#define thtk_io_open_file_fn(f,m,e) thtk_io_open_file_w(f,L##m,e)
+#define thdat_detect_filename_fn thdat_detect_filename_w
+#define thdat_detect_fn thdat_detect_w
+#define fnfopen(f,m) _wfopen(f,L##m)
+#define PRIfnc "%lc"
+#define PRIfns "%ls"
+#define FNCHAR(x) L##x
+#else /* !_WIN32 */
+typedef char fnchar;
+#define mkfnchar(str) (str)
+#define freefnchar(str) do{ ; } while(0)
+#define SET_ARGV(to,from) do { argv[to] = argv[from]; } while(0)
+#define fnargv argv
+#define thtk_io_open_file_fn(f,m,e) thtk_io_open_file(f,m,e)
+#define thdat_detect_filename_fn thdat_detect_filename
+#define thdat_detect_fn thdat_detect
+#define fnfopen(f,m) fopen(f,m)
+#define PRIfnc "%c"
+#define PRIfns "%s"
+#define FNCHAR(x) x
+#endif
+
 #endif

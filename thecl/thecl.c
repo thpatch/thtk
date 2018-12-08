@@ -220,12 +220,14 @@ main(int argc, char* argv[])
             break;
         case 'm': {
             FILE* map_file = NULL;
-            map_file = fopen(util_optarg, "r");
+            fnchar *fnoptarg = mkfnchar(util_optarg);
+            map_file = fnfopen(fnoptarg, "r");
             if (!map_file) {
-                fprintf(stderr, "%s: couldn't open %s for reading: %s\n",
-                    argv0, util_optarg, strerror(errno));
+                fprintf(stderr, "%s: couldn't open " PRIfns " for reading: %s\n",
+                    argv0, fnoptarg, strerror(errno));
                 exit(1);
             }
+            freefnchar(fnoptarg);
             eclmap_load(g_eclmap_opcode, g_eclmap_global, map_file, util_optarg);
             fclose(map_file);
             break;
@@ -285,18 +287,18 @@ main(int argc, char* argv[])
 
         if (0 < argc) {
             current_input = argv[0];
-            in = fopen(argv[0], "rb");
+            in = fnfopen(fnargv[0], "rb");
             if (!in) {
-                fprintf(stderr, "%s: couldn't open %s for reading: %s\n",
-                    argv0, argv[0], strerror(errno));
+                fprintf(stderr, "%s: couldn't open " PRIfns " for reading: %s\n",
+                    argv0, fnargv[0], strerror(errno));
                 exit(1);
             }
             if (1 < argc) {
                 current_output = argv[1];
-                out = fopen(argv[1], "wb");
+                out = fnfopen(fnargv[1], "wb");
                 if (!out) {
-                    fprintf(stderr, "%s: couldn't open %s for writing: %s\n",
-                        argv0, argv[1], strerror(errno));
+                    fprintf(stderr, "%s: couldn't open " PRIfns " for writing: %s\n",
+                        argv0, fnargv[1], strerror(errno));
                     fclose(in);
                     exit(1);
                 }

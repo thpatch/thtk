@@ -88,12 +88,12 @@ thdat_state_free(
 static thdat_state_t*
 thdat_open_file(
     unsigned int version,
-    const char* path,
+    const fnchar* path,
     thtk_error_t** error)
 {
     thdat_state_t* state = thdat_state_alloc();
 
-    if (!(state->stream = thtk_io_open_file(path, "rb", error))) {
+    if (!(state->stream = thtk_io_open_file_fn(path, "rb", error))) {
         thdat_state_free(state);
         return NULL;
     }
@@ -139,7 +139,7 @@ thdat_extract_file(
 static int
 thdat_list(
     unsigned int version,
-    const char* path,
+    const fnchar* path,
     thtk_error_t** error)
 {
     thdat_state_t* state = thdat_open_file(version, path, error);
@@ -203,7 +203,7 @@ thdat_list(
 static int
 thdat_create_wrapper(
     unsigned int version,
-    const char* path,
+    const fnchar* path,
     const char** paths,
     size_t entry_count,
     thtk_error_t** error)
@@ -214,7 +214,7 @@ thdat_create_wrapper(
     int* entries_count = calloc(entry_count, sizeof(int));
     size_t real_entry_count = 0;
 
-    if (!(state->stream = thtk_io_open_file(path, "wb", error))) {
+    if (!(state->stream = thtk_io_open_file_fn(path, "wb", error))) {
         thdat_state_free(state);
         exit(1);
     }
@@ -360,15 +360,15 @@ main(
     /* detect version */
     if(argc && (mode == 'x' || mode == 'l') && version == ~0) {
         thtk_io_t* file;
-        if(!(file = thtk_io_open_file(argv[0], "rb", &error))) {
+        if(!(file = thtk_io_open_file_fn(fnargv[0], "rb", &error))) {
             print_error(error);
             thtk_error_free(&error);
             exit(1);
         }
         uint32_t out[4];
         unsigned int heur;
-        printf("Detecting '%s'...\n",argv[0]);
-        if(-1 == thdat_detect(argv[0], file, out, &heur, &error)) {
+        printf("Detecting '"PRIfns"'...\n",fnargv[0]);
+        if(-1 == thdat_detect_fn(fnargv[0], file, out, &heur, &error)) {
             thtk_io_close(file);
             print_error(error);
             thtk_error_free(&error);
@@ -398,7 +398,7 @@ main(
             exit(1);
         }
         thtk_io_t* file;
-        if (!(file = thtk_io_open_file(argv[0], "rb", &error))) {
+        if (!(file = thtk_io_open_file_fn(fnargv[0], "rb", &error))) {
             print_error(error);
             thtk_error_free(&error);
             exit(1);
@@ -407,8 +407,8 @@ main(
         uint32_t out[4];
         unsigned int heur;
 
-        printf("Detecting '%s'... ",argv[0]);
-        if (-1 == thdat_detect(argv[0], file, out, &heur, &error)) {
+        printf("Detecting '"PRIfns"'... ",fnargv[0]);
+        if (-1 == thdat_detect_fn(fnargv[0], file, out, &heur, &error)) {
             printf("\n");
             thtk_io_close(file);
             print_error(error);
@@ -421,7 +421,7 @@ main(
         while((ent = thdat_detect_iter(out))) {
             printf("%d,",ent->alias);
         }
-        printf(" | filename: %d\n", thdat_detect_filename(argv[0]));
+        printf(" | filename: %d\n", thdat_detect_filename_fn(fnargv[0]));
         thtk_io_close(file);
         exit(0);
     }
@@ -431,7 +431,7 @@ main(
             exit(1);
         }
 
-        if (!thdat_list(version, argv[0], &error)) {
+        if (!thdat_list(version, fnargv[0], &error)) {
             print_error(error);
             thtk_error_free(&error);
             exit(1);
@@ -445,7 +445,7 @@ main(
             exit(1);
         }
 
-        if (!thdat_create_wrapper(version, argv[0], (const char**)&argv[1], argc - 1, &error)) {
+        if (!thdat_create_wrapper(version, fnargv[0], (const char**)&argv[1], argc - 1, &error)) {
             print_error(error);
             thtk_error_free(&error);
             exit(1);
@@ -459,7 +459,7 @@ main(
             exit(1);
         }
 
-        thdat_state_t* state = thdat_open_file(version, argv[0], &error);
+        thdat_state_t* state = thdat_open_file(version, fnargv[0], &error);
         if (!state) {
             print_error(error);
             thtk_error_free(&error);

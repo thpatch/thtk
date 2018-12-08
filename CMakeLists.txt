@@ -109,7 +109,7 @@ endif()
 
 function(link_setargv target)
   if(MSVC)
-    set_target_properties(${target} PROPERTIES LINK_FLAGS "setargv.obj")
+    set_target_properties(${target} PROPERTIES LINK_FLAGS "wsetargv.obj /entry:wmainCRTStartup")
   endif()
 endfunction()
 
