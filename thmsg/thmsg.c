@@ -137,16 +137,16 @@ main(int argc, char* argv[])
             current_input = argv[0];
             in = fnfopen(fnargv[0], "rb");
             if (!in) {
-                fprintf(stderr, "%s: couldn't open " PRIfns " for reading: %s\n",
-                    argv0, fnargv[0], strerror(errno));
+                fprintf(stderr, "%s: couldn't open %s for reading: %s\n",
+                    argv0, argv[0], strerror(errno));
                 return 1;
             }
             if (argc > 1) {
                 current_output = argv[1];
                 out = fnfopen(fnargv[1], "wb");
                 if (!out) {
-                    fprintf(stderr, "%s: couldn't open " PRIfns " for writing: %s\n",
-                        argv0, fnargv[1], strerror(errno));
+                    fprintf(stderr, "%s: couldn't open %s for writing: %s\n",
+                        argv0, argv[1], strerror(errno));
                     fclose(in);
                     return 1;
                 }

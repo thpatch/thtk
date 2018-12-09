@@ -33,6 +33,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <locale.h>
 #include "program.h"
 #include "util.h"
 #include "mygetopt.h"
@@ -202,10 +203,21 @@ fnchar *mkfnchar(const char* str) {
     }
     return wcs;
 }
-#pragma comment( linker, "/entry:\"wmainCRTStartup\"" )
 wchar_t **wargv = NULL;
+
+#include <Windows.h>
+static UINT oldCP;
+static void restoreCP(void) {
+    SetConsoleOutputCP(oldCP);
+}
 int wmain(int argc, wchar_t **_wargv) {
     wargv = _wargv;
+
+    setlocale(LC_CTYPE, ".65001"); // UTF-8
+    // FIXME: east asian codepages don't round-trip, and leave artifacts on screen
+    oldCP = GetConsoleOutputCP();
+    SetConsoleOutputCP(65001);
+    atexit(restoreCP);
 
     char **argv = malloc(sizeof(char*) * (argc + 1));
     argv[argc] = NULL;

@@ -519,7 +519,7 @@ anm_read_file(
 
         list_init(&entry->scripts);
         if (header->scripts) {
-            anm_offset_t* script_offsets = 
+            anm_offset_t* script_offsets =
                 (anm_offset_t*)(map + sizeof(*header) + header->sprites * sizeof(uint32_t));
             for (uint32_t s = 0; s < header->scripts; ++s) {
                 anm_script_t* script = malloc(sizeof(*script));
@@ -907,9 +907,9 @@ filename_cut(
 
 static anm_archive_t*
 anm_create(
+    FILE *f,
     const fnchar* spec)
 {
-    FILE* f;
     char line[4096];
     anm_archive_t* anm;
     anm_entry_t* entry = NULL;
@@ -917,15 +917,8 @@ anm_create(
     anm_instr_t* instr = NULL;
     unsigned int linenum = 1;
 
-    f = fnfopen(spec, "r");
-    if (!f) {
-        fprintf(stderr, "%s: couldn't open " PRIfns " for reading: %s\n",
-            argv0, spec, strerror(errno));
-        exit(1);
-    }
-
 #define ERROR(text, ...) fprintf(stderr, \
-    "%s: " PRIfns ":%d: " text "\n", argv0, spec, linenum, ##__VA_ARGS__)
+    "%s: %s:%d: " text "\n", argv0, spec, linenum, ##__VA_ARGS__)
 
 #define SCAN_DEPRECATED(fieldstr, format, field) \
     if (sscanf(line, fieldstr ": " format, &entry->header->field) > 0) { \
@@ -1071,25 +1064,14 @@ anm_create(
 #undef SCAN_DEPRECATED
 #undef ERROR
 
-    fclose(f);
-
     return anm;
 }
 
 static void
 anm_write(
     anm_archive_t* anm,
-    const fnchar* filename)
+    FILE *stream)
 {
-    FILE* stream;
-
-    stream = fnfopen(filename, "wb");
-    if (!stream) {
-        fprintf(stderr, "%s: couldn't open " PRIfns " for writing: %s\n",
-            argv0, filename, strerror(errno));
-        exit(1);
-    }
-
     anm_entry_t* entry;
     list_for_each(&anm->entries, entry) {
         sprite_t* sprite;
@@ -1210,8 +1192,6 @@ anm_write(
 
         file_seek(stream, base + entry->header->nextoffset);
     }
-
-    fclose(stream);
 }
 #endif
 
@@ -1350,7 +1330,7 @@ main(
         current_input = argv[0];
         in = fnfopen(fnargv[0], "rb");
         if (!in) {
-            fprintf(stderr, "%s: couldn't open " PRIfns " for reading\n", argv0, fnargv[0]);
+            fprintf(stderr, "%s: couldn't open %s for reading\n", argv0, argv[0]);
             exit(1);
         }
         anm = anm_read_file(in);
@@ -1368,7 +1348,7 @@ main(
         current_input = argv[0];
         in = fnfopen(fnargv[0], "rb");
         if (!in) {
-            fprintf(stderr, "%s: couldn't open " PRIfns " for reading\n", argv0, fnargv[0]);
+            fprintf(stderr, "%s: couldn't open %s for reading\n", argv0, argv[0]);
             exit(1);
         }
         anm = anm_read_file(in);
@@ -1411,7 +1391,7 @@ extract_next:
         current_input = argv[0];
         in = fnfopen(fnargv[0], "rb");
         if (!in) {
-            fprintf(stderr, "%s: couldn't open " PRIfns " for reading\n", argv0, fnargv[0]);
+            fprintf(stderr, "%s: couldn't open %s for reading\n", argv0, argv[0]);
             exit(1);
         }
         anm = anm_read_file(in);
@@ -1419,8 +1399,8 @@ extract_next:
 
         anmfp = fnfopen(fnargv[0], "rb+");
         if (!anmfp) {
-            fprintf(stderr, "%s: couldn't open " PRIfns " for writing: %s\n",
-                argv0, fnargv[0], strerror(errno));
+            fprintf(stderr, "%s: couldn't open %s for writing: %s\n",
+                argv0, argv[0], strerror(errno));
             exit(1);
         }
 
@@ -1461,7 +1441,14 @@ replace_done:
             exit(1);
         }
         current_input = argv[1];
-        anm = anm_create(fnargv[1]);
+        FILE *fspec = fnfopen(fnargv[1], "r");
+        if (!fspec) {
+            fprintf(stderr, "%s: couldn't open %s for reading: %s\n",
+                argv0, argv[1], strerror(errno));
+            exit(1);
+        }
+        anm = anm_create(fspec, argv[1]);
+        fclose(fspec);
 
         /* Allocate enough space for the THTX data. */
         list_for_each(&anm->entries, entry) {
@@ -1476,7 +1463,14 @@ replace_done:
             anm_replace(anm, NULL, name, name);
 
         current_output = argv[0];
-        anm_write(anm, fnargv[0]);
+        FILE* fanm = fnfopen(fnargv[0], "wb");
+        if (!fanm) {
+            fprintf(stderr, "%s: couldn't open %s for writing: %s\n",
+                argv0, argv[0], strerror(errno));
+            exit(1);
+        }
+        anm_write(anm, fanm);
+        fclose(fanm);
 
         anm_free(anm);
         exit(0);

@@ -73,9 +73,6 @@ fnchar *mkfnchar(const char* str);
 #define thdat_detect_filename_fn thdat_detect_filename_w
 #define thdat_detect_fn thdat_detect_w
 #define fnfopen(f,m) _wfopen(f,L##m)
-#define PRIfnc "%lc"
-#define PRIfns "%ls"
-#define FNCHAR(x) L##x
 #else /* !_WIN32 */
 typedef char fnchar;
 #define mkfnchar(str) (str)
@@ -86,9 +83,6 @@ typedef char fnchar;
 #define thdat_detect_filename_fn thdat_detect_filename
 #define thdat_detect_fn thdat_detect
 #define fnfopen(f,m) fopen(f,m)
-#define PRIfnc "%c"
-#define PRIfns "%s"
-#define FNCHAR(x) x
 #endif
 
 #endif

@@ -367,7 +367,7 @@ main(
         }
         uint32_t out[4];
         unsigned int heur;
-        printf("Detecting '"PRIfns"'...\n",fnargv[0]);
+        printf("Detecting '%s'...\n",argv[0]);
         if(-1 == thdat_detect_fn(fnargv[0], file, out, &heur, &error)) {
             thtk_io_close(file);
             print_error(error);
@@ -407,7 +407,7 @@ main(
         uint32_t out[4];
         unsigned int heur;
 
-        printf("Detecting '"PRIfns"'... ",fnargv[0]);
+        printf("Detecting '%s'... ",argv[0]);
         if (-1 == thdat_detect_fn(fnargv[0], file, out, &heur, &error)) {
             printf("\n");
             thtk_io_close(file);
