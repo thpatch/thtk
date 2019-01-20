@@ -84,6 +84,8 @@ static void expression_free(expression_t* expr);
     expression_operation_new(state, (int[]){ a, 0 }, (expression_t*[]){ A, NULL })
 #define EXPR_1A(a, A) \
     expression_address_operation_new(state, (int[]){ a, 0 }, A)
+#define EXPR_1B(a, b, A) \
+    expression_operation_new(state, (int[]){ a, b, 0 }, (expression_t*[]){ A, NULL })
 
 /* Bison things. */
 void yyerror(parser_state_t*, const char*);
@@ -204,6 +206,9 @@ void set_time(parser_state_t* state, int new_time);
 %token OR "||"
 %token XOR "^"
 %token DEC "--"
+%token NEG "-"
+%token NEGI "$-"
+%token NEGF "%-"
 
 %token DOLLAR "$"
 
@@ -230,7 +235,7 @@ void set_time(parser_state_t* state, int new_time);
 %type <integer> Cast_Target2
 
 %nonassoc ADD ADDI ADDF SUBTRACT SUBTRACTI SUBTRACTF MULTIPLY MULTIPLYI MULTIPLYF DIVIDE DIVIDEI DIVIDEF EQUAL EQUALI EQUALF INEQUAL INEQUALI INEQUALF LT LTI LTF LTEQ LTEQI LTEQF GT GTI GTF GTEQ GTEQI GTEQF MODULO OR AND XOR
-%left NOT
+%left NOT NEG NEGI NEGF
 %right DEC
 
 %%
@@ -533,6 +538,7 @@ Expression:
     | Expression "&&"  Expression { $$ = EXPR_12(AND,                  $1, $3); }
     | Expression "^"   Expression { $$ = EXPR_12(XOR,                  $1, $3); }
     | Address "--"                { $$ = EXPR_1A(DEC,                  $1); }
+    | "-" Expression              { $$ = EXPR_1B(NEGI,      NEGF,      $2); }
     ;
 
 Address:

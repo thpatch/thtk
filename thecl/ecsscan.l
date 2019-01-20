@@ -98,6 +98,7 @@
 "&&"       return AND;
 "^"        return XOR;
 "--"       return DEC;
+"-"        return NEG;
 
 "$"        return DOLLAR;
 

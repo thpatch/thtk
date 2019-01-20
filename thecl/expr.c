@@ -49,6 +49,7 @@ th10_alternatives[] = {
     { LTEQ,     { LTEQI, LTEQF } },
     { GT,       { GTI, GTF } },
     { GTEQ,     { GTEQI, GTEQF } },
+    { NEG,      { NEGI, NEGF } },
     { 0,        { 0, 0 } }
 };
 
@@ -101,6 +102,8 @@ th10_expressions[] = {
     { AND,        74, 'S', NULL, 2, "SS", "s1 && s0" },
     { XOR,        75, 'S', NULL, 2, "SS", "s1 ^ s0" },
     { DEC,        78, 'S',  "S", 0, NULL, "p0--" },
+    { NEGI,       84, 'S', NULL, 1, "S", "-s0" },
+    { NEGF,       85, 'f', NULL, 1, "f", "-s0" },
     { 0,           0,   0, NULL, 0, NULL, NULL }
 };
 
