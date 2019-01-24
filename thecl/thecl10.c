@@ -971,6 +971,8 @@ static const id_format_pair_t th16_fmts[] = {
 };
 
 static const id_format_pair_t th165_fmts[] = {
+    { 1000, "" },
+    { 1001, "" },
     { 1002, "f" },
     { 1005, "S" },
     { 1006, "f" },
@@ -980,6 +982,7 @@ static const id_format_pair_t th165_fmts[] = {
     { 1010, "f" },
     { 1011, "S" },
     { 1012, "S" },
+    { 1013, "" },
     { 1014, "S" },
     { -1, NULL }
 };
