@@ -1207,11 +1207,11 @@ th10_open(
             new_instr->offset = (ptrdiff_t)instr - (ptrdiff_t)raw_sub;
             list_init(&new_instr->params);
 
-            if (instr->size > sizeof(th10_instr_t)) {
-                uint32_t param_mask = instr->param_mask;
-                const char* format = th10_find_format(version, instr->id);
-                /* TODO: Handle format == NULL. */
+            uint32_t param_mask = instr->param_mask;
+            const char* format = th10_find_format(version, instr->id);
+            /* TODO: Handle format == NULL. */
 
+            if (instr->size > sizeof(th10_instr_t)) {
                 value_t* values = value_list_from_data(th10_value_from_data, instr->data, instr->size - sizeof(th10_instr_t), format);
                 if (!values)
                     return NULL;
