@@ -70,6 +70,11 @@ typedef struct expression_t {
     int result_type;
 } expression_t;
 
+typedef struct {
+    expression_t *expr;
+    char labelstr[250];
+} switch_case_t;
+
 static int parse_rank(const parser_state_t* state, const char* value);
 
 static expression_t* expression_load_new(const parser_state_t* state, thecl_param_t* value);
@@ -88,6 +93,7 @@ static void expression_free(expression_t* expr);
 #define EXPR_1B(a, b, A) \
     expression_operation_new(state, (int[]){ a, b, 0 }, (expression_t*[]){ A, NULL })
 
+static expression_t *expression_copy(expression_t *expr);
 static void expression_create_goto(parser_state_t *state, int type, char *labelstr);
 
 /* Bison things. */
@@ -168,6 +174,11 @@ void set_time(parser_state_t* state, int new_time);
 %token UNLESS "unless"
 %token IF "if"
 %token ELSE "else"
+%token DO "do"
+%token WHILE "while"
+%token SWITCH "switch"
+%token CASE "case"
+%token BREAK "break"
 %token ASYNC "async"
 %token LOAD
 %token LOADI
@@ -378,14 +389,34 @@ Text_Semicolon_List:
 Instructions:
       Instruction ";"
     | IfBlock
+    | WhileBlock
+    | SwitchBlock
     | INTEGER ":" { set_time(state, $1); }
     | IDENTIFIER ":" { label_create(state, $1); free($1); }
     | Instructions INTEGER ":" { set_time(state, $2); }
     | Instructions IDENTIFIER ":" { label_create(state, $2); free($2); }
     | Instructions Instruction ";"
     | Instructions IfBlock
+    | Instructions SwitchBlock
+    | Instructions WhileBlock
     | RANK { state->instr_rank = parse_rank(state, $1); } Instruction ";"
     | Instructions RANK { state->instr_rank = parse_rank(state, $2); } Instruction ";"
+    | Instructions "break" ";" {
+          list_node_t *head = state->block_stack.head;
+          for(; head; head = head->next) {
+              if (strncmp(head->data, "while", 5) == 0 ||
+                  strncmp(head->data, "switch", 6) == 0) {
+                  char labelstr[256];
+                  snprintf(labelstr, 256, "%s_end", (char*)head->data);
+                  expression_create_goto(state, GOTO, labelstr);
+                  break;
+              }
+          }
+          if(!head) {
+              yyerror(state, "break not within while or switch");
+              g_was_error = true;
+          }
+    }
     ;
 
 IfBlock:
@@ -393,7 +424,6 @@ IfBlock:
           char labelstr[256];
           snprintf(labelstr, 256, "unless_%i_%i", yylloc.first_line, yylloc.first_column);
           list_prepend_new(&state->block_stack, strdup(labelstr));
-          const expr_t* expr = expr_get_by_symbol(state->version, UNLESS);
           expression_output(state, $2);
           expression_free($2);
           expression_create_goto(state, IF, labelstr);
@@ -408,7 +438,6 @@ IfBlock:
           char labelstr[256];
           snprintf(labelstr, 256, "if_%i_%i", yylloc.first_line, yylloc.first_column);
           list_prepend_new(&state->block_stack, strdup(labelstr));
-          const expr_t* expr = expr_get_by_symbol(state->version, IF);
           expression_output(state, $2);
           expression_free($2);
           expression_create_goto(state, UNLESS, labelstr);
@@ -442,6 +471,124 @@ ElseBlock:
           list_prepend_new(&state->block_stack, strdup(labelstr));
       } IfBlock
       ;
+
+WhileBlock:
+      "while" Expression {
+          char labelstr[256];
+          snprintf(labelstr, 256, "while_%i_%i", yylloc.first_line, yylloc.first_column);
+          char labelstr_st[256];
+          char labelstr_end[256];
+          snprintf(labelstr_st, 256, "%s_st", (char*)labelstr);
+          snprintf(labelstr_end, 256, "%s_end", (char*)labelstr);
+
+          list_prepend_new(&state->block_stack, strdup(labelstr));
+          label_create(state, labelstr_st);
+          expression_output(state, $2);
+          expression_free($2);
+          expression_create_goto(state, UNLESS, labelstr_end);
+      } "{" Instructions "}" {
+          char labelstr_st[256];
+          char labelstr_end[256];
+          list_node_t *head = state->block_stack.head;
+          snprintf(labelstr_st, 256, "%s_st", (char*)head->data);
+          snprintf(labelstr_end, 256, "%s_end", (char*)head->data);
+
+          expression_create_goto(state, GOTO, labelstr_st);
+          label_create(state, labelstr_end);
+
+          free(head->data);
+          list_del(&state->block_stack, head);
+      }
+    | "do"  {
+          char labelstr[256];
+          snprintf(labelstr, 256, "while_%i_%i", yylloc.first_line, yylloc.first_column);
+          char labelstr_st[256];
+          char labelstr_end[256];
+          snprintf(labelstr_st, 256, "%s_st", (char*)labelstr);
+          snprintf(labelstr_end, 256, "%s_end", (char*)labelstr);
+
+          list_prepend_new(&state->block_stack, strdup(labelstr));
+          label_create(state, labelstr_st);
+    } "{" Instructions "}" "while" Expression  {
+          char labelstr_st[256];
+          char labelstr_end[256];
+          list_node_t *head = state->block_stack.head;
+          snprintf(labelstr_st, 256, "%s_st", (char*)head->data);
+          snprintf(labelstr_end, 256, "%s_end", (char*)head->data);
+
+          expression_output(state, $7);
+          expression_free($7);
+          expression_create_goto(state, IF, labelstr_st);
+          label_create(state, labelstr_end);
+
+          free(head->data);
+          list_del(&state->block_stack, head);
+    } ";"
+    ;
+
+SwitchBlock:
+    "switch" Expression {
+          char labelstr[256];
+          list_prepend_new(&state->block_stack, NULL);
+          snprintf(labelstr, 256, "switch_%i_%i", yylloc.first_line, yylloc.first_column);
+          list_prepend_new(&state->block_stack, strdup(labelstr));
+          expression_create_goto(state, GOTO, labelstr);
+    } "{" CaseList "}" {
+          list_node_t *head = state->block_stack.head;
+
+          char labelstr[256];
+          snprintf(labelstr, 256, "%s_end", (char*)head->data);
+          expression_create_goto(state, GOTO, labelstr);
+
+          label_create(state, head->data);
+
+          free(head->data);
+          list_del(&state->block_stack, head);
+
+          list_node_t *node = state->block_stack.head;
+          while (node->data) {
+              switch_case_t *switch_case = node->data;
+              expression_output(state, switch_case->expr);
+              expression_output(state, expression_copy($2));
+              instr_add(state->current_sub, instr_new(state, 59, ""));
+              expression_free(switch_case->expr);
+              expression_create_goto(state, IF, switch_case->labelstr);
+              list_node_t *buf = node;
+              node = node->next;
+              free(buf->data);
+              free(buf);
+          }
+          state->block_stack.head = node->next;
+          free(node);
+
+          label_create(state, labelstr);
+          expression_free($2);
+    }
+    ;
+
+CaseList:
+    Case
+    | Case Instructions
+    | CaseList Case
+    | CaseList Case Instructions
+    ;
+
+Case:
+   "case" Expression ":" {
+          switch_case_t *switch_case = malloc(sizeof(switch_case_t));
+          switch_case->expr = $2;
+          snprintf(switch_case->labelstr, 250, "case_%i_%i", yylloc.first_line, yylloc.first_column);
+
+          label_create(state, switch_case->labelstr);
+
+          list_node_t *head = state->block_stack.head;
+          if (head->next) {
+              list_prepend_to(&state->block_stack, switch_case, head->next);
+          } else {
+              list_append_new(&state->block_stack, switch_case);
+          }
+    }
+    ;
 
     /* TODO: Check the given parameters against the parameters expected for the
      *       instruction. */
@@ -1058,6 +1205,25 @@ expression_operation_new(
 
     /* We cannot continue after this; the program would crash */
     exit(2);
+}
+
+static expression_t *
+expression_copy(
+    expression_t *expr)
+{
+    expression_t *copy = malloc(sizeof(expression_t));
+    memcpy(copy, expr, sizeof(expression_t));
+    expression_t* child_expr;
+    list_init(&copy->children);
+    if (expr->type == EXPRESSION_OP) {
+        list_for_each(&expr->children, child_expr)
+            list_append_new(&copy->children, expression_copy(child_expr));
+    } else if (expr->type == EXPRESSION_VAL) {
+        thecl_param_t *param = malloc(sizeof(thecl_param_t));
+        memcpy(param, expr->value, sizeof(thecl_param_t));
+        copy->value = param;
+    }
+    return copy;
 }
 
 static void
