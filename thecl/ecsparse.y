@@ -180,6 +180,7 @@ void set_time(parser_state_t* state, int new_time);
 %token CASE "case"
 %token BREAK "break"
 %token ASYNC "async"
+%token GLOBAL "global"
 %token LOAD
 %token LOADI
 %token LOADF
@@ -243,6 +244,7 @@ void set_time(parser_state_t* state, int new_time);
 %type <param> Instruction_Parameter
 %type <param> Address
 %type <param> Address_Type
+%type <param> Global_Def
 %type <param> Integer
 %type <param> Floating
 %type <param> Text
@@ -327,6 +329,12 @@ Statement:
 
         free($2);
       }
+    | "global" "[" IDENTIFIER "]" "=" Global_Def ";" {
+        global_definition_t *def = malloc(sizeof(global_definition_t));
+        strncpy(def->name, $3, 256);
+        def->param = $6;
+        list_append_new(&state->global_definitions, def);
+      }
     ;
 
 Integer_List:
@@ -360,6 +368,12 @@ Subroutine_Body:
       Instructions
     | Instructions
     ;
+
+Global_Def:
+      Address
+    | Integer
+    | Floating
+;
 
 Optional_Identifier_Whitespace_List:
       { $$ = NULL; }
@@ -796,6 +810,24 @@ Address:
         $$ = $2;
         $$->stack = 1;
       }
+    | "[" IDENTIFIER "]" {
+        global_definition_t *def;
+        bool found = 0;
+        list_for_each(&state->global_definitions, def) {
+            if (strcmp(def->name, $2) == 0) {
+                thecl_param_t *param = malloc(sizeof(thecl_param_t));
+                memcpy(param, def->param, sizeof(thecl_param_t));
+                $$ = param;
+                found = 1;
+                break;
+            }
+        }
+        if(!found) {
+            fprintf (stderr, "%s:instr_set_types: in sub %s: global definition not found: %s\n",
+                    argv0, state->current_sub->name, $2);
+            exit(1);
+        }
+    }
     | "$" IDENTIFIER {
         $$ = param_new('S');
         $$->stack = 1;

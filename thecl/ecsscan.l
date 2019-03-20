@@ -88,6 +88,7 @@
 "case"     return CASE;
 "break"    return BREAK;
 "async"    return ASYNC;
+"global"   return GLOBAL;
 "="        return ASSIGN;
 "+"        return ADD;
 "-"        return SUBTRACT;

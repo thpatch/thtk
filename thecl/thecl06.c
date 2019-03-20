@@ -934,6 +934,7 @@ th06_parse(
     state.uses_stack_offsets = false;
     list_init(&state.expressions);
     list_init(&state.block_stack);
+    list_init(&state.global_definitions);
     state.current_sub = NULL;
     state.ecl = thecl_new();
     state.ecl->version = version;
