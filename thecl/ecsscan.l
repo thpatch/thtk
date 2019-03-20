@@ -109,7 +109,7 @@ _Sf return CAST_IF;
 _ff return CAST_FF;
 _fS return CAST_FI;
 
--?[0-9]+(\.[0-9]+)?f {
+-?[0-9]+(\.[0-9]*)?f {
     yylval.floating = strtof(yytext, NULL);
     return FLOATING;
 }
