@@ -181,5 +181,6 @@ extern int yyparse(parser_state_t*);
 extern eclmap_t* g_eclmap_opcode;
 extern eclmap_t* g_eclmap_global;
 extern bool g_ecl_rawoutput;
+extern bool g_was_error;
 
 #endif

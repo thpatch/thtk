@@ -42,6 +42,7 @@ extern const thecl_module_t th10_ecl;
 eclmap_t* g_eclmap_opcode = NULL;
 eclmap_t* g_eclmap_global = NULL;
 bool g_ecl_rawoutput = false;
+bool g_was_error = false;
 
 thecl_t*
 thecl_new(
@@ -325,7 +326,11 @@ main(int argc, char* argv[])
         }
         fclose(in);
         fclose(out);
-        
+
+        if(g_was_error) {
+          printf("%s: %s: there were errors.\n", argv0, argv[0]);
+          exit(1);
+        }
         exit(0);
     }
     default:

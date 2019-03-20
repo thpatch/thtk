@@ -394,6 +394,7 @@ Instruction:
         eclmap_entry_t* ent = eclmap_find(g_eclmap_opcode, $1);
         if(!ent) {
             yyerror(state, "unknown mnemonic");
+            g_was_error = true;
         }
         else {
             instr_add(state->current_sub, instr_new_list(state, ent->opcode, $3));
@@ -983,6 +984,7 @@ sub_begin(
                 char buf[256];
                 snprintf(buf, 256, "duplicate sub: %s", name);
                 yyerror(state, buf);
+                g_was_error = true;
                 break;
             } else if(diff < 0) {
                 list_prepend_to(&state->ecl->subs, sub, node);
