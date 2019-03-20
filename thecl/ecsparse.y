@@ -784,11 +784,11 @@ parse_rank(
     int rank = state->has_overdrive_difficulty ? 0xC0 : 0xF0;
 
     if (check_rank_flag(state, value, '*')) {
-        if (strlen(value) != 1) 
+        if (strlen(value) != 1)
             fprintf(stderr, "%s:parse_rank: in sub %s: * should not be used with other rank flags.\n", argv0, state->current_sub->name);
         return 0xFF;
     } else if (check_rank_flag(state, value, '-')) {
-        if (strlen(value) != 1) 
+        if (strlen(value) != 1)
             fprintf(stderr, "%s:parse_rank: in sub %s: - should not be used with other rank flags.\n", argv0, state->current_sub->name);
         return rank;
     } else {
