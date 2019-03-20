@@ -81,6 +81,7 @@
 "goto"     return GOTO;
 "unless"   return UNLESS;
 "if"       return IF;
+"async"    return ASYNC;
 "="        return ASSIGN;
 "+"        return ADD;
 "-"        return SUBTRACT;

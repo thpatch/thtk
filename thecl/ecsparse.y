@@ -51,6 +51,7 @@ static void string_list_free(list_t* list);
 static thecl_instr_t* instr_new(parser_state_t* state, unsigned int id, const char* format, ...);
 static thecl_instr_t* instr_new_list(parser_state_t* state, unsigned int id, list_t* list);
 static void instr_add(thecl_sub_t* sub, thecl_instr_t* instr);
+static void instr_create_call(parser_state_t *state, int type, char *name, list_t *params);
 
 enum expression_type {
     EXPRESSION_OP,
@@ -164,6 +165,7 @@ void set_time(parser_state_t* state, int new_time);
 %token GOTO "goto"
 %token UNLESS "unless"
 %token IF "if"
+%token ASYNC "async"
 %token LOAD
 %token LOADI
 %token LOADF
@@ -383,7 +385,25 @@ Instructions:
     /* TODO: Check the given parameters against the parameters expected for the
      *       instruction. */
 Instruction:
-      IDENTIFIER "(" Instruction_Parameters ")" {
+      IDENTIFIER "(" Instruction_Parameters ")" "async" {
+          /* Search for sub */
+          bool sub_found = false;
+          thecl_sub_t* iter_sub;
+          list_for_each(&state->ecl->subs, iter_sub) {
+              if (strcmp(iter_sub->name, $1) == 0) {
+                  sub_found = true;
+              }
+          }
+          if (sub_found) {
+              instr_create_call(state, 15, $1, $3);
+          } else {
+              char errbuf[256];
+              snprintf(errbuf, 256, "unknown sub: %s", $1);
+              yyerror(state, errbuf);
+              g_was_error = true;
+          }
+      }
+      | IDENTIFIER "(" Instruction_Parameters ")" {
         expression_t* expr;
         list_for_each(&state->expressions, expr) {
             expression_output(state, expr);
@@ -392,9 +412,23 @@ Instruction:
         list_free_nodes(&state->expressions);
 
         eclmap_entry_t* ent = eclmap_find(g_eclmap_opcode, $1);
-        if(!ent) {
-            yyerror(state, "unknown mnemonic");
-            g_was_error = true;
+        if (!ent) {
+            /* Search for sub */
+            bool sub_found = false;
+            thecl_sub_t* iter_sub;
+            list_for_each(&state->ecl->subs, iter_sub) {
+                if (strcmp(iter_sub->name, $1) == 0) {
+                    sub_found = true;
+                }
+            }
+            if (sub_found) {
+                instr_create_call(state, 11, $1, $3);
+            } else {
+                char errbuf[256];
+                snprintf(errbuf, 256, "unknown mnemonic: %s", $1);
+                yyerror(state, errbuf);
+                g_was_error = true;
+            }
         }
         else {
             instr_add(state->current_sub, instr_new_list(state, ent->opcode, $3));
@@ -765,6 +799,53 @@ instr_add(
     list_append_new(&sub->instrs, instr);
     instr->offset = sub->offset;
     sub->offset += instr->size;
+}
+
+static void
+instr_create_call(
+    parser_state_t *state,
+    int type,
+    char *name,
+    list_t *params)
+{
+    /* Create new arg list */
+    list_t *param_list = list_new();
+
+    /* Instr name */
+    thecl_param_t *param = param_new('z');
+    param->value.type = 'z';
+    param->value.val.z = name;
+    list_append_new(param_list, param);
+
+    /* Add parameter casts */
+    thecl_param_t *iter_param;
+    if (params != NULL)
+        list_for_each(params, iter_param) {
+            param = param_new('D');
+            param->stack = iter_param->stack;
+            param->is_expression_param = iter_param->is_expression_param;
+            param->value.type = 'm';
+            param->value.val.m.length = 2 * sizeof(int32_t);
+            param->value.val.m.data = malloc(2 * sizeof(int32_t));
+            int32_t *D = (int32_t *)param->value.val.m.data;
+            switch (iter_param->value.type) {
+            case 'S':
+                D[0] = 0x6969;
+                D[1] = iter_param->value.val.S;
+                break;
+            case 'f':
+                D[0] = 0x6666;
+                memcpy(&D[1], &iter_param->value.val.f, sizeof(float));
+                break;
+            default:
+                yyerror(state, "invalid sub parameter");
+                g_was_error = true;
+            }
+            param_free(iter_param);
+            list_append_new(param_list, param);
+        }
+
+    instr_add(state->current_sub, instr_new_list(state, type, param_list));
 }
 
 static bool
