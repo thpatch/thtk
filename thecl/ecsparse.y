@@ -334,6 +334,7 @@ Statement:
         strncpy(def->name, $3, 256);
         def->param = $6;
         list_append_new(&state->global_definitions, def);
+        free($3);
       }
     ;
 
@@ -563,7 +564,9 @@ SwitchBlock:
           while (node->data) {
               switch_case_t *switch_case = node->data;
               expression_output(state, switch_case->expr);
-              expression_output(state, expression_copy($2));
+              expression_t *copy = expression_copy($2);
+              expression_output(state, copy);
+              expression_free(copy);
               instr_add(state->current_sub, instr_new(state, 59, ""));
               expression_free(switch_case->expr);
               expression_create_goto(state, IF, switch_case->labelstr);
@@ -576,6 +579,7 @@ SwitchBlock:
           free(node);
 
           label_create(state, labelstr);
+          free($2->value);
           expression_free($2);
     }
     ;
@@ -618,12 +622,15 @@ Instruction:
           }
           if (sub_found) {
               instr_create_call(state, 15, $1, $3);
+              list_free_nodes($3);
           } else {
               char errbuf[256];
               snprintf(errbuf, 256, "unknown sub: %s", $1);
               yyerror(state, errbuf);
               g_was_error = true;
           }
+
+          free($3);
       }
       | IDENTIFIER "(" Instruction_Parameters ")" {
         expression_t* expr;
@@ -645,6 +652,7 @@ Instruction:
             }
             if (sub_found) {
                 instr_create_call(state, 11, $1, $3);
+                list_free_nodes($3);
             } else {
                 char errbuf[256];
                 snprintf(errbuf, 256, "unknown mnemonic: %s", $1);
@@ -829,6 +837,7 @@ Address:
             yyerror(state, errbuf);
             exit(1);
         }
+        free($2);
     }
     | "$" IDENTIFIER {
         $$ = param_new('S');
@@ -1092,6 +1101,11 @@ instr_create_call(
         }
 
     instr_add(state->current_sub, instr_new_list(state, type, param_list));
+
+    list_for_each(param_list, iter_param) {
+        param_free(param);
+    }
+    list_free_nodes(&param_list);
 }
 
 static bool
@@ -1370,7 +1384,7 @@ sub_begin(
         if (strcmp(buf, name)) {
             char errbuf[256];
             snprintf(errbuf, 256,
-                     "%s:parse_rank: in sub %s: Function name does not match "
+                     "parse_rank: in sub %s: Function name does not match "
                      "position in file. (expected %s)",
                      name, buf);
             yyerror(state, errbuf);

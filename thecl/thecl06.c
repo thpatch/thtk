@@ -946,6 +946,14 @@ th06_parse(
     if (yyparse(&state) != 0)
         return 0;
 
+    global_definition_t* def;
+    list_for_each(&state.global_definitions, def) {
+        free(def->param);
+        free(def);
+    }
+    list_free_nodes(&state.global_definitions);
+    list_free_nodes(&state.block_stack);
+
     return state.ecl;
 }
 
