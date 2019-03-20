@@ -102,8 +102,11 @@ th10_expressions[] = {
     { AND,        74, 'S', NULL, 2, "SS", "s1 && s0" },
     { XOR,        75, 'S', NULL, 2, "SS", "s1 ^ s0" },
     { DEC,        78, 'S',  "S", 0, NULL, "p0--" },
+    { SIN,        79, 'f', NULL, 1, "f", "sin(s0)" },
+    { COS,        80, 'f', NULL, 1, "f", "cos(s0)" },
     { NEGI,       84, 'S', NULL, 1, "S", "-s0" },
     { NEGF,       85, 'f', NULL, 1, "f", "-s0" },
+    { SQRT,       88, 'f', NULL, 1, "f", "sqrt(s0)" },
     { 0,           0,   0, NULL, 0, NULL, NULL }
 };
 

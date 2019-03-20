@@ -209,6 +209,9 @@ void set_time(parser_state_t* state, int new_time);
 %token NEG "-"
 %token NEGI "$-"
 %token NEGF "%-"
+%token SIN "sin"
+%token COS "cos"
+%token SQRT "sqrt"
 
 %token DOLLAR "$"
 
@@ -235,7 +238,7 @@ void set_time(parser_state_t* state, int new_time);
 %type <integer> Cast_Target2
 
 %nonassoc ADD ADDI ADDF SUBTRACT SUBTRACTI SUBTRACTF MULTIPLY MULTIPLYI MULTIPLYF DIVIDE DIVIDEI DIVIDEF EQUAL EQUALI EQUALF INEQUAL INEQUALI INEQUALF LT LTI LTF LTEQ LTEQI LTEQF GT GTI GTF GTEQ GTEQI GTEQF MODULO OR AND XOR
-%left NOT NEG NEGI NEGF
+%left NOT NEG NEGI NEGF SIN COS SQRT
 %right DEC
 
 %%
@@ -539,6 +542,10 @@ Expression:
     | Expression "^"   Expression { $$ = EXPR_12(XOR,                  $1, $3); }
     | Address "--"                { $$ = EXPR_1A(DEC,                  $1); }
     | "-" Expression              { $$ = EXPR_1B(NEGI,      NEGF,      $2); }
+    | "sin" Expression            { $$ = EXPR_11(SIN,                  $2); }
+    | "cos" Expression            { $$ = EXPR_11(COS,                  $2); }
+    | "sqrt" Expression           { $$ = EXPR_11(SQRT,                 $2); }
+
     ;
 
 Address:

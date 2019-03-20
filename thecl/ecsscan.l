@@ -99,6 +99,9 @@
 "^"        return XOR;
 "--"       return DEC;
 "-"        return NEG;
+"sin"      return SIN;
+"cos"      return COS;
+"sqrt"     return SQRT;
 
 "$"        return DOLLAR;
 
