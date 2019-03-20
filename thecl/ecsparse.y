@@ -823,8 +823,10 @@ Address:
             }
         }
         if(!found) {
-            fprintf (stderr, "%s:instr_set_types: in sub %s: global definition not found: %s\n",
-                    argv0, state->current_sub->name, $2);
+            char errbuf[256];
+            snprintf(errbuf, 256, "instr_set_types: in sub %s: global definition not found: %s",
+                     state->current_sub->name, $2);
+            yyerror(state, errbuf);
             exit(1);
         }
     }
@@ -941,7 +943,11 @@ instr_set_types(
             !(param->type == 'z' && (new_type == 'm' || new_type == 'x')) &&
             !(param->type == 'S' && new_type == 's')) {
 
-            fprintf(stderr, "%s:instr_set_types: in sub %s: wrong argument type for opcode %d (expected: %c, got: %c)\n", argv0, state->current_sub->name, instr->id, new_type, param->type);
+            char errbuf[256];
+            snprintf(errbuf, 256, "instr_set_types: in sub %s: wrong argument "
+                     "type for opcode %d (expected: %c, got: %c)",
+                     state->current_sub->name, instr->id, new_type, param->type);
+            yyerror(state, errbuf);
         }
 
         param->type = new_type;
@@ -1100,7 +1106,10 @@ check_rank_flag(
     if (count == 0) return false;
     else if(count == 1) return true;
     else {
-        fprintf(stderr, "%s:check_rank_flag: in sub %s: duplicate rank flag %c in '%s'\n", argv0, state->current_sub->name, flag, value);
+        char errbuf[256];
+        snprintf(errbuf, 256, "check_rank_flag: in sub %s: duplicate rank flag %c in '%s'",
+                 state->current_sub->name, flag, value);
+        yyerror(state, errbuf);
         return true;
     }
 }
@@ -1113,12 +1122,24 @@ parse_rank(
     int rank = state->has_overdrive_difficulty ? 0xC0 : 0xF0;
 
     if (check_rank_flag(state, value, '*')) {
-        if (strlen(value) != 1)
-            fprintf(stderr, "%s:parse_rank: in sub %s: * should not be used with other rank flags.\n", argv0, state->current_sub->name);
+        if (strlen(value) != 1) {
+            char errbuf[256];
+            snprintf(errbuf, 256,
+                     "parse_rank: in sub %s: * should not be used with "
+                     "other rank flags.",
+                     state->current_sub->name);
+            yyerror(state, errbuf);
+        }
         return 0xFF;
     } else if (check_rank_flag(state, value, '-')) {
-        if (strlen(value) != 1)
-            fprintf(stderr, "%s:parse_rank: in sub %s: - should not be used with other rank flags.\n", argv0, state->current_sub->name);
+        if (strlen(value) != 1) {
+            char errbuf[256];
+            snprintf(errbuf, 256,
+                     "parse_rank: in sub %s: - should not be used with "
+                     "other rank flags.",
+                     state->current_sub->name);
+            yyerror(state, errbuf);
+        }
         return rank;
     } else {
         if (check_rank_flag(state, value, 'E')) rank |= RANK_EASY;
@@ -1137,17 +1158,36 @@ parse_rank(
         if (check_rank_flag(state, value, '6')) rank &= ~RANK_ID_6;
         if (check_rank_flag(state, value, '7')) rank &= ~RANK_ID_7;
 
-        if (state->has_overdrive_difficulty && (check_rank_flag(state, value, '4') || check_rank_flag(state, value, '5')))
-            fprintf(stderr, "%s:parse_rank: in sub %s: Rank flags 4 and 5 are not used in TH13+. Use X for extra, and O for overdrive instead.\n",
-                    argv0, state->current_sub->name);
-        if (!state->has_overdrive_difficulty && (check_rank_flag(state, value, 'X') || check_rank_flag(state, value, 'O')))
-            fprintf(stderr, "%s:parse_rank: in sub %s: Rank flags X and O do not exist before TH13. Use 4 and 5 for the unused difficulties flags instead.\n",
-                    argv0, state->current_sub->name);
-        if (check_rank_flag(state, value, 'W') || check_rank_flag(state, value, 'Y') || check_rank_flag(state, value, 'Z'))
-            fprintf(stderr, "%s:parse_rank: in sub %s: Rank flags W, X, Y and Z no longer refer to unused difficulties 4-7. %s\n",
-                    argv0, state->current_sub->name,
-                    state->has_overdrive_difficulty ? "In TH13+, use 6 and 7 for the remaining two unused difficulties, X for extra, and O for overdrive."
-                                                    : "Before TH13, use 4, 5, 6, and 7 to refer to the unused difficulties.");
+        if (state->has_overdrive_difficulty && (check_rank_flag(state, value, '4') || check_rank_flag(state, value, '5'))) {
+            char errbuf[256];
+            snprintf(errbuf, 256,
+                    "parse_rank: in sub %s: Rank flags 4 and 5 are not used in "
+                    "TH13+. Use X for extra, and O for overdrive instead.",
+                    state->current_sub->name);
+            yyerror(state, errbuf);
+        }
+        if (!state->has_overdrive_difficulty && (check_rank_flag(state, value, 'X') || check_rank_flag(state, value, 'O'))) {
+            char errbuf[256];
+            snprintf(errbuf, 256,
+                    "parse_rank: in sub %s: Rank flags X and O do not exist "
+                    "before TH13. Use 4 and 5 for the unused difficulties flags "
+                    "instead.",
+                    state->current_sub->name);
+            yyerror(state, errbuf);
+        }
+        if (check_rank_flag(state, value, 'W') || check_rank_flag(state, value, 'Y') || check_rank_flag(state, value, 'Z')) {
+          char errbuf[256];
+          snprintf(errbuf, 256,
+                   "parse_rank: in sub %s: Rank flags W, X, Y and Z no "
+                   "longer refer to unused difficulties 4-7. %s",
+                   state->current_sub->name,
+                   state->has_overdrive_difficulty
+                       ? "In TH13+, use 6 and 7 for the remaining two unused "
+                         "difficulties, X for extra, and O for overdrive."
+                       : "Before TH13, use 4, 5, 6, and 7 to refer to the "
+                         "unused difficulties.");
+          yyerror(state, errbuf);
+        }
 
         return rank;
     }
@@ -1328,8 +1368,12 @@ sub_begin(
         char buf[256];
         snprintf(buf, 256, "Sub%u", sub_count + 1);
         if (strcmp(buf, name)) {
-            fprintf(stderr, "%s:parse_rank: in sub %s: Function name does not match position in file. (expected %s)\n",
-                    argv0, name, buf);
+            char errbuf[256];
+            snprintf(errbuf, 256,
+                     "%s:parse_rank: in sub %s: Function name does not match "
+                     "position in file. (expected %s)",
+                     name, buf);
+            yyerror(state, errbuf);
         }
     } else {
         // Touhou expects the list of subs to be sorted by name.
