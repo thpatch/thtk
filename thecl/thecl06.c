@@ -952,7 +952,6 @@ th06_parse(
         free(def);
     }
     list_free_nodes(&state.global_definitions);
-    list_free_nodes(&state.block_stack);
 
     return state.ecl;
 }
