@@ -88,6 +88,8 @@ static void expression_free(expression_t* expr);
 #define EXPR_1B(a, b, A) \
     expression_operation_new(state, (int[]){ a, b, 0 }, (expression_t*[]){ A, NULL })
 
+static void expression_create_goto(parser_state_t *state, int type, char *labelstr);
+
 /* Bison things. */
 void yyerror(parser_state_t*, const char*);
 int yylex(void);
@@ -165,6 +167,7 @@ void set_time(parser_state_t* state, int new_time);
 %token GOTO "goto"
 %token UNLESS "unless"
 %token IF "if"
+%token ELSE "else"
 %token ASYNC "async"
 %token LOAD
 %token LOADI
@@ -374,13 +377,71 @@ Text_Semicolon_List:
 
 Instructions:
       Instruction ";"
+    | IfBlock
     | INTEGER ":" { set_time(state, $1); }
+    | IDENTIFIER ":" { label_create(state, $1); free($1); }
     | Instructions INTEGER ":" { set_time(state, $2); }
     | Instructions IDENTIFIER ":" { label_create(state, $2); free($2); }
     | Instructions Instruction ";"
+    | Instructions IfBlock
     | RANK { state->instr_rank = parse_rank(state, $1); } Instruction ";"
     | Instructions RANK { state->instr_rank = parse_rank(state, $2); } Instruction ";"
     ;
+
+IfBlock:
+    "unless" Expression {
+          char labelstr[256];
+          snprintf(labelstr, 256, "unless_%i_%i", yylloc.first_line, yylloc.first_column);
+          list_prepend_new(&state->block_stack, strdup(labelstr));
+          const expr_t* expr = expr_get_by_symbol(state->version, UNLESS);
+          expression_output(state, $2);
+          expression_free($2);
+          expression_create_goto(state, IF, labelstr);
+      } "{" Instructions "}" ElseBlock {
+          list_node_t *head = state->block_stack.head;
+          label_create(state, head->data);
+          state->block_stack.head = head->next;
+          free(head->data);
+          list_del(&state->block_stack, head);
+        }
+    | "if" Expression {
+          char labelstr[256];
+          snprintf(labelstr, 256, "if_%i_%i", yylloc.first_line, yylloc.first_column);
+          list_prepend_new(&state->block_stack, strdup(labelstr));
+          const expr_t* expr = expr_get_by_symbol(state->version, IF);
+          expression_output(state, $2);
+          expression_free($2);
+          expression_create_goto(state, UNLESS, labelstr);
+      } "{" Instructions "}" ElseBlock {
+          list_node_t *head = state->block_stack.head;
+          label_create(state, head->data);
+          free(head->data);
+          list_del(&state->block_stack, head);
+      }
+      ;
+
+ElseBlock:
+    | "else"  {
+          char labelstr[256];
+          snprintf(labelstr, 256, "if_%i_%i", yylloc.first_line, yylloc.first_column);
+          expression_create_goto(state, GOTO, labelstr);
+          list_node_t *head = state->block_stack.head;
+          label_create(state, head->data);
+          free(head->data);
+          list_del(&state->block_stack, head);
+          list_prepend_new(&state->block_stack, strdup(labelstr));
+    } "{" Instructions "}"
+    | "else" {
+          char labelstr[256];
+          snprintf(labelstr, 256, "if_%i_%i", yylloc.first_line, yylloc.first_column);
+          expression_create_goto(state, GOTO, labelstr);
+          list_node_t *head = state->block_stack.head;
+          label_create(state, head->data);
+          free(head->data);
+          list_del(&state->block_stack, head);
+          list_prepend_new(&state->block_stack, strdup(labelstr));
+      } IfBlock
+      ;
 
     /* TODO: Check the given parameters against the parameters expected for the
      *       instruction. */
@@ -997,6 +1058,22 @@ expression_operation_new(
 
     /* We cannot continue after this; the program would crash */
     exit(2);
+}
+
+static void
+expression_create_goto(
+    parser_state_t *state,
+    int type,
+    char *labelstr)
+{
+    const expr_t* expr = expr_get_by_symbol(state->version, type);
+    thecl_param_t *p1 = param_new('o');
+    thecl_param_t *p2 = param_new('S');
+    p1->value.type = 'z';
+    p1->value.val.z = strdup(labelstr);
+    p2->value.type = 'S';
+    p2->value.val.S = state->instr_time;
+    instr_add(state->current_sub, instr_new(state, expr->id, "pp", p1, p2));
 }
 
 static void

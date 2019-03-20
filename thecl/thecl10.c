@@ -1500,7 +1500,7 @@ th10_stringify_param(
                     return strdup(temp);
                 }
             }
-            
+
             char* ret = th10_param_to_text(param);
             sprintf(temp, "%s%s%s",
                 param->stack ? "[" : "",
@@ -1508,7 +1508,7 @@ th10_stringify_param(
                 param->stack ? "]" : "");
             free(ret);
         }
-        
+
         return strdup(temp);
     }
     }
@@ -1613,9 +1613,9 @@ th10_dump(
                 instr->string = strdup(temp);
                 break;
             case THECL_INSTR_RANK:
-                if(instr->rank == 0xFF) 
+                if(instr->rank == 0xFF)
                     instr->string = strdup("!*");
-                else if(instr->rank == (th10_is_post_th13(ecl->version) ? 0xC0 : 0xF0)) 
+                else if(instr->rank == (th10_is_post_th13(ecl->version) ? 0xC0 : 0xF0))
                     instr->string = strdup("!-");
                 else {
                     if (th10_is_post_th13(ecl->version)) {
@@ -1767,6 +1767,7 @@ th10_parse(
     state.has_overdrive_difficulty = th10_is_post_th13(version);
     state.uses_stack_offsets = th10_is_post_th13(version);
     list_init(&state.expressions);
+    list_init(&state.block_stack);
     state.current_sub = NULL;
     state.ecl = thecl_new();
     state.ecl->version = version;
@@ -1826,7 +1827,7 @@ th10_instr_serialize(
                 fprintf(stderr, "%s:th10_instr_serialize: in sub %s: too many arguments for opcode %d\n", argv0, sub->name, instr->id);
             if (expected_format[0] != '*') expected_format++;
         }
-        if (expected_format[0] != '*' && expected_format[0] != 0)  
+        if (expected_format[0] != '*' && expected_format[0] != 0)
             fprintf(stderr, "%s:th10_instr_serialize: in sub %s: too few arguments for opcode %d\n", argv0, sub->name, instr->id);
     }
 
