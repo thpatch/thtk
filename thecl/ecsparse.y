@@ -868,8 +868,9 @@ expression_operation_new(
     const int* symbols,
     expression_t** operands)
 {
-    for (; *symbols; ++symbols) {
-        const expr_t* expr = expr_get_by_symbol(state->version, *symbols);
+    const int *symbol = symbols;
+    for (; *symbol; ++symbol) {
+        const expr_t* expr = expr_get_by_symbol(state->version, *symbol);
 
         for (size_t s = 0; s < expr->stack_arity; ++s)
             if (operands[s]->result_type != expr->stack_formats[s])
@@ -890,7 +891,23 @@ expression_operation_new(
         continue_outer: ;
     }
 
-    return NULL;
+    /* Create error */
+    char errbuf[512];
+    errbuf[0] = 0;
+    const expr_t *expr = expr_get_by_symbol(state->version, *symbols);
+    if (expr) {
+      snprintf(errbuf, 511, "%s: ", expr->display_format);
+    }
+    strncat(errbuf, "no expression found for type(s): ", 511 - strlen(errbuf));
+    for (size_t s = 0; operands[s]; ++s) {
+      if (s != 0)
+        strncat(errbuf, " and ", 511 - strlen(errbuf));
+      strncat(errbuf, (char *)&operands[s]->result_type, 1);
+    }
+    yyerror((parser_state_t *)state, errbuf);
+
+    /* We cannot continue after this; the program would crash */
+    exit(2);
 }
 
 static void
