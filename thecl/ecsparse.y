@@ -1102,11 +1102,6 @@ instr_create_call(
         }
 
     instr_add(state->current_sub, instr_new_list(state, type, param_list));
-
-    list_for_each(param_list, iter_param) {
-        param_free(param);
-    }
-    list_free_nodes(&param_list);
 }
 
 static bool
