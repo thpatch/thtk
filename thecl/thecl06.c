@@ -730,7 +730,7 @@ th06_open(
                 format = "";
             else
                 format = th06_find_format(version, raw_instr->id);
-            
+
             if (!format) {
                 fprintf(stderr, "%-3d %04xB R%04x [%04x]: ",
                     raw_instr->id,
@@ -783,7 +783,7 @@ next:
     }
 
     thecl_local_data_t* local_data;
-    
+
     for (size_t e = 0; e < extra_count; ++e) {
         char name[128];
         sprintf(name, "th%02u_extra%zu", version, e + 1);
@@ -933,6 +933,8 @@ th06_parse(
     state.has_overdrive_difficulty = false;
     state.uses_stack_offsets = false;
     list_init(&state.expressions);
+    list_init(&state.block_stack);
+    list_init(&state.global_definitions);
     state.current_sub = NULL;
     state.ecl = thecl_new();
     state.ecl->version = version;
@@ -943,6 +945,13 @@ th06_parse(
 
     if (yyparse(&state) != 0)
         return 0;
+
+    global_definition_t* def;
+    list_for_each(&state.global_definitions, def) {
+        free(def->param);
+        free(def);
+    }
+    list_free_nodes(&state.global_definitions);
 
     return state.ecl;
 }

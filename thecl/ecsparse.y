@@ -51,6 +51,7 @@ static void string_list_free(list_t* list);
 static thecl_instr_t* instr_new(parser_state_t* state, unsigned int id, const char* format, ...);
 static thecl_instr_t* instr_new_list(parser_state_t* state, unsigned int id, list_t* list);
 static void instr_add(thecl_sub_t* sub, thecl_instr_t* instr);
+static void instr_create_call(parser_state_t *state, int type, char *name, list_t *params);
 
 enum expression_type {
     EXPRESSION_OP,
@@ -69,6 +70,11 @@ typedef struct expression_t {
     int result_type;
 } expression_t;
 
+typedef struct {
+    expression_t *expr;
+    char labelstr[250];
+} switch_case_t;
+
 static int parse_rank(const parser_state_t* state, const char* value);
 
 static expression_t* expression_load_new(const parser_state_t* state, thecl_param_t* value);
@@ -86,6 +92,9 @@ static void expression_free(expression_t* expr);
     expression_address_operation_new(state, (int[]){ a, 0 }, A)
 #define EXPR_1B(a, b, A) \
     expression_operation_new(state, (int[]){ a, b, 0 }, (expression_t*[]){ A, NULL })
+
+static expression_t *expression_copy(expression_t *expr);
+static void expression_create_goto(parser_state_t *state, int type, char *labelstr);
 
 /* Bison things. */
 void yyerror(parser_state_t*, const char*);
@@ -164,6 +173,14 @@ void set_time(parser_state_t* state, int new_time);
 %token GOTO "goto"
 %token UNLESS "unless"
 %token IF "if"
+%token ELSE "else"
+%token DO "do"
+%token WHILE "while"
+%token SWITCH "switch"
+%token CASE "case"
+%token BREAK "break"
+%token ASYNC "async"
+%token GLOBAL "global"
 %token LOAD
 %token LOADI
 %token LOADF
@@ -209,6 +226,9 @@ void set_time(parser_state_t* state, int new_time);
 %token NEG "-"
 %token NEGI "$-"
 %token NEGF "%-"
+%token SIN "sin"
+%token COS "cos"
+%token SQRT "sqrt"
 
 %token DOLLAR "$"
 
@@ -224,6 +244,7 @@ void set_time(parser_state_t* state, int new_time);
 %type <param> Instruction_Parameter
 %type <param> Address
 %type <param> Address_Type
+%type <param> Global_Def
 %type <param> Integer
 %type <param> Floating
 %type <param> Text
@@ -235,7 +256,7 @@ void set_time(parser_state_t* state, int new_time);
 %type <integer> Cast_Target2
 
 %nonassoc ADD ADDI ADDF SUBTRACT SUBTRACTI SUBTRACTF MULTIPLY MULTIPLYI MULTIPLYF DIVIDE DIVIDEI DIVIDEF EQUAL EQUALI EQUALF INEQUAL INEQUALI INEQUALF LT LTI LTF LTEQ LTEQI LTEQF GT GTI GTF GTEQ GTEQI GTEQF MODULO OR AND XOR
-%left NOT NEG NEGI NEGF
+%left NOT NEG NEGI NEGF SIN COS SQRT
 %right DEC
 
 %%
@@ -308,6 +329,13 @@ Statement:
 
         free($2);
       }
+    | "global" "[" IDENTIFIER "]" "=" Global_Def ";" {
+        global_definition_t *def = malloc(sizeof(global_definition_t));
+        strncpy(def->name, $3, 256);
+        def->param = $6;
+        list_append_new(&state->global_definitions, def);
+        free($3);
+      }
     ;
 
 Integer_List:
@@ -342,6 +370,12 @@ Subroutine_Body:
     | Instructions
     ;
 
+Global_Def:
+      Address
+    | Integer
+    | Floating
+;
+
 Optional_Identifier_Whitespace_List:
       { $$ = NULL; }
     | Identifier_Whitespace_List
@@ -369,18 +403,237 @@ Text_Semicolon_List:
 
 Instructions:
       Instruction ";"
+    | IfBlock
+    | WhileBlock
+    | SwitchBlock
     | INTEGER ":" { set_time(state, $1); }
+    | IDENTIFIER ":" { label_create(state, $1); free($1); }
     | Instructions INTEGER ":" { set_time(state, $2); }
     | Instructions IDENTIFIER ":" { label_create(state, $2); free($2); }
     | Instructions Instruction ";"
+    | Instructions IfBlock
+    | Instructions SwitchBlock
+    | Instructions WhileBlock
     | RANK { state->instr_rank = parse_rank(state, $1); } Instruction ";"
     | Instructions RANK { state->instr_rank = parse_rank(state, $2); } Instruction ";"
+    | Instructions "break" ";" {
+          list_node_t *head = state->block_stack.head;
+          for(; head; head = head->next) {
+              if (strncmp(head->data, "while", 5) == 0 ||
+                  strncmp(head->data, "switch", 6) == 0) {
+                  char labelstr[256];
+                  snprintf(labelstr, 256, "%s_end", (char*)head->data);
+                  expression_create_goto(state, GOTO, labelstr);
+                  break;
+              }
+          }
+          if(!head) {
+              yyerror(state, "break not within while or switch");
+              g_was_error = true;
+          }
+    }
+    ;
+
+IfBlock:
+    "unless" Expression {
+          char labelstr[256];
+          snprintf(labelstr, 256, "unless_%i_%i", yylloc.first_line, yylloc.first_column);
+          list_prepend_new(&state->block_stack, strdup(labelstr));
+          expression_output(state, $2);
+          expression_free($2);
+          expression_create_goto(state, IF, labelstr);
+      } "{" Instructions "}" ElseBlock {
+          list_node_t *head = state->block_stack.head;
+          label_create(state, head->data);
+          state->block_stack.head = head->next;
+          free(head->data);
+          list_del(&state->block_stack, head);
+        }
+    | "if" Expression {
+          char labelstr[256];
+          snprintf(labelstr, 256, "if_%i_%i", yylloc.first_line, yylloc.first_column);
+          list_prepend_new(&state->block_stack, strdup(labelstr));
+          expression_output(state, $2);
+          expression_free($2);
+          expression_create_goto(state, UNLESS, labelstr);
+      } "{" Instructions "}" ElseBlock {
+          list_node_t *head = state->block_stack.head;
+          label_create(state, head->data);
+          free(head->data);
+          list_del(&state->block_stack, head);
+      }
+      ;
+
+ElseBlock:
+    | "else"  {
+          char labelstr[256];
+          snprintf(labelstr, 256, "if_%i_%i", yylloc.first_line, yylloc.first_column);
+          expression_create_goto(state, GOTO, labelstr);
+          list_node_t *head = state->block_stack.head;
+          label_create(state, head->data);
+          free(head->data);
+          list_del(&state->block_stack, head);
+          list_prepend_new(&state->block_stack, strdup(labelstr));
+    } "{" Instructions "}"
+    | "else" {
+          char labelstr[256];
+          snprintf(labelstr, 256, "if_%i_%i", yylloc.first_line, yylloc.first_column);
+          expression_create_goto(state, GOTO, labelstr);
+          list_node_t *head = state->block_stack.head;
+          label_create(state, head->data);
+          free(head->data);
+          list_del(&state->block_stack, head);
+          list_prepend_new(&state->block_stack, strdup(labelstr));
+      } IfBlock
+      ;
+
+WhileBlock:
+      "while" Expression {
+          char labelstr[256];
+          snprintf(labelstr, 256, "while_%i_%i", yylloc.first_line, yylloc.first_column);
+          char labelstr_st[256];
+          char labelstr_end[256];
+          snprintf(labelstr_st, 256, "%s_st", (char*)labelstr);
+          snprintf(labelstr_end, 256, "%s_end", (char*)labelstr);
+
+          list_prepend_new(&state->block_stack, strdup(labelstr));
+          label_create(state, labelstr_st);
+          expression_output(state, $2);
+          expression_free($2);
+          expression_create_goto(state, UNLESS, labelstr_end);
+      } "{" Instructions "}" {
+          char labelstr_st[256];
+          char labelstr_end[256];
+          list_node_t *head = state->block_stack.head;
+          snprintf(labelstr_st, 256, "%s_st", (char*)head->data);
+          snprintf(labelstr_end, 256, "%s_end", (char*)head->data);
+
+          expression_create_goto(state, GOTO, labelstr_st);
+          label_create(state, labelstr_end);
+
+          free(head->data);
+          list_del(&state->block_stack, head);
+      }
+    | "do"  {
+          char labelstr[256];
+          snprintf(labelstr, 256, "while_%i_%i", yylloc.first_line, yylloc.first_column);
+          char labelstr_st[256];
+          char labelstr_end[256];
+          snprintf(labelstr_st, 256, "%s_st", (char*)labelstr);
+          snprintf(labelstr_end, 256, "%s_end", (char*)labelstr);
+
+          list_prepend_new(&state->block_stack, strdup(labelstr));
+          label_create(state, labelstr_st);
+    } "{" Instructions "}" "while" Expression  {
+          char labelstr_st[256];
+          char labelstr_end[256];
+          list_node_t *head = state->block_stack.head;
+          snprintf(labelstr_st, 256, "%s_st", (char*)head->data);
+          snprintf(labelstr_end, 256, "%s_end", (char*)head->data);
+
+          expression_output(state, $7);
+          expression_free($7);
+          expression_create_goto(state, IF, labelstr_st);
+          label_create(state, labelstr_end);
+
+          free(head->data);
+          list_del(&state->block_stack, head);
+    } ";"
+    ;
+
+SwitchBlock:
+    "switch" Expression {
+          char labelstr[256];
+          list_prepend_new(&state->block_stack, NULL);
+          snprintf(labelstr, 256, "switch_%i_%i", yylloc.first_line, yylloc.first_column);
+          list_prepend_new(&state->block_stack, strdup(labelstr));
+          expression_create_goto(state, GOTO, labelstr);
+    } "{" CaseList "}" {
+          list_node_t *head = state->block_stack.head;
+
+          char labelstr[256];
+          snprintf(labelstr, 256, "%s_end", (char*)head->data);
+          expression_create_goto(state, GOTO, labelstr);
+
+          label_create(state, head->data);
+
+          free(head->data);
+          list_del(&state->block_stack, head);
+
+          list_node_t *node = state->block_stack.head;
+          while (node->data) {
+              switch_case_t *switch_case = node->data;
+              expression_output(state, switch_case->expr);
+              expression_t *copy = expression_copy($2);
+              expression_output(state, copy);
+              expression_free(copy);
+              instr_add(state->current_sub, instr_new(state, 59, ""));
+              expression_free(switch_case->expr);
+              expression_create_goto(state, IF, switch_case->labelstr);
+              list_node_t *buf = node;
+              node = node->next;
+              free(buf->data);
+              free(buf);
+          }
+          node->next->prev = NULL;
+          state->block_stack.head = node->next;
+          free(node);
+
+          label_create(state, labelstr);
+          free($2->value);
+          expression_free($2);
+    }
+    ;
+
+CaseList:
+    Case
+    | Case Instructions
+    | CaseList Case
+    | CaseList Case Instructions
+    ;
+
+Case:
+   "case" Expression ":" {
+          switch_case_t *switch_case = malloc(sizeof(switch_case_t));
+          switch_case->expr = $2;
+          snprintf(switch_case->labelstr, 250, "case_%i_%i", yylloc.first_line, yylloc.first_column);
+
+          label_create(state, switch_case->labelstr);
+
+          list_node_t *head = state->block_stack.head;
+          if (head->next) {
+              list_prepend_to(&state->block_stack, switch_case, head->next);
+          } else {
+              list_append_new(&state->block_stack, switch_case);
+          }
+    }
     ;
 
     /* TODO: Check the given parameters against the parameters expected for the
      *       instruction. */
 Instruction:
-      IDENTIFIER "(" Instruction_Parameters ")" {
+      IDENTIFIER "(" Instruction_Parameters ")" "async" {
+          /* Search for sub */
+          bool sub_found = false;
+          thecl_sub_t* iter_sub;
+          list_for_each(&state->ecl->subs, iter_sub) {
+              if (strcmp(iter_sub->name, $1) == 0) {
+                  sub_found = true;
+              }
+          }
+          if (sub_found) {
+              instr_create_call(state, 15, $1, $3);
+              list_free_nodes($3);
+          } else {
+              char errbuf[256];
+              snprintf(errbuf, 256, "unknown sub: %s", $1);
+              yyerror(state, errbuf);
+              g_was_error = true;
+          }
+
+          free($3);
+      }
+      | IDENTIFIER "(" Instruction_Parameters ")" {
         expression_t* expr;
         list_for_each(&state->expressions, expr) {
             expression_output(state, expr);
@@ -389,8 +642,24 @@ Instruction:
         list_free_nodes(&state->expressions);
 
         eclmap_entry_t* ent = eclmap_find(g_eclmap_opcode, $1);
-        if(!ent) {
-            yyerror(state, "unknown mnemonic");
+        if (!ent) {
+            /* Search for sub */
+            bool sub_found = false;
+            thecl_sub_t* iter_sub;
+            list_for_each(&state->ecl->subs, iter_sub) {
+                if (strcmp(iter_sub->name, $1) == 0) {
+                    sub_found = true;
+                }
+            }
+            if (sub_found) {
+                instr_create_call(state, 11, $1, $3);
+                list_free_nodes($3);
+            } else {
+                char errbuf[256];
+                snprintf(errbuf, 256, "unknown mnemonic: %s", $1);
+                yyerror(state, errbuf);
+                g_was_error = true;
+            }
         }
         else {
             instr_add(state->current_sub, instr_new_list(state, ent->opcode, $3));
@@ -539,6 +808,10 @@ Expression:
     | Expression "^"   Expression { $$ = EXPR_12(XOR,                  $1, $3); }
     | Address "--"                { $$ = EXPR_1A(DEC,                  $1); }
     | "-" Expression              { $$ = EXPR_1B(NEGI,      NEGF,      $2); }
+    | "sin" Expression            { $$ = EXPR_11(SIN,                  $2); }
+    | "cos" Expression            { $$ = EXPR_11(COS,                  $2); }
+    | "sqrt" Expression           { $$ = EXPR_11(SQRT,                 $2); }
+
     ;
 
 Address:
@@ -546,6 +819,27 @@ Address:
         $$ = $2;
         $$->stack = 1;
       }
+    | "[" IDENTIFIER "]" {
+        global_definition_t *def;
+        bool found = 0;
+        list_for_each(&state->global_definitions, def) {
+            if (strcmp(def->name, $2) == 0) {
+                thecl_param_t *param = malloc(sizeof(thecl_param_t));
+                memcpy(param, def->param, sizeof(thecl_param_t));
+                $$ = param;
+                found = 1;
+                break;
+            }
+        }
+        if(!found) {
+            char errbuf[256];
+            snprintf(errbuf, 256, "instr_set_types: in sub %s: global definition not found: %s",
+                     state->current_sub->name, $2);
+            yyerror(state, errbuf);
+            exit(1);
+        }
+        free($2);
+    }
     | "$" IDENTIFIER {
         $$ = param_new('S');
         $$->stack = 1;
@@ -659,7 +953,11 @@ instr_set_types(
             !(param->type == 'z' && (new_type == 'm' || new_type == 'x')) &&
             !(param->type == 'S' && new_type == 's')) {
 
-            fprintf(stderr, "%s:instr_set_types: in sub %s: wrong argument type for opcode %d (expected: %c, got: %c)\n", argv0, state->current_sub->name, instr->id, new_type, param->type);
+            char errbuf[256];
+            snprintf(errbuf, 256, "instr_set_types: in sub %s: wrong argument "
+                     "type for opcode %d (expected: %c, got: %c)",
+                     state->current_sub->name, instr->id, new_type, param->type);
+            yyerror(state, errbuf);
         }
 
         param->type = new_type;
@@ -759,6 +1057,58 @@ instr_add(
     sub->offset += instr->size;
 }
 
+static void
+instr_create_call(
+    parser_state_t *state,
+    int type,
+    char *name,
+    list_t *params)
+{
+    /* Create new arg list */
+    list_t *param_list = list_new();
+
+    /* Instr name */
+    thecl_param_t *param = param_new('z');
+    param->value.type = 'z';
+    param->value.val.z = name;
+    list_append_new(param_list, param);
+
+    /* Add parameter casts */
+    thecl_param_t *iter_param;
+    if (params != NULL)
+        list_for_each(params, iter_param) {
+            param = param_new('D');
+            param->stack = iter_param->stack;
+            param->is_expression_param = iter_param->is_expression_param;
+            param->value.type = 'm';
+            param->value.val.m.length = 2 * sizeof(int32_t);
+            param->value.val.m.data = malloc(2 * sizeof(int32_t));
+            int32_t *D = (int32_t *)param->value.val.m.data;
+            switch (iter_param->value.type) {
+            case 'S':
+                D[0] = 0x6969;
+                D[1] = iter_param->value.val.S;
+                break;
+            case 'f':
+                D[0] = 0x6666;
+                memcpy(&D[1], &iter_param->value.val.f, sizeof(float));
+                break;
+            default:
+                yyerror(state, "invalid sub parameter");
+                g_was_error = true;
+            }
+            param_free(iter_param);
+            list_append_new(param_list, param);
+        }
+
+    instr_add(state->current_sub, instr_new_list(state, type, param_list));
+
+    list_for_each(param_list, iter_param) {
+        param_free(param);
+    }
+    list_free_nodes(&param_list);
+}
+
 static bool
 check_rank_flag(
     const parser_state_t* state,
@@ -771,7 +1121,10 @@ check_rank_flag(
     if (count == 0) return false;
     else if(count == 1) return true;
     else {
-        fprintf(stderr, "%s:check_rank_flag: in sub %s: duplicate rank flag %c in '%s'\n", argv0, state->current_sub->name, flag, value);
+        char errbuf[256];
+        snprintf(errbuf, 256, "check_rank_flag: in sub %s: duplicate rank flag %c in '%s'",
+                 state->current_sub->name, flag, value);
+        yyerror(state, errbuf);
         return true;
     }
 }
@@ -784,12 +1137,24 @@ parse_rank(
     int rank = state->has_overdrive_difficulty ? 0xC0 : 0xF0;
 
     if (check_rank_flag(state, value, '*')) {
-        if (strlen(value) != 1) 
-            fprintf(stderr, "%s:parse_rank: in sub %s: * should not be used with other rank flags.\n", argv0, state->current_sub->name);
+        if (strlen(value) != 1) {
+            char errbuf[256];
+            snprintf(errbuf, 256,
+                     "parse_rank: in sub %s: * should not be used with "
+                     "other rank flags.",
+                     state->current_sub->name);
+            yyerror(state, errbuf);
+        }
         return 0xFF;
     } else if (check_rank_flag(state, value, '-')) {
-        if (strlen(value) != 1) 
-            fprintf(stderr, "%s:parse_rank: in sub %s: - should not be used with other rank flags.\n", argv0, state->current_sub->name);
+        if (strlen(value) != 1) {
+            char errbuf[256];
+            snprintf(errbuf, 256,
+                     "parse_rank: in sub %s: - should not be used with "
+                     "other rank flags.",
+                     state->current_sub->name);
+            yyerror(state, errbuf);
+        }
         return rank;
     } else {
         if (check_rank_flag(state, value, 'E')) rank |= RANK_EASY;
@@ -808,17 +1173,36 @@ parse_rank(
         if (check_rank_flag(state, value, '6')) rank &= ~RANK_ID_6;
         if (check_rank_flag(state, value, '7')) rank &= ~RANK_ID_7;
 
-        if (state->has_overdrive_difficulty && (check_rank_flag(state, value, '4') || check_rank_flag(state, value, '5')))
-            fprintf(stderr, "%s:parse_rank: in sub %s: Rank flags 4 and 5 are not used in TH13+. Use X for extra, and O for overdrive instead.\n",
-                    argv0, state->current_sub->name);
-        if (!state->has_overdrive_difficulty && (check_rank_flag(state, value, 'X') || check_rank_flag(state, value, 'O')))
-            fprintf(stderr, "%s:parse_rank: in sub %s: Rank flags X and O do not exist before TH13. Use 4 and 5 for the unused difficulties flags instead.\n",
-                    argv0, state->current_sub->name);
-        if (check_rank_flag(state, value, 'W') || check_rank_flag(state, value, 'Y') || check_rank_flag(state, value, 'Z'))
-            fprintf(stderr, "%s:parse_rank: in sub %s: Rank flags W, X, Y and Z no longer refer to unused difficulties 4-7. %s\n",
-                    argv0, state->current_sub->name,
-                    state->has_overdrive_difficulty ? "In TH13+, use 6 and 7 for the remaining two unused difficulties, X for extra, and O for overdrive."
-                                                    : "Before TH13, use 4, 5, 6, and 7 to refer to the unused difficulties.");
+        if (state->has_overdrive_difficulty && (check_rank_flag(state, value, '4') || check_rank_flag(state, value, '5'))) {
+            char errbuf[256];
+            snprintf(errbuf, 256,
+                    "parse_rank: in sub %s: Rank flags 4 and 5 are not used in "
+                    "TH13+. Use X for extra, and O for overdrive instead.",
+                    state->current_sub->name);
+            yyerror(state, errbuf);
+        }
+        if (!state->has_overdrive_difficulty && (check_rank_flag(state, value, 'X') || check_rank_flag(state, value, 'O'))) {
+            char errbuf[256];
+            snprintf(errbuf, 256,
+                    "parse_rank: in sub %s: Rank flags X and O do not exist "
+                    "before TH13. Use 4 and 5 for the unused difficulties flags "
+                    "instead.",
+                    state->current_sub->name);
+            yyerror(state, errbuf);
+        }
+        if (check_rank_flag(state, value, 'W') || check_rank_flag(state, value, 'Y') || check_rank_flag(state, value, 'Z')) {
+          char errbuf[256];
+          snprintf(errbuf, 256,
+                   "parse_rank: in sub %s: Rank flags W, X, Y and Z no "
+                   "longer refer to unused difficulties 4-7. %s",
+                   state->current_sub->name,
+                   state->has_overdrive_difficulty
+                       ? "In TH13+, use 6 and 7 for the remaining two unused "
+                         "difficulties, X for extra, and O for overdrive."
+                       : "Before TH13, use 4, 5, 6, and 7 to refer to the "
+                         "unused difficulties.");
+          yyerror(state, errbuf);
+        }
 
         return rank;
     }
@@ -868,8 +1252,9 @@ expression_operation_new(
     const int* symbols,
     expression_t** operands)
 {
-    for (; *symbols; ++symbols) {
-        const expr_t* expr = expr_get_by_symbol(state->version, *symbols);
+    const int *symbol = symbols;
+    for (; *symbol; ++symbol) {
+        const expr_t* expr = expr_get_by_symbol(state->version, *symbol);
 
         for (size_t s = 0; s < expr->stack_arity; ++s)
             if (operands[s]->result_type != expr->stack_formats[s])
@@ -890,7 +1275,58 @@ expression_operation_new(
         continue_outer: ;
     }
 
-    return NULL;
+    /* Create error */
+    char errbuf[512];
+    errbuf[0] = 0;
+    const expr_t *expr = expr_get_by_symbol(state->version, *symbols);
+    if (expr) {
+      snprintf(errbuf, 511, "%s: ", expr->display_format);
+    }
+    strncat(errbuf, "no expression found for type(s): ", 511 - strlen(errbuf));
+    for (size_t s = 0; operands[s]; ++s) {
+      if (s != 0)
+        strncat(errbuf, " and ", 511 - strlen(errbuf));
+      strncat(errbuf, (char *)&operands[s]->result_type, 1);
+    }
+    yyerror((parser_state_t *)state, errbuf);
+
+    /* We cannot continue after this; the program would crash */
+    exit(2);
+}
+
+static expression_t *
+expression_copy(
+    expression_t *expr)
+{
+    expression_t *copy = malloc(sizeof(expression_t));
+    memcpy(copy, expr, sizeof(expression_t));
+    expression_t* child_expr;
+    list_init(&copy->children);
+    if (expr->type == EXPRESSION_OP) {
+        list_for_each(&expr->children, child_expr)
+            list_append_new(&copy->children, expression_copy(child_expr));
+    } else if (expr->type == EXPRESSION_VAL) {
+        thecl_param_t *param = malloc(sizeof(thecl_param_t));
+        memcpy(param, expr->value, sizeof(thecl_param_t));
+        copy->value = param;
+    }
+    return copy;
+}
+
+static void
+expression_create_goto(
+    parser_state_t *state,
+    int type,
+    char *labelstr)
+{
+    const expr_t* expr = expr_get_by_symbol(state->version, type);
+    thecl_param_t *p1 = param_new('o');
+    thecl_param_t *p2 = param_new('S');
+    p1->value.type = 'z';
+    p1->value.val.z = strdup(labelstr);
+    p2->value.type = 'S';
+    p2->value.val.S = state->instr_time;
+    instr_add(state->current_sub, instr_new(state, expr->id, "pp", p1, p2));
 }
 
 static void
@@ -947,8 +1383,12 @@ sub_begin(
         char buf[256];
         snprintf(buf, 256, "Sub%u", sub_count + 1);
         if (strcmp(buf, name)) {
-            fprintf(stderr, "%s:parse_rank: in sub %s: Function name does not match position in file. (expected %s)\n",
-                    argv0, name, buf);
+            char errbuf[256];
+            snprintf(errbuf, 256,
+                     "parse_rank: in sub %s: Function name does not match "
+                     "position in file. (expected %s)",
+                     name, buf);
+            yyerror(state, errbuf);
         }
     } else {
         // Touhou expects the list of subs to be sorted by name.
@@ -959,6 +1399,7 @@ sub_begin(
                 char buf[256];
                 snprintf(buf, 256, "duplicate sub: %s", name);
                 yyerror(state, buf);
+                g_was_error = true;
                 break;
             } else if(diff < 0) {
                 list_prepend_to(&state->ecl->subs, sub, node);

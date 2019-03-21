@@ -81,6 +81,14 @@
 "goto"     return GOTO;
 "unless"   return UNLESS;
 "if"       return IF;
+"else"     return ELSE;
+"do"       return DO;
+"while"    return WHILE;
+"switch"   return SWITCH;
+"case"     return CASE;
+"break"    return BREAK;
+"async"    return ASYNC;
+"global"   return GLOBAL;
 "="        return ASSIGN;
 "+"        return ADD;
 "-"        return SUBTRACT;
@@ -99,6 +107,9 @@
 "^"        return XOR;
 "--"       return DEC;
 "-"        return NEG;
+"sin"      return SIN;
+"cos"      return COS;
+"sqrt"     return SQRT;
 
 "$"        return DOLLAR;
 
@@ -109,7 +120,7 @@ _Sf return CAST_IF;
 _ff return CAST_FF;
 _fS return CAST_FI;
 
--?[0-9]+(\.[0-9]+)?f {
+-?[0-9]+(\.[0-9]*)?f {
     yylval.floating = strtof(yytext, NULL);
     return FLOATING;
 }

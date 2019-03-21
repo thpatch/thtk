@@ -131,6 +131,11 @@ typedef struct {
 /* TODO: Local data deletion and creation functions. */
 
 typedef struct {
+    thecl_param_t *param;
+    char name[256];
+} global_definition_t;
+
+typedef struct {
     unsigned int version;
     /* TODO: Make local data. */
     size_t anim_count;
@@ -167,6 +172,8 @@ typedef struct {
     bool has_overdrive_difficulty;
     bool uses_stack_offsets;
     list_t expressions;
+    list_t block_stack;
+    list_t global_definitions;
     thecl_sub_t* current_sub;
     thecl_t* ecl;
     const char* (*instr_format)(unsigned int version, unsigned int id);
@@ -181,5 +188,6 @@ extern int yyparse(parser_state_t*);
 extern eclmap_t* g_eclmap_opcode;
 extern eclmap_t* g_eclmap_global;
 extern bool g_ecl_rawoutput;
+extern bool g_was_error;
 
 #endif
