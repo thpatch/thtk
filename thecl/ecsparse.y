@@ -575,6 +575,7 @@ SwitchBlock:
               free(buf->data);
               free(buf);
           }
+          node->next->prev = NULL;
           state->block_stack.head = node->next;
           free(node);
 
