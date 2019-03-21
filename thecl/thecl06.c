@@ -188,7 +188,7 @@ static const id_format_pair_t th06_fmts[] = {
     { 48, "f" },
     { 49, "ff" },
     { 50, "ff" },
-    { 51, "Sf" },
+    { 51, "ff" },
     { 52, "Sff" },
     { 53, "Sff" },
     { 54, "Sff" },
