@@ -1092,6 +1092,17 @@ th06_compile(
     offsets = calloc(offset_count, sizeof(*offsets));
 
     thecl_sub_t* sub;
+    uint16_t max_opcode;
+    /* TODO: Get max opcodes for the rest of the games */
+    switch (ecl->version)
+    {
+    case 6:
+        max_opcode = 135;
+        break;
+    default:
+        max_opcode = 0xFFFFU;
+        break;
+    }
     size_t s = 0;
     list_for_each(&ecl->subs, sub) {
         offsets[extra_count + s] = file_tell(out);
@@ -1099,7 +1110,12 @@ th06_compile(
         thecl_instr_t* instr;
         list_for_each(&sub->instrs, instr) {
             th06_instr_t* raw_instr = th06_instr_serialize(ecl, instr);
-            file_write(out, raw_instr, raw_instr->size);
+            if (raw_instr->id <= max_opcode)
+                file_write(out, raw_instr, raw_instr->size);
+            else {
+                fprintf(stderr, "%s: invalid opcode: id %hu was higher than the maximum %hu", argv0, raw_instr->id, max_opcode);
+                g_was_error = true;
+            }
             free(raw_instr);
         }
 
