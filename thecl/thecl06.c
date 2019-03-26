@@ -1099,6 +1099,9 @@ th06_compile(
     case 6:
         max_opcode = 135;
         break;
+	case 14:
+		max_opcode = 1003;
+		break;
     default:
         max_opcode = 0xFFFFU;
         break;
