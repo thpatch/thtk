@@ -222,6 +222,8 @@ void set_time(parser_state_t* state, int new_time);
 %token AND "&&"
 %token OR "||"
 %token XOR "^"
+%token B_OR "|"
+%token B_AND "&"
 %token DEC "--"
 %token NEG "-"
 %token NEGI "$-"
@@ -255,7 +257,7 @@ void set_time(parser_state_t* state, int new_time);
 %type <integer> Cast_Target
 %type <integer> Cast_Target2
 
-%nonassoc ADD ADDI ADDF SUBTRACT SUBTRACTI SUBTRACTF MULTIPLY MULTIPLYI MULTIPLYF DIVIDE DIVIDEI DIVIDEF EQUAL EQUALI EQUALF INEQUAL INEQUALI INEQUALF LT LTI LTF LTEQ LTEQI LTEQF GT GTI GTF GTEQ GTEQI GTEQF MODULO OR AND XOR
+%nonassoc ADD ADDI ADDF SUBTRACT SUBTRACTI SUBTRACTF MULTIPLY MULTIPLYI MULTIPLYF DIVIDE DIVIDEI DIVIDEF EQUAL EQUALI EQUALF INEQUAL INEQUALI INEQUALF LT LTI LTF LTEQ LTEQI LTEQF GT GTI GTF GTEQ GTEQI GTEQF MODULO OR AND XOR B_OR B_AND
 %left NOT NEG NEGI NEGF SIN COS SQRT
 %right DEC
 
@@ -806,6 +808,8 @@ Expression:
     | Expression "||"  Expression { $$ = EXPR_12(OR,                   $1, $3); }
     | Expression "&&"  Expression { $$ = EXPR_12(AND,                  $1, $3); }
     | Expression "^"   Expression { $$ = EXPR_12(XOR,                  $1, $3); }
+    | Expression "|" Expression   { $$ = EXPR_12(B_OR,                 $1, $3); }
+    | Expression "&" Expression   { $$ = EXPR_12(B_AND,                $1, $3); }
     | Address "--"                { $$ = EXPR_1A(DEC,                  $1); }
     | "-" Expression              { $$ = EXPR_1B(NEGI,      NEGF,      $2); }
     | "sin" Expression            { $$ = EXPR_11(SIN,                  $2); }

@@ -105,6 +105,8 @@
 "||"       return OR;
 "&&"       return AND;
 "^"        return XOR;
+"|"        return B_OR;
+"&"        return B_AND;
 "--"       return DEC;
 "-"        return NEG;
 "sin"      return SIN;
