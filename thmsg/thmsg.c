@@ -106,7 +106,7 @@ main(int argc, char* argv[])
     case 15:
     case 16:
     case 165:
-	case 17:
+    case 17:
         module = &th06_msg;
         break;
     case 95:
