@@ -137,7 +137,7 @@ th10_param_to_text(
         for (size_t z = 0; z < zlen; ++z) {
             if (!param->value.val.z[z])
                 break;
-            if (param->value.val.z[z] == '"')
+            if (param->value.val.z[z] == '"' || param->value.val.z[z] == '\\')
                 *temp++ = '\\';
             *temp++ = param->value.val.z[z];
         }
@@ -761,9 +761,9 @@ static const id_format_pair_t th13_fmts[] = {
     { 405, "SSff" },
     { 406, "ff" },
     { 407, "SSff" },
-    { 408, "ffSS" },
+    { 408, "ffff" },
     { 409, "SSfff" },
-    { 410, "ffSS" },
+    { 410, "ffff" },
     { 411, "SSfff" },
     { 412, "SSf" },
     { 413, "SSf" },
@@ -783,7 +783,7 @@ static const id_format_pair_t th13_fmts[] = {
     { 427, "" },
     { 428, "ff" },
     { 429, "SSff" },
-    { 430, "SS" },
+    { 430, "ff" },
     { 431, "SSff" },
     { 432, "S" },
     { 433, "S" },

@@ -124,7 +124,7 @@ th06_param_to_text(
         for (size_t z = 0; z < zlen; ++z) {
             if (!param->value.val.z[z])
                 break;
-            if (param->value.val.z[z] == '"')
+            if (param->value.val.z[z] == '"' || param->value.val.z[z] == '\\')
                 *temp++ = '\\';
             *temp++ = param->value.val.z[z];
         }
