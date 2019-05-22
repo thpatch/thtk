@@ -60,7 +60,7 @@
             result = 1; \
         } \
     }
-%x COMMENT CSTRING STRING
+%x COMMENT CSTRING STRING ESCAPE_CHAR
 %%
 ","        return COMMA;
 ":"        return COLON;
@@ -152,9 +152,12 @@ ins_[0-9]+ {
     BEGIN(STRING);
     yylval.string = strdup("");
 }
-<STRING>[^\"\n]+ {
+<STRING>[^\"\n\\]+ {
     yylval.string = realloc(yylval.string, strlen(yylval.string) + yyleng + 1);
     strcat(yylval.string, yytext);
+}
+<STRING>\\ {
+    BEGIN(ESCAPE_CHAR);
 }
 <STRING>\n {
     free(yylval.string);
@@ -165,6 +168,18 @@ ins_[0-9]+ {
 <STRING>\" {
     BEGIN(INITIAL);
     return TEXT;
+}
+<ESCAPE_CHAR>[\"\\] {
+    yylval.string = realloc(yylval.string, strlen(yylval.string) + yyleng + 1);
+    strcat(yylval.string, yytext);
+    BEGIN(STRING);
+}
+<ESCAPE_CHAR>[^\"\\] {
+    char buf[256];
+    snprintf(buf, 256, "invalid character escape: %s", yytext);
+    yyerror(NULL, buf);
+    BEGIN(INITIAL);
+    yyterminate();
 }
 
 "/*"               BEGIN(COMMENT);
