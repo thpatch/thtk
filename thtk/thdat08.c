@@ -178,6 +178,8 @@ th08_read(
     if (thtk_io_read(raw_entry, &entry_type, 1, error) != 1)
         return -1;
 
+    /* FIXME: ZUN returns contents of raw_entry if magic or type
+	 * is incorrect */
     if (strncmp(magic, "edz", 3)) {
         thtk_error_new(error, "incorrect entry magic");
         return -1;
@@ -185,7 +187,7 @@ th08_read(
 
     entry->size -= 4;
 
-    for (i = 0; i < 7; ++i) {
+    for (i = 0; i < 8; ++i) {
         if (current_crypt_params[i].type == entry_type) {
             type = i;
             break;

@@ -117,7 +117,16 @@ typedef struct {
 #define TYPE_TXT 5
 #define TYPE_WAV 6
 
-/* XXX: { '*', 0x99, 0x37, 0x400, 0x1000 } is listed by Brightmoon. */
+/* NOTE: { '*', 0x99, 0x37, 0x400, 0x1000 } is supported by the games but
+ * does not appear in ZUN's dat files. It is supported by Brightmoon, and
+ * is required to unpack th09e.dat
+ *
+ *  version   |  params  | sub which selects params and runs th_decrypt
+ * th08 1.00d | 004C78E0 | 0043E390
+ * th09 1.50a | 004A1E60 | 0042C290
+ *
+ * The order in the original games is MTAJEW-*
+ */
 static const crypt_params
 th08_crypt_params[] = {
     { '-', 0x35, 0x97,   0x80, 0x2800 }, /* .*   */
@@ -127,6 +136,7 @@ th08_crypt_params[] = {
     { 'M', 0x1b, 0x37,   0x40, 0x2000 }, /* .msg */
     { 'T', 0x51, 0xe9,   0x40, 0x3000 }, /* .txt */
     { 'W', 0x12, 0x34,  0x400, 0x2800 }, /* .wav */
+    { '*', 0x99, 0x37,  0x400, 0x1000 },
 };
 
 static const crypt_params
@@ -137,7 +147,8 @@ th09_crypt_params[] = {
     { 'J', 0x03, 0x19, 0x400,  0x400 },
     { 'M', 0x1b, 0x37,  0x40, 0x2800 },
     { 'T', 0x51, 0xe9,  0x40, 0x3000 },
-    { 'W', 0x12, 0x34, 0x400,  0x400 }
+    { 'W', 0x12, 0x34, 0x400,  0x400 },
+    { '*', 0x99, 0x37, 0x400, 0x1000 },
 };
 
 /* thdat95 */
