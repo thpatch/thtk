@@ -126,7 +126,8 @@ expr_get_table(unsigned int version)
         || version == 143
         || version == 15
         || version == 16
-        || version == 165)
+        || version == 165
+        || version == 17)
         return th10_expressions;
     return th10_no_expressions;
 }

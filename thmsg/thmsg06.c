@@ -225,6 +225,7 @@ th06_find_format(unsigned int version, int id)
         }
     } else {
         switch (version) {
+        case 17:
         case 165:
         case 16:
             if(!ret) ret = find_format(th16_msg_fmts, id);
