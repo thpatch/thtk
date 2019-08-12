@@ -296,6 +296,7 @@ static const id_format_pair_t formats_v8[] = {
     { 104, "SS" },
     { 105, "ff" },
     { 107, "ff" },
+	{ 109, "CS"},
     { 112, "SSS" },
     { 113, "fff" },
     { 115, "fff" },
