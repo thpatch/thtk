@@ -103,6 +103,7 @@ static const id_format_pair_t formats_v2[] = {
     { 17, "S" },
     { 18, "SSfff" },
     { 19, "S" },
+	{ 21, "SSf"},
     { 0, NULL }
 };
 
