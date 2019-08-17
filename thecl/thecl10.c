@@ -989,9 +989,9 @@ static const id_format_pair_t th165_fmts[] = {
 };
 
 static const id_format_pair_t th17_fmts[] = {
-	{ 904, "f" },
-	{ 1001, "S"},
-	{ -1, NULL }
+    { 904, "f" },
+    { 1001, "S"},
+    { -1, NULL }
 };
 
 
@@ -1012,7 +1012,7 @@ th10_find_format(
     switch (version) {
     /* Intentional fallthroughs, obviously */
     case 17:
-		if (!ret) ret = find_format(th17_fmts, id);
+        if (!ret) ret = find_format(th17_fmts, id);
     case 165:
         if(!ret) ret = find_format(th165_fmts, id);
     case 16:
