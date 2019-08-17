@@ -179,7 +179,7 @@ th08_read(
         return -1;
 
     /* FIXME: ZUN returns contents of raw_entry if magic or type
-	 * is incorrect */
+     * is incorrect */
     if (strncmp(magic, "edz", 3)) {
         thtk_error_new(error, "incorrect entry magic");
         return -1;

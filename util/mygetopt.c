@@ -32,50 +32,50 @@
 char *optarg = NULL;
 int opterr = 1, optind = 1, optopt = 0;
 int getopt(int argc, char *const argv[], const char *optstring) {
-	static char* arg = NULL;
-	char*p;
-	int rv;
-	if(optind >= argc || !argv || !optstring) return -1;
-	if(arg == NULL) {
-		char *temp = argv[optind];
-		if(temp == NULL) return -1;
-		if(temp[0] != '-') return -1;
-		if(temp[1] == '\0') return -1;
-		if(temp[1] == '-' && temp[2] == '\0') { optind++; return -1; }
-		arg = temp+1;
-	}
-	
-	optopt = *arg++;
-	if(isalnum(optopt) && (p=strchr(optstring,optopt))) {
-		rv = optopt;
-		if(p[1] == ':') {
-			if(*arg) {
-				/* argument of form -ffilename */
-				optarg = arg;
-				arg = NULL;
-				optind++;
-			}
-			else {
-				/* argument of form -f filename */
-				optarg = argv[++optind]; /* optind will be increased second time later */
-				if(!optarg) {
-					if(opterr && optstring[0] != ':')
-						fprintf(stderr, "%s: Option -%c requires an operand\n", argv[0], optopt);
-					rv = optstring[0] == ':' ? ':' : '?';
-				}
-			}
-		}
-	}
-	else {
-		if(opterr && optstring[0] != ':')
-			fprintf(stderr, "%s: Unrecognized option: '-%c'\n", argv[0], optopt);
-		rv = '?';
-	}
+    static char* arg = NULL;
+    char*p;
+    int rv;
+    if(optind >= argc || !argv || !optstring) return -1;
+    if(arg == NULL) {
+        char *temp = argv[optind];
+        if(temp == NULL) return -1;
+        if(temp[0] != '-') return -1;
+        if(temp[1] == '\0') return -1;
+        if(temp[1] == '-' && temp[2] == '\0') { optind++; return -1; }
+        arg = temp+1;
+    }
+    
+    optopt = *arg++;
+    if(isalnum(optopt) && (p=strchr(optstring,optopt))) {
+        rv = optopt;
+        if(p[1] == ':') {
+            if(*arg) {
+                /* argument of form -ffilename */
+                optarg = arg;
+                arg = NULL;
+                optind++;
+            }
+            else {
+                /* argument of form -f filename */
+                optarg = argv[++optind]; /* optind will be increased second time later */
+                if(!optarg) {
+                    if(opterr && optstring[0] != ':')
+                        fprintf(stderr, "%s: Option -%c requires an operand\n", argv[0], optopt);
+                    rv = optstring[0] == ':' ? ':' : '?';
+                }
+            }
+        }
+    }
+    else {
+        if(opterr && optstring[0] != ':')
+            fprintf(stderr, "%s: Unrecognized option: '-%c'\n", argv[0], optopt);
+        rv = '?';
+    }
 
-	if(arg && *arg == '\0') {
-		arg = NULL;
-		optind++;
-	}
+    if(arg && *arg == '\0') {
+        arg = NULL;
+        optind++;
+    }
 
-	return rv;
+    return rv;
 }
