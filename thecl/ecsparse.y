@@ -56,6 +56,7 @@ static void instr_create_call(parser_state_t *state, int type, char *name, list_
 enum expression_type {
     EXPRESSION_OP,
     EXPRESSION_VAL,
+    EXPRESSION_RANK_SWITCH
 };
 
 typedef struct expression_t {
@@ -65,6 +66,7 @@ typedef struct expression_t {
     /* For values: The value. */
     thecl_param_t* value;
     /* For operators: The child expressions. */
+    /* This list is also used to store values for difficulty switches. */
     list_t children;
     /* Resulting type of expression. */
     int result_type;
@@ -80,6 +82,11 @@ static int parse_rank(const parser_state_t* state, const char* value);
 static expression_t* expression_load_new(const parser_state_t* state, thecl_param_t* value);
 static expression_t* expression_operation_new(const parser_state_t* state, const int* symbols, expression_t** operands);
 static expression_t* expression_address_operation_new(const parser_state_t* state, const int* symbols, thecl_param_t* value);
+static expression_t* expression_rank_switch_new(
+    const parser_state_t* state, const int* type, 
+    const thecl_param_t* valE, const thecl_param_t* valN, const thecl_param_t* valH, const thecl_param_t* valL
+);
+
 static void expression_output(parser_state_t* state, expression_t* expr);
 static void expression_free(expression_t* expr);
 #define EXPR_22(a, b, A, B) \
@@ -816,6 +823,9 @@ Expression:
     | "cos" Expression            { $$ = EXPR_11(COS,                  $2); }
     | "sqrt" Expression           { $$ = EXPR_11(SQRT,                 $2); }
 
+    /* Custom expressions. */
+    | Integer ":" Integer ":" Integer ":" Integer       { $$ = expression_rank_switch_new(state, 'S', $1, $3, $5, $7); }
+    | Floating ":" Floating ":" Floating ":" Floating   { $$ = expression_rank_switch_new(state, 'f', $1, $3, $5, $7); }
     ;
 
 Address:
@@ -1293,6 +1303,23 @@ expression_operation_new(
     exit(2);
 }
 
+static expression_t* 
+expression_rank_switch_new(
+    const parser_state_t* state, const int* type, 
+    const thecl_param_t* valE, const thecl_param_t* valN, const thecl_param_t* valH, const thecl_param_t* valL
+) {
+    expression_t* expr = malloc(sizeof(expression_t));
+    expr->type = EXPRESSION_RANK_SWITCH;
+    expr->result_type = type;
+    list_t* list = list_new();
+    list_append_new(list, valE);
+    list_append_new(list, valN);
+    list_append_new(list, valH);
+    list_append_new(list, valL);
+    expr->children = *list;
+    return expr;
+}
+
 static expression_t *
 expression_copy(
     expression_t *expr)
@@ -1342,6 +1369,16 @@ expression_output(
         }
 
         instr_add(state->current_sub, instr_new(state, expr->id, ""));
+    } else if (expr->type == EXPRESSION_RANK_SWITCH) {
+        int diff = 0;
+        char* diffs[5] = {"E", "N", "H", "L"};
+        int ins_number = expr->result_type == 'S' ? 42 : 44; //  42 and 44 are ins numbers for pushing int/float to ECL stack
+        int val;
+        list_for_each(&expr->children, val) {
+            thecl_instr_t* instr = instr_new(state, ins_number, "p", val);
+            instr->rank = parse_rank(state, diffs[diff++]);
+            instr_add(state->current_sub, instr);
+        }
     }
 }
 
@@ -1354,7 +1391,8 @@ expression_free(
         list_for_each(&expr->children, child_expr)
             expression_free(child_expr);
         list_free_nodes(&expr->children);
-    }
+    } else if (expr->type == EXPRESSION_RANK_SWITCH)
+        list_free_nodes(&expr->children);
     free(expr);
 }
 
