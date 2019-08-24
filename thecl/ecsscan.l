@@ -142,6 +142,12 @@ ins_[0-9]+ {
     yylval.integer = strtol(yytext, NULL, 16);
     return INTEGER;
 }
+-?0b[0-1]+ {
+    bool isNegative = yytext[0] == '-';
+    yylval.integer = strtol(yytext + (isNegative ? 3 : 2), NULL, 2);
+    if (isNegative) yylval.integer = -yylval.integer;
+    return INTEGER;
+}
 ![-*ENHLWXYZO4567]+ {
     yylval.string = strdup(yytext + 1);
     return RANK;
