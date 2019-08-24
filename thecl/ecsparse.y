@@ -794,6 +794,18 @@ Instruction_Parameter:
             $$->value.val.f = -1.0f;
         }
       }
+      | Expression {
+          list_prepend_new(&state->expressions, $1);
+
+          $$ = param_new($1->result_type);
+          $$->stack = 1;
+          $$->is_expression_param = $1->result_type;
+          if ($1->result_type == 'S') {
+              $$->value.val.S = -1;
+          } else {
+              $$->value.val.f = -1.0f;
+          }
+      }
     ;
 
 Expression:
