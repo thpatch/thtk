@@ -126,8 +126,8 @@ _fS return CAST_FI;
     yylval.floating = strtof(yytext, NULL);
     return FLOATING;
 }
--?[0-9]+(\.[0-9]*)?deg {
-    yylval.floating = strtof(yytext, NULL) / 180.0f * 3.14159265359f;
+rad\(-?[0-9]+(\.[0-9]*)?f\) {
+    yylval.floating = strtof(yytext+4, NULL) / 180.0f * 3.14159265359f;
     return FLOATING;
 }
 ins_[0-9]+ {
