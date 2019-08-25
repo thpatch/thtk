@@ -51,6 +51,7 @@ static void string_list_free(list_t* list);
 static thecl_instr_t* instr_new(parser_state_t* state, unsigned int id, const char* format, ...);
 static thecl_instr_t* instr_new_list(parser_state_t* state, unsigned int id, list_t* list);
 static void instr_add(thecl_sub_t* sub, thecl_instr_t* instr);
+static void instr_prepend(thecl_sub_t* sub, thecl_instr_t* instr);
 static void instr_create_call(parser_state_t *state, int type, char *name, list_t *params);
 
 enum expression_type {
@@ -292,6 +293,7 @@ Statement:
             state->current_sub->stack = state->current_sub->arity * 4;
       }
       "{" Subroutine_Body "}" {
+        instr_prepend(state->current_sub, instr_new(state, 40, "S", state->current_sub->stack));
         sub_finish(state);
       }
     | "anim" "{" Text_Semicolon_List "}" {
@@ -359,24 +361,7 @@ Integer_List:
     ;
 
 Subroutine_Body:
-    | "var" Optional_Identifier_Whitespace_List ";" {
-        size_t var_list_length = 0;
-        string_t* str;
-
-        if ($2) {
-            list_for_each($2, str) {
-                ++var_list_length;
-                var_create(state->current_sub, str->text);
-            }
-            string_list_free($2);
-        }
-
-        state->current_sub->stack += var_list_length * 4;
-
-        instr_add(state->current_sub, instr_new(state, 40, "S", state->current_sub->stack));
-      }
-      Instructions
-    | Instructions
+    Instructions
     ;
 
 Global_Def:
@@ -408,6 +393,23 @@ Text_Semicolon_List:
     | Text_Semicolon_List TEXT ";" {
         $$ = string_list_add($1, $2);
       }
+    ;
+
+VarDeclaration:
+    "var" Optional_Identifier_Whitespace_List {
+        size_t var_list_length = 0;
+        string_t* str;
+
+        if ($2) {
+            list_for_each($2, str) {
+                ++var_list_length;
+                var_create(state->current_sub, str->text);
+            }
+            string_list_free($2);
+        }
+
+        state->current_sub->stack += var_list_length * 4;
+    }
     ;
 
 Instructions:
@@ -726,6 +728,7 @@ Instruction:
         expression_output(state, $1);
         expression_free($1);
       }
+    | VarDeclaration
     ;
 
 Instruction_Parameters:
@@ -1093,6 +1096,26 @@ instr_add(
     list_append_new(&sub->instrs, instr);
     instr->offset = sub->offset;
     sub->offset += instr->size;
+}
+
+static void
+instr_prepend(
+    thecl_sub_t* sub,
+    thecl_instr_t* instr)
+{
+    list_prepend_new(&sub->instrs, instr);
+    instr->offset = 0;
+    sub->offset += instr->size;
+
+    thecl_instr_t* tmp_instr;
+    list_for_each(&sub->instrs, tmp_instr) {
+        tmp_instr->offset += instr->size;
+    }
+
+    thecl_label_t* tmp_label;
+    list_for_each(&sub->labels, tmp_label) {
+        tmp_label->offset += instr->size;
+    }
 }
 
 static void
