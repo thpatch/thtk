@@ -395,7 +395,7 @@ Text_Semicolon_List:
       }
     ;
 
-VarDeclaration:
+VarDeclareMany:
     "var" Optional_Identifier_Whitespace_List {
         size_t var_list_length = 0;
         string_t* str;
@@ -410,6 +410,50 @@ VarDeclaration:
 
         state->current_sub->stack += var_list_length * 4;
     }
+    ;
+
+VarDeclareAssign:
+      VarIntegerAssign
+    | VarFloatAssign
+    ;
+
+VarIntegerAssign:
+    "var" "$" IDENTIFIER "=" Expression {
+        var_create(state->current_sub, $3);
+        state->current_sub->stack += 4;
+
+        expression_output(state, $5);
+        expression_free($5);
+
+        thecl_param_t* param = param_new('S');
+        param->value.type = 'S';
+        param->value.val.S = state->current_sub->stack - 4;
+        param->stack = 1;
+
+        instr_add(state->current_sub, instr_new(state, 43, "p", param));
+    }
+    ;
+
+VarFloatAssign:
+    "var" "%" IDENTIFIER "=" Expression {
+        var_create(state->current_sub, $3);
+        state->current_sub->stack += 4;
+
+        expression_output(state, $5);
+        expression_free($5);
+
+        thecl_param_t* param = param_new('f');
+        param->value.type = 'f';
+        param->value.val.f = state->current_sub->stack - 4;
+        param->stack = 1;
+
+        instr_add(state->current_sub, instr_new(state, 45, "p", param));
+    }
+    ;
+
+VarDeclaration:
+      VarDeclareMany
+    | VarDeclareAssign
     ;
 
 Instructions:
