@@ -621,7 +621,19 @@ Case:
     /* TODO: Check the given parameters against the parameters expected for the
      *       instruction. */
 Instruction:
-      IDENTIFIER "(" Instruction_Parameters ")" "async" {
+      IDENTIFIER "(" Instruction_Parameters ")" "sub" {
+          /* Force creating a sub call, even if it wasn't defined in the file earlier - useful for calling subs from default.ecl */
+          instr_create_call(state, 11, $1, $3);
+          list_free_nodes($3);
+          free($3);
+      }
+      | IDENTIFIER "(" Instruction_Parameters ")" "sub" "async" {
+          /* Same as above, except use ins_15 (callAsync) instead of ins_11 (call) */
+          instr_create_call(state, 15, $1, $3);
+          list_free_nodes($3);
+          free($3);
+      } 
+      | IDENTIFIER "(" Instruction_Parameters ")" "async" {
           /* Search for sub */
           bool sub_found = false;
           thecl_sub_t* iter_sub;
