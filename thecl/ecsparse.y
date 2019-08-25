@@ -1566,7 +1566,10 @@ sub_finish(
     parser_state_t* state)
 {
     if (not_pre_th10(state->ecl->version)) {
-        instr_prepend(state->current_sub, instr_new(state, 40, "S", state->current_sub->stack));
+        
+        thecl_instr_t* var_ins = instr_new(state, 40, "S", state->current_sub->stack);
+        var_ins->time = 0;
+        instr_prepend(state->current_sub, var_ins);
 
         thecl_instr_t* last_ins = list_tail(&state->current_sub->instrs);
         if (last_ins == NULL || last_ins->id != 10 && last_ins->id != 1) {
