@@ -1474,11 +1474,11 @@ expression_output(
         instr_add(state->current_sub, instr_new(state, expr->id, ""));
     } else if (expr->type == EXPRESSION_RANK_SWITCH) {
         int diff = 0;
-        char* diffs[5] = {"E", "N", "H", "L"};
+        char* diffs[4] = {"E", "N", "H", "L"};
         int ins_number = expr->result_type == 'S' ? 42 : 44; //  42 and 44 are ins numbers for pushing int/float to ECL stack
-        int val;
-        list_for_each(&expr->children, val) {
-            thecl_instr_t* instr = instr_new(state, ins_number, "p", val);
+        thecl_param_t* param;
+        list_for_each(&expr->children, param) {
+            thecl_instr_t* instr = instr_new(state, ins_number, "p", param);
             instr->rank = parse_rank(state, diffs[diff++]);
             instr_add(state->current_sub, instr);
         }
