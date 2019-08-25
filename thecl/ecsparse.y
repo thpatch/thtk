@@ -293,7 +293,6 @@ Statement:
             state->current_sub->stack = state->current_sub->arity * 4;
       }
       "{" Subroutine_Body "}" {
-        instr_prepend(state->current_sub, instr_new(state, 40, "S", state->current_sub->stack));
         sub_finish(state);
       }
     | "anim" "{" Text_Semicolon_List "}" {
@@ -1560,6 +1559,13 @@ static void
 sub_finish(
     parser_state_t* state)
 {
+    instr_prepend(state->current_sub, instr_new(state, 40, "S", state->current_sub->stack));
+
+    thecl_instr_t* last_ins = list_tail(&state->current_sub->instrs);
+    if (last_ins == NULL || last_ins->id != 10 && last_ins->id != 1) {
+        instr_add(state->current_sub, instr_new(state, 10, ""));
+    }
+
     state->current_sub = NULL;
 }
 
