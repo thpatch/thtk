@@ -1127,6 +1127,14 @@ instr_create_call(
             list_append_new(param_list, param);
         }
 
+    /* Output expressions from parameters. */
+    expression_t* expr;
+    list_for_each(&state->expressions, expr) {
+        expression_output(state, expr);
+        expression_free(expr);
+    }
+    list_free_nodes(&state->expressions);
+
     instr_add(state->current_sub, instr_new_list(state, type, param_list));
 }
 
