@@ -69,6 +69,9 @@ thecl_param_t* param_new(
 void param_free(
     thecl_param_t* param);
 
+int not_pre_th10(
+    unsigned int version);
+
 typedef struct thecl_instr_t {
     thecl_instr_type type;
     char* string;

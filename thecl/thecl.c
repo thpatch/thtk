@@ -173,6 +173,25 @@ free_eclmaps(void)
     eclmap_free(g_eclmap_global);
 }
 
+int
+not_pre_th10(
+    unsigned int version)
+{
+    return version == 10
+        || version == 103
+        || version == 11
+        || version == 12
+        || version == 125
+        || version == 128
+        || version == 13
+        || version == 14
+        || version == 143
+        || version == 15
+        || version == 16
+        || version == 165
+        || version == 17;
+}
+
 static void
 print_usage(void)
 {

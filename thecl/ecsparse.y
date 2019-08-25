@@ -1410,16 +1410,22 @@ expression_rank_switch_new(
     const parser_state_t* state, const int* type, 
     const thecl_param_t* valE, const thecl_param_t* valN, const thecl_param_t* valH, const thecl_param_t* valL
 ) {
-    expression_t* expr = malloc(sizeof(expression_t));
-    expr->type = EXPRESSION_RANK_SWITCH;
-    expr->result_type = type;
-    list_t* list = list_new();
-    list_append_new(list, valE);
-    list_append_new(list, valN);
-    list_append_new(list, valH);
-    list_append_new(list, valL);
-    expr->children = *list;
-    return expr;
+    if (not_pre_th10(state->ecl->version)) {
+        expression_t* expr = malloc(sizeof(expression_t));
+        expr->type = EXPRESSION_RANK_SWITCH;
+        expr->result_type = type;
+        list_t* list = list_new();
+        list_append_new(list, valE);
+        list_append_new(list, valN);
+        list_append_new(list, valH);
+        list_append_new(list, valL);
+        expr->children = *list;
+        return expr;
+    }
+    char buf[256] = "difficulty switch expression is not available in pre-th10 ECL";
+    yyerror((parser_state_t *)state, buf);
+
+    exit(2);
 }
 
 static expression_t *
@@ -1559,11 +1565,13 @@ static void
 sub_finish(
     parser_state_t* state)
 {
-    instr_prepend(state->current_sub, instr_new(state, 40, "S", state->current_sub->stack));
+    if (not_pre_th10(state->ecl->version)) {
+        instr_prepend(state->current_sub, instr_new(state, 40, "S", state->current_sub->stack));
 
-    thecl_instr_t* last_ins = list_tail(&state->current_sub->instrs);
-    if (last_ins == NULL || last_ins->id != 10 && last_ins->id != 1) {
-        instr_add(state->current_sub, instr_new(state, 10, ""));
+        thecl_instr_t* last_ins = list_tail(&state->current_sub->instrs);
+        if (last_ins == NULL || last_ins->id != 10 && last_ins->id != 1) {
+            instr_add(state->current_sub, instr_new(state, 10, ""));
+        }
     }
 
     state->current_sub = NULL;
