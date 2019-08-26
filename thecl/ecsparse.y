@@ -1517,21 +1517,37 @@ expression_output(
 
         instr_add(state->current_sub, instr_new(state, expr->id, ""));
     } else if (expr->type == EXPRESSION_RANK_SWITCH) {
+        const int diff_amt = 5;
+        const char* diffs[5] = {"E", "N", "H", "L", "O"};
+
         int diff = 0;
-        char* diffs[5] = {"E", "N", "H", "L", "O"};
         int ins_number = expr->result_type == 'S' ? 42 : 44; //  42 and 44 are ins numbers for pushing int/float to ECL stack
         thecl_param_t* param;
+        thecl_instr_t* instr = NULL;
+
         list_for_each(&expr->children, param) {
+            if (instr != NULL) {
+                instr->rank = parse_rank(state, diffs[diff++]);
+                instr_add(state->current_sub, instr);
+            }
 
             if (diff > 4) {
                 yyerror(state, "too many parameters for difficulty switch");
                 exit(2);
             }
 
-            thecl_instr_t* instr = instr_new(state, ins_number, "p", param);
-            instr->rank = parse_rank(state, diffs[diff++]);
-            instr_add(state->current_sub, instr);
+            instr = instr_new(state, ins_number, "p", param);
         }
+
+        /* Set last ins to all remaining difficulties. */
+        char diff_str[5] = "";
+        while(diff < diff_amt) {
+            char* next_diff = diffs[diff++];
+            strcat(diff_str, next_diff);
+        }
+        
+        instr->rank = parse_rank(state, diff_str);
+        instr_add(state->current_sub, instr);
     }
 }
 
