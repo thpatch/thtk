@@ -414,6 +414,10 @@ VarDeclareMany:
         }
 
         state->current_sub->stack += var_list_length * 4;
+
+        if (g_ecl_simplecreate) {
+            instr_add(state->current_sub, instr_new(state, TH10_INS_STACK_ALLOC, "S", state->current_sub->stack));
+        }
     }
     ;
 
@@ -424,6 +428,11 @@ VarDeclareAssign:
 
 VarIntegerAssign:
     "var" "$" IDENTIFIER "=" Expression {
+        if (g_ecl_simplecreate) {
+            yyerror(state, "var creation with assignment is not allowed in simple creation mode");
+            exit(2);
+        }
+
         var_create(state, state->current_sub, $3);
         state->current_sub->stack += 4;
 
@@ -442,6 +451,11 @@ VarIntegerAssign:
 
 VarFloatAssign:
     "var" "%" IDENTIFIER "=" Expression {
+        if (g_ecl_simplecreate) {
+            yyerror(state, "var creation with assignment is not allowed in simple creation mode");
+            exit(2);
+        }
+
         var_create(state, state->current_sub, $3);
         state->current_sub->stack += 4;
 
@@ -606,7 +620,11 @@ WhileBlock:
     ;
 
 TimesBlock:
-      "times" Expression {          
+      "times" Expression {
+          if (g_ecl_simplecreate) {
+              yyerror(state, "times loops are not allowed in simple creation mode");
+              exit(2);
+          }
           char loop_name[256];
           snprintf(loop_name, 256, "times_%i_%i", yylloc.first_line, yylloc.first_column);
           var_create(state, state->current_sub, loop_name);
@@ -1691,7 +1709,7 @@ static void
 sub_finish(
     parser_state_t* state)
 {
-    if (not_pre_th10(state->ecl->version)) {
+    if (not_pre_th10(state->ecl->version) && !g_ecl_simplecreate) {
         
         thecl_instr_t* var_ins = instr_new(state, TH10_INS_STACK_ALLOC, "S", state->current_sub->stack);
         var_ins->time = 0;
