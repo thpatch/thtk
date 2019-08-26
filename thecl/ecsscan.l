@@ -84,6 +84,7 @@
 "else"     return ELSE;
 "do"       return DO;
 "while"    return WHILE;
+"times"    return TIMES;
 "switch"   return SWITCH;
 "case"     return CASE;
 "break"    return BREAK;

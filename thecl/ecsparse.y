@@ -185,6 +185,7 @@ void set_time(parser_state_t* state, int new_time);
 %token ELSE "else"
 %token DO "do"
 %token WHILE "while"
+%token TIMES "times"
 %token SWITCH "switch"
 %token CASE "case"
 %token BREAK "break"
@@ -464,6 +465,7 @@ Instructions:
       Instruction ";"
     | IfBlock
     | WhileBlock
+    | TimesBlock
     | SwitchBlock
     | INTEGER ":" { set_time(state, $1); }
     | IDENTIFIER ":" { label_create(state, $1); free($1); }
@@ -473,6 +475,7 @@ Instructions:
     | Instructions IfBlock
     | Instructions SwitchBlock
     | Instructions WhileBlock
+    | Instructions TimesBlock
     | RANK { state->instr_rank = parse_rank(state, $1); } Instruction ";"
     | Instructions RANK { state->instr_rank = parse_rank(state, $2); } Instruction ";"
     | Instructions "break" ";" {
@@ -598,6 +601,58 @@ WhileBlock:
           free(head->data);
           list_del(&state->block_stack, head);
     } ";"
+    ;
+
+TimesBlock:
+      "times" Expression {          
+          char loop_name[256];
+          snprintf(loop_name, 256, "times_%i_%i", yylloc.first_line, yylloc.first_column);
+          var_create(state, state->current_sub, loop_name);
+          state->current_sub->stack += 4;
+        
+          if ($2->result_type != 'S') {
+              char buf[256];
+              snprintf(buf, 256, "invalid iteration count type for a times loop: %c", $2->result_type);
+              yyerror(state, buf);
+              exit(2);
+          }
+
+          expression_output(state, $2);
+          expression_free($2);
+          
+          thecl_param_t* param = param_new('S');
+          param->stack = 1;
+          param->value.val.S = state->current_sub->stack - 4;
+          instr_add(state->current_sub, instr_new(state, 43, "p", param));
+
+          char labelstr_st[256];
+          char labelstr_end[256];
+          snprintf(labelstr_st, 256, "%s_st", (char*)loop_name);
+          snprintf(labelstr_end, 256, "%s_end", (char*)loop_name);
+
+          expression_create_goto(state, GOTO, labelstr_end);
+          label_create(state, labelstr_st);
+
+          list_prepend_new(&state->block_stack, strdup(loop_name));
+    } "{" Instructions "}" {
+          char labelstr_st[256];
+          char labelstr_end[256];
+          list_node_t *head = state->block_stack.head;
+          snprintf(labelstr_st, 256, "%s_st", (char*)head->data);
+          snprintf(labelstr_end, 256, "%s_end", (char*)head->data);
+
+          label_create(state, labelstr_end);
+
+          thecl_param_t* param = param_new('S');
+          param->stack = 1;
+          param->value.val.S = var_find(state, state->current_sub, (char*)head->data);
+          instr_add(state->current_sub, instr_new(state, 78, "p", param));
+         
+          expression_create_goto(state, IF, labelstr_st);
+          
+          free(head->data);
+          list_del(&state->block_stack, head);
+    }
     ;
 
 SwitchBlock:
