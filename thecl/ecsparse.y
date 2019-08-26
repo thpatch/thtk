@@ -117,9 +117,11 @@ static void sub_begin(parser_state_t* state, char* name);
 static void sub_finish(parser_state_t* state);
 
 /* Creates a new variable in the specified subroutine. */
-static void var_create(thecl_sub_t* sub, const char* name);
+static void var_create(parser_state_t* state, thecl_sub_t* sub, const char* name);
 /* Returns the stack offset of a specified variable in the specified sub. */
 static int var_find(parser_state_t* state, thecl_sub_t* sub, const char* name);
+/* Returns 1 if a variable of a given name exists, and 0 if it doesn't. */
+static int var_exists(thecl_sub_t* sub, const char* name);
 /* Stores a new label in the current subroutine pointing to the current offset. */
 static void label_create(parser_state_t* state, char* label);
 
@@ -286,7 +288,7 @@ Statement:
                 string_t* str;
                 list_for_each($5, str) {
                     state->current_sub->arity++;
-                    var_create(state->current_sub, str->text);
+                    var_create(state, state->current_sub, str->text);
                 }
                 string_list_free($5);
             }
@@ -402,7 +404,7 @@ VarDeclareMany:
         if ($2) {
             list_for_each($2, str) {
                 ++var_list_length;
-                var_create(state->current_sub, str->text);
+                var_create(state, state->current_sub, str->text);
             }
             string_list_free($2);
         }
@@ -418,7 +420,7 @@ VarDeclareAssign:
 
 VarIntegerAssign:
     "var" "$" IDENTIFIER "=" Expression {
-        var_create(state->current_sub, $3);
+        var_create(state, state->current_sub, $3);
         state->current_sub->stack += 4;
 
         expression_output(state, $5);
@@ -435,7 +437,7 @@ VarIntegerAssign:
 
 VarFloatAssign:
     "var" "%" IDENTIFIER "=" Expression {
-        var_create(state->current_sub, $3);
+        var_create(state, state->current_sub, $3);
         state->current_sub->stack += 4;
 
         expression_output(state, $5);
@@ -1582,9 +1584,15 @@ sub_finish(
 
 static void
 var_create(
+    parser_state_t* state,
     thecl_sub_t* sub,
     const char* name)
 {
+    if (var_exists(sub, name)) {
+        char buf[256];
+        snprintf(buf, 256, "redeclaration of variable: %s", name);
+        yyerror(state, buf);
+    }
     ++sub->var_count;
     sub->vars = realloc(sub->vars, sub->var_count * sizeof(char*));
     sub->vars[sub->var_count - 1] = strdup(name);
@@ -1609,6 +1617,19 @@ var_find(
     }
     snprintf(buf, 256, "variable not found: %s", name);
     yyerror(state, buf);
+    return 0;
+}
+
+static int
+var_exists(
+    thecl_sub_t* sub,
+    const char* name)
+{
+    unsigned int i;
+    for (i = 0; i < sub->var_count; ++i) {
+        if (strcmp(name, sub->vars[i]) == 0) return 1;
+    }
+
     return 0;
 }
 
