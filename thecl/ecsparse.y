@@ -1517,7 +1517,8 @@ expression_output(
 
         instr_add(state->current_sub, instr_new(state, expr->id, ""));
     } else if (expr->type == EXPRESSION_RANK_SWITCH) {
-        const int diff_amt = 5;
+
+        const int diff_amt = state->has_overdrive_difficulty ? 5 : 4;
         const char* diffs[5] = {"E", "N", "H", "L", "O"};
 
         int diff = 0;
@@ -1545,7 +1546,7 @@ expression_output(
             char* next_diff = diffs[diff++];
             strcat(diff_str, next_diff);
         }
-        
+
         instr->rank = parse_rank(state, diff_str);
         instr_add(state->current_sub, instr);
     }
