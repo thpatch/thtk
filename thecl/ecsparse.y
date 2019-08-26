@@ -435,7 +435,8 @@ VarIntegerAssign:
         param->value.val.S = state->current_sub->stack - 4;
         param->stack = 1;
 
-        instr_add(state->current_sub, instr_new(state, 43, "p", param));
+        const expr_t* expr = expr_get_by_symbol(state->version, ASSIGNI);
+        instr_add(state->current_sub, instr_new(state, expr->id, "p", param));
     }
     ;
 
@@ -452,7 +453,8 @@ VarFloatAssign:
         param->value.val.f = state->current_sub->stack - 4;
         param->stack = 1;
 
-        instr_add(state->current_sub, instr_new(state, 45, "p", param));
+        const expr_t* expr = expr_get_by_symbol(state->version, ASSIGNF);
+        instr_add(state->current_sub, instr_new(state, expr->id, "p", param));
     }
     ;
 
@@ -623,7 +625,9 @@ TimesBlock:
           thecl_param_t* param = param_new('S');
           param->stack = 1;
           param->value.val.S = state->current_sub->stack - 4;
-          instr_add(state->current_sub, instr_new(state, 43, "p", param));
+
+          const expr_t* expr = expr_get_by_symbol(state->version, ASSIGNI);
+          instr_add(state->current_sub, instr_new(state, expr->id, "p", param));
 
           char labelstr_st[256];
           char labelstr_end[256];
@@ -646,7 +650,9 @@ TimesBlock:
           thecl_param_t* param = param_new('S');
           param->stack = 1;
           param->value.val.S = var_find(state, state->current_sub, (char*)head->data);
-          instr_add(state->current_sub, instr_new(state, 78, "p", param));
+
+          const expr_t* expr = expr_get_by_symbol(state->version, DEC);
+          instr_add(state->current_sub, instr_new(state, expr->id, "p", param));
          
           expression_create_goto(state, IF, labelstr_st);
           
@@ -681,7 +687,10 @@ SwitchBlock:
               expression_t *copy = expression_copy($2);
               expression_output(state, copy);
               expression_free(copy);
-              instr_add(state->current_sub, instr_new(state, 59, ""));
+
+              const expr_t* expr = expr_get_by_symbol(state->version, EQUALI);
+              instr_add(state->current_sub, instr_new(state, expr->id, ""));
+
               expression_free(switch_case->expr);
               expression_create_goto(state, IF, switch_case->labelstr);
               list_node_t *buf = node;
@@ -1684,13 +1693,13 @@ sub_finish(
 {
     if (not_pre_th10(state->ecl->version)) {
         
-        thecl_instr_t* var_ins = instr_new(state, 40, "S", state->current_sub->stack);
+        thecl_instr_t* var_ins = instr_new(state, TH10_INS_STACK_ALLOC, "S", state->current_sub->stack);
         var_ins->time = 0;
         instr_prepend(state->current_sub, var_ins);
 
         thecl_instr_t* last_ins = list_tail(&state->current_sub->instrs);
-        if (last_ins == NULL || last_ins->id != 10 && last_ins->id != 1) {
-            instr_add(state->current_sub, instr_new(state, 10, ""));
+        if (last_ins == NULL || last_ins->id != TH10_INS_RET_NORMAL && last_ins->id != TH10_INS_RET_BIG) {
+            instr_add(state->current_sub, instr_new(state, TH10_INS_RET_NORMAL, ""));
         }
     }
 

@@ -57,6 +57,11 @@ typedef enum {
 #define RANK_ID_6      (1 << 6)
 #define RANK_ID_7      (1 << 7)
 
+// Numbers of important ECL instructions
+#define TH10_INS_RET_BIG        1
+#define TH10_INS_RET_NORMAL     10
+#define TH10_INS_STACK_ALLOC    40
+
 typedef struct thecl_param_t {
     int type;
     value_t value;
