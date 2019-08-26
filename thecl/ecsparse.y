@@ -84,8 +84,7 @@ static expression_t* expression_load_new(const parser_state_t* state, thecl_para
 static expression_t* expression_operation_new(const parser_state_t* state, const int* symbols, expression_t** operands);
 static expression_t* expression_address_operation_new(const parser_state_t* state, const int* symbols, thecl_param_t* value);
 static expression_t* expression_rank_switch_new(
-    const parser_state_t* state, const int* type, 
-    const thecl_param_t* valE, const thecl_param_t* valN, const thecl_param_t* valH, const thecl_param_t* valL
+    const parser_state_t* state, list_t* params
 );
 
 static void expression_output(parser_state_t* state, expression_t* expr);
@@ -250,6 +249,8 @@ void set_time(parser_state_t* state, int new_time);
 %type <list> Instruction_Parameters_List
 %type <list> Instruction_Parameters
 %type <list> Integer_List
+%type <list> Rank_Switch_List
+%type <list> Rank_Switch_Next_Value_List
 
 %type <expression> Expression
 
@@ -263,6 +264,8 @@ void set_time(parser_state_t* state, int new_time);
 %type <param> Label
 %type <param> Load_Type
 %type <param> Cast_Type
+%type <param> Rank_Switch_Value
+%type <param> Rank_Switch_Next_Value
 
 %type <integer> Cast_Target
 %type <integer> Cast_Target2
@@ -872,6 +875,38 @@ Instruction_Parameter:
       }
     ;
 
+Rank_Switch_Value:
+      Integer
+    | Floating
+    ;
+
+Rank_Switch_Next_Value: 
+      ":" Rank_Switch_Value {$$ = $2}
+    ;
+
+Rank_Switch_List:
+      Rank_Switch_Value Rank_Switch_Next_Value_List {
+        $$ = list_new();
+        list_append_new($$, $1);
+
+        thecl_param_t* param;
+        list_for_each($2, param) {
+            list_append_new($$, param);
+        }
+      }
+    ;
+
+Rank_Switch_Next_Value_List:
+      Rank_Switch_Next_Value {
+        $$ = list_new();
+        list_append_new($$, $1);
+      }
+    | Rank_Switch_Next_Value_List Rank_Switch_Next_Value {
+        $$ = $1;
+        list_append_new($$, $2);
+    }
+    ;
+
 Expression:
       Load_Type                      { $$ = expression_load_new(state, $1); }
     |             "(" Expression ")" { $$ = $2; }
@@ -900,8 +935,7 @@ Expression:
     | "sqrt" Expression           { $$ = EXPR_11(SQRT,                 $2); }
 
     /* Custom expressions. */
-    | Integer ":" Integer ":" Integer ":" Integer       { $$ = expression_rank_switch_new(state, 'S', $1, $3, $5, $7); }
-    | Floating ":" Floating ":" Floating ":" Floating   { $$ = expression_rank_switch_new(state, 'f', $1, $3, $5, $7); }
+    | Rank_Switch_List            { $$ = expression_rank_switch_new(state, $1); }
     ;
 
 Address:
@@ -1409,23 +1443,26 @@ expression_operation_new(
 
 static expression_t* 
 expression_rank_switch_new(
-    const parser_state_t* state, const int* type, 
-    const thecl_param_t* valE, const thecl_param_t* valN, const thecl_param_t* valH, const thecl_param_t* valL
+    const parser_state_t* state, list_t* params
 ) {
     if (not_pre_th10(state->ecl->version)) {
         expression_t* expr = malloc(sizeof(expression_t));
         expr->type = EXPRESSION_RANK_SWITCH;
-        expr->result_type = type;
-        list_t* list = list_new();
-        list_append_new(list, valE);
-        list_append_new(list, valN);
-        list_append_new(list, valH);
-        list_append_new(list, valL);
-        expr->children = *list;
+
+        thecl_param_t* param = list_head(params);
+        expr->result_type = param->value.type;
+
+        list_for_each(params, param) {
+            if (param->value.type != expr->result_type) {
+                yyerror(state, "inconsistent parameter types for rank switch");
+                exit(2);
+            }
+        }
+
+        expr->children = *params;
         return expr;
     }
-    char buf[256] = "difficulty switch expression is not available in pre-th10 ECL";
-    yyerror((parser_state_t *)state, buf);
+    yyerror(state, "difficulty switch expression is not available in pre-th10 ECL");
 
     exit(2);
 }
@@ -1481,10 +1518,16 @@ expression_output(
         instr_add(state->current_sub, instr_new(state, expr->id, ""));
     } else if (expr->type == EXPRESSION_RANK_SWITCH) {
         int diff = 0;
-        char* diffs[4] = {"E", "N", "H", "L"};
+        char* diffs[5] = {"E", "N", "H", "L", "O"};
         int ins_number = expr->result_type == 'S' ? 42 : 44; //  42 and 44 are ins numbers for pushing int/float to ECL stack
         thecl_param_t* param;
         list_for_each(&expr->children, param) {
+
+            if (diff > 4) {
+                yyerror(state, "too many parameters for difficulty switch");
+                exit(2);
+            }
+
             thecl_instr_t* instr = instr_new(state, ins_number, "p", param);
             instr->rank = parse_rank(state, diffs[diff++]);
             instr_add(state->current_sub, instr);
