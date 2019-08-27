@@ -479,23 +479,22 @@ VarDeclaration:
 
 Instructions:
       Instruction ";"
-    | IfBlock
-    | WhileBlock
-    | TimesBlock
-    | SwitchBlock
-    | BreakStatement
+    | Block
     | INTEGER ":" { set_time(state, $1); }
     | IDENTIFIER ":" { label_create(state, $1); free($1); }
     | Instructions INTEGER ":" { set_time(state, $2); }
     | Instructions IDENTIFIER ":" { label_create(state, $2); free($2); }
     | Instructions Instruction ";"
-    | Instructions IfBlock
-    | Instructions SwitchBlock
-    | Instructions WhileBlock
-    | Instructions TimesBlock
-    | RANK { state->instr_rank = parse_rank(state, $1); } Instruction ";"
-    | Instructions RANK { state->instr_rank = parse_rank(state, $2); } Instruction ";"
-    | Instructions BreakStatement
+    | Instructions Block
+    | RANK { state->instr_rank = parse_rank(state, $1); } 
+    | Instructions RANK { state->instr_rank = parse_rank(state, $2); } 
+    ;
+
+Block:
+      IfBlock
+    | WhileBlock
+    | TimesBlock
+    | SwitchBlock
     ;
 
 BreakStatement:
@@ -871,6 +870,7 @@ Instruction:
         expression_free($1);
       }
     | VarDeclaration
+    | BreakStatement
     ;
 
 Instruction_Parameters:
