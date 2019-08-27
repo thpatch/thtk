@@ -760,20 +760,20 @@ Case:
     /* TODO: Check the given parameters against the parameters expected for the
      *       instruction. */
 Instruction:
-      IDENTIFIER "(" Instruction_Parameters ")" "sub" {
+      "@" IDENTIFIER "(" Instruction_Parameters ")" {
           /* Force creating a sub call, even if it wasn't defined in the file earlier - useful for calling subs from default.ecl */
-          instr_create_call(state, 11, $1, $3);
-          if ($3 != NULL) {
-              list_free_nodes($3);
-              free($3);
+          instr_create_call(state, 11, $2, $4);
+          if ($4 != NULL) {
+              list_free_nodes($4);
+              free($4);
           }
       }
-      | IDENTIFIER "(" Instruction_Parameters ")" "sub" "async" {
+      | "@" IDENTIFIER "(" Instruction_Parameters ")" "async" {
           /* Same as above, except use ins_15 (callAsync) instead of ins_11 (call) */
-          instr_create_call(state, 15, $1, $3);
-          if ($3 != NULL) {
-              list_free_nodes($3);
-              free($3);
+          instr_create_call(state, 15, $2, $4);
+          if ($4 != NULL) {
+              list_free_nodes($4);
+              free($4);
           }
       } 
       | IDENTIFIER "(" Instruction_Parameters ")" "async" {
