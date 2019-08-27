@@ -498,7 +498,7 @@ Block:
     ;
 
 BreakStatement:
-      "break" ";" {
+      "break" {
           list_node_t *head = state->block_stack.head;
           for(; head; head = head->next) {
               if (
