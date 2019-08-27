@@ -968,13 +968,8 @@ Rank_Switch_Next_Value:
 
 Rank_Switch_List:
       Rank_Switch_Value Rank_Switch_Next_Value_List {
-        $$ = list_new();
-        list_append_new($$, $1);
-
-        thecl_param_t* param;
-        list_for_each($2, param) {
-            list_append_new($$, param);
-        }
+        $$ = $2;
+        list_prepend_new($$, $1);
       }
     ;
 
