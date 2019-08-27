@@ -865,10 +865,10 @@ th06_dump(
                         (instr->rank) & RANK_NORMAL  ? "N" : "",
                         (instr->rank) & RANK_HARD    ? "H" : "",
                         (instr->rank) & RANK_LUNATIC ? "L" : "",
-                        !((instr->rank) & RANK_ID_4) ? "W" : "",
-                        !((instr->rank) & RANK_ID_5) ? "X" : "",
-                        !((instr->rank) & RANK_ID_6) ? "Y" : "",
-                        !((instr->rank) & RANK_ID_7) ? "Z" : "");
+                        !((instr->rank) & RANK_ID_4) ? "4" : "",
+                        !((instr->rank) & RANK_ID_5) ? "5" : "",
+                        !((instr->rank) & RANK_ID_6) ? "6" : "",
+                        !((instr->rank) & RANK_ID_7) ? "7" : "");
                 }
                 break;
             case THECL_INSTR_INSTR: {
