@@ -483,6 +483,7 @@ Instructions:
     | WhileBlock
     | TimesBlock
     | SwitchBlock
+    | BreakStatement
     | INTEGER ":" { set_time(state, $1); }
     | IDENTIFIER ":" { label_create(state, $1); free($1); }
     | Instructions INTEGER ":" { set_time(state, $2); }
@@ -494,11 +495,18 @@ Instructions:
     | Instructions TimesBlock
     | RANK { state->instr_rank = parse_rank(state, $1); } Instruction ";"
     | Instructions RANK { state->instr_rank = parse_rank(state, $2); } Instruction ";"
-    | Instructions "break" ";" {
+    | Instructions BreakStatement
+    ;
+
+BreakStatement:
+      "break" ";" {
           list_node_t *head = state->block_stack.head;
           for(; head; head = head->next) {
-              if (strncmp(head->data, "while", 5) == 0 ||
-                  strncmp(head->data, "switch", 6) == 0) {
+              if (
+                  strncmp(head->data, "while", 5) == 0 ||
+                  strncmp(head->data, "switch", 6) == 0 ||
+                  strncmp(head->data, "times", 5) == 0
+              ) {
                   char labelstr[256];
                   snprintf(labelstr, 256, "%s_end", (char*)head->data);
                   expression_create_goto(state, GOTO, labelstr);
@@ -509,8 +517,8 @@ Instructions:
               yyerror(state, "break not within while or switch");
               g_was_error = true;
           }
-    }
-    ;
+      }
+      ;
 
 IfBlock:
     "unless" Expression {
@@ -644,7 +652,7 @@ TimesBlock:
           param->stack = 1;
           param->value.val.S = state->current_sub->stack - 4;
 
-          const expr_t* expr = expr_get_by_symbol(state->version, ASSIGNI);
+          expr_t* expr = expr_get_by_symbol(state->version, ASSIGNI);
           instr_add(state->current_sub, instr_new(state, expr->id, "p", param));
 
           char labelstr_st[256];
@@ -652,8 +660,16 @@ TimesBlock:
           snprintf(labelstr_st, 256, "%s_st", (char*)loop_name);
           snprintf(labelstr_end, 256, "%s_end", (char*)loop_name);
 
-          expression_create_goto(state, GOTO, labelstr_end);
           label_create(state, labelstr_st);
+          
+          param = param_new('S');
+          param->stack = 1;
+          param->value.val.S = state->current_sub->stack - 4;
+
+          expr = expr_get_by_symbol(state->version, DEC);
+          instr_add(state->current_sub, instr_new(state, expr->id, "p", param));
+
+          expression_create_goto(state, UNLESS, labelstr_end);
 
           list_prepend_new(&state->block_stack, strdup(loop_name));
     } "{" Instructions "}" {
@@ -662,17 +678,9 @@ TimesBlock:
           list_node_t *head = state->block_stack.head;
           snprintf(labelstr_st, 256, "%s_st", (char*)head->data);
           snprintf(labelstr_end, 256, "%s_end", (char*)head->data);
-
+          
+          expression_create_goto(state, GOTO, labelstr_st);
           label_create(state, labelstr_end);
-
-          thecl_param_t* param = param_new('S');
-          param->stack = 1;
-          param->value.val.S = var_find(state, state->current_sub, (char*)head->data);
-
-          const expr_t* expr = expr_get_by_symbol(state->version, DEC);
-          instr_add(state->current_sub, instr_new(state, expr->id, "p", param));
-         
-          expression_create_goto(state, IF, labelstr_st);
           
           free(head->data);
           list_del(&state->block_stack, head);
