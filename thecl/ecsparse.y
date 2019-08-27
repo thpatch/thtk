@@ -402,6 +402,12 @@ Text_Semicolon_List:
 
 VarDeclareMany:
     "var" Optional_Identifier_Whitespace_List {
+        if (!not_pre_th10(state->version)) {
+            char buf[256];
+            snprintf(buf, 256, "stack variable declaration is not allowed in version: %i", state->version);
+            yyerror(state, buf);
+            exit(2);
+        }
         size_t var_list_length = 0;
         string_t* str;
 
@@ -428,6 +434,12 @@ VarDeclareAssign:
 
 VarIntegerAssign:
     "var" "$" IDENTIFIER "=" Expression {
+        if (!not_pre_th10(state->version)) {
+            char buf[256];
+            snprintf(buf, 256, "stack variable declaration is not allowed in version: %i", state->version);
+            yyerror(state, buf);
+            exit(2);
+        }
         if (g_ecl_simplecreate) {
             yyerror(state, "var creation with assignment is not allowed in simple creation mode");
             exit(2);
@@ -451,6 +463,12 @@ VarIntegerAssign:
 
 VarFloatAssign:
     "var" "%" IDENTIFIER "=" Expression {
+        if (!not_pre_th10(state->version)) {
+            char buf[256];
+            snprintf(buf, 256, "stack variable declaration is not allowed in version: %i", state->version);
+            yyerror(state, buf);
+            exit(2);
+        }
         if (g_ecl_simplecreate) {
             yyerror(state, "var creation with assignment is not allowed in simple creation mode");
             exit(2);
