@@ -60,6 +60,8 @@ typedef enum {
 // Numbers of important ECL instructions
 #define TH10_INS_RET_BIG        1
 #define TH10_INS_RET_NORMAL     10
+#define TH10_INS_CALL           11
+#define TH10_INS_CALL_ASYNC     15
 #define TH10_INS_STACK_ALLOC    40
 
 typedef struct thecl_param_t {

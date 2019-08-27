@@ -762,7 +762,7 @@ Case:
 Instruction:
       "@" IDENTIFIER "(" Instruction_Parameters ")" {
           /* Force creating a sub call, even if it wasn't defined in the file earlier - useful for calling subs from default.ecl */
-          instr_create_call(state, 11, $2, $4);
+          instr_create_call(state, TH10_INS_CALL, $2, $4);
           if ($4 != NULL) {
               list_free_nodes($4);
               free($4);
@@ -770,7 +770,7 @@ Instruction:
       }
       | "@" IDENTIFIER "(" Instruction_Parameters ")" "async" {
           /* Same as above, except use ins_15 (callAsync) instead of ins_11 (call) */
-          instr_create_call(state, 15, $2, $4);
+          instr_create_call(state, TH10_INS_CALL_ASYNC, $2, $4);
           if ($4 != NULL) {
               list_free_nodes($4);
               free($4);
@@ -786,7 +786,7 @@ Instruction:
               }
           }
           if (sub_found) {
-              instr_create_call(state, 15, $1, $3);
+              instr_create_call(state, TH10_INS_CALL_ASYNC, $1, $3);
               if ($3 != NULL) list_free_nodes($3);
           } else {
               char errbuf[256];
@@ -816,7 +816,7 @@ Instruction:
                 }
             }
             if (sub_found) {
-                instr_create_call(state, 11, $1, $3);
+                instr_create_call(state, TH10_INS_CALL, $1, $3);
                 if ($3 != NULL) list_free_nodes($3);;
             } else {
                 char errbuf[256];
