@@ -51,11 +51,13 @@ static void string_list_free(list_t* list);
 static thecl_instr_t* instr_new(parser_state_t* state, unsigned int id, const char* format, ...);
 static thecl_instr_t* instr_new_list(parser_state_t* state, unsigned int id, list_t* list);
 static void instr_add(thecl_sub_t* sub, thecl_instr_t* instr);
+static void instr_prepend(thecl_sub_t* sub, thecl_instr_t* instr);
 static void instr_create_call(parser_state_t *state, int type, char *name, list_t *params);
 
 enum expression_type {
     EXPRESSION_OP,
     EXPRESSION_VAL,
+    EXPRESSION_RANK_SWITCH
 };
 
 typedef struct expression_t {
@@ -65,6 +67,7 @@ typedef struct expression_t {
     /* For values: The value. */
     thecl_param_t* value;
     /* For operators: The child expressions. */
+    /* This list is also used to store values for difficulty switches. */
     list_t children;
     /* Resulting type of expression. */
     int result_type;
@@ -80,6 +83,10 @@ static int parse_rank(const parser_state_t* state, const char* value);
 static expression_t* expression_load_new(const parser_state_t* state, thecl_param_t* value);
 static expression_t* expression_operation_new(const parser_state_t* state, const int* symbols, expression_t** operands);
 static expression_t* expression_address_operation_new(const parser_state_t* state, const int* symbols, thecl_param_t* value);
+static expression_t* expression_rank_switch_new(
+    const parser_state_t* state, list_t* params
+);
+
 static void expression_output(parser_state_t* state, expression_t* expr);
 static void expression_free(expression_t* expr);
 #define EXPR_22(a, b, A, B) \
@@ -109,9 +116,11 @@ static void sub_begin(parser_state_t* state, char* name);
 static void sub_finish(parser_state_t* state);
 
 /* Creates a new variable in the specified subroutine. */
-static void var_create(thecl_sub_t* sub, const char* name);
+static void var_create(parser_state_t* state, thecl_sub_t* sub, const char* name);
 /* Returns the stack offset of a specified variable in the specified sub. */
 static int var_find(parser_state_t* state, thecl_sub_t* sub, const char* name);
+/* Returns 1 if a variable of a given name exists, and 0 if it doesn't. */
+static int var_exists(thecl_sub_t* sub, const char* name);
 /* Stores a new label in the current subroutine pointing to the current offset. */
 static void label_create(parser_state_t* state, char* label);
 
@@ -176,6 +185,7 @@ void set_time(parser_state_t* state, int new_time);
 %token ELSE "else"
 %token DO "do"
 %token WHILE "while"
+%token TIMES "times"
 %token SWITCH "switch"
 %token CASE "case"
 %token BREAK "break"
@@ -240,6 +250,8 @@ void set_time(parser_state_t* state, int new_time);
 %type <list> Instruction_Parameters_List
 %type <list> Instruction_Parameters
 %type <list> Integer_List
+%type <list> Rank_Switch_List
+%type <list> Rank_Switch_Next_Value_List
 
 %type <expression> Expression
 
@@ -253,6 +265,8 @@ void set_time(parser_state_t* state, int new_time);
 %type <param> Label
 %type <param> Load_Type
 %type <param> Cast_Type
+%type <param> Rank_Switch_Value
+%type <param> Rank_Switch_Next_Value
 
 %type <integer> Cast_Target
 %type <integer> Cast_Target2
@@ -278,7 +292,7 @@ Statement:
                 string_t* str;
                 list_for_each($5, str) {
                     state->current_sub->arity++;
-                    var_create(state->current_sub, str->text);
+                    var_create(state, state->current_sub, str->text);
                 }
                 string_list_free($5);
             }
@@ -352,24 +366,7 @@ Integer_List:
     ;
 
 Subroutine_Body:
-    | "var" Optional_Identifier_Whitespace_List ";" {
-        size_t var_list_length = 0;
-        string_t* str;
-
-        if ($2) {
-            list_for_each($2, str) {
-                ++var_list_length;
-                var_create(state->current_sub, str->text);
-            }
-            string_list_free($2);
-        }
-
-        state->current_sub->stack += var_list_length * 4;
-
-        instr_add(state->current_sub, instr_new(state, 40, "S", state->current_sub->stack));
-      }
-      Instructions
-    | Instructions
+    Instructions
     ;
 
 Global_Def:
@@ -403,26 +400,130 @@ Text_Semicolon_List:
       }
     ;
 
+VarDeclareMany:
+    "var" Optional_Identifier_Whitespace_List {
+        if (!not_pre_th10(state->version)) {
+            char buf[256];
+            snprintf(buf, 256, "stack variable declaration is not allowed in version: %i", state->version);
+            yyerror(state, buf);
+            exit(2);
+        }
+        size_t var_list_length = 0;
+        string_t* str;
+
+        if ($2) {
+            list_for_each($2, str) {
+                ++var_list_length;
+                var_create(state, state->current_sub, str->text);
+            }
+            string_list_free($2);
+        }
+
+        state->current_sub->stack += var_list_length * 4;
+
+        if (g_ecl_simplecreate) {
+            instr_add(state->current_sub, instr_new(state, TH10_INS_STACK_ALLOC, "S", state->current_sub->stack));
+        }
+    }
+    ;
+
+VarDeclareAssign:
+      VarIntegerAssign
+    | VarFloatAssign
+    ;
+
+VarIntegerAssign:
+    "var" "$" IDENTIFIER "=" Expression {
+        if (!not_pre_th10(state->version)) {
+            char buf[256];
+            snprintf(buf, 256, "stack variable declaration is not allowed in version: %i", state->version);
+            yyerror(state, buf);
+            exit(2);
+        }
+        if (g_ecl_simplecreate) {
+            yyerror(state, "var creation with assignment is not allowed in simple creation mode");
+            exit(2);
+        }
+
+        var_create(state, state->current_sub, $3);
+        state->current_sub->stack += 4;
+
+        expression_output(state, $5);
+        expression_free($5);
+
+        thecl_param_t* param = param_new('S');
+        param->value.type = 'S';
+        param->value.val.S = state->current_sub->stack - 4;
+        param->stack = 1;
+
+        const expr_t* expr = expr_get_by_symbol(state->version, ASSIGNI);
+        instr_add(state->current_sub, instr_new(state, expr->id, "p", param));
+    }
+    ;
+
+VarFloatAssign:
+    "var" "%" IDENTIFIER "=" Expression {
+        if (!not_pre_th10(state->version)) {
+            char buf[256];
+            snprintf(buf, 256, "stack variable declaration is not allowed in version: %i", state->version);
+            yyerror(state, buf);
+            exit(2);
+        }
+        if (g_ecl_simplecreate) {
+            yyerror(state, "var creation with assignment is not allowed in simple creation mode");
+            exit(2);
+        }
+
+        var_create(state, state->current_sub, $3);
+        state->current_sub->stack += 4;
+
+        expression_output(state, $5);
+        expression_free($5);
+
+        thecl_param_t* param = param_new('f');
+        param->value.type = 'f';
+        param->value.val.f = state->current_sub->stack - 4;
+        param->stack = 1;
+
+        const expr_t* expr = expr_get_by_symbol(state->version, ASSIGNF);
+        instr_add(state->current_sub, instr_new(state, expr->id, "p", param));
+    }
+    ;
+
+VarDeclaration:
+      VarDeclareMany
+    | VarDeclareAssign
+    ;
+
 Instructions:
       Instruction ";"
-    | IfBlock
-    | WhileBlock
-    | SwitchBlock
+    | Block
     | INTEGER ":" { set_time(state, $1); }
     | IDENTIFIER ":" { label_create(state, $1); free($1); }
     | Instructions INTEGER ":" { set_time(state, $2); }
     | Instructions IDENTIFIER ":" { label_create(state, $2); free($2); }
     | Instructions Instruction ";"
-    | Instructions IfBlock
-    | Instructions SwitchBlock
-    | Instructions WhileBlock
-    | RANK { state->instr_rank = parse_rank(state, $1); } Instruction ";"
-    | Instructions RANK { state->instr_rank = parse_rank(state, $2); } Instruction ";"
-    | Instructions "break" ";" {
+    | Instructions Block
+    | RANK { state->instr_rank = parse_rank(state, $1); } 
+    | Instructions RANK { state->instr_rank = parse_rank(state, $2); } 
+    ;
+
+Block:
+      IfBlock
+    | WhileBlock
+    | TimesBlock
+    | SwitchBlock
+    ;
+
+BreakStatement:
+      "break" {
           list_node_t *head = state->block_stack.head;
           for(; head; head = head->next) {
-              if (strncmp(head->data, "while", 5) == 0 ||
-                  strncmp(head->data, "switch", 6) == 0) {
+              if (
+                  strncmp(head->data, "while", 5) == 0 ||
+                  strncmp(head->data, "switch", 6) == 0 ||
+                  strncmp(head->data, "times", 5) == 0
+              ) {
                   char labelstr[256];
                   snprintf(labelstr, 256, "%s_end", (char*)head->data);
                   expression_create_goto(state, GOTO, labelstr);
@@ -433,8 +534,8 @@ Instructions:
               yyerror(state, "break not within while or switch");
               g_was_error = true;
           }
-    }
-    ;
+      }
+      ;
 
 IfBlock:
     "unless" Expression {
@@ -543,6 +644,66 @@ WhileBlock:
     } ";"
     ;
 
+TimesBlock:
+      "times" Expression {
+          if (g_ecl_simplecreate) {
+              yyerror(state, "times loops are not allowed in simple creation mode");
+              exit(2);
+          }
+          char loop_name[256];
+          snprintf(loop_name, 256, "times_%i_%i", yylloc.first_line, yylloc.first_column);
+          var_create(state, state->current_sub, loop_name);
+          state->current_sub->stack += 4;
+        
+          if ($2->result_type != 'S') {
+              char buf[256];
+              snprintf(buf, 256, "invalid iteration count type for a times loop: %c", $2->result_type);
+              yyerror(state, buf);
+              exit(2);
+          }
+
+          expression_output(state, $2);
+          expression_free($2);
+          
+          thecl_param_t* param = param_new('S');
+          param->stack = 1;
+          param->value.val.S = state->current_sub->stack - 4;
+
+          expr_t* expr = expr_get_by_symbol(state->version, ASSIGNI);
+          instr_add(state->current_sub, instr_new(state, expr->id, "p", param));
+
+          char labelstr_st[256];
+          char labelstr_end[256];
+          snprintf(labelstr_st, 256, "%s_st", (char*)loop_name);
+          snprintf(labelstr_end, 256, "%s_end", (char*)loop_name);
+
+          label_create(state, labelstr_st);
+          
+          param = param_new('S');
+          param->stack = 1;
+          param->value.val.S = state->current_sub->stack - 4;
+
+          expr = expr_get_by_symbol(state->version, DEC);
+          instr_add(state->current_sub, instr_new(state, expr->id, "p", param));
+
+          expression_create_goto(state, UNLESS, labelstr_end);
+
+          list_prepend_new(&state->block_stack, strdup(loop_name));
+    } "{" Instructions "}" {
+          char labelstr_st[256];
+          char labelstr_end[256];
+          list_node_t *head = state->block_stack.head;
+          snprintf(labelstr_st, 256, "%s_st", (char*)head->data);
+          snprintf(labelstr_end, 256, "%s_end", (char*)head->data);
+          
+          expression_create_goto(state, GOTO, labelstr_st);
+          label_create(state, labelstr_end);
+          
+          free(head->data);
+          list_del(&state->block_stack, head);
+    }
+    ;
+
 SwitchBlock:
     "switch" Expression {
           char labelstr[256];
@@ -569,7 +730,10 @@ SwitchBlock:
               expression_t *copy = expression_copy($2);
               expression_output(state, copy);
               expression_free(copy);
-              instr_add(state->current_sub, instr_new(state, 59, ""));
+
+              const expr_t* expr = expr_get_by_symbol(state->version, EQUALI);
+              instr_add(state->current_sub, instr_new(state, expr->id, ""));
+
               expression_free(switch_case->expr);
               expression_create_goto(state, IF, switch_case->labelstr);
               list_node_t *buf = node;
@@ -614,7 +778,23 @@ Case:
     /* TODO: Check the given parameters against the parameters expected for the
      *       instruction. */
 Instruction:
-      IDENTIFIER "(" Instruction_Parameters ")" "async" {
+      "@" IDENTIFIER "(" Instruction_Parameters ")" {
+          /* Force creating a sub call, even if it wasn't defined in the file earlier - useful for calling subs from default.ecl */
+          instr_create_call(state, TH10_INS_CALL, $2, $4);
+          if ($4 != NULL) {
+              list_free_nodes($4);
+              free($4);
+          }
+      }
+      | "@" IDENTIFIER "(" Instruction_Parameters ")" "async" {
+          /* Same as above, except use ins_15 (callAsync) instead of ins_11 (call) */
+          instr_create_call(state, TH10_INS_CALL_ASYNC, $2, $4);
+          if ($4 != NULL) {
+              list_free_nodes($4);
+              free($4);
+          }
+      } 
+      | IDENTIFIER "(" Instruction_Parameters ")" "async" {
           /* Search for sub */
           bool sub_found = false;
           thecl_sub_t* iter_sub;
@@ -624,8 +804,8 @@ Instruction:
               }
           }
           if (sub_found) {
-              instr_create_call(state, 15, $1, $3);
-              list_free_nodes($3);
+              instr_create_call(state, TH10_INS_CALL_ASYNC, $1, $3);
+              if ($3 != NULL) list_free_nodes($3);
           } else {
               char errbuf[256];
               snprintf(errbuf, 256, "unknown sub: %s", $1);
@@ -654,8 +834,8 @@ Instruction:
                 }
             }
             if (sub_found) {
-                instr_create_call(state, 11, $1, $3);
-                list_free_nodes($3);
+                instr_create_call(state, TH10_INS_CALL, $1, $3);
+                if ($3 != NULL) list_free_nodes($3);;
             } else {
                 char errbuf[256];
                 snprintf(errbuf, 256, "unknown mnemonic: %s", $1);
@@ -707,6 +887,8 @@ Instruction:
         expression_output(state, $1);
         expression_free($1);
       }
+    | VarDeclaration
+    | BreakStatement
     ;
 
 Instruction_Parameters:
@@ -787,6 +969,45 @@ Instruction_Parameter:
             $$->value.val.f = -1.0f;
         }
       }
+      | Expression {
+          list_prepend_new(&state->expressions, $1);
+
+          $$ = param_new($1->result_type);
+          $$->stack = 1;
+          $$->is_expression_param = $1->result_type;
+          if ($1->result_type == 'S') {
+              $$->value.val.S = -1;
+          } else {
+              $$->value.val.f = -1.0f;
+          }
+      }
+    ;
+
+Rank_Switch_Value:
+      Integer
+    | Floating
+    ;
+
+Rank_Switch_Next_Value: 
+      ":" Rank_Switch_Value {$$ = $2}
+    ;
+
+Rank_Switch_List:
+      Rank_Switch_Value Rank_Switch_Next_Value_List {
+        $$ = $2;
+        list_prepend_new($$, $1);
+      }
+    ;
+
+Rank_Switch_Next_Value_List:
+      Rank_Switch_Next_Value {
+        $$ = list_new();
+        list_append_new($$, $1);
+      }
+    | Rank_Switch_Next_Value_List Rank_Switch_Next_Value {
+        $$ = $1;
+        list_append_new($$, $2);
+    }
     ;
 
 Expression:
@@ -816,6 +1037,8 @@ Expression:
     | "cos" Expression            { $$ = EXPR_11(COS,                  $2); }
     | "sqrt" Expression           { $$ = EXPR_11(SQRT,                 $2); }
 
+    /* Custom expressions. */
+    | Rank_Switch_List            { $$ = expression_rank_switch_new(state, $1); }
     ;
 
 Address:
@@ -1062,6 +1285,26 @@ instr_add(
 }
 
 static void
+instr_prepend(
+    thecl_sub_t* sub,
+    thecl_instr_t* instr)
+{
+    list_prepend_new(&sub->instrs, instr);
+    instr->offset = 0;
+    sub->offset += instr->size;
+
+    thecl_instr_t* tmp_instr;
+    list_for_each(&sub->instrs, tmp_instr) {
+        tmp_instr->offset += instr->size;
+    }
+
+    thecl_label_t* tmp_label;
+    list_for_each(&sub->labels, tmp_label) {
+        tmp_label->offset += instr->size;
+    }
+}
+
+static void
 instr_create_call(
     parser_state_t *state,
     int type,
@@ -1104,6 +1347,14 @@ instr_create_call(
             param_free(iter_param);
             list_append_new(param_list, param);
         }
+
+    /* Output expressions from parameters. */
+    expression_t* expr;
+    list_for_each(&state->expressions, expr) {
+        expression_output(state, expr);
+        expression_free(expr);
+    }
+    list_free_nodes(&state->expressions);
 
     instr_add(state->current_sub, instr_new_list(state, type, param_list));
 }
@@ -1293,6 +1544,32 @@ expression_operation_new(
     exit(2);
 }
 
+static expression_t* 
+expression_rank_switch_new(
+    const parser_state_t* state, list_t* params
+) {
+    if (not_pre_th10(state->ecl->version)) {
+        expression_t* expr = malloc(sizeof(expression_t));
+        expr->type = EXPRESSION_RANK_SWITCH;
+
+        thecl_param_t* param = list_head(params);
+        expr->result_type = param->value.type;
+
+        list_for_each(params, param) {
+            if (param->value.type != expr->result_type) {
+                yyerror(state, "inconsistent parameter types for rank switch");
+                exit(2);
+            }
+        }
+
+        expr->children = *params;
+        return expr;
+    }
+    yyerror(state, "difficulty switch expression is not available in pre-th10 ECL");
+
+    exit(2);
+}
+
 static expression_t *
 expression_copy(
     expression_t *expr)
@@ -1342,6 +1619,39 @@ expression_output(
         }
 
         instr_add(state->current_sub, instr_new(state, expr->id, ""));
+    } else if (expr->type == EXPRESSION_RANK_SWITCH) {
+
+        const int diff_amt = state->has_overdrive_difficulty ? 5 : 4;
+        const char* diffs[5] = {"E", "N", "H", "L", "O"};
+
+        int diff = 0;
+        int ins_number = expr->result_type == 'S' ? 42 : 44; //  42 and 44 are ins numbers for pushing int/float to ECL stack
+        thecl_param_t* param;
+        thecl_instr_t* instr = NULL;
+
+        list_for_each(&expr->children, param) {
+            if (instr != NULL) {
+                instr->rank = parse_rank(state, diffs[diff++]);
+                instr_add(state->current_sub, instr);
+            }
+
+            if (diff > 4) {
+                yyerror(state, "too many parameters for difficulty switch");
+                exit(2);
+            }
+
+            instr = instr_new(state, ins_number, "p", param);
+        }
+
+        /* Set last ins to all remaining difficulties. */
+        char diff_str[5] = "";
+        while(diff < diff_amt) {
+            char* next_diff = diffs[diff++];
+            strcat(diff_str, next_diff);
+        }
+
+        instr->rank = parse_rank(state, diff_str);
+        instr_add(state->current_sub, instr);
     }
 }
 
@@ -1354,7 +1664,8 @@ expression_free(
         list_for_each(&expr->children, child_expr)
             expression_free(child_expr);
         list_free_nodes(&expr->children);
-    }
+    } else if (expr->type == EXPRESSION_RANK_SWITCH)
+        list_free_nodes(&expr->children);
     free(expr);
 }
 
@@ -1419,14 +1730,32 @@ static void
 sub_finish(
     parser_state_t* state)
 {
+    if (not_pre_th10(state->ecl->version) && !g_ecl_simplecreate) {
+        
+        thecl_instr_t* var_ins = instr_new(state, TH10_INS_STACK_ALLOC, "S", state->current_sub->stack);
+        var_ins->time = 0;
+        instr_prepend(state->current_sub, var_ins);
+
+        thecl_instr_t* last_ins = list_tail(&state->current_sub->instrs);
+        if (last_ins == NULL || last_ins->id != TH10_INS_RET_NORMAL && last_ins->id != TH10_INS_RET_BIG) {
+            instr_add(state->current_sub, instr_new(state, TH10_INS_RET_NORMAL, ""));
+        }
+    }
+
     state->current_sub = NULL;
 }
 
 static void
 var_create(
+    parser_state_t* state,
     thecl_sub_t* sub,
     const char* name)
 {
+    if (var_exists(sub, name)) {
+        char buf[256];
+        snprintf(buf, 256, "redeclaration of variable: %s", name);
+        yyerror(state, buf);
+    }
     ++sub->var_count;
     sub->vars = realloc(sub->vars, sub->var_count * sizeof(char*));
     sub->vars[sub->var_count - 1] = strdup(name);
@@ -1451,6 +1780,19 @@ var_find(
     }
     snprintf(buf, 256, "variable not found: %s", name);
     yyerror(state, buf);
+    return 0;
+}
+
+static int
+var_exists(
+    thecl_sub_t* sub,
+    const char* name)
+{
+    unsigned int i;
+    for (i = 0; i < sub->var_count; ++i) {
+        if (strcmp(name, sub->vars[i]) == 0) return 1;
+    }
+
     return 0;
 }
 

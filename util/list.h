@@ -51,6 +51,8 @@ list_t* list_new(void);
 list_node_t* list_node_new(void);
 /* Returns the data of head in the list. */
 void* list_head(list_t* list);
+/* Returns the data of tail in the list. */
+void* list_tail(list_t* list);
 /* Returns 1 if the list is empty. */
 int list_empty(list_t* list);
 /* Sets a node as the tail of the list. */

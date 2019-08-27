@@ -57,6 +57,13 @@ typedef enum {
 #define RANK_ID_6      (1 << 6)
 #define RANK_ID_7      (1 << 7)
 
+// Numbers of important ECL instructions
+#define TH10_INS_RET_BIG        1
+#define TH10_INS_RET_NORMAL     10
+#define TH10_INS_CALL           11
+#define TH10_INS_CALL_ASYNC     15
+#define TH10_INS_STACK_ALLOC    40
+
 typedef struct thecl_param_t {
     int type;
     value_t value;
@@ -68,6 +75,9 @@ thecl_param_t* param_new(
     int type);
 void param_free(
     thecl_param_t* param);
+
+int not_pre_th10(
+    unsigned int version);
 
 typedef struct thecl_instr_t {
     thecl_instr_type type;
@@ -188,6 +198,7 @@ extern int yyparse(parser_state_t*);
 extern eclmap_t* g_eclmap_opcode;
 extern eclmap_t* g_eclmap_global;
 extern bool g_ecl_rawoutput;
+extern bool g_ecl_simplecreate;
 extern bool g_was_error;
 
 #endif

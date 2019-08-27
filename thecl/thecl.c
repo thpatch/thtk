@@ -42,6 +42,7 @@ extern const thecl_module_t th10_ecl;
 eclmap_t* g_eclmap_opcode = NULL;
 eclmap_t* g_eclmap_global = NULL;
 bool g_ecl_rawoutput = false;
+bool g_ecl_simplecreate = false;
 bool g_was_error = false;
 
 thecl_t*
@@ -173,6 +174,25 @@ free_eclmaps(void)
     eclmap_free(g_eclmap_global);
 }
 
+int
+not_pre_th10(
+    unsigned int version)
+{
+    return version == 10
+        || version == 103
+        || version == 11
+        || version == 12
+        || version == 125
+        || version == 128
+        || version == 13
+        || version == 14
+        || version == 143
+        || version == 15
+        || version == 16
+        || version == 165
+        || version == 17;
+}
+
 static void
 print_usage(void)
 {
@@ -183,6 +203,7 @@ print_usage(void)
            "  -V  display version information and exit\n"
            "  -m  use map file for translating mnemonics\n"
            "  -r  output raw ECL opcodes, applying minimal transformations\n"
+           "  -s  use simple creation, which doesn't add any instructions automatically\n"
            "VERSION can be:\n"
            "  6, 7, 8, 9, 95, 10, 103 (for Uwabami Breakers), 11, 12, 125, 128, 13, 14, 143, 15, 16, 165 or 17\n"
            "Report bugs to <" PACKAGE_BUGREPORT ">.\n", argv0);
@@ -208,7 +229,7 @@ main(int argc, char* argv[])
     int opt;
     int ind=0;
     while(argv[util_optind]) {
-        switch(opt = util_getopt(argc, argv, ":c:d:Vm:r")) {
+        switch(opt = util_getopt(argc, argv, ":c:d:Vm:r:s")) {
         case 'c':
         case 'd':
             if(mode != -1) {
@@ -233,6 +254,9 @@ main(int argc, char* argv[])
         }
         case 'r':
             g_ecl_rawoutput = true;
+            break;
+        case 's':
+            g_ecl_simplecreate = true;
             break;
         default:
             util_getopt_default(&ind,argv,opt,print_usage);
@@ -281,6 +305,12 @@ main(int argc, char* argv[])
         if(g_ecl_rawoutput) {
             if (mode != 'd') {
                 fprintf(stderr, "%s: 'r' option cannot be used while compiling\n", argv0);
+                exit(1);
+            }
+        }
+        if (g_ecl_simplecreate) {
+            if (mode != 'c') {
+                fprintf(stderr, "%s: 's' option cannot be used while dumping\n", argv0);
                 exit(1);
             }
         }

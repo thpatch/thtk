@@ -69,6 +69,16 @@ list_head(
         return NULL;
 }
 
+void*
+list_tail(
+    list_t* list)
+{
+    if (list->tail)
+        return list->tail->data;
+    else
+        return NULL;
+}
+
 int
 list_empty(
     list_t* list)

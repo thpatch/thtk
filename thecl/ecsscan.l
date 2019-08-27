@@ -84,6 +84,7 @@
 "else"     return ELSE;
 "do"       return DO;
 "while"    return WHILE;
+"times"    return TIMES;
 "switch"   return SWITCH;
 "case"     return CASE;
 "break"    return BREAK;
@@ -126,6 +127,10 @@ _fS return CAST_FI;
     yylval.floating = strtof(yytext, NULL);
     return FLOATING;
 }
+rad\(-?[0-9]+(\.[0-9]*)?f\) {
+    yylval.floating = strtof(yytext+4, NULL) / 180.0f * 3.14159265359f;
+    return FLOATING;
+}
 ins_[0-9]+ {
     yylval.integer = strtol(yytext + 4, NULL, 10);
     return INSTRUCTION;
@@ -136,6 +141,12 @@ ins_[0-9]+ {
 }
 -?0x[0-9a-fA-F]+ {
     yylval.integer = strtol(yytext, NULL, 16);
+    return INTEGER;
+}
+-?0b[0-1]+ {
+    bool isNegative = yytext[0] == '-';
+    yylval.integer = strtol(yytext + (isNegative ? 3 : 2), NULL, 2);
+    if (isNegative) yylval.integer = -yylval.integer;
     return INTEGER;
 }
 ![-*ENHLWXYZO4567]+ {

@@ -115,19 +115,7 @@ th10_expressions[] = {
 static const expr_t*
 expr_get_table(unsigned int version)
 {
-    if (   version == 10
-        || version == 103
-        || version == 11
-        || version == 12
-        || version == 125
-        || version == 128
-        || version == 13
-        || version == 14
-        || version == 143
-        || version == 15
-        || version == 16
-        || version == 165
-        || version == 17)
+    if (not_pre_th10(version))
         return th10_expressions;
     return th10_no_expressions;
 }
