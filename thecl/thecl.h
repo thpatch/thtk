@@ -118,6 +118,11 @@ typedef struct {
 
 /* TODO: Move label creation functions here. */
 
+typedef struct {
+    char* name;
+    int type;
+} thecl_variable_t;
+
 /* TODO: Clean this up. */
 typedef struct {
     char* name;
@@ -125,7 +130,7 @@ typedef struct {
     size_t stack;
     ssize_t arity;
     size_t var_count;
-    char** vars;
+    thecl_variable_t** vars;
     uint32_t offset;
     list_t labels;
 } thecl_sub_t;

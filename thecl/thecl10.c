@@ -1596,14 +1596,16 @@ th10_dump(
         fprintf(out, "\nsub %s(", sub->name);
         for (p = 0; p < sub->arity; ++p) {
             if (p != 0)
-                fprintf(out, " ");
-            fprintf(out, "%c", 'A' + p);
+                fprintf(out, ", ");
+            fprintf(out, "var %c", 'A' + p);
         }
         fprintf(out, ")\n{\n");
 
         if(!g_ecl_rawoutput) {
             fprintf(out, "    var");
             for (p = sub->arity * 4; p < sub->stack; p += 4) {
+                if (p != sub->arity * 4)
+                    fprintf(out, ",");
                 fprintf(out, " %c", 'A' + p / 4);
             }
             fprintf(out, ";\n");

@@ -116,9 +116,13 @@ static void sub_begin(parser_state_t* state, char* name);
 static void sub_finish(parser_state_t* state);
 
 /* Creates a new variable in the specified subroutine. */
-static void var_create(parser_state_t* state, thecl_sub_t* sub, const char* name);
+static void var_create(parser_state_t* state, thecl_sub_t* sub, const char* name, int type);
+/* Creates a new variable in the specified subroutine, and assigns a value to it.. */
+static void var_create_assign(parser_state_t* state, thecl_sub_t* sub, const char* name, int type, expression_t* expr);
 /* Returns the stack offset of a specified variable in the specified sub. */
-static int var_find(parser_state_t* state, thecl_sub_t* sub, const char* name);
+static int var_stack(parser_state_t* state, thecl_sub_t* sub, const char* name);
+/* Returns the type of a specified variable in the specified sub. */
+static int var_type(parser_state_t* state, thecl_sub_t* sub, const char* name);
 /* Returns 1 if a variable of a given name exists, and 0 if it doesn't. */
 static int var_exists(thecl_sub_t* sub, const char* name);
 /* Stores a new label in the current subroutine pointing to the current offset. */
@@ -153,7 +157,7 @@ void set_time(parser_state_t* state, int new_time);
 %token <string> IDENTIFIER "identifier"
 %token <string> TEXT "text"
 %token <integer> INTEGER "integer"
-%token <floating> FLOATING "float"
+%token <floating> FLOATING "floating"
 %token <string> RANK "rank"
 %token COMMA ","
 %token COLON ":"
@@ -170,6 +174,8 @@ void set_time(parser_state_t* state, int new_time);
 %token ECLI "ecli"
 %token SUB "sub"
 %token VAR "var"
+%token INT "int"
+%token FLOAT "float"
 %token LOCAL "local"
 %token AT "@"
 %token BRACE_OPEN "{"
@@ -245,8 +251,6 @@ void set_time(parser_state_t* state, int new_time);
 %token DOLLAR "$"
 
 %type <list> Text_Semicolon_List
-%type <list> Optional_Identifier_Whitespace_List
-%type <list> Identifier_Whitespace_List
 %type <list> Instruction_Parameters_List
 %type <list> Instruction_Parameters
 %type <list> Integer_List
@@ -270,6 +274,8 @@ void set_time(parser_state_t* state, int new_time);
 
 %type <integer> Cast_Target
 %type <integer> Cast_Target2
+%type <integer> VarDeclareKeyword
+%type <integer> VarDeclaration
 
 %nonassoc ADD ADDI ADDF SUBTRACT SUBTRACTI SUBTRACTF MULTIPLY MULTIPLYI MULTIPLYF DIVIDE DIVIDEI DIVIDEF EQUAL EQUALI EQUALF INEQUAL INEQUALI INEQUALF LT LTI LTF LTEQ LTEQI LTEQF GT GTI GTF GTEQ GTEQI GTEQF MODULO OR AND XOR B_OR B_AND
 %left NOT NEG NEGI NEGF SIN COS SQRT
@@ -286,17 +292,8 @@ Statement:
         sub_begin(state, $2);
         free($2);
       }
-      "(" Optional_Identifier_Whitespace_List ")" {
-            state->current_sub->arity = 0;
-            if ($5 && !list_empty($5)) {
-                string_t* str;
-                list_for_each($5, str) {
-                    state->current_sub->arity++;
-                    var_create(state, state->current_sub, str->text);
-                }
-                string_list_free($5);
-            }
-            state->current_sub->stack = state->current_sub->arity * 4;
+      "(" ArgumentDeclaration ")" {
+            state->current_sub->arity = state->current_sub->stack / 4;
       }
       "{" Subroutine_Body "}" {
         sub_finish(state);
@@ -375,21 +372,6 @@ Global_Def:
     | Floating
 ;
 
-Optional_Identifier_Whitespace_List:
-      { $$ = NULL; }
-    | Identifier_Whitespace_List
-    ;
-
-Identifier_Whitespace_List:
-      IDENTIFIER {
-        $$ = list_new();
-        string_list_add($$, $1);
-      }
-    | Identifier_Whitespace_List IDENTIFIER {
-        $$ = string_list_add($1, $2);
-      }
-    ;
-
 Text_Semicolon_List:
       TEXT ";" {
         $$ = list_new();
@@ -400,99 +382,46 @@ Text_Semicolon_List:
       }
     ;
 
-VarDeclareMany:
-    "var" Optional_Identifier_Whitespace_List {
-        if (!not_pre_th10(state->version)) {
-            char buf[256];
-            snprintf(buf, 256, "stack variable declaration is not allowed in version: %i", state->version);
-            yyerror(state, buf);
-            exit(2);
-        }
-        size_t var_list_length = 0;
-        string_t* str;
-
-        if ($2) {
-            list_for_each($2, str) {
-                ++var_list_length;
-                var_create(state, state->current_sub, str->text);
-            }
-            string_list_free($2);
-        }
-
-        state->current_sub->stack += var_list_length * 4;
-
-        if (g_ecl_simplecreate) {
-            instr_add(state->current_sub, instr_new(state, TH10_INS_STACK_ALLOC, "S", state->current_sub->stack));
-        }
-    }
-    ;
-
-VarDeclareAssign:
-      VarIntegerAssign
-    | VarFloatAssign
-    ;
-
-VarIntegerAssign:
-    "var" "$" IDENTIFIER "=" Expression {
-        if (!not_pre_th10(state->version)) {
-            char buf[256];
-            snprintf(buf, 256, "stack variable declaration is not allowed in version: %i", state->version);
-            yyerror(state, buf);
-            exit(2);
-        }
-        if (g_ecl_simplecreate) {
-            yyerror(state, "var creation with assignment is not allowed in simple creation mode");
-            exit(2);
-        }
-
-        var_create(state, state->current_sub, $3);
-        state->current_sub->stack += 4;
-
-        expression_output(state, $5);
-        expression_free($5);
-
-        thecl_param_t* param = param_new('S');
-        param->value.type = 'S';
-        param->value.val.S = state->current_sub->stack - 4;
-        param->stack = 1;
-
-        const expr_t* expr = expr_get_by_symbol(state->version, ASSIGNI);
-        instr_add(state->current_sub, instr_new(state, expr->id, "p", param));
-    }
-    ;
-
-VarFloatAssign:
-    "var" "%" IDENTIFIER "=" Expression {
-        if (!not_pre_th10(state->version)) {
-            char buf[256];
-            snprintf(buf, 256, "stack variable declaration is not allowed in version: %i", state->version);
-            yyerror(state, buf);
-            exit(2);
-        }
-        if (g_ecl_simplecreate) {
-            yyerror(state, "var creation with assignment is not allowed in simple creation mode");
-            exit(2);
-        }
-
-        var_create(state, state->current_sub, $3);
-        state->current_sub->stack += 4;
-
-        expression_output(state, $5);
-        expression_free($5);
-
-        thecl_param_t* param = param_new('f');
-        param->value.type = 'f';
-        param->value.val.f = state->current_sub->stack - 4;
-        param->stack = 1;
-
-        const expr_t* expr = expr_get_by_symbol(state->version, ASSIGNF);
-        instr_add(state->current_sub, instr_new(state, expr->id, "p", param));
-    }
+VarDeclareKeyword:
+      "var" { $$ = 0 }
+    | "int" { $$ = 'S' }
+    | "float" { $$ = 'f' }
     ;
 
 VarDeclaration:
-      VarDeclareMany
-    | VarDeclareAssign
+      VarDeclareKeyword
+    | VarDeclareKeyword IDENTIFIER {
+          $$ = $1;
+          var_create(state, state->current_sub, $2, $1);
+          free($2);
+      }
+    | VarDeclareKeyword IDENTIFIER "=" Expression {
+          $$ = $1;
+          var_create_assign(state, state->current_sub, $2, $1, $4);
+          free($2);
+      }
+    | VarDeclaration "," IDENTIFIER {
+          $$ = $1;
+          var_create(state, state->current_sub, $3, $1);
+          free($3);
+      }
+    | VarDeclaration "," IDENTIFIER "=" Expression {
+          $$ = $1;
+          var_create_assign(state, state->current_sub, $3, $1, $5);
+          free($3);
+      }
+    ;
+
+ArgumentDeclaration:
+    /* The | at the beginning is obviously intentional and needed to allow creating subs with no arguments. */
+    | VarDeclareKeyword IDENTIFIER {
+          var_create(state, state->current_sub, $2, $1);
+          free($2);
+      }
+    | ArgumentDeclaration "," VarDeclareKeyword IDENTIFIER {
+          var_create(state, state->current_sub, $4, $3);
+          free($4);
+      }
     ;
 
 Instructions:
@@ -652,8 +581,7 @@ TimesBlock:
           }
           char loop_name[256];
           snprintf(loop_name, 256, "times_%i_%i", yylloc.first_line, yylloc.first_column);
-          var_create(state, state->current_sub, loop_name);
-          state->current_sub->stack += 4;
+          var_create(state, state->current_sub, loop_name, 'S');
         
           if ($2->result_type != 'S') {
               char buf[256];
@@ -887,7 +815,10 @@ Instruction:
         expression_output(state, $1);
         expression_free($1);
       }
-    | VarDeclaration
+    | VarDeclaration {
+        if (g_ecl_simplecreate)
+            instr_add(state->current_sub, instr_new(state, TH10_INS_STACK_ALLOC, "S", state->current_sub->stack));
+    }
     | BreakStatement
     ;
 
@@ -1070,15 +1001,32 @@ Address:
     | "$" IDENTIFIER {
         $$ = param_new('S');
         $$->stack = 1;
-        $$->value.val.S = var_find(state, state->current_sub, $2);
+        $$->value.val.S = var_stack(state, state->current_sub, $2);
         free($2);
       }
     | "%" IDENTIFIER {
         $$ = param_new('f');
         $$->stack = 1;
-        $$->value.val.f = var_find(state, state->current_sub, $2);
+        $$->value.val.f = var_stack(state, state->current_sub, $2);
         free($2);
       }
+    | IDENTIFIER {
+        int type = var_type(state, state->current_sub, $1);
+        if (type == 0) {
+            char buf[256];
+            snprintf(buf, 256, "typeless variables need to have their type specified with a %% or $ prefix when used: %s", $1);
+            yyerror(state, buf);
+            exit(2);
+        }
+        $$ = param_new(type);
+        $$->stack = 1;
+        if (type == 'S') {
+            $$->value.val.S = var_stack(state, state->current_sub, $1);
+        } else {
+            $$->value.val.f = var_stack(state, state->current_sub, $1);
+        }
+        free($1);
+    }
     ;
 
 Address_Type:
@@ -1749,20 +1697,74 @@ static void
 var_create(
     parser_state_t* state,
     thecl_sub_t* sub,
-    const char* name)
+    const char* name,
+    int type)
 {
+    if (!not_pre_th10(state->version)) {
+        char buf[256];
+        snprintf(buf, 256, "stack variable declaration is not allowed in version: %i", state->version);
+        yyerror(state, buf);
+        exit(2);
+    }
+    if (g_ecl_simplecreate && type != 0) {
+        char buf[256];
+        snprintf(buf, 256, "only typeless variables are allowed in simple creation mode: %s", name);
+        yyerror(state, buf);
+        exit(2);
+    }
     if (var_exists(sub, name)) {
         char buf[256];
         snprintf(buf, 256, "redeclaration of variable: %s", name);
         yyerror(state, buf);
     }
+
+    thecl_variable_t* var = malloc(sizeof(thecl_variable_t));
+    var->name = strdup(name);
+    var->type = type;
+
     ++sub->var_count;
-    sub->vars = realloc(sub->vars, sub->var_count * sizeof(char*));
-    sub->vars[sub->var_count - 1] = strdup(name);
+    sub->vars = realloc(sub->vars, sub->var_count * sizeof(thecl_variable_t*));
+    sub->vars[sub->var_count - 1] = var;
+
+    sub->stack += 4;
+}
+
+static void
+var_create_assign(
+    parser_state_t* state,
+    thecl_sub_t* sub,
+    const char* name,
+    int type,
+    expression_t* expr)
+{
+    if (g_ecl_simplecreate) {
+        yyerror(state, "var creation with assignment is not allowed in simple creation mode");
+        exit(2);
+    }
+    if (type == 0) {
+        yyerror(state, "var creation with assignment requires int/float declaration keyword");
+        exit(2);
+    }
+    var_create(state, sub, name, type);
+
+    expression_output(state, expr);
+    expression_free(expr);
+
+    thecl_param_t* param = param_new(type);
+    param->value.type = type;
+    if (type == 'S') {
+        param->value.val.S = state->current_sub->stack - 4;
+    } else {
+        param->value.val.f = state->current_sub->stack - 4;
+    }
+    param->stack = 1;
+
+    const expr_t* expr_assign = expr_get_by_symbol(state->version, type == 'S' ? ASSIGNI : ASSIGNF);
+    instr_add(state->current_sub, instr_new(state, expr_assign->id, "p", param));
 }
 
 static int
-var_find(
+var_stack(
     parser_state_t* state,
     thecl_sub_t* sub,
     const char* name)
@@ -1775,8 +1777,28 @@ var_find(
     char buf[256];
     unsigned int i;
     for (i = 0; i < sub->var_count; ++i) {
-        if (strcmp(name, sub->vars[i]) == 0)
+        if (strcmp(name, sub->vars[i]->name) == 0)
             return i * 4;
+    }
+    snprintf(buf, 256, "variable not found: %s", name);
+    yyerror(state, buf);
+    return 0;
+}
+
+static int
+var_type(
+    parser_state_t* state,
+    thecl_sub_t* sub,
+    const char* name)
+{
+    eclmap_entry_t* ent = eclmap_find(g_eclmap_global, name);
+    if (ent) return ent->signature[0] == '$' ? 'S' : 'f';
+    
+    char buf[256];
+    unsigned int i;
+    for (i = 0; i < sub->var_count; ++i) {
+        if (strcmp(name, sub->vars[i]->name) == 0)
+            return sub->vars[i]->type;
     }
     snprintf(buf, 256, "variable not found: %s", name);
     yyerror(state, buf);
@@ -1790,7 +1812,7 @@ var_exists(
 {
     unsigned int i;
     for (i = 0; i < sub->var_count; ++i) {
-        if (strcmp(name, sub->vars[i]) == 0) return 1;
+        if (strcmp(name, sub->vars[i]->name) == 0) return 1;
     }
 
     return 0;

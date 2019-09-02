@@ -75,6 +75,8 @@
 "ecli"     return ECLI;
 "sub"      return SUB;
 "var"      return VAR;
+"int"      return INT;
+"float"    return FLOAT;
 "local"    return LOCAL;
 "@"        return AT;
 
