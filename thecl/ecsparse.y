@@ -863,10 +863,12 @@ Cast_Target2:
     | CAST_IF { $$ = 0x6966; }
     | CAST_FF { $$ = 0x6666; }
     | CAST_FI { $$ = 0x6669; }
+    ;
 
 Cast_Target:
       CAST_INTEGER  { $$ = 'S'; }
     | CAST_FLOATING { $$ = 'f'; }
+    ;
 
 Cast_Type:
       Address
