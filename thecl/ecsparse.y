@@ -87,8 +87,9 @@ static expression_t* expression_rank_switch_new(
     const parser_state_t* state, list_t* params
 );
 
-static void expression_output(parser_state_t* state, expression_t* expr);
+static void expression_output(parser_state_t* state, expression_t* expr, int has_no_parents);
 static void expression_free(expression_t* expr);
+static void expression_optimize(expression_t* expr);
 #define EXPR_22(a, b, A, B) \
     expression_operation_new(state, (int[]){ a, b, 0 }, (expression_t*[]){ A, B, NULL })
 #define EXPR_12(a, A, B) \
@@ -205,6 +206,14 @@ void set_time(parser_state_t* state, int new_time);
 %token ASSIGN "="
 %token ASSIGNI "$="
 %token ASSIGNF "%="
+%token ASSIGNADD "+="
+%token ASSIGNSUB "-="
+%token ASSIGNMUL "*="
+%token ASSIGNDIV "/="
+%token ASSIGNMOD "%="
+%token ASSIGNXOR "^="
+%token ASSIGNBOR "|="
+%token ASSIGNBAND "&="
 %token ADD "+"
 %token ADDI "$+"
 %token ADDF "%+"
@@ -443,13 +452,13 @@ Block:
       /* Moving the old if ... gotos to Block, because if else would break with them being in Instruction. */
       "if" Expression "goto" Label "@" Integer ";" {
         const expr_t* expr = expr_get_by_symbol(state->version, IF);
-        expression_output(state, $2);
+        expression_output(state, $2, 1);
         expression_free($2);
         instr_add(state->current_sub, instr_new(state, expr->id, "pp", $4, $6));
       }
     | "unless" Expression "goto" Label "@" Integer ";" {
         const expr_t* expr = expr_get_by_symbol(state->version, UNLESS);
-        expression_output(state, $2);
+        expression_output(state, $2, 1);
         expression_free($2);
         instr_add(state->current_sub, instr_new(state, expr->id, "pp", $4, $6));
       }
@@ -491,7 +500,7 @@ IfBlock:
           char labelstr[256];
           snprintf(labelstr, 256, "unless_%i_%i", yylloc.first_line, yylloc.first_column);
           list_prepend_new(&state->block_stack, strdup(labelstr));
-          expression_output(state, $2);
+          expression_output(state, $2, 1);
           expression_free($2);
           expression_create_goto(state, IF, labelstr);
       } CodeBlock ElseBlock {
@@ -505,7 +514,7 @@ IfBlock:
           char labelstr[256];
           snprintf(labelstr, 256, "if_%i_%i", yylloc.first_line, yylloc.first_column);
           list_prepend_new(&state->block_stack, strdup(labelstr));
-          expression_output(state, $2);
+          expression_output(state, $2, 1);
           expression_free($2);
           expression_create_goto(state, UNLESS, labelstr);
       } CodeBlock ElseBlock {
@@ -550,7 +559,7 @@ WhileBlock:
 
           list_prepend_new(&state->block_stack, strdup(labelstr));
           label_create(state, labelstr_st);
-          expression_output(state, $2);
+          expression_output(state, $2, 1);
           expression_free($2);
           expression_create_goto(state, UNLESS, labelstr_end);
       } CodeBlock {
@@ -583,7 +592,7 @@ WhileBlock:
           snprintf(labelstr_st, 256, "%s_st", (char*)head->data);
           snprintf(labelstr_end, 256, "%s_end", (char*)head->data);
 
-          expression_output(state, $5);
+          expression_output(state, $5, 1);
           expression_free($5);
           expression_create_goto(state, IF, labelstr_st);
           label_create(state, labelstr_end);
@@ -610,7 +619,7 @@ TimesBlock:
               exit(2);
           }
 
-          expression_output(state, $2);
+          expression_output(state, $2, 1);
           expression_free($2);
           
           thecl_param_t* param = param_new('S');
@@ -674,9 +683,9 @@ SwitchBlock:
           list_node_t *node = state->block_stack.head;
           while (node->data) {
               switch_case_t *switch_case = node->data;
-              expression_output(state, switch_case->expr);
+              expression_output(state, switch_case->expr, 1);
               expression_t *copy = expression_copy($2);
-              expression_output(state, copy);
+              expression_output(state, copy, 1);
               expression_free(copy);
 
               const expr_t* expr = expr_get_by_symbol(state->version, EQUALI);
@@ -766,7 +775,7 @@ Instruction:
       | IDENTIFIER "(" Instruction_Parameters ")" {
         expression_t* expr;
         list_for_each(&state->expressions, expr) {
-            expression_output(state, expr);
+            expression_output(state, expr, 1);
             expression_free(expr);
         }
         list_free_nodes(&state->expressions);
@@ -800,7 +809,7 @@ Instruction:
     | INSTRUCTION "(" Instruction_Parameters ")" {
         expression_t* expr;
         list_for_each(&state->expressions, expr) {
-            expression_output(state, expr);
+            expression_output(state, expr, 1);
             expression_free(expr);
         }
         list_free_nodes(&state->expressions);
@@ -815,7 +824,7 @@ Instruction:
       }
     | Assignment
     | Expression {
-        expression_output(state, $1);
+        expression_output(state, $1, 1);
         expression_free($1);
       }
     | VarDeclaration {
@@ -828,18 +837,18 @@ Instruction:
 Assignment:
       Address "=" Expression {
         const expr_t* expr = expr_get_by_symbol(state->version, $1->type == 'S' ? ASSIGNI : ASSIGNF);
-        expression_output(state, $3);
+        expression_output(state, $3, 1);
         expression_free($3);
         instr_add(state->current_sub, instr_new(state, expr->id, "p", $1));
       }
-    | Address "+" "=" Expression { var_shorthand_assign(state, $1, $4, ADDI, ADDF); }
-    | Address "-" "=" Expression { var_shorthand_assign(state, $1, $4, SUBTRACTI, SUBTRACTF); }
-    | Address "*" "=" Expression { var_shorthand_assign(state, $1, $4, MULTIPLYI, MULTIPLYF); }
-    | Address "/" "=" Expression { var_shorthand_assign(state, $1, $4, DIVIDEI, DIVIDEF); }
-    | Address "%" "=" Expression { var_shorthand_assign(state, $1, $4, MODULO, 0); }
-    | Address "^" "=" Expression { var_shorthand_assign(state, $1, $4, XOR, 0); }
-    | Address "|" "=" Expression { var_shorthand_assign(state, $1, $4, B_OR, 0); }
-    | Address "&" "=" Expression { var_shorthand_assign(state, $1, $4, B_AND, 0); }
+    | Address "+=" Expression { var_shorthand_assign(state, $1, $3, ADDI, ADDF); }
+    | Address "-=" Expression { var_shorthand_assign(state, $1, $3, SUBTRACTI, SUBTRACTF); }
+    | Address "*=" Expression { var_shorthand_assign(state, $1, $3, MULTIPLYI, MULTIPLYF); }
+    | Address "/=" Expression { var_shorthand_assign(state, $1, $3, DIVIDEI, DIVIDEF); }
+    | Address "%=" Expression { var_shorthand_assign(state, $1, $3, MODULO, 0); }
+    | Address "^=" Expression { var_shorthand_assign(state, $1, $3, XOR, 0); }
+    | Address "|=" Expression { var_shorthand_assign(state, $1, $3, B_OR, 0); }
+    | Address "&=" Expression { var_shorthand_assign(state, $1, $3, B_AND, 0); }
 ;
 
 Instruction_Parameters:
@@ -1321,7 +1330,7 @@ instr_create_call(
     /* Output expressions from parameters. */
     expression_t* expr;
     list_for_each(&state->expressions, expr) {
-        expression_output(state, expr);
+        expression_output(state, expr, 1);
         expression_free(expr);
     }
     list_free_nodes(&state->expressions);
@@ -1578,14 +1587,19 @@ expression_create_goto(
 static void
 expression_output(
     parser_state_t* state,
-    expression_t* expr)
+    expression_t* expr,
+    int has_no_parents)
 {
+    if (!g_ecl_simplecreate && has_no_parents)
+        // Since expression_optimize is already done recursively for children, it shouldn't be called for child expressions.
+        expression_optimize(state, expr);
+
     if (expr->type == EXPRESSION_VAL) {
         instr_add(state->current_sub, instr_new(state, expr->id, "p", expr->value));
     } else if (expr->type == EXPRESSION_OP) {
         expression_t* child_expr;
         list_for_each(&expr->children, child_expr) {
-            expression_output(state, child_expr);
+            expression_output(state, child_expr, 0);
         }
 
         instr_add(state->current_sub, instr_new(state, expr->id, ""));
@@ -1623,6 +1637,150 @@ expression_output(
         instr->rank = parse_rank(state, diff_str);
         instr_add(state->current_sub, instr);
     }
+}
+
+static void
+expression_optimize(
+    parser_state_t* state,
+    expression_t* expression)
+{
+    if (expression->type != EXPRESSION_OP) return;
+
+    int child_cnt = 0;
+    expression_t* child_expr_1;
+    expression_t* child_expr_2;
+    expression_t* child_expr;
+    list_for_each(&expression->children, child_expr) {
+        if (child_expr->type == EXPRESSION_OP) {
+            expression_optimize(state, child_expr);
+        }
+
+        if (child_cnt == 0) {
+            child_expr_1 = child_expr;
+        } else if (child_cnt == 1) {
+            child_expr_2 = child_expr;
+        }
+        ++child_cnt;
+    }
+
+    // TODO: handle some single-child expressions, such as sin or cos
+    if (child_cnt != 2) return;
+
+    if (
+           child_expr_1->type != EXPRESSION_VAL
+        || child_expr_2->type != EXPRESSION_VAL
+        || child_expr_1->value->stack // Variables are not acceptable, obviously.
+        || child_expr_2->value->stack
+    ) return;
+
+    expr_t* tmp_expr = expr_get_by_id(state->version, expression->id);
+    
+    // Need to get the type from tmp_expr->return_type, since expression->result_type could have been modified by typecasts.
+    thecl_param_t* param = param_new(tmp_expr->return_type);
+
+    int res1 = child_expr_1->value->type;
+    int res2 = child_expr_2->value->type;
+    
+    int val1S = res1 == 'S' ? child_expr_1->value->value.val.S : (int)(child_expr_1->value->value.val.f);
+    float val1f = res1 == 'f' ? child_expr_1->value->value.val.f : (float)(child_expr_1->value->value.val.S);
+    int val2S = res2 == 'S' ? child_expr_2->value->value.val.S : (int)(child_expr_2->value->value.val.f);
+    float val2f = res2 == 'f' ? child_expr_2->value->value.val.f : (float)(child_expr_2->value->value.val.S);
+
+    switch(tmp_expr->symbol) {
+        case ADDI:
+            param->value.val.S = val1S + val2S;
+        break;
+        case ADDF:
+            param->value.val.f = val1f + val2f;
+        break;
+        case SUBTRACTI:
+            param->value.val.S = val1S - val2S;
+        break;
+        case SUBTRACTF:
+            param->value.val.f = val1f - val2f;
+        break;
+        case MULTIPLYI:
+            param->value.val.S = val1S * val2S;
+        break;
+        case MULTIPLYF:
+            param->value.val.f = val1f * val2f;
+        break;
+        case DIVIDEI:
+            param->value.val.S = val1S / val2S;
+        break;
+        case DIVIDEF:
+            param->value.val.f = val1f / val2f;
+        break;
+        case MODULO:
+            param->value.val.S = val1S % val2S;
+        break;
+        case EQUALI:
+            param->value.val.S = val1S == val2S;
+        break;
+        case EQUALF:
+            param->value.val.S = val1f == val2f;
+        break;
+        case INEQUALI:
+            param->value.val.S = val1S != val2S;
+        break;
+        case INEQUALF:
+            param->value.val.S = val1f != val2f;
+        break;
+        case LTI:
+            param->value.val.S = val1S < val2S;
+        break;
+        case LTF:
+            param->value.val.S = val1f < val2f;
+        break;
+        case LTEQI:
+            param->value.val.S = val1S <= val2S;
+        break;
+        case LTEQF:
+            param->value.val.S = val1f <= val2f;
+        break;
+        case GTI:
+            param->value.val.S = val1S > val2S;
+        break;
+        case GTF:
+            param->value.val.S = val1f > val2f;
+        break;
+        case GTEQI:
+            param->value.val.S = val1S >= val2S;
+        break;
+        case GTEQF:
+            param->value.val.S = val1f >= val2f;
+        break;
+        case OR:
+            param->value.val.S = val1S || val2S;
+        break;
+        case AND:
+            param->value.val.S = val1S && val2S;
+        break;
+        case XOR:
+            param->value.val.S = val1S ^ val2S;
+        break;
+        case B_OR:
+            param->value.val.S = val1S | val2S;
+        break;
+        case B_AND:
+            param->value.val.S = val1S & val2S;
+        break;
+        default:
+            // Since the cases above cover all existing 2-parameter expressions there is no possibility of this ever hapenning.
+            // Just putting this error message in case someone adds new expressions and forgets about handling them here...
+            yyerror(state, "Math preprocessing error! Try using simple creation mode.");
+    }
+
+    expression->value = param;
+    expression->type = EXPRESSION_VAL;
+    tmp_expr = expr_get_by_symbol(state->version, param->type == 'S' ? LOADI : LOADF);
+    expression->id = tmp_expr->id;
+
+    param_free(child_expr_1->value);
+    param_free(child_expr_2->value);
+    expression_free(child_expr_1);
+    expression_free(child_expr_2);
+    list_free_nodes(&expression->children);
 }
 
 static void
@@ -1769,7 +1927,7 @@ var_create_assign(
     }
     var_create(state, sub, name, type);
 
-    expression_output(state, expr);
+    expression_output(state, expr, 1);
     expression_free(expr);
 
     thecl_param_t* param = param_new(type);
@@ -1854,7 +2012,7 @@ var_shorthand_assign(
 
     expression_t* expr_load = expression_load_new(state, param_clone);
     expression_t* expr_main = EXPR_22(EXPRI, EXPRF, expr_load, expr_assign);
-    expression_output(state, expr_main);
+    expression_output(state, expr_main, 1);
     expression_free(expr_main);
     // No need to free expr_load or expr, since they both got freed as children of expr_main.
 

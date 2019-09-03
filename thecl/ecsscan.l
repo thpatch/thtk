@@ -93,6 +93,14 @@
 "async"    return ASYNC;
 "global"   return GLOBAL;
 "="        return ASSIGN;
+"+="       return ASSIGNADD;
+"-="       return ASSIGNSUB;
+"*="       return ASSIGNMUL;
+"/="       return ASSIGNDIV;
+"%="       return ASSIGNMOD;
+"^="       return ASSIGNXOR;
+"|="       return ASSIGNBOR;
+"&="       return ASSIGNBAND;
 "+"        return ADD;
 "-"        return SUBTRACT;
 "*"        return MULTIPLY;
