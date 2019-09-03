@@ -125,6 +125,8 @@ static int var_stack(parser_state_t* state, thecl_sub_t* sub, const char* name);
 static int var_type(parser_state_t* state, thecl_sub_t* sub, const char* name);
 /* Returns 1 if a variable of a given name exists, and 0 if it doesn't. */
 static int var_exists(thecl_sub_t* sub, const char* name);
+/* Compiles a shorthand assignment operation on a given variable */
+static void var_shorthand_assign(parser_state_t* state, thecl_param_t* param, expression_t* expr, int EXPRI, int EXPRF);
 /* Stores a new label in the current subroutine pointing to the current offset. */
 static void label_create(parser_state_t* state, char* label);
 
@@ -811,12 +813,7 @@ Instruction:
         const expr_t* expr = expr_get_by_symbol(state->version, GOTO);
         instr_add(state->current_sub, instr_new(state, expr->id, "pp", $2, $4));
       }
-    | Address "=" Expression {
-        const expr_t* expr = expr_get_by_symbol(state->version, $1->type == 'S' ? ASSIGNI : ASSIGNF);
-        expression_output(state, $3);
-        expression_free($3);
-        instr_add(state->current_sub, instr_new(state, expr->id, "p", $1));
-      }
+    | Assignment
     | Expression {
         expression_output(state, $1);
         expression_free($1);
@@ -827,6 +824,23 @@ Instruction:
     }
     | BreakStatement
     ;
+
+Assignment:
+      Address "=" Expression {
+        const expr_t* expr = expr_get_by_symbol(state->version, $1->type == 'S' ? ASSIGNI : ASSIGNF);
+        expression_output(state, $3);
+        expression_free($3);
+        instr_add(state->current_sub, instr_new(state, expr->id, "p", $1));
+      }
+    | Address "+" "=" Expression { var_shorthand_assign(state, $1, $4, ADDI, ADDF); }
+    | Address "-" "=" Expression { var_shorthand_assign(state, $1, $4, SUBTRACTI, SUBTRACTF); }
+    | Address "*" "=" Expression { var_shorthand_assign(state, $1, $4, MULTIPLYI, MULTIPLYF); }
+    | Address "/" "=" Expression { var_shorthand_assign(state, $1, $4, DIVIDEI, DIVIDEF); }
+    | Address "%" "=" Expression { var_shorthand_assign(state, $1, $4, MODULO, 0); }
+    | Address "^" "=" Expression { var_shorthand_assign(state, $1, $4, XOR, 0); }
+    | Address "|" "=" Expression { var_shorthand_assign(state, $1, $4, B_OR, 0); }
+    | Address "&" "=" Expression { var_shorthand_assign(state, $1, $4, B_AND, 0); }
+;
 
 Instruction_Parameters:
       { $$ = NULL; }
@@ -1822,6 +1836,28 @@ var_exists(
     }
 
     return 0;
+}
+
+static void
+var_shorthand_assign(
+    parser_state_t* state,
+    thecl_param_t* param,
+    expression_t* expr_assign,
+    int EXPRI,
+    int EXPRF)
+{
+    // Can't use the same param twice, so a copy is created.
+    thecl_param_t* param_clone = malloc(sizeof(thecl_param_t));
+    memcpy(param_clone, param, sizeof(thecl_param_t));
+
+    expression_t* expr_load = expression_load_new(state, param_clone);
+    expression_t* expr_main = EXPR_22(EXPRI, EXPRF, expr_load, expr_assign);
+    expression_output(state, expr_main);
+    expression_free(expr_main);
+    // No need to free expr_load or expr, since they both got freed as children of expr_main.
+
+    const expr_t* expr = expr_get_by_symbol(state->version, param->type == 'S' ? ASSIGNI : ASSIGNF);
+    instr_add(state->current_sub, instr_new(state, expr->id, "p", param));
 }
 
 static void
