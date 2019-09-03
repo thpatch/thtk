@@ -438,10 +438,28 @@ Instructions:
     ;
 
 Block:
-      IfBlock
+      /* Moving the old if ... gotos to Block, because if else would break with them being in Instruction. */
+      "if" Expression "goto" Label "@" Integer ";" {
+        const expr_t* expr = expr_get_by_symbol(state->version, IF);
+        expression_output(state, $2);
+        expression_free($2);
+        instr_add(state->current_sub, instr_new(state, expr->id, "pp", $4, $6));
+      }
+    | "unless" Expression "goto" Label "@" Integer ";" {
+        const expr_t* expr = expr_get_by_symbol(state->version, UNLESS);
+        expression_output(state, $2);
+        expression_free($2);
+        instr_add(state->current_sub, instr_new(state, expr->id, "pp", $4, $6));
+      }
+    | IfBlock
     | WhileBlock
     | TimesBlock
     | SwitchBlock
+    ;
+
+CodeBlock:
+      "{" Instructions "}"
+    | Instruction ";"
     ;
 
 BreakStatement:
@@ -474,7 +492,7 @@ IfBlock:
           expression_output(state, $2);
           expression_free($2);
           expression_create_goto(state, IF, labelstr);
-      } "{" Instructions "}" ElseBlock {
+      } CodeBlock ElseBlock {
           list_node_t *head = state->block_stack.head;
           label_create(state, head->data);
           state->block_stack.head = head->next;
@@ -488,7 +506,7 @@ IfBlock:
           expression_output(state, $2);
           expression_free($2);
           expression_create_goto(state, UNLESS, labelstr);
-      } "{" Instructions "}" ElseBlock {
+      } CodeBlock ElseBlock {
           list_node_t *head = state->block_stack.head;
           label_create(state, head->data);
           free(head->data);
@@ -506,7 +524,7 @@ ElseBlock:
           free(head->data);
           list_del(&state->block_stack, head);
           list_prepend_new(&state->block_stack, strdup(labelstr));
-    } "{" Instructions "}"
+    } CodeBlock
     | "else" {
           char labelstr[256];
           snprintf(labelstr, 256, "if_%i_%i", yylloc.first_line, yylloc.first_column);
@@ -533,7 +551,7 @@ WhileBlock:
           expression_output(state, $2);
           expression_free($2);
           expression_create_goto(state, UNLESS, labelstr_end);
-      } "{" Instructions "}" {
+      } CodeBlock {
           char labelstr_st[256];
           char labelstr_end[256];
           list_node_t *head = state->block_stack.head;
@@ -556,15 +574,15 @@ WhileBlock:
 
           list_prepend_new(&state->block_stack, strdup(labelstr));
           label_create(state, labelstr_st);
-    } "{" Instructions "}" "while" Expression  {
+    } CodeBlock "while" Expression  {
           char labelstr_st[256];
           char labelstr_end[256];
           list_node_t *head = state->block_stack.head;
           snprintf(labelstr_st, 256, "%s_st", (char*)head->data);
           snprintf(labelstr_end, 256, "%s_end", (char*)head->data);
 
-          expression_output(state, $7);
-          expression_free($7);
+          expression_output(state, $5);
+          expression_free($5);
           expression_create_goto(state, IF, labelstr_st);
           label_create(state, labelstr_end);
 
@@ -617,7 +635,7 @@ TimesBlock:
           expression_create_goto(state, UNLESS, labelstr_end);
 
           list_prepend_new(&state->block_stack, strdup(loop_name));
-    } "{" Instructions "}" {
+    } CodeBlock {
           char labelstr_st[256];
           char labelstr_end[256];
           list_node_t *head = state->block_stack.head;
@@ -788,18 +806,6 @@ Instruction:
         instr_add(state->current_sub, instr_new_list(state, $1, $3));
 
         free($3);
-      }
-    | "if" Expression "goto" Label "@" Integer {
-        const expr_t* expr = expr_get_by_symbol(state->version, IF);
-        expression_output(state, $2);
-        expression_free($2);
-        instr_add(state->current_sub, instr_new(state, expr->id, "pp", $4, $6));
-      }
-    | "unless" Expression "goto" Label "@" Integer {
-        const expr_t* expr = expr_get_by_symbol(state->version, UNLESS);
-        expression_output(state, $2);
-        expression_free($2);
-        instr_add(state->current_sub, instr_new(state, expr->id, "pp", $4, $6));
       }
     | "goto" Label "@" Integer {
         const expr_t* expr = expr_get_by_symbol(state->version, GOTO);
