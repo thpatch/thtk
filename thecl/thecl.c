@@ -174,23 +174,23 @@ free_eclmaps(void)
     eclmap_free(g_eclmap_global);
 }
 
-int
-not_pre_th10(
+bool
+is_post_th10(
     unsigned int version)
 {
-    return version == 10
-        || version == 103
-        || version == 11
-        || version == 12
-        || version == 125
-        || version == 128
-        || version == 13
-        || version == 14
-        || version == 143
-        || version == 15
-        || version == 16
-        || version == 165
-        || version == 17;
+    switch(version) {
+        case 6: case 7: case 8: case 9: case 95: return false;
+        default: return true;
+    }
+}
+
+bool
+is_post_th13(unsigned int version) {
+    switch(version) {
+        case 6: case 7: case 8: case 9: case 95:
+        case 10: case 103: case 11: case 12: case 125: case 128: return false;
+        default: return true;
+    }
 }
 
 static void
@@ -229,7 +229,7 @@ main(int argc, char* argv[])
     int opt;
     int ind=0;
     while(argv[util_optind]) {
-        switch(opt = util_getopt(argc, argv, ":c:d:Vm:r:s")) {
+        switch(opt = util_getopt(argc, argv, ":c:d:Vm:rs")) {
         case 'c':
         case 'd':
             if(mode != -1) {

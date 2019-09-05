@@ -994,14 +994,6 @@ static const id_format_pair_t th17_fmts[] = {
     { -1, NULL }
 };
 
-
-static bool th10_is_post_th13(unsigned int version) {
-    switch(version) {
-        case 10: case 103: case 11: case 12: case 125: case 128: return false;
-        default: return true;
-    }
-}
-
 static const char*
 th10_find_format(
     unsigned int version,
@@ -1481,7 +1473,7 @@ th10_stringify_param(
         } else if (
             param->value.type == 'S' &&
             param->stack &&
-            (th10_is_post_th13(version) ? param->value.val.S == -(*removed + 1) : param->value.val.S == -1) &&
+            (is_post_th13(version) ? param->value.val.S == -(*removed + 1) : param->value.val.S == -1) &&
             rep &&
             rep->op_type) {
             ++*removed;
@@ -1492,7 +1484,7 @@ th10_stringify_param(
         } else if (
             param->value.type == 'f' &&
             param->stack &&
-            (th10_is_post_th13(version) ? param->value.val.f == -(*removed + 1.0f) : param->value.val.f == -1.0f) &&
+            (is_post_th13(version) ? param->value.val.f == -(*removed + 1.0f) : param->value.val.f == -1.0f) &&
             rep &&
             rep->op_type) {
             ++*removed;
@@ -1626,10 +1618,10 @@ th10_dump(
             case THECL_INSTR_RANK:
                 if(instr->rank == 0xFF)
                     instr->string = strdup("!*");
-                else if(instr->rank == (th10_is_post_th13(ecl->version) ? 0xC0 : 0xF0))
+                else if(instr->rank == (is_post_th13(ecl->version) ? 0xC0 : 0xF0))
                     instr->string = strdup("!-");
                 else {
-                    if (th10_is_post_th13(ecl->version)) {
+                    if (is_post_th13(ecl->version)) {
                         sprintf(temp, "!%s%s%s%s%s%s%s%s",
                                 (instr->rank) & RANK_EASY      ? "E" : "",
                                 (instr->rank) & RANK_NORMAL    ? "N" : "",
@@ -1775,8 +1767,8 @@ th10_parse(
     state.instr_rank = 0xff;
     state.version = version;
     state.uses_numbered_subs = false;
-    state.has_overdrive_difficulty = th10_is_post_th13(version);
-    state.uses_stack_offsets = th10_is_post_th13(version);
+    state.has_overdrive_difficulty = is_post_th13(version);
+    state.uses_stack_offsets = is_post_th13(version);
     list_init(&state.expressions);
     list_init(&state.block_stack);
     list_init(&state.global_definitions);

@@ -1527,7 +1527,7 @@ static expression_t*
 expression_rank_switch_new(
     const parser_state_t* state, list_t* params
 ) {
-    if (not_pre_th10(state->ecl->version)) {
+    if (is_post_th10(state->ecl->version)) {
         expression_t* expr = malloc(sizeof(expression_t));
         expr->type = EXPRESSION_RANK_SWITCH;
 
@@ -1858,7 +1858,7 @@ static void
 sub_finish(
     parser_state_t* state)
 {
-    if (not_pre_th10(state->ecl->version) && !g_ecl_simplecreate) {
+    if (is_post_th10(state->ecl->version) && !g_ecl_simplecreate) {
         
         thecl_instr_t* var_ins = instr_new(state, TH10_INS_STACK_ALLOC, "S", state->current_sub->stack);
         var_ins->time = 0;
@@ -1880,7 +1880,7 @@ var_create(
     const char* name,
     int type)
 {
-    if (!not_pre_th10(state->version)) {
+    if (!is_post_th10(state->version)) {
         char buf[256];
         snprintf(buf, 256, "stack variable declaration is not allowed in version: %i", state->version);
         yyerror(state, buf);

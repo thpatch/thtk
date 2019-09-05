@@ -54,11 +54,6 @@ th10_alternatives[] = {
 };
 
 static const expr_t
-th10_no_expressions[] = {
-    { 0,           0,   0, NULL, 0, NULL, NULL }
-};
-
-static const expr_t
 th10_expressions[] = {
     /* The program checks against the number of params, as well as the
      * requested stack depth, and does the replacements. */
@@ -112,12 +107,26 @@ th10_expressions[] = {
     { 0,           0,   0, NULL, 0, NULL, NULL }
 };
 
+static const expr_t
+th13_expressions[] = {
+    /*SYM         ID  RET     P  A    S   DISP */
+    { NEGI,       83, 'S', NULL, 1, "S", "-s0" },
+    { NEGF,       84, 'f', NULL, 1, "f", "-s0" },
+    { 0,           0,   0, NULL, 0, NULL, NULL }
+};
+
 static const expr_t*
-expr_get_table(unsigned int version)
+expr_get_by_symbol_from_table(
+    expr_t* table,
+    int symbol)
 {
-    if (not_pre_th10(version))
-        return th10_expressions;
-    return th10_no_expressions;
+    while (table->symbol) {
+        if (table->symbol == symbol)
+            return table;
+        ++table;
+    }
+
+    return NULL;
 }
 
 const expr_t*
@@ -125,10 +134,21 @@ expr_get_by_symbol(
     unsigned int version,
     int symbol)
 {
-    const expr_t* table = expr_get_table(version);
+    expr_t* ret = NULL;
 
+    if (!ret && is_post_th13(version)) ret = expr_get_by_symbol_from_table(th13_expressions, symbol);
+    if (!ret && is_post_th10(version)) ret = expr_get_by_symbol_from_table(th10_expressions, symbol);
+
+    return ret;
+}
+
+static const expr_t*
+expr_get_by_id_from_table(
+    expr_t* table,
+    int id)
+{
     while (table->symbol) {
-        if (table->symbol == symbol)
+        if (table->id == id)
             return table;
         ++table;
     }
@@ -141,15 +161,12 @@ expr_get_by_id(
     unsigned int version,
     int id)
 {
-    const expr_t* table = expr_get_table(version);
+    expr_t* ret = NULL;
 
-    while (table->symbol) {
-        if (table->id == id)
-            return table;
-        ++table;
-    }
+    if (!ret && is_post_th13(version)) ret = expr_get_by_id_from_table(th13_expressions, id);
+    if (!ret && is_post_th10(version)) ret = expr_get_by_id_from_table(th10_expressions, id);
 
-    return NULL;
+    return ret;
 }
 
 int
