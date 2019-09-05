@@ -232,7 +232,7 @@ value_to_text(
         snprintf(temp, 256, "%f", value->val.d);
         break;
     case 'b':
-        snprintf(temp, 256, "%02x", value->val.b);
+        snprintf(temp, 256, "0x%02x", value->val.b);
         break;
     case 'c':
         snprintf(temp, 256, "%c", value->val.c);
@@ -257,7 +257,7 @@ value_to_text(
         temp[value->val.m.length] = '\0';
         break;
     case 'C':
-        snprintf(temp, 256, "#%02hhx%02hhx%02hhx%02hhx",
+        snprintf(temp, 256, "0x%02hhx%02hhx%02hhx%02hhx",
                  value->val.C[0], value->val.C[1], value->val.C[2], value->val.C[3]);
       break;
     default:
