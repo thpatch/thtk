@@ -162,6 +162,7 @@ void set_time(parser_state_t* state, int new_time);
 %token <integer> INTEGER "integer"
 %token <floating> FLOATING "floating"
 %token <string> RANK "rank"
+%token <string> DIRECTIVE "directive"
 %token COMMA ","
 %token COLON ":"
 %token SEMICOLON ";"
@@ -360,6 +361,47 @@ Statement:
         list_append_new(&state->global_definitions, def);
         free($3);
       }
+    | DIRECTIVE TEXT {
+        if (strncmp($1, "include", 7) == 0) {
+            const FILE* include_file = fopen($2, "rb");
+            if (include_file != NULL) {
+                
+                FILE* in_org = yyin;
+                YYLTYPE loc_org = yylloc;
+                char* input_org = current_input;
+
+                current_input = $2;
+                yyin = include_file;
+                yylloc.first_line = 1;
+                yylloc.first_column = 1;
+                yylloc.last_line = 1;
+                yylloc.last_column = 1;
+
+                /* The return is needed for proper error displaying. */
+                if (yyparse(state) != 0) {
+                    fclose(include_file);
+                    free($1);
+                    free($2);
+                    return 1;
+                };
+
+                yyin = in_org;
+                yylloc = loc_org;
+                current_input = input_org;
+                fclose(include_file);
+            } else {
+                char buf[256];
+                snprintf(buf, 256, "include error: couldn't open %s for reading", $2);
+                yyerror(state, buf);
+            }
+        } else {
+            char buf[256];
+            snprintf(buf, 256, "unknown directive: %s", $1);
+            yyerror(state, buf);
+        }
+        free($1);
+        free($2);
+    }
     ;
 
 Integer_List:

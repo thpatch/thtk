@@ -208,6 +208,11 @@ ins_[0-9]+ {
 <COMMENT>\*[^*/]*  ;
 <COMMENT>"*/"      BEGIN(INITIAL);
 
+#([a-zA-Z]+) {
+    yylval.string = strdup(yytext + 1);
+    return DIRECTIVE;
+}
+
 [\t\n\r ]+ ;
 . {
     char buf[256];
