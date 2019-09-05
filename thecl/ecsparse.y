@@ -1178,7 +1178,7 @@ instr_set_types(
 
         if (new_type != param->type &&
             !(param->type == 'z' && (new_type == 'm' || new_type == 'x')) &&
-            !(param->type == 'S' && new_type == 's')) {
+            !(param->type == 'S' && (new_type == 's' || new_type == 'U'))) {
 
             char errbuf[256];
             snprintf(errbuf, 256, "instr_set_types: in sub %s: wrong argument "
