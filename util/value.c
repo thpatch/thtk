@@ -80,7 +80,7 @@ value_from_data(
     case 'S':
         READ(S, sizeof(int32_t));
     case 'C':
-        READ(C, sizeof(int32_t));
+        READ(C, sizeof(uint32_t));
         break;
     case 'z':
         value->val.z = malloc(data_length);
@@ -196,6 +196,13 @@ value_from_text(
     case 'S':
         READ(d, value->val.S);
         break;
+    case 'C':
+        if (sscanf(text, "#%02hhx%02hhx%02hhx%02hhx", &value->val.C[0], &value->val.C[1], &value->val.C[2], &value->val.C[3]) != 4) {
+                fprintf(stderr, "%s:value_from_text: couldn't parse '%c' from  \"%s\"\n", argv0, value->type, text);
+                return 0;
+        }
+        READ(u, value->val.C);
+        break;
     case 'z':
         value->val.z = strdup(text);
         break;
@@ -232,7 +239,7 @@ value_to_text(
         snprintf(temp, 256, "%f", value->val.d);
         break;
     case 'b':
-        snprintf(temp, 256, "0x%02x", value->val.b);
+        snprintf(temp, 256, "%02x", value->val.b);
         break;
     case 'c':
         snprintf(temp, 256, "%c", value->val.c);
@@ -257,7 +264,7 @@ value_to_text(
         temp[value->val.m.length] = '\0';
         break;
     case 'C':
-        snprintf(temp, 256, "0x%02hhx%02hhx%02hhx%02hhx",
+        snprintf(temp, 256, "#%02hhx%02hhx%02hhx%02hhx",
                  value->val.C[0], value->val.C[1], value->val.C[2], value->val.C[3]);
       break;
     default:
@@ -299,6 +306,8 @@ value_to_data(
         WRITE(U, sizeof(uint32_t));
     case 'S':
         WRITE(S, sizeof(int32_t));
+    case 'C':
+        WRITE(C, sizeof(uint32_t));
     case 'z': {
         size_t zlen = strlen(value->val.z);
         if (data_length < zlen) {
@@ -344,6 +353,8 @@ value_size(
         return sizeof(uint32_t);
     case 'S':
         return sizeof(int32_t);
+    case 'C':
+        return sizeof(uint32_t);
     case 'z':
         return strlen(value->val.z);
     case 'm':
