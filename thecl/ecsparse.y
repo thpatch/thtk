@@ -944,7 +944,6 @@ Instruction_Parameter:
     | Integer
     | Floating
     | Text
-    | Label
     | Cast_Target2 Cast_Type {
         $$ = param_new('D');
         $$->stack = $2->stack;
@@ -1084,21 +1083,32 @@ Address:
         free($2);
       }
     | IDENTIFIER {
-        int type = var_type(state, state->current_sub, $1);
-        if (type == 0) {
-            char buf[256];
-            snprintf(buf, 256, "typeless variables need to have their type specified with a %% or $ prefix when used: %s", $1);
-            yyerror(state, buf);
-            exit(2);
-        }
-        $$ = param_new(type);
-        $$->stack = 1;
-        if (type == 'S') {
-            $$->value.val.S = var_stack(state, state->current_sub, $1);
+        if (var_exists(state->current_sub, $1)) {
+            int type = var_type(state, state->current_sub, $1);
+            if (type == 0) {
+                char buf[256];
+                snprintf(buf, 256, "typeless variables need to have their type specified with a %% or $ prefix when used: %s", $1);
+                yyerror(state, buf);
+                exit(2);
+            }
+            $$ = param_new(type);
+            $$->stack = 1;
+            if (type == 'S') {
+                $$->value.val.S = var_stack(state, state->current_sub, $1);
+            } else {
+                $$->value.val.f = var_stack(state, state->current_sub, $1);
+            }
+            free($1);
         } else {
-            $$->value.val.f = var_stack(state, state->current_sub, $1);
+            if (strncmp($1, state->current_sub->name, strlen(state->current_sub->name)) != 0) {
+                char buf[256];
+                snprintf(buf, 256, "warning: %s not found as a variable, treating like a label instead.", $1);
+                yyerror(state, buf);
+            }
+            $$ = param_new('o');
+            $$->value.type = 'z';
+            $$->value.val.z = $1;
         }
-        free($1);
     }
     ;
 
@@ -2032,6 +2042,9 @@ var_exists(
     thecl_sub_t* sub,
     const char* name)
 {
+    eclmap_entry_t* ent = eclmap_find(g_eclmap_global, name);
+    if (ent) return 1;
+
     unsigned int i;
     for (i = 0; i < sub->var_count; ++i) {
         if (strcmp(name, sub->vars[i]->name) == 0) return 1;
