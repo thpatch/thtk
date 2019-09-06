@@ -98,6 +98,7 @@ th10_value_from_data(
     case 'D':
         return value_from_data(data, 2 * sizeof(uint32_t), 'm', value);
     case 'o':
+    case 't':
         return value_from_data(data, data_length, 'S', value);
     case 'm':
     case 'x': {
@@ -160,9 +161,9 @@ static const id_format_pair_t th10_fmts[] = {
     { 1, "" },
     { 10, "" },
     { 11, "m*D" },
-    { 12, "oS" },
-    { 13, "oS" },
-    { 14, "oS" },
+    { 12, "ot" },
+    { 13, "ot" },
+    { 14, "ot" },
     { 15, "m*D" },
     { 16, "mS*D" },
     { 17, "S" },
@@ -391,9 +392,9 @@ static const id_format_pair_t th12_fmts[] = {
     { 1, "" },
     { 10, "" },
     { 11, "m*D" },
-    { 12, "oS" },
-    { 13, "oS" },
-    { 14, "oS" },
+    { 12, "ot" },
+    { 13, "ot" },
+    { 14, "ot" },
     { 15, "m*D" },
     { 16, "mS*D" },
     { 17, "S" },
@@ -660,9 +661,9 @@ static const id_format_pair_t th13_fmts[] = {
     { 1, "" },
     { 10, "" },
     { 11, "m*D" },
-    { 12, "oS" },
-    { 13, "oS" },
-    { 14, "oS" },
+    { 12, "ot" },
+    { 13, "ot" },
+    { 14, "ot" },
     { 15, "m*D" },
     { 16, "mS*D" },
     { 17, "S" },
@@ -1746,7 +1747,7 @@ th10_instr_size(
         if (param->type == 'm' || param->type == 'x') {
             size_t zlen = strlen(param->value.val.z);
             ret += sizeof(uint32_t) + zlen + (4 - (zlen % 4));
-        } else if (param->type == 'o') {
+        } else if (param->type == 'o' || param->type == 't') {
             ret += sizeof(uint32_t);
         } else {
             ret += value_size(&param->value);
@@ -1794,7 +1795,7 @@ th10_parse(
 }
 
 static int32_t
-label_find(
+label_offset(
     thecl_sub_t* sub,
     const char* name)
 {
@@ -1802,6 +1803,20 @@ label_find(
     list_for_each(&sub->labels, label) {
         if (strcmp(label->name, name) == 0)
             return label->offset;
+    }
+    fprintf(stderr, "%s: label not found: %s\n", argv0, name);
+    return 0;
+}
+
+static int32_t
+label_time(
+    thecl_sub_t* sub,
+    const char* name)
+{
+    thecl_label_t* label;
+    list_for_each(&sub->labels, label) {
+        if (strcmp(label->name, name) == 0)
+            return label->time;
     }
     fprintf(stderr, "%s: label not found: %s\n", argv0, name);
     return 0;
@@ -1848,9 +1863,19 @@ th10_instr_serialize(
         ++param_count;
         if (param->type == 'o') {
             /* This calculates the relative offset from the current instruction. */
-            uint32_t label = label_find(sub, param->value.val.z) - instr->offset;
+            uint32_t label = label_offset(sub, param->value.val.z) - instr->offset;
             memcpy(param_data, &label, sizeof(uint32_t));
             param_data += sizeof(uint32_t);
+        } else if (param->type == 't') {
+            /* Time value for jump instructions - either read from a label or directly
+               from param value, depenging on how the jump was created. */
+            int32_t time;
+            if (param->value.type == 'z') {
+                time = label_time(sub, param->value.val.z);
+            } else {
+                time = param->value.val.S;
+            }
+            memcpy(param_data, &time, sizeof(int32_t));
         } else if (param->type == 'x' || param->type == 'm') {
             size_t zlen = strlen(param->value.val.z);
             uint32_t padded_length = zlen + (4 - (zlen % 4));

@@ -116,6 +116,7 @@ void thecl_instr_free(
 
 typedef struct {
     int32_t offset;
+    int32_t time;
     char name[];
 } thecl_label_t;
 

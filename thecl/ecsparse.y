@@ -1209,7 +1209,8 @@ instr_set_types(
 
         if (new_type != param->type &&
             !(param->type == 'z' && (new_type == 'm' || new_type == 'x')) &&
-            !(param->type == 'S' && (new_type == 's' || new_type == 'U'))) {
+            !(param->type == 'S' && (new_type == 's' || new_type == 'U' || new_type == 't'))
+        ) {
 
             char errbuf[256];
             snprintf(errbuf, 256, "instr_set_types: in sub %s: wrong argument "
@@ -1628,11 +1629,11 @@ expression_create_goto(
 {
     const expr_t* expr = expr_get_by_symbol(state->version, type);
     thecl_param_t *p1 = param_new('o');
-    thecl_param_t *p2 = param_new('S');
+    thecl_param_t *p2 = param_new('t');
     p1->value.type = 'z';
     p1->value.val.z = strdup(labelstr);
-    p2->value.type = 'S';
-    p2->value.val.S = state->instr_time;
+    p2->value.type = 'z';
+    p2->value.val.z = strdup(labelstr);
     instr_add(state->current_sub, instr_new(state, expr->id, "pp", p1, p2));
 }
 
@@ -2083,6 +2084,7 @@ label_create(
     thecl_label_t* label = malloc(sizeof(thecl_label_t) + strlen(name) + 1);
     list_prepend_new(&state->current_sub->labels, label);
     label->offset = state->current_sub->offset;
+    label->time = state->instr_time;
     strcpy(label->name, name);
 }
 
