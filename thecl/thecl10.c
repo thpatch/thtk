@@ -1876,6 +1876,7 @@ th10_instr_serialize(
                 time = param->value.val.S;
             }
             memcpy(param_data, &time, sizeof(int32_t));
+            param_data += sizeof(int32_t);
         } else if (param->type == 'x' || param->type == 'm') {
             size_t zlen = strlen(param->value.val.z);
             uint32_t padded_length = zlen + (4 - (zlen % 4));
