@@ -1890,16 +1890,7 @@ th10_instr_serialize(
         } else
             param_data += value_to_data(&param->value, param_data, instr->size - (param_data - (unsigned char*)ret));
 
-        if (param->stack && (
-               version == 13 ||
-               version == 14 ||
-               version == 143 ||
-               version == 15 ||
-               version == 16 ||
-               version == 165 ||
-               version == 17
-           )
-        ) {
+        if (param->stack && is_post_th13(version)) {
             if (param->type == 'f' && param->value.val.f == -(ret->zero + 1.0f)) {
                 ++ret->zero;
             } else if (param->type == 'S' && param->value.val.S == -(ret->zero + 1)) {
