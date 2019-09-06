@@ -989,6 +989,7 @@ Instruction_Parameter:
 Rank_Switch_Value:
       Integer
     | Floating
+    | Address
     ;
 
 Rank_Switch_Next_Value: 
@@ -1662,9 +1663,13 @@ expression_output(
         const char* diffs[5] = {"E", "N", "H", "L", "O"};
 
         int diff = 0;
-        int ins_number = expr->result_type == 'S' ? 42 : 44; //  42 and 44 are ins numbers for pushing int/float to ECL stack
         thecl_param_t* param;
         thecl_instr_t* instr = NULL;
+
+        expr_t* tmp_expr = expr_get_by_symbol(state->version, LOADI);
+        int loadi = tmp_expr->id;
+        tmp_expr = expr_get_by_symbol(state->version, LOADF);
+        int loadf = tmp_expr->id;
 
         list_for_each(&expr->children, param) {
             if (instr != NULL) {
@@ -1677,7 +1682,7 @@ expression_output(
                 exit(2);
             }
 
-            instr = instr_new(state, ins_number, "p", param);
+            instr = instr_new(state, param->type == 'S' ? loadi : loadf, "p", param);
         }
 
         /* Set last ins to all remaining difficulties. */
