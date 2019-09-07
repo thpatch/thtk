@@ -339,7 +339,7 @@ main(int argc, char* argv[])
 #ifdef WIN32
             _setmode(fileno(stdout), _O_BINARY);
 #endif
-            thecl_t* ecl = module->parse(in, version);
+            thecl_t* ecl = module->parse(in, argv[0], version);
             if (!ecl)
                 exit(1);
             module->compile(ecl, out);

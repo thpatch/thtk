@@ -35,6 +35,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "expr.h"
+#include "path.h"
 #include "file.h"
 #include "list.h"
 #include "program.h"
@@ -133,6 +134,9 @@ static void label_create(parser_state_t* state, char* label);
 
 /* Update the current time label. */
 void set_time(parser_state_t* state, int new_time);
+
+/* Opens and parses the file of a given name. Returns a non-zero value on error. */
+static int directive_include(parser_state_t* state, char* include_path);
 
 %}
 
@@ -363,36 +367,11 @@ Statement:
       }
     | DIRECTIVE TEXT {
         if (strncmp($1, "include", 7) == 0) {
-            const FILE* include_file = fopen($2, "rb");
-            if (include_file != NULL) {
-                
-                FILE* in_org = yyin;
-                YYLTYPE loc_org = yylloc;
-                char* input_org = current_input;
-
-                current_input = $2;
-                yyin = include_file;
-                yylloc.first_line = 1;
-                yylloc.first_column = 1;
-                yylloc.last_line = 1;
-                yylloc.last_column = 1;
-
-                /* The return is needed for proper error displaying. */
-                if (yyparse(state) != 0) {
-                    fclose(include_file);
-                    free($1);
-                    free($2);
-                    return 1;
-                };
-
-                yyin = in_org;
-                yylloc = loc_org;
-                current_input = input_org;
-                fclose(include_file);
-            } else {
-                char buf[256];
-                snprintf(buf, 256, "include error: couldn't open %s for reading", $2);
-                yyerror(state, buf);
+            if (directive_include(state, $2) != 0) {
+                /* For proper syntax error displaying, this needs to return. */
+                free($1);
+                free($2);
+                return 1;
             }
         } else {
             char buf[256];
@@ -2104,6 +2083,58 @@ set_time(
         yyerror(state, buf);
     }
     state->instr_time = new_time;
+}
+
+static int
+directive_include(
+    parser_state_t* state,
+    char* include_path)
+{
+    if (!is_post_th10(state->version)) {
+        /* This is mostly because of numbered subs */
+        yyerror(state, "include directive cannot be used in pre-th10 versions.");
+        return 1;
+    }
+
+    char* path = path_get_full(state, include_path);
+    FILE* include_file = fopen(path, "rb");
+
+    if (include_file != NULL) {
+                
+        FILE* in_org = yyin;
+        YYLTYPE loc_org = yylloc;
+        char* input_org = current_input;
+
+        current_input = include_path;
+        yyin = include_file;
+        yylloc.first_line = 1;
+        yylloc.first_column = 1;
+        yylloc.last_line = 1;
+        yylloc.last_column = 1;
+
+        path_add(state, path);
+
+        int err = yyparse(state);
+
+        fclose(include_file);
+        path_remove(state);
+
+        if (err) {
+            free(path);
+            return 1;
+        }
+
+        yyin = in_org;
+        yylloc = loc_org;
+        current_input = input_org;
+    } else {
+        char buf[256];
+        snprintf(buf, 256, "include error: couldn't open %s for reading", include_path);
+        yyerror(state, buf);
+        return 1;
+    }
+    free(path);
+    return 0;
 }
 
 void

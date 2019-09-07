@@ -179,7 +179,7 @@ typedef struct {
     void (*trans)(thecl_t* ecl);
     void (*dump)(const thecl_t* ecl, FILE* stream);
 
-    thecl_t* (*parse)(FILE* stream, unsigned int ver);
+    thecl_t* (*parse)(FILE* stream, char* filename, unsigned int ver);
     int (*compile)(const thecl_t* ecl, FILE* stream);
 } thecl_module_t;
 
@@ -195,6 +195,8 @@ typedef struct {
     list_t global_definitions;
     thecl_sub_t* current_sub;
     thecl_t* ecl;
+    int path_cnt;
+    char** path_stack;
     const char* (*instr_format)(unsigned int version, unsigned int id);
     size_t (*instr_size)(unsigned int version, const thecl_instr_t* instr);
 } parser_state_t;

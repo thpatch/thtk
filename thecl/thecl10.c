@@ -32,6 +32,7 @@
 #include <string.h>
 #include <math.h>
 #include "expr.h"
+#include "path.h"
 #include "file.h"
 #include "program.h"
 #include "thecl.h"
@@ -1760,6 +1761,7 @@ th10_instr_size(
 static thecl_t*
 th10_parse(
     FILE* in,
+    char* filename,
     unsigned int version)
 {
     parser_state_t state;
@@ -1778,6 +1780,10 @@ th10_parse(
     state.ecl->version = version;
     state.instr_format = th10_find_format;
     state.instr_size = th10_instr_size;
+
+    state.path_cnt = 0;
+    state.path_stack = NULL;
+    path_add(&state, filename);
 
     yyin = in;
 
