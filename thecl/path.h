@@ -34,7 +34,7 @@
 #include "thecl.h"
 
 
-/* Returns the absolute version of a given path, based on current path stack. */
+/* Returns a new string containing the given path the with last entry of the path stack prepended to it. */
 char* path_get_full(parser_state_t* state, char* path);
 /* Given a path to a file, pushes directory that file is in to the path stack. */
 void path_add(parser_state_t* state, char* path);

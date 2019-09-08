@@ -137,6 +137,8 @@ void set_time(parser_state_t* state, int new_time);
 
 /* Opens and parses the file of a given name. Returns a non-zero value on error. */
 static int directive_include(parser_state_t* state, char* include_path);
+/* Opens and loads an eclmap. */
+static void directive_eclmap(parser_state_t* state, char* name);
 
 %}
 
@@ -366,13 +368,15 @@ Statement:
         free($3);
       }
     | DIRECTIVE TEXT {
-        if (strncmp($1, "include", 7) == 0) {
+        if (strcmp($1, "include") == 0) {
             if (directive_include(state, $2) != 0) {
                 /* For proper syntax error displaying, this needs to return. */
                 free($1);
                 free($2);
                 return 1;
             }
+        } else if (strcmp($1, "eclmap") == 0) {
+            directive_eclmap(state, $2);
         } else {
             char buf[256];
             snprintf(buf, 256, "unknown directive: %s", $1);
@@ -2129,12 +2133,30 @@ directive_include(
         current_input = input_org;
     } else {
         char buf[256];
-        snprintf(buf, 256, "include error: couldn't open %s for reading", include_path);
+        snprintf(buf, 256, "#include error: couldn't open %s for reading", path);
         yyerror(state, buf);
         return 1;
     }
     free(path);
     return 0;
+}
+
+static void
+directive_eclmap(
+parser_state_t* state,
+char* name) 
+{
+    char* path = path_get_full(state, name);
+    FILE* map_file = fopen(path, "r");
+    if (map_file == NULL) {
+        char buf[256];
+        snprintf(buf, 256, "#eclmap error: couldn't open %s for reading", path);
+        yyerror(state, buf);
+    } else {
+        eclmap_load(g_eclmap_opcode, g_eclmap_global, map_file, path);
+        fclose(map_file);
+    }
+    free(path);
 }
 
 void
