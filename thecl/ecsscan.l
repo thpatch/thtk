@@ -60,7 +60,7 @@
             result = 1; \
         } \
     }
-%x COMMENT CSTRING STRING ESCAPE_CHAR
+%x COMMENT COMMENT_SINGLE CSTRING STRING ESCAPE_CHAR
 %%
 ","        return COMMA;
 ":"        return COLON;
@@ -207,6 +207,10 @@ ins_[0-9]+ {
 <COMMENT>[^*]*     |
 <COMMENT>\*[^*/]*  ;
 <COMMENT>"*/"      BEGIN(INITIAL);
+
+"//"                  BEGIN(COMMENT_SINGLE);
+<COMMENT_SINGLE>.*    ;
+<COMMENT_SINGLE>"\n"  BEGIN(INITIAL);
 
 #([a-zA-Z]+) {
     yylval.string = strdup(yytext + 1);
