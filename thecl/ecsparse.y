@@ -287,7 +287,6 @@ static void directive_eclmap(parser_state_t* state, char* name);
 %type <param> Label
 %type <param> Load_Type
 %type <param> Cast_Type
-%type <param> Rank_Switch_Value
 %type <param> Rank_Switch_Next_Value
 
 %type <integer> Cast_Target
@@ -723,7 +722,8 @@ SwitchBlock:
               free(buf->data);
               free(buf);
           }
-          node->next->prev = NULL;
+          if (node->next != NULL) /* Prevent crashing when there is nothing else on the block stack. */
+              node->next->prev = NULL;
           state->block_stack.head = node->next;
           free(node);
 
@@ -741,9 +741,9 @@ CaseList:
     ;
 
 Case:
-   "case" Expression ":" {
+     "case" "(" Expression ")" ":" {
           switch_case_t *switch_case = malloc(sizeof(switch_case_t));
-          switch_case->expr = $2;
+          switch_case->expr = $3;
           snprintf(switch_case->labelstr, 250, "case_%i_%i", yylloc.first_line, yylloc.first_column);
 
           label_create(state, switch_case->labelstr);
@@ -754,7 +754,21 @@ Case:
           } else {
               list_append_new(&state->block_stack, switch_case);
           }
-    }
+      }
+    | "case" Load_Type ":" {
+          switch_case_t *switch_case = malloc(sizeof(switch_case_t));
+          switch_case->expr = expression_load_new(state, $2);
+          snprintf(switch_case->labelstr, 250, "case_%i_%i", yylloc.first_line, yylloc.first_column);
+
+          label_create(state, switch_case->labelstr);
+
+          list_node_t *head = state->block_stack.head;
+          if (head->next) {
+              list_prepend_to(&state->block_stack, switch_case, head->next);
+          } else {
+              list_append_new(&state->block_stack, switch_case);
+          }
+      }
     ;
 
     /* TODO: Check the given parameters against the parameters expected for the
@@ -969,18 +983,12 @@ Instruction_Parameter:
       }
     ;
 
-Rank_Switch_Value:
-      Integer
-    | Floating
-    | Address
-    ;
-
 Rank_Switch_Next_Value: 
-      ":" Rank_Switch_Value {$$ = $2}
+      ":" Load_Type {$$ = $2}
     ;
 
 Rank_Switch_List:
-      Rank_Switch_Value Rank_Switch_Next_Value_List {
+      Load_Type Rank_Switch_Next_Value_List {
         $$ = $2;
         list_prepend_new($$, $1);
       }
