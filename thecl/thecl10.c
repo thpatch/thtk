@@ -999,8 +999,11 @@ static const id_format_pair_t th17_fmts[] = {
 static const char*
 th10_find_format(
     unsigned int version,
-    unsigned int id)
+    unsigned int id,
+    bool is_timeline)
 {
+    if (is_timeline) return NULL;
+
     const char* ret = NULL;
 
     switch (version) {
@@ -1212,7 +1215,7 @@ th10_open(
             list_init(&new_instr->params);
 
             uint32_t param_mask = instr->param_mask;
-            const char* format = th10_find_format(version, instr->id);
+            const char* format = th10_find_format(version, instr->id, 0);
             /* TODO: Handle format == NULL. */
             size_t param_size_total = instr->size - sizeof(th10_instr_t);
             if (format == NULL) {
@@ -1738,8 +1741,11 @@ normal:
 static size_t
 th10_instr_size(
     unsigned int version,
-    const thecl_instr_t* instr)
+    const thecl_instr_t* instr,
+    bool is_timeline)
 {
+    if (is_timeline) return 0;
+    
     size_t ret = sizeof(th10_instr_t);
     thecl_param_t* param;
 
@@ -1850,7 +1856,7 @@ th10_instr_serialize(
     unsigned char* param_data = ret->data;
     int param_count = 0;
 
-    const char* expected_format = th10_find_format(version, instr->id);
+    const char* expected_format = th10_find_format(version, instr->id, 0);
     if (expected_format == NULL)
         fprintf(stderr, "%s:th10_instr_serialize: in sub %s: instruction with id %d is not known to exist in version %d\n", argv0, sub->name, instr->id, version);
     else {

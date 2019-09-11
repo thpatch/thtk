@@ -44,6 +44,13 @@ typedef struct eclmap_entry_t {
 
 typedef list_t eclmap_t;
 
+enum ECLMAP_ENT_TYPES {
+    ECLMAP_ENT_INVALID,
+    ECLMAP_ENT_OPCODE,
+    ECLMAP_ENT_TIMELINE_OPCODE,
+    ECLMAP_ENT_GLOBAL
+};
+
 /* Allocates and initalizes a new eclmap */
 #define eclmap_new() ((eclmap_t*)list_new())
 /* Frees an eclmap */
@@ -55,6 +62,6 @@ eclmap_entry_t* eclmap_get(eclmap_t* map, int opcode);
 /* Finds an entry in a eclmap by mnemonic */
 eclmap_entry_t* eclmap_find(eclmap_t* map, const char* mnemonic);
 /* Loads entries from eclmap file (thread unsafe) */
-void eclmap_load(eclmap_t* opcodes, eclmap_t* globals, FILE* f, const char* fn);
+void eclmap_load(eclmap_t* opcodes, eclmap_t* timeline_opcodes, eclmap_t* globals, FILE* f, const char* fn);
 
 #endif

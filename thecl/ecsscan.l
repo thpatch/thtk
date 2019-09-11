@@ -74,10 +74,10 @@
 "anim"     return ANIM;
 "ecli"     return ECLI;
 "sub"      return SUB;
+"timeline" return TIMELINE;
 "var"      return VAR;
 "int"      return INT;
 "float"    return FLOAT;
-"local"    return LOCAL;
 "@"        return AT;
 
 "goto"     return GOTO;

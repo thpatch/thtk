@@ -183,10 +183,10 @@ static void directive_eclmap(parser_state_t* state, char* name);
 %token ANIM "anim"
 %token ECLI "ecli"
 %token SUB "sub"
+%token TIMELINE "timeline"
 %token VAR "var"
 %token INT "int"
 %token FLOAT "float"
-%token LOCAL "local"
 %token AT "@"
 %token BRACE_OPEN "{"
 %token BRACE_CLOSE "}"
@@ -301,16 +301,22 @@ static void directive_eclmap(parser_state_t* state, char* name);
 %%
 
 Statements:
-    | Statement Statements
+    | Statements Statement
     ;
 
 Statement:
       "sub" IDENTIFIER {
-        sub_begin(state, $2);
+        sub_begin(state, $2, 0);
         free($2);
       }
       "(" ArgumentDeclaration ")" {
             state->current_sub->arity = state->current_sub->stack / 4;
+      }
+      "{" Subroutine_Body "}" {
+        sub_finish(state);
+      }
+    | "timeline" IDENTIFIER "(" ")" {
+        sub_begin(state, $2, 1);
       }
       "{" Subroutine_Body "}" {
         sub_finish(state);
@@ -332,32 +338,6 @@ Statement:
             state->ecl->ecli_names[state->ecl->ecli_count - 1] = strdup(str->text);
         }
         string_list_free($3);
-      }
-    | "local" IDENTIFIER "{" Integer_List "}" {
-        size_t data_length = 0;
-        thecl_local_data_t* local_data;
-        thecl_param_t* param;
-
-        list_for_each($4, param) {
-            ++data_length;
-        }
-
-        local_data = malloc(sizeof(thecl_local_data_t) + data_length);
-        local_data->data_length = data_length;
-        strcpy(local_data->name, $2);
-        data_length = 0;
-        list_for_each($4, param) {
-            local_data->data[data_length++] = param->value.val.S;
-        }
-
-        list_append_new(&state->ecl->local_data, local_data);
-
-        list_for_each($4, param)
-            free(param);
-        list_free_nodes($4);
-        free($4);
-
-        free($2);
       }
     | "global" "[" IDENTIFIER "]" "=" Global_Def ";" {
         global_definition_t *def = malloc(sizeof(global_definition_t));
@@ -460,15 +440,10 @@ ArgumentDeclaration:
     ;
 
 Instructions:
-      Instruction ";"
-    | Block
-    | INTEGER ":" { set_time(state, $1); }
-    | IDENTIFIER ":" { label_create(state, $1); free($1); }
     | Instructions INTEGER ":" { set_time(state, $2); }
     | Instructions IDENTIFIER ":" { label_create(state, $2); free($2); }
     | Instructions Instruction ";"
     | Instructions Block
-    | RANK { state->instr_rank = parse_rank(state, $1); } 
     | Instructions RANK { state->instr_rank = parse_rank(state, $2); } 
     ;
 
@@ -819,7 +794,7 @@ Instruction:
         }
         list_free_nodes(&state->expressions);
 
-        eclmap_entry_t* ent = eclmap_find(g_eclmap_opcode, $1);
+        eclmap_entry_t* ent = eclmap_find(state->is_timeline_sub ? g_eclmap_timeline_opcode : g_eclmap_opcode, $1);
         if (!ent) {
             /* Search for sub */
             bool sub_found = false;
@@ -1185,7 +1160,7 @@ instr_set_types(
     parser_state_t* state,
     thecl_instr_t* instr)
 {
-    const char* format = state->instr_format(state->version, instr->id);
+    const char* format = state->instr_format(state->version, instr->id, state->is_timeline_sub);
 
     thecl_param_t* param;
     list_for_each(&instr->params, param) {
@@ -1250,7 +1225,7 @@ instr_new(
 
     instr_set_types(state, instr);
 
-    instr->size = state->instr_size(state->version, instr);
+    instr->size = state->instr_size(state->version, instr, state->is_timeline_sub);
 
     return instr;
 }
@@ -1293,7 +1268,7 @@ instr_new_list(
 
     instr_set_types(state, instr);
 
-    instr->size = state->instr_size(state->version, instr);
+    instr->size = state->instr_size(state->version, instr, state->is_timeline_sub);
 
     return instr;
 }
@@ -1849,8 +1824,11 @@ expression_free(
 static void
 sub_begin(
     parser_state_t* state,
-    char* name)
+    char* name,
+    int is_timeline)
 {
+    state->is_timeline_sub = is_timeline;
+
     thecl_sub_t* sub = malloc(sizeof(thecl_sub_t));
 
     sub->name = strdup(name);
@@ -1865,10 +1843,15 @@ sub_begin(
     if (state->uses_numbered_subs) {
         int sub_count = 0;
         thecl_sub_t* iter_sub;
-        list_for_each(&state->ecl->subs, iter_sub) sub_count++;
-
         char buf[256];
-        snprintf(buf, 256, "Sub%u", sub_count + 1);
+        if (is_timeline) {
+            list_for_each(&state->ecl->timelines, iter_sub) sub_count++;
+            snprintf(buf, 256, "Timeline%u", sub_count);
+        } else {
+            list_for_each(&state->ecl->subs, iter_sub) sub_count++;
+            snprintf(buf, 256, "Sub%u", sub_count);
+        }
+
         if (strcmp(buf, name)) {
             char errbuf[256];
             snprintf(errbuf, 256,
@@ -1878,6 +1861,10 @@ sub_begin(
             yyerror(state, errbuf);
         }
     } else {
+        if (is_timeline) {
+            yyerror(state, "timelines don't exist in th10+");
+        }
+
         // Touhou expects the list of subs to be sorted by name.
         thecl_sub_t* iter_sub;
         list_for_each(&state->ecl->subs, iter_sub) {
@@ -1894,10 +1881,14 @@ sub_begin(
             }
         }
     }
-    list_append_new(&state->ecl->subs, sub);
+    if (is_timeline)
+        list_append_new(&state->ecl->timelines, sub);
+    else
+        list_append_new(&state->ecl->subs, sub);
+
 no_append:
 
-    ++state->ecl->sub_count;
+    if (!is_timeline) ++state->ecl->sub_count;
     state->instr_time = 0;
     state->instr_rank = 0xff;
     state->current_sub = sub;
@@ -2161,7 +2152,7 @@ char* name)
         snprintf(buf, 256, "#eclmap error: couldn't open %s for reading", path);
         yyerror(state, buf);
     } else {
-        eclmap_load(g_eclmap_opcode, g_eclmap_global, map_file, path);
+        eclmap_load(g_eclmap_opcode, g_eclmap_timeline_opcode, g_eclmap_global, map_file, path);
         fclose(map_file);
     }
     free(path);

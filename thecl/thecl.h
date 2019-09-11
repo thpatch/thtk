@@ -143,11 +143,8 @@ typedef struct {
 
 typedef struct {
     char name[256];
-    size_t data_length;
-    unsigned char data[];
-} thecl_local_data_t;
-
-/* TODO: Local data deletion and creation functions. */
+    list_t instrs;
+} thecl_timeline_t;
 
 typedef struct {
     thecl_param_t *param;
@@ -166,7 +163,7 @@ typedef struct {
     size_t sub_count;
     list_t subs;
 
-    list_t local_data;
+    list_t timelines;
 } thecl_t;
 
 thecl_t* thecl_new(
@@ -190,6 +187,7 @@ typedef struct {
     bool uses_numbered_subs;
     bool has_overdrive_difficulty;
     bool uses_stack_offsets;
+    bool is_timeline_sub; /* Variable for escparse.y */
     list_t expressions;
     list_t block_stack;
     list_t global_definitions;
@@ -197,8 +195,8 @@ typedef struct {
     thecl_t* ecl;
     int path_cnt;
     char** path_stack;
-    const char* (*instr_format)(unsigned int version, unsigned int id);
-    size_t (*instr_size)(unsigned int version, const thecl_instr_t* instr);
+    const char* (*instr_format)(unsigned int version, unsigned int id, bool is_timeline);
+    size_t (*instr_size)(unsigned int version, const thecl_instr_t* instr, bool is_timeline);
 } parser_state_t;
 
 /* TODO: Deletion and creation functions for parser state. */
@@ -207,6 +205,7 @@ extern FILE* yyin;
 extern int yyparse(parser_state_t*);
 
 extern eclmap_t* g_eclmap_opcode;
+extern eclmap_t* g_eclmap_timeline_opcode;
 extern eclmap_t* g_eclmap_global;
 extern bool g_ecl_rawoutput;
 extern bool g_ecl_simplecreate;

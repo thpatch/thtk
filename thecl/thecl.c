@@ -40,6 +40,7 @@ extern const thecl_module_t th06_ecl;
 extern const thecl_module_t th10_ecl;
 
 eclmap_t* g_eclmap_opcode = NULL;
+eclmap_t* g_eclmap_timeline_opcode = NULL;
 eclmap_t* g_eclmap_global = NULL;
 bool g_ecl_rawoutput = false;
 bool g_ecl_simplecreate = false;
@@ -51,7 +52,7 @@ thecl_new(
 {
     thecl_t* ecl = calloc(1, sizeof(thecl_t));
     list_init(&ecl->subs);
-    list_init(&ecl->local_data);
+    list_init(&ecl->timelines);
     return ecl;
 }
 
@@ -88,11 +89,6 @@ thecl_free(
         free(sub);
     }
     list_free_nodes(&ecl->subs);
-
-    thecl_local_data_t* local_data;
-    list_for_each(&ecl->local_data, local_data)
-        free(local_data);
-    list_free_nodes(&ecl->local_data);
 
     free(ecl);
 }
@@ -171,6 +167,7 @@ static void
 free_eclmaps(void)
 {
     eclmap_free(g_eclmap_opcode);
+    eclmap_free(g_eclmap_timeline_opcode);
     eclmap_free(g_eclmap_global);
 }
 
@@ -222,6 +219,7 @@ main(int argc, char* argv[])
     current_output = "(stdout)";
 
     g_eclmap_opcode = eclmap_new();
+    g_eclmap_timeline_opcode = eclmap_new();
     g_eclmap_global = eclmap_new();
     atexit(free_eclmaps);
 
@@ -248,7 +246,7 @@ main(int argc, char* argv[])
                     argv0, util_optarg, strerror(errno));
                 exit(1);
             }
-            eclmap_load(g_eclmap_opcode, g_eclmap_global, map_file, util_optarg);
+            eclmap_load(g_eclmap_opcode, g_eclmap_timeline_opcode, g_eclmap_global, map_file, util_optarg);
             fclose(map_file);
             break;
         }
