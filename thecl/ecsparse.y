@@ -211,8 +211,8 @@ static void directive_eclmap(parser_state_t* state, char* name);
 %token LOADI
 %token LOADF
 %token ASSIGN "="
-%token ASSIGNI "$="
-%token ASSIGNF "%="
+%token ASSIGNI
+%token ASSIGNF
 %token ASSIGNADD "+="
 %token ASSIGNSUB "-="
 %token ASSIGNMUL "*="
@@ -222,36 +222,36 @@ static void directive_eclmap(parser_state_t* state, char* name);
 %token ASSIGNBOR "|="
 %token ASSIGNBAND "&="
 %token ADD "+"
-%token ADDI "$+"
-%token ADDF "%+"
+%token ADDI
+%token ADDF
 %token SUBTRACT "-"
-%token SUBTRACTI "$-"
-%token SUBTRACTF "%-"
+%token SUBTRACTI
+%token SUBTRACTF
 %token MULTIPLY "*"
-%token MULTIPLYI "$*"
-%token MULTIPLYF "%*"
+%token MULTIPLYI
+%token MULTIPLYF
 %token DIVIDE "/"
-%token DIVIDEI "$/"
-%token DIVIDEF "%/"
+%token DIVIDEI
+%token DIVIDEF
 %token MODULO "%"
 %token EQUAL "=="
-%token EQUALI "$=="
-%token EQUALF "%=="
+%token EQUALI
+%token EQUALF
 %token INEQUAL "!="
-%token INEQUALI "$!="
-%token INEQUALF "%!="
+%token INEQUALI
+%token INEQUALF
 %token LT "<"
-%token LTI "$<"
-%token LTF "%<"
+%token LTI
+%token LTF
 %token LTEQ "<="
-%token LTEQI "$<="
-%token LTEQF "%<="
+%token LTEQI
+%token LTEQF
 %token GT ">"
-%token GTI "$>"
-%token GTF "%>"
+%token GTI
+%token GTF
 %token GTEQ ">="
-%token GTEQI "$>="
-%token GTEQF "%>="
+%token GTEQI
+%token GTEQF
 %token NOT "!"
 %token AND "&&"
 %token OR "||"
@@ -260,8 +260,8 @@ static void directive_eclmap(parser_state_t* state, char* name);
 %token B_AND "&"
 %token DEC "--"
 %token NEG "-"
-%token NEGI "$-"
-%token NEGF "%-"
+%token NEGI
+%token NEGF
 %token SIN "sin"
 %token COS "cos"
 %token SQRT "sqrt"
