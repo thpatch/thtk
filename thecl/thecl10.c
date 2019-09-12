@@ -1806,34 +1806,6 @@ th10_parse(
     return state.ecl;
 }
 
-static int32_t
-label_offset(
-    thecl_sub_t* sub,
-    const char* name)
-{
-    thecl_label_t* label;
-    list_for_each(&sub->labels, label) {
-        if (strcmp(label->name, name) == 0)
-            return label->offset;
-    }
-    fprintf(stderr, "%s: label not found: %s\n", argv0, name);
-    return 0;
-}
-
-static int32_t
-label_time(
-    thecl_sub_t* sub,
-    const char* name)
-{
-    thecl_label_t* label;
-    list_for_each(&sub->labels, label) {
-        if (strcmp(label->name, name) == 0)
-            return label->time;
-    }
-    fprintf(stderr, "%s: label not found: %s\n", argv0, name);
-    return 0;
-}
-
 static unsigned char*
 th10_instr_serialize(
     unsigned int version,

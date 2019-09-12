@@ -139,6 +139,15 @@ typedef struct {
     list_t labels;
 } thecl_sub_t;
 
+int32_t
+label_offset(
+    thecl_sub_t* sub,
+    const char* name);
+int32_t
+label_time(
+    thecl_sub_t* sub,
+    const char* name);
+
 /* TODO: Subroutine creation and deletion functions. */
 
 typedef struct {

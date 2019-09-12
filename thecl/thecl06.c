@@ -68,13 +68,29 @@ PACK_END
 } PACK_ATTRIBUTE th06_timeline_instr_t;
 
 static ssize_t
+th06_value_from_data(
+    const unsigned char* data,
+    size_t data_length,
+    char type,
+    value_t* value)
+{
+    if (type == 'o') {
+        return value_from_data(data, data_length, 'S', value);
+    } else {
+        return value_from_data(data, data_length, type, value);
+    }
+}
+
+static ssize_t
 th08_value_from_data(
     const unsigned char* data,
     size_t data_length,
     char type,
     value_t* value)
 {
-    if (type == 'm') {
+    if (type == 'o') {
+        return value_from_data(data, data_length, 'S', value);
+    } else if (type == 'm') {
         int ret;
         value_t temp;
         switch (data_length) {
@@ -112,7 +128,9 @@ th95_value_from_data(
     char type,
     value_t* value)
 {
-    if (type == 'm') {
+    if (type == 'o') {
+        return value_from_data(data, data_length, 'S', value);
+    } else if (type == 'm') {
         int ret;
         value_t temp;
         ret = value_from_data(data, 48, 'm', &temp);
@@ -128,7 +146,7 @@ static char*
 th06_param_to_text(
     const thecl_param_t* param)
 {
-    if (param->type == 'z') {
+    if (param->type == 'z' || param->type == 'm') {
         const size_t zlen = strlen(param->value.val.z);
         char* ret = malloc(4 + zlen * 2);
         char* temp = ret;
@@ -145,6 +163,22 @@ th06_param_to_text(
         return ret;
     } else
         return value_to_text(&param->value);
+}
+
+static char*
+th06_stringify_param(
+    const thecl_sub_t* sub,
+    const thecl_instr_t* instr,
+    const thecl_param_t* param)
+{
+    char temp[512];
+    switch(param->type) {
+        case 'o':
+            snprintf(temp, 512, "%s_%d", sub->name, instr->offset + param->value.val.S);
+            return strdup(temp);
+        default:
+            return th06_param_to_text(param);
+    }
 }
 
 static const id_format_pair_t th06_timeline_fmts[] = {
@@ -223,8 +257,8 @@ th06_find_timeline_format(
 static const id_format_pair_t th06_fmts[] = {
     { 0, "" },
     { 1, "S" },
-    { 2, "SS" },
-    { 3, "SSS" },
+    { 2, "So" },
+    { 3, "SoS" },
     { 4, "SS" },
     { 5, "Sf" },
     { 6, "SS" },
@@ -250,12 +284,12 @@ static const id_format_pair_t th06_fmts[] = {
     { 26, "S" },
     { 27, "SS" },
     { 28, "ff" },
-    { 29, "SS" },
-    { 30, "SS" },
-    { 31, "SS" },
-    { 32, "SS" },
-    { 33, "SS" },
-    { 34, "SS" },
+    { 29, "So" },
+    { 30, "So" },
+    { 31, "So" },
+    { 32, "So" },
+    { 33, "So" },
+    { 34, "So" },
     { 35, "SSf" },
     { 36, "" },
     { 37, "SSfSS" },
@@ -362,8 +396,8 @@ static const id_format_pair_t th06_fmts[] = {
 static const id_format_pair_t th07_fmts[] = {
     { 0, "" },
     { 1, "" },
-    { 2, "SS" },
-    { 3, "SSS" },
+    { 2, "So" },
+    { 3, "SoS" },
     { 4, "SS" },
     { 5, "ff" },
     { 6, "SS" },
@@ -387,18 +421,18 @@ static const id_format_pair_t th07_fmts[] = {
     { 25, "ff" },
     { 26, "fffff" },
     { 27, "fSSSffff" },
-    { 28, "SSSS" },
-    { 29, "ffSS" },
-    { 30, "SSSS" },
-    { 31, "ffSS" },
-    { 32, "SSSS" },
-    { 33, "ffSS" },
-    { 34, "SSSS" },
-    { 35, "ffSS" },
-    { 36, "SSSS" },
-    { 37, "ffSS" },
-    { 38, "SSSS" },
-    { 39, "ffSS" },
+    { 28, "SSSo" },
+    { 29, "ffSo" },
+    { 30, "SSSo" },
+    { 31, "ffSo" },
+    { 32, "SSSo" },
+    { 33, "ffSo" },
+    { 34, "SSSo" },
+    { 35, "ffSo" },
+    { 36, "SSSo" },
+    { 37, "ffSo" },
+    { 38, "SSSo" },
+    { 39, "ffSo" },
     { 40, "f" },
     { 41, "S" },
     { 42, "" },
@@ -521,8 +555,8 @@ static const id_format_pair_t th08_fmts[] = {
     { 1, "" },
     { 2, "S" },
     { 3, "S" },
-    { 4, "SS" },
-    { 5, "SSS" },
+    { 4, "So" },
+    { 5, "SoS" },
     { 6, "SS" },
     { 7, "ff" },
     { 9, "ff" },
@@ -552,16 +586,16 @@ static const id_format_pair_t th08_fmts[] = {
     { 37, "f" },
     { 38, "ffff" },
     { 39, "fffff" },
-    { 40, "SSSS" },
-    { 42, "SSSS" },
-    { 44, "SSSS" },
-    { 45, "ffSS" },
-    { 46, "SSSS" },
-    { 47, "ffSS" },
-    { 48, "SSSS" },
-    { 49, "ffSS" },
-    { 50, "SSSS" },
-    { 51, "ffSS" },
+    { 40, "SSSo" },
+    { 42, "SSSo" },
+    { 44, "SSSo" },
+    { 45, "ffSo" },
+    { 46, "SSSo" },
+    { 47, "ffSo" },
+    { 48, "SSSo" },
+    { 49, "ffSo" },
+    { 50, "SSSo" },
+    { 51, "ffSo" },
     { 52, "S" },
     { 53, "" },
     { 54, "S" },
@@ -774,6 +808,41 @@ th06_check_timeline_sentinel(
         return raw_instr->time == 0xffff && (uint16_t)raw_instr->arg0 == 0xffff && raw_instr->size == 0x00;
 }
 
+static void
+th06_insert_labels(
+    thecl_t* ecl)
+{
+    thecl_sub_t* sub;
+    list_for_each(&ecl->subs, sub) {
+
+        thecl_instr_t* instr;
+        list_for_each(&sub->instrs, instr) {
+
+            thecl_param_t* param;
+            list_for_each(&instr->params, param) {
+
+                if (param->type == 'o') {
+
+                    list_node_t* node;
+                    list_for_each_node(&sub->instrs, node) {
+                        thecl_instr_t* instr_find = node->data;
+
+                        if (instr_find->offset == instr->offset + param->value.val.S) {
+
+                            if (instr_find->type != THECL_INSTR_LABEL) {
+                                thecl_instr_t* label = thecl_instr_label(instr_find->offset);
+                                list_prepend_to(&sub->instrs, label, node);
+                            }
+
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 static thecl_t*
 th06_open(
     FILE* stream,
@@ -825,11 +894,12 @@ th06_open(
         list_init(&sub->labels);
         unsigned int time = 0;
 
-        const th06_instr_t* raw_instr =
-            (th06_instr_t*)(map + header->offsets[timeline_count_max + s]);
+        const void* raw_sub = map + header->offsets[timeline_count_max + s];
+        const th06_instr_t* raw_instr = (th06_instr_t*)(raw_sub);
         while (raw_instr->time != 0xffffffff && raw_instr->size) {
             if (raw_instr->time != time) {
                 thecl_instr_t* new = thecl_instr_time(raw_instr->time);
+                new->offset = (ptrdiff_t)raw_instr - (ptrdiff_t)raw_sub;
                 list_append_new(&sub->instrs, new);
                 time = raw_instr->time;
             }
@@ -839,12 +909,14 @@ th06_open(
                 if (version == 6 || version == 7)
                     rank_mask |= 0xf0;
                 thecl_instr_t* new = thecl_instr_rank(rank_mask & 0xff);
+                new->offset = (ptrdiff_t)raw_instr - (ptrdiff_t)raw_sub;
                 list_append_new(&sub->instrs, new);
                 rank = raw_instr->rank_mask;
             }
 
             thecl_instr_t* instr = thecl_instr_new();
             instr->id = raw_instr->id;
+            instr->offset = (ptrdiff_t)raw_instr - (ptrdiff_t)raw_sub;
 
             const char* format;
 
@@ -880,16 +952,21 @@ th06_open(
                 else if (version == 8)
                     values = value_list_from_data(th08_value_from_data, raw_instr->data, raw_instr->size - sizeof(th06_instr_t), format);
                 else
-                    values = value_list_from_data(value_from_data, raw_instr->data, raw_instr->size - sizeof(th06_instr_t), format);
+                    values = value_list_from_data(th06_value_from_data, raw_instr->data, raw_instr->size - sizeof(th06_instr_t), format);
                 value_t* value_iter = values;
                 uint16_t param_mask = raw_instr->param_mask;
+
+                size_t p = 0;
+                char f;
                 while (value_iter->type) {
-                    thecl_param_t* param = param_new((*value_iter).type);
+                    f = format[p];
+                    thecl_param_t* param = param_new(f);
                     param->value = *value_iter;
                     if (version != 6 && param_mask & 1)
                         param->stack = 1;
                     param_mask >>= 1;
                     ++value_iter;
+                    ++p;
                     list_append_new(&instr->params, param);
                 }
                 free(values);
@@ -903,6 +980,8 @@ next:
 
         list_append_new(&ecl->subs, sub);
     }
+
+    th06_insert_labels(ecl);
 
     thecl_timeline_t* timeline;
 
@@ -1003,6 +1082,7 @@ th06_dump(
 
         thecl_instr_t* instr;
         list_for_each(&sub->instrs, instr) {
+            char temp[512];
             switch (instr->type) {
             case THECL_INSTR_TIME:
                 fprintf(out, "%u:\n", instr->time);
@@ -1022,6 +1102,9 @@ th06_dump(
                         !((instr->rank) & RANK_ID_7) ? "7" : "");
                 }
                 break;
+            case THECL_INSTR_LABEL:
+                fprintf(out, "%s_%u:\n", sub->name, instr->offset);
+                break;
             case THECL_INSTR_INSTR: {
                 eclmap_entry_t *ent = eclmap_get(g_eclmap_opcode, instr->id);
                 if(ent && ent->mnemonic) {
@@ -1039,7 +1122,7 @@ th06_dump(
                         first = 0;
                     }
 
-                    char* ret = th06_param_to_text(param);
+                    char* ret = th06_stringify_param(sub, instr, param);
                     fprintf(out, "%s%s%s",
                         param->stack ? "[" : "",
                         ret,
@@ -1153,9 +1236,13 @@ th06_instr_size(
     } else {
         thecl_param_t* param;
         list_for_each(&instr->params, param) {
-            value_t v = param->value;
-            v.type = param->type;
-            ret += value_size(&v);
+            if (param->type == 'o')  {
+                ret += sizeof(uint32_t);
+            } else {
+                value_t v = param->value;
+                v.type = param->type;
+                ret += value_size(&v);
+            }
         }
     }
 
@@ -1207,6 +1294,7 @@ th06_parse(
 static th06_instr_t*
 th06_instr_serialize(
     const thecl_t* ecl,
+    thecl_sub_t* sub,
     thecl_instr_t* instr)
 {
     th06_instr_t* ret;
@@ -1234,7 +1322,11 @@ th06_instr_serialize(
         if (param->stack)
             ret->param_mask |= 1 << param_count;
         ++param_count;
-        if (param->value.type == 'z') {
+        if (param->type == 'o') {
+            uint32_t label = label_offset(sub, param->value.val.z) - instr->offset;
+            memcpy(param_data, &label, sizeof(uint32_t));
+            param_data += sizeof(uint32_t);
+        } else if (param->value.type == 'z') {
             if (ecl->version == 6) {
                 memset(param_data, 0, 34);
                 strncpy((char*)param_data, param->value.val.z, 34);
@@ -1365,7 +1457,7 @@ th06_compile(
 
         thecl_instr_t* instr;
         list_for_each(&sub->instrs, instr) {
-            th06_instr_t* raw_instr = th06_instr_serialize(ecl, instr);
+            th06_instr_t* raw_instr = th06_instr_serialize(ecl, sub, instr);
             if (raw_instr->id <= max_opcode)
                 file_write(out, raw_instr, raw_instr->size);
             else {

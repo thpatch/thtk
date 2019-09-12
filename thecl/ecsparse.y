@@ -1067,7 +1067,10 @@ Address:
             }
             free($1);
         } else {
-            if (strncmp($1, state->current_sub->name, strlen(state->current_sub->name)) != 0) {
+            if (
+                   is_post_th10(state->version) /* Old versions don't have stack vars anyway, so no need to show the warning... */
+                && strncmp($1, state->current_sub->name, strlen(state->current_sub->name)) != 0
+            ) {
                 char buf[256];
                 snprintf(buf, 256, "warning: %s not found as a variable, treating like a label instead.", $1);
                 yyerror(state, buf);
