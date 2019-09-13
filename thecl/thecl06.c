@@ -74,7 +74,9 @@ th06_value_from_data(
     char type,
     value_t* value)
 {
-    if (type == 'o') {
+    if (type == 'n') {
+        return value_from_data(data, data_length, 's', value);
+    } else if (type == 'o' || type == 'N') {
         return value_from_data(data, data_length, 'S', value);
     } else {
         return value_from_data(data, data_length, type, value);
@@ -88,7 +90,9 @@ th08_value_from_data(
     char type,
     value_t* value)
 {
-    if (type == 'o') {
+    if (type == 'n') {
+        return value_from_data(data, data_length, 's', value);
+    } else if (type == 'o' || type == 'N') {
         return value_from_data(data, data_length, 'S', value);
     } else if (type == 'm') {
         int ret;
@@ -128,7 +132,9 @@ th95_value_from_data(
     char type,
     value_t* value)
 {
-    if (type == 'o') {
+    if (type == 'n') {
+        return value_from_data(data, data_length, 's', value);
+    } else if (type == 'o' || type == 'N') {
         return value_from_data(data, data_length, 'S', value);
     } else if (type == 'm') {
         int ret;
@@ -173,6 +179,12 @@ th06_stringify_param(
 {
     char temp[512];
     switch(param->type) {
+        case 'n':
+            snprintf(temp, 512, "\"Sub%d\"", param->value.val.s);
+            return strdup(temp);
+        case 'N':
+            snprintf(temp, 512, "\"Sub%d\"", param->value.val.S);
+            return strdup(temp);
         case 'o':
             snprintf(temp, 512, "%s_%d", sub->name, instr->offset + param->value.val.S);
             return strdup(temp);
@@ -183,13 +195,13 @@ th06_stringify_param(
 
 static const id_format_pair_t th06_timeline_fmts[] = {
     /* the first parameter is a part of the struct and is always s */
-    {0, "sfffssS"},
-    {2, "sfffssS"},
-    {4, "sfffssS"},
-    {6, "sfffssS"},
+    {0, "nfffssS"},
+    {2, "nfffssS"},
+    {4, "nfffssS"},
+    {6, "nfffssS"},
     {8, "s"},
     {9, "s"},
-    {10, "sff"},
+    {10, "sSS"},
     {12, "s"},
     { 0, 0 },
 };
@@ -255,6 +267,11 @@ th06_find_timeline_format(
 
 /* TODO: Try to derive the TH07 table from this. */
 static const id_format_pair_t th06_fmts[] = {
+    /* Special param types:
+        - 'o' - 'S' used as a label (offset in jump instructions)
+        - 'N' - 'S' used as a sub name string (in call/enm creation instructions)
+        - 'n' - 's' used as a sub name string
+    */
     { 0, "" },
     { 1, "S" },
     { 2, "So" },
@@ -290,14 +307,14 @@ static const id_format_pair_t th06_fmts[] = {
     { 32, "So" },
     { 33, "So" },
     { 34, "So" },
-    { 35, "SSf" },
+    { 35, "NSf" },
     { 36, "" },
-    { 37, "SSfSS" },
-    { 38, "SSfSS" },
-    { 39, "SSfSS" },
-    { 40, "SSfSS" },
-    { 41, "SSfSS" },
-    { 42, "SSfSS" },
+    { 37, "NSfSS" },
+    { 38, "NSfSS" },
+    { 39, "NSfSS" },
+    { 40, "NSfSS" },
+    { 41, "NSfSS" },
+    { 42, "NSfSS" },
     { 43, "fff" },
     { 44, "fff" },
     { 45, "ff" },
@@ -350,7 +367,7 @@ static const id_format_pair_t th06_fmts[] = {
     { 92, "S" },
     { 93, "ssz" },
     { 94, "" },
-    { 95, "SfffssS" },
+    { 95, "NfffssS" },
     { 96, "" },
     { 97, "S" },
     { 98, "ssssS" },
@@ -363,15 +380,15 @@ static const id_format_pair_t th06_fmts[] = {
     { 105, "S" },
     { 106, "S" },
     { 107, "S" },
-    { 108, "S" },
-    { 109, "SS" },
+    { 108, "N" },
+    { 109, "NS" },
     { 110, "S" },
     { 111, "S" },
     { 112, "S" },
     { 113, "S" },
-    { 114, "S" },
+    { 114, "N" },
     { 115, "S" },
-    { 116, "S" },
+    { 116, "N" },
     { 117, "S" },
     { 118, "SSss" },
     { 119, "S" },
@@ -382,7 +399,7 @@ static const id_format_pair_t th06_fmts[] = {
     { 124, "S" },
     { 125, "" },
     { 126, "S" },
-    { 127, "" },
+    { 127, "S" },
     { 128, "S" },
     { 129, "SS" },
     { 130, "S" },
@@ -1029,7 +1046,7 @@ next:
 
                 fprintf(stderr, "\n");
             } else {
-                thecl_param_t* param0 = param_new('s');
+                thecl_param_t* param0 = param_new(format[0]);
                 param0->value.val.s = raw_instr->arg0;
                 list_append_new(&instr->params, param0);
 
@@ -1180,7 +1197,7 @@ th06_dump(
                         first = 0;
                     }
 
-                    char* ret = th06_param_to_text(param);
+                    char* ret = th06_stringify_param(NULL, instr, param);
                     fprintf(out, ret);
                     free(ret);
                 }
@@ -1236,7 +1253,9 @@ th06_instr_size(
     } else {
         thecl_param_t* param;
         list_for_each(&instr->params, param) {
-            if (param->type == 'o')  {
+            if (param->type == 'n') {
+                ret += sizeof(uint16_t);
+            } else if (param->type == 'o' || param->type == 'N')  {
                 ret += sizeof(uint32_t);
             } else {
                 value_t v = param->value;
@@ -1291,6 +1310,21 @@ th06_parse(
     return state.ecl;
 }
 
+static uint32_t
+th06_find_sub(
+    const thecl_t* ecl,
+    char* name)
+{
+    uint32_t n = 0;
+    thecl_sub_t* sub;
+    list_for_each(&ecl->subs, sub) {
+        if (!strcmp(sub->name, name)) return n;
+        ++n;
+    }
+    fprintf(stderr, "%s: sub not found: %s\n", argv0, name);
+    return 0;
+}
+
 static th06_instr_t*
 th06_instr_serialize(
     const thecl_t* ecl,
@@ -1322,7 +1356,15 @@ th06_instr_serialize(
         if (param->stack)
             ret->param_mask |= 1 << param_count;
         ++param_count;
-        if (param->type == 'o') {
+        if (param->type == 'n') {
+            uint16_t num = th06_find_sub(ecl, param->value.val.z);
+            memcpy(param_data, &num, sizeof(uint16_t));
+            param_data += sizeof(uint16_t);
+        } else if (param->type == 'N') {
+            uint32_t num = th06_find_sub(ecl, param->value.val.z);
+            memcpy(param_data, &num, sizeof(uint32_t));
+            param_data += sizeof(uint32_t);
+        } else if (param->type == 'o') {
             uint32_t label = label_offset(sub, param->value.val.z) - instr->offset;
             memcpy(param_data, &label, sizeof(uint32_t));
             param_data += sizeof(uint32_t);
@@ -1381,9 +1423,15 @@ th06_timeline_instr_serialize(
     int first = 1;
     list_for_each(&instr->params, param) {
         if (first) {
-            ret->arg0 = param->value.val.s;
+            if (param->type == 'n')
+                ret->arg0 = th06_find_sub(ecl, param->value.val.z);
+            else 
+                ret->arg0 = param->value.val.s;
             first = 0;
         } else {
+            /* TODO: implement other param types if necessary */
+            /* Or maybe it would be better to make a function that both this
+               and th06_instr_serialize would use for writing param data? */
             value_t v = param->value;
             v.type = param->type;
             param_data += value_to_data(&v, param_data, instr->size - (param_data - (unsigned char*)ret));

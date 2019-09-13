@@ -1178,7 +1178,7 @@ instr_set_types(
             new_type = *format;
 
         if (new_type != param->type &&
-            !(param->type == 'z' && (new_type == 'm' || new_type == 'x')) &&
+            !(param->type == 'z' && (new_type == 'm' || new_type == 'x' || new_type == 'N' || new_type == 'n')) &&
             !(param->type == 'S' && (new_type == 's' || new_type == 'U' || new_type == 't'))
         ) {
 
@@ -1843,27 +1843,7 @@ sub_begin(
     sub->offset = 0;
     list_init(&sub->labels);
 
-    if (state->uses_numbered_subs) {
-        int sub_count = 0;
-        thecl_sub_t* iter_sub;
-        char buf[256];
-        if (is_timeline) {
-            list_for_each(&state->ecl->timelines, iter_sub) sub_count++;
-            snprintf(buf, 256, "Timeline%u", sub_count);
-        } else {
-            list_for_each(&state->ecl->subs, iter_sub) sub_count++;
-            snprintf(buf, 256, "Sub%u", sub_count);
-        }
-
-        if (strcmp(buf, name)) {
-            char errbuf[256];
-            snprintf(errbuf, 256,
-                     "parse_rank: in sub %s: Function name does not match "
-                     "position in file. (expected %s)",
-                     name, buf);
-            yyerror(state, errbuf);
-        }
-    } else {
+    if (!state->uses_numbered_subs) {
         if (is_timeline) {
             yyerror(state, "timelines don't exist in th10+");
         }
@@ -2096,12 +2076,6 @@ directive_include(
     parser_state_t* state,
     char* include_path)
 {
-    if (!is_post_th10(state->version)) {
-        /* This is mostly because of numbered subs */
-        yyerror(state, "include directive cannot be used in pre-th10 versions.");
-        return 1;
-    }
-
     char* path = path_get_full(state, include_path);
     FILE* include_file = fopen(path, "rb");
 
