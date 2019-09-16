@@ -31,6 +31,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 #include "path.h"
 #include "file.h"
 #include "program.h"
@@ -175,7 +176,8 @@ static char*
 th06_stringify_param(
     const thecl_sub_t* sub,
     const thecl_instr_t* instr,
-    const thecl_param_t* param)
+    const thecl_param_t* param,
+    unsigned int version)
 {
     char temp[512];
     switch(param->type) {
@@ -189,7 +191,31 @@ th06_stringify_param(
             snprintf(temp, 512, "%s_%d", sub->name, instr->offset + param->value.val.S);
             return strdup(temp);
         default:
-            return th06_param_to_text(param);
+            if (
+                   (param->stack || version == 6)
+                && (param->value.type == 'f' || param->value.type == 'S' || param->value.type == 's')
+            ) {
+                int val;
+                if (param->value.type == 'S') val = param->value.val.S;
+                else if (param->value.type == 'f') val = floor(param->value.val.f);
+                else val = param->value.val.s;
+                
+                eclmap_entry_t* ent = eclmap_get(g_eclmap_global, val);
+                if (ent && ent->mnemonic) {
+                    snprintf(temp, 256, "%c%s", param->value.type == 'f' ? '%' : '$', ent->mnemonic);
+                    return strdup(temp);
+                }
+            }
+
+
+            char* ret = th06_param_to_text(param);
+            sprintf(temp, "%s%s%s",
+                param->stack ? "[" : "",
+                ret,
+                param->stack ? "]" : "");
+            free(ret);
+
+            return strdup(temp);
     }
 }
 
@@ -898,6 +924,7 @@ th06_open(
     }
 
     thecl_t* ecl = thecl_new();
+    ecl->version = version;
     ecl->sub_count = header->sub_count;
 
     for (size_t s = 0; s < header->sub_count; ++s) {
@@ -1139,11 +1166,8 @@ th06_dump(
                         first = 0;
                     }
 
-                    char* ret = th06_stringify_param(sub, instr, param);
-                    fprintf(out, "%s%s%s",
-                        param->stack ? "[" : "",
-                        ret,
-                        param->stack ? "]" : "");
+                    char* ret = th06_stringify_param(sub, instr, param, ecl->version);
+                    fprintf(out, "%s", ret);
                     free(ret);
                 }
                 fprintf(out, ");\n");
@@ -1197,8 +1221,8 @@ th06_dump(
                         first = 0;
                     }
 
-                    char* ret = th06_stringify_param(NULL, instr, param);
-                    fprintf(out, ret);
+                    char* ret = th06_stringify_param(NULL, instr, param, ecl->version);
+                    fprintf(out, "%s", ret);
                     free(ret);
                 }
                 fprintf(out, ");\n");
