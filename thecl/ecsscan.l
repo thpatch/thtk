@@ -63,6 +63,7 @@
 %x COMMENT COMMENT_SINGLE CSTRING STRING ESCAPE_CHAR
 %%
 ","        return COMMA;
+"?"        return QUESTION;
 ":"        return COLON;
 ";"        return SEMICOLON;
 "["        return SQUARE_OPEN;

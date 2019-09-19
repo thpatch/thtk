@@ -58,7 +58,8 @@ static void instr_create_call(parser_state_t *state, int type, char *name, list_
 enum expression_type {
     EXPRESSION_OP,
     EXPRESSION_VAL,
-    EXPRESSION_RANK_SWITCH
+    EXPRESSION_RANK_SWITCH,
+    EXPRESSION_TERNARY
 };
 
 typedef struct expression_t {
@@ -85,8 +86,9 @@ static expression_t* expression_load_new(const parser_state_t* state, thecl_para
 static expression_t* expression_operation_new(const parser_state_t* state, const int* symbols, expression_t** operands);
 static expression_t* expression_address_operation_new(const parser_state_t* state, const int* symbols, thecl_param_t* value);
 static expression_t* expression_rank_switch_new(
-    const parser_state_t* state, list_t* params
+    const parser_state_t* state, list_t* exprs
 );
+static expression_t* expression_ternary_new(const parser_state_t* state, expression_t* condition, expression_t* val1, expression_t* val2);
 
 static void expression_output(parser_state_t* state, expression_t* expr, int has_no_parents);
 static void expression_free(expression_t* expr);
@@ -170,6 +172,7 @@ static void directive_eclmap(parser_state_t* state, char* name);
 %token <string> RANK "rank"
 %token <string> DIRECTIVE "directive"
 %token COMMA ","
+%token QUESTION "?"
 %token COLON ":"
 %token SEMICOLON ";"
 %token SQUARE_OPEN "["
@@ -996,6 +999,7 @@ Expression:
 
     /* Custom expressions. */
     | Rank_Switch_List            { $$ = expression_rank_switch_new(state, $1); }
+    | Expression "?" Expression_Safe ":" Expression_Safe { $$ = expression_ternary_new(state, $1, $3, $5); }
     ;
 
 /* 
@@ -1552,7 +1556,7 @@ static expression_t*
 expression_rank_switch_new(
     const parser_state_t* state, list_t* exprs
 ) {
-    if (is_post_th10(state->ecl->version)) {
+    if (is_post_th10(state->version)) {
         expression_t* expr_main = malloc(sizeof(expression_t));
         expr_main->type = EXPRESSION_RANK_SWITCH;
 
@@ -1575,6 +1579,30 @@ expression_rank_switch_new(
     exit(2);
 }
 
+static expression_t*
+expression_ternary_new(
+    const parser_state_t* state,
+    expression_t* cond,
+    expression_t* val1,
+    expression_t* val2
+ ) {
+    if (is_post_th10(state->version)) {
+        if (val1->result_type != val2->result_type)
+            yyerror(state, "inconsistent types for ternary operator");
+        expression_t* expr = malloc(sizeof(expression_t));
+        expr->type = EXPRESSION_TERNARY;
+        expr->result_type = val1->result_type;
+        list_init(&expr->children);
+        list_append_new(&expr->children, cond);
+        list_append_new(&expr->children, val1);
+        list_append_new(&expr->children, val2);
+        return expr;
+    }
+    yyerror(state, "ternary operator is not available in pre-th10 ECL");
+
+    exit(2);
+ }
+
 static expression_t *
 expression_copy(
     expression_t *expr)
@@ -1583,7 +1611,7 @@ expression_copy(
     memcpy(copy, expr, sizeof(expression_t));
     expression_t* child_expr;
     list_init(&copy->children);
-    if (expr->type == EXPRESSION_OP) {
+    if (expr->type == EXPRESSION_OP || expr->type == EXPRESSION_RANK_SWITCH || expr->type == EXPRESSION_TERNARY) {
         list_for_each(&expr->children, child_expr)
             list_append_new(&copy->children, expression_copy(child_expr));
     } else if (expr->type == EXPRESSION_VAL) {
@@ -1665,6 +1693,27 @@ expression_output(
         if (state->instr_rank != rank_none) expression_output(state, last_expr, 1);
 
         state->instr_rank = rank_org;
+    } else if (expr->type == EXPRESSION_TERNARY) {
+        char labelstr_unless[256];
+        char labelstr_end[256];
+
+        snprintf(labelstr_unless, 256, "ternary_unless_%d_%d", yylloc.first_line, yylloc.first_column);
+        snprintf(labelstr_end, 256, "ternary_end_%d_%d", yylloc.first_line, yylloc.first_column);
+
+        int i = 0;
+        expression_t* child_expr;
+        list_for_each(&expr->children, child_expr) {
+            expression_output(state, child_expr, 1);
+            if (i == 0) {
+                expression_create_goto(state, UNLESS, labelstr_unless);
+            } else if (i == 1) {
+                expression_create_goto(state, GOTO, labelstr_end);
+                label_create(state, labelstr_unless);
+            } else {
+                label_create(state, labelstr_end);
+            }
+            ++i;
+        }
     }
 }
 
@@ -1817,12 +1866,11 @@ expression_free(
     expression_t* expr)
 {
     expression_t* child_expr;
-    if (expr->type == EXPRESSION_OP) {
+    if (expr->type == EXPRESSION_OP || expr->type == EXPRESSION_RANK_SWITCH || expr->type == EXPRESSION_TERNARY) {
         list_for_each(&expr->children, child_expr)
             expression_free(child_expr);
         list_free_nodes(&expr->children);
-    } else if (expr->type == EXPRESSION_RANK_SWITCH)
-        list_free_nodes(&expr->children);
+    }
     free(expr);
 }
 
