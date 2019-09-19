@@ -946,11 +946,11 @@ Instruction_Parameter:
     ;
 
 Rank_Switch_Next_Value: 
-      ":" Load_Type {$$ = $2}
+      ":" Expression_Safe {$$ = $2}
     ;
 
 Rank_Switch_List:
-      Load_Type Rank_Switch_Next_Value_List {
+      Expression_Safe Rank_Switch_Next_Value_List {
         $$ = $2;
         list_prepend_new($$, $1);
       }
@@ -1550,24 +1550,25 @@ expression_operation_new(
 
 static expression_t* 
 expression_rank_switch_new(
-    const parser_state_t* state, list_t* params
+    const parser_state_t* state, list_t* exprs
 ) {
     if (is_post_th10(state->ecl->version)) {
-        expression_t* expr = malloc(sizeof(expression_t));
-        expr->type = EXPRESSION_RANK_SWITCH;
+        expression_t* expr_main = malloc(sizeof(expression_t));
+        expr_main->type = EXPRESSION_RANK_SWITCH;
 
-        thecl_param_t* param = list_head(params);
-        expr->result_type = param->value.type;
+        expression_t* expr = list_head(exprs);
+        expr_main->result_type = expr->result_type;
 
-        list_for_each(params, param) {
-            if (param->value.type != expr->result_type) {
-                yyerror(state, "inconsistent parameter types for rank switch");
+        list_for_each(exprs, expr) {
+            if (expr->result_type != expr_main->result_type) {
+                yyerror(state, "inconsistent parameter types for difficulty switch");
                 exit(2);
             }
         }
 
-        expr->children = *params;
-        return expr;
+        expr_main->children = *exprs;
+        free(exprs);
+        return expr_main;
     }
     yyerror(state, "difficulty switch expression is not available in pre-th10 ECL");
 
@@ -1634,18 +1635,15 @@ expression_output(
         const char* diffs[5] = {"E", "N", "H", "L", "O"};
 
         int diff = 0;
-        thecl_param_t* param;
-        thecl_instr_t* instr = NULL;
+        int rank_none = parse_rank(state, "-");
+        int rank_org = state->instr_rank;
 
-        expr_t* tmp_expr = expr_get_by_symbol(state->version, LOADI);
-        int loadi = tmp_expr->id;
-        tmp_expr = expr_get_by_symbol(state->version, LOADF);
-        int loadf = tmp_expr->id;
-
-        list_for_each(&expr->children, param) {
-            if (instr != NULL) {
-                instr->rank = parse_rank(state, diffs[diff++]);
-                instr_add(state->current_sub, instr);
+        expression_t* iter_expr;
+        expression_t* last_expr = NULL;
+        list_for_each(&expr->children, iter_expr) {
+            if (last_expr != NULL) {
+                state->instr_rank = rank_org & parse_rank(state, diffs[diff++]);
+                if (state->instr_rank != rank_none) expression_output(state, last_expr, 1);
             }
 
             if (diff > 4) {
@@ -1653,18 +1651,20 @@ expression_output(
                 exit(2);
             }
 
-            instr = instr_new(state, param->type == 'S' ? loadi : loadf, "p", param);
+            last_expr = iter_expr;
         }
 
-        /* Set last ins to all remaining difficulties. */
+        /* Set last expr to all remaining difficulties. */
         char diff_str[5] = "";
         while(diff < diff_amt) {
             char* next_diff = diffs[diff++];
             strcat(diff_str, next_diff);
         }
 
-        instr->rank = parse_rank(state, diff_str);
-        instr_add(state->current_sub, instr);
+        state->instr_rank = rank_org & parse_rank(state, diff_str);
+        if (state->instr_rank != rank_none) expression_output(state, last_expr, 1);
+
+        state->instr_rank = rank_org;
     }
 }
 
