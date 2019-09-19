@@ -276,6 +276,7 @@ static void directive_eclmap(parser_state_t* state, char* name);
 %type <list> Rank_Switch_Next_Value_List
 
 %type <expression> Expression
+%type <expression> Expression_Safe
 
 %type <param> Instruction_Parameter
 %type <param> Address
@@ -716,23 +717,9 @@ CaseList:
     ;
 
 Case:
-     "case" "(" Expression ")" ":" {
+     "case" Expression_Safe ":" {
           switch_case_t *switch_case = malloc(sizeof(switch_case_t));
-          switch_case->expr = $3;
-          snprintf(switch_case->labelstr, 250, "case_%i_%i", yylloc.first_line, yylloc.first_column);
-
-          label_create(state, switch_case->labelstr);
-
-          list_node_t *head = state->block_stack.head;
-          if (head->next) {
-              list_prepend_to(&state->block_stack, switch_case, head->next);
-          } else {
-              list_append_new(&state->block_stack, switch_case);
-          }
-      }
-    | "case" Load_Type ":" {
-          switch_case_t *switch_case = malloc(sizeof(switch_case_t));
-          switch_case->expr = expression_load_new(state, $2);
+          switch_case->expr = $2;
           snprintf(switch_case->labelstr, 250, "case_%i_%i", yylloc.first_line, yylloc.first_column);
 
           label_create(state, switch_case->labelstr);
@@ -1009,6 +996,21 @@ Expression:
 
     /* Custom expressions. */
     | Rank_Switch_List            { $$ = expression_rank_switch_new(state, $1); }
+    ;
+
+/* 
+   The purpose of this is to be used in places that contain certain tokens
+   that could be a part of an expression too, to prevent such tokens from
+   mistakenly being parsed as expressions.
+   An example of such situation is the ':' from "case 1:" being parsed as a part of
+   the rank switch expression.
+   Of course, this still allows any expression to be put in - it just requires it to
+   be in brackets (unless it's a literal), which prevents any bad things from happening.
+*/
+Expression_Safe:
+      Load_Type                      { $$ = expression_load_new(state, $1); }
+    |             "(" Expression ")" { $$ = $2 ;}
+    | Cast_Target "(" Expression ")" { $$ = $3; $$->result_type = $1 }
     ;
 
 Address:
