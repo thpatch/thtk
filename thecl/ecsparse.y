@@ -1353,12 +1353,23 @@ instr_create_call(
             bool is_load_expression = false;
             bool is_load_var = false;
             if (param->is_expression_param) {
+                
                 current_expr = (expression_t*)node_expr->data;
-                expression_optimize(state, current_expr);
-                expr_t* expr = expr_get_by_id(state->version, current_expr->id);
-                is_load_expression = (expr->symbol == LOADI || expr->symbol == LOADF);
-                if (!is_load_expression) node_expr = node_expr->prev;
-                else is_load_var = current_expr->value->stack;
+                list_node_t* last_node = node_expr;
+                node_expr = node_expr->prev;
+
+                if (current_expr->type == EXPRESSION_OP)
+                    expression_optimize(state, current_expr);
+                if (current_expr->type == EXPRESSION_VAL) {
+                    expr_t* expr = expr_get_by_id(state->version, current_expr->id);
+                    is_load_expression = (expr->symbol == LOADI || expr->symbol == LOADF);
+                    if (is_load_expression) {
+                        is_load_var = current_expr->value->stack;
+                        param->stack = is_load_var;
+                        param->is_expression_param = 0;
+                        list_del(&state->expressions, last_node);
+                    }
+                }
             }
             switch (iter_param->value.type) {
             case 'S':
@@ -1406,16 +1417,10 @@ instr_create_call(
                 yyerror(state, "invalid sub parameter");
                 g_was_error = true;
             }
-            if (is_load_expression) {
-                param->stack = is_load_var;
-                param->is_expression_param = 0;
 
-                list_node_t* tmp = node_expr;
-                node_expr = node_expr->prev;
-
-                list_del(&state->expressions, tmp);
+            if (is_load_expression)
                 expression_free(current_expr);
-            }
+
             param_free(iter_param);
             list_append_new(param_list, param);
         }

@@ -45,6 +45,11 @@ typedef struct {
      * [p0...pn] is used to insert the parameters.
      * [s0...sn] is used to insert the previous instructions. */
     char* display_format;
+    /* This is used to indicate that no brackets should be added
+     * when inserting previous instructions, even if they are
+     * non-leaf expressions. It's mostly used by expressions that
+     * include brackets in the display_format, to avoid doubling them. */
+    int no_brackets;
 } expr_t;
 
 /* Returns an expression by its symbol. */

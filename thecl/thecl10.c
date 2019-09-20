@@ -1414,7 +1414,7 @@ th10_stringify_param(
     size_t p,
     thecl_param_t* param,
     size_t* removed,
-    int special)
+    int no_brackets)
 {
     thecl_instr_t* instr = node->data;
 
@@ -1452,7 +1452,7 @@ th10_stringify_param(
         temp_param.type = new_value.type;
         temp_param.value = new_value;
         strcat(temp, " ");
-        char* str_temp = th10_stringify_param(version, sub, node, 0, &temp_param, removed, 1);
+        char* str_temp = th10_stringify_param(version, sub, node, 0, &temp_param, removed, 0);
         strcat(temp, str_temp);
         free(str_temp);
 
@@ -1480,10 +1480,13 @@ th10_stringify_param(
             rep &&
             rep->op_type) {
             ++*removed;
-            if (special)
-                sprintf(temp, "(%s)", rep->string);
-            else
-                sprintf(temp, "_S(%s)", rep->string);
+                if (rep->op_type != 'S') {
+                    sprintf(temp, "_S(%s)", rep->string);
+                } else if (!no_brackets) {
+                    sprintf(temp, "(%s)", rep->string);
+                } else {
+                    sprintf(temp, "%s", rep->string);
+                }
         } else if (
             param->value.type == 'f' &&
             param->stack &&
@@ -1491,10 +1494,13 @@ th10_stringify_param(
             rep &&
             rep->op_type) {
             ++*removed;
-            if (special)
-                sprintf(temp, "(%s)", rep->string);
-            else
-                sprintf(temp, "_f(%s)", rep->string);
+                if (rep->op_type != 'f') {
+                    sprintf(temp, "_f(%s)", rep->string);
+                } else if (!no_brackets) {
+                    sprintf(temp, "(%s)", rep->string);
+                } else {
+                    sprintf(temp, "%s", rep->string);
+                }
         } else {
             if (param->stack && (param->value.type == 'f' || param->value.type == 'S')) {
                 int val = param->value.type == 'f' ? floor(param->value.val.f) : param->value.val.S;
@@ -1545,7 +1551,60 @@ th10_stringify_instr(
                 strcat(string, temp);
             }
         }
-    } else {
+    } else if (
+           (instr->id == TH10_INS_CALL || instr->id == TH10_INS_CALL_ASYNC)
+        && !g_ecl_rawoutput
+     ) {
+         strcat(string, "@");
+         size_t removed = 0;
+         for (p = 0; p < instr->param_count; ++p) {
+             thecl_param_t* param = th10_param_index(instr, p);
+             if (p == 0) {
+                 strcat(string, param->value.val.z);
+                 strcat(string, "(");
+             } else {
+                value_t new_value;
+                int32_t* D = (int*)param->value.val.m.data;
+                memcpy(&new_value.val.S, &D[1], sizeof(int32_t));
+                if (D[0] == 0x6666 /* ff */) {
+                    strcpy(temp, "%s");
+                    new_value.type = 'f';
+                } else if (D[0] == 0x6669 /* fi */) {
+                    strcpy(temp, "_f(%s)");
+                    new_value.type = 'S';
+                } else if (D[0] == 0x6966 /* if */) {
+                    strcpy(temp, "_S(%s)");
+                    new_value.type = 'f';
+                } else if (D[0] == 0x6969 /* ii */) {
+                    strcpy(temp, "%s");
+                    new_value.type = 'S';
+                } else {
+                    fprintf(stderr, "%s: bad ECL file - invalid parameter for sub-calling ins\n", argv0);
+                    abort();
+                }
+
+                thecl_param_t temp_param = *param;
+                temp_param.type = new_value.type;
+                temp_param.value = new_value;
+                char* param_string = th10_stringify_param(version, sub, node, 0, &temp_param, &removed, 1);
+                char temp2[256];
+                sprintf(temp2, temp, param_string);
+                free(param_string);
+
+                if (p != 1)
+                    strcat(string, ", ");
+                strcat(string, temp2);
+             }
+         }
+         for (size_t s = 0; s < removed; ++s) {
+            list_node_t* prev = node->prev;
+            thecl_instr_free(prev->data);
+            list_del(&sub->instrs, prev);
+        }
+        strcat(string, ")");
+        if (instr->id == TH10_INS_CALL_ASYNC)
+            strcat(string, " async");
+     } else {
         eclmap_entry_t *ent = eclmap_get(g_eclmap_opcode, instr->id);
         if(ent && ent->mnemonic) {
             sprintf(string, "%s(", ent->mnemonic);
@@ -1556,7 +1615,7 @@ th10_stringify_instr(
 
         size_t removed = 0;
         for (p = 0; p < instr->param_count; ++p) {
-            char* param_string = th10_stringify_param(version, sub, node, p, NULL, &removed, 0);
+            char* param_string = th10_stringify_param(version, sub, node, p, NULL, &removed, 1);
             if (p != 0)
                strcat(string, ", ");
             strcat(string, param_string);
@@ -1685,7 +1744,7 @@ th10_dump(
                             /* XXX: Only supports S and f. */
                             sprintf(rep_str, "%s(%s)", expr->stack_formats[s] == 'S' ? "_S" : "_f", rep->string);
                             str_replace(temp, pat, rep_str);
-                        } else if (!expr_is_leaf(10, rep->id)) {
+                        } else if (!expr_is_leaf(10, rep->id) && !expr->no_brackets) {
                             char rep_str[1024] = { '\0' };
                             sprintf(rep_str, "(%s)", rep->string);
                             str_replace(temp, pat, rep_str);
@@ -1705,7 +1764,7 @@ th10_dump(
                     for (size_t p = 0; p < param_count; ++p) {
                         size_t removed = 0;
                         sprintf(pat, "p%zu", p);
-                        char* rep_str = th10_stringify_param(ecl->version, sub, node, p, NULL, &removed, 0);
+                        char* rep_str = th10_stringify_param(ecl->version, sub, node, p, NULL, &removed, 1);
                         str_replace(temp, pat, rep_str);
                         free(rep_str);
 
