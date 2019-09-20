@@ -1299,7 +1299,7 @@ th10_trans(
         list_for_each_node_safe(&sub->instrs, node, node_next) {
             thecl_instr_t* instr = node->data;
 
-            if (instr->type == THECL_INSTR_INSTR && instr->id == 40) {
+            if (instr->type == THECL_INSTR_INSTR && instr->id == TH10_INS_STACK_ALLOC) {
                 thecl_param_t* param = list_head(&instr->params);
                 sub->stack = param->value.val.S;
                 list_del(&sub->instrs, node);
@@ -1313,8 +1313,8 @@ th10_trans(
                     if (param->type == 'm') {
                         thecl_sub_t* found_sub = th10_find_sub(ecl, param->value.val.z);
                         if (found_sub) {
-                            if (instr->id == 11 ||
-                                instr->id == 15) {
+                            if (instr->id == TH10_INS_CALL ||
+                                instr->id == TH10_INS_CALL_ASYNC) {
                                 th10_set_arity(found_sub, instr->param_count - 1);
                             } else {
                                 thecl_sub_t* found_sub = th10_find_sub(ecl, param->value.val.z);
