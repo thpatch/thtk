@@ -1942,11 +1942,14 @@ sub_finish(
         
         thecl_instr_t* var_ins = instr_new(state, TH10_INS_STACK_ALLOC, "S", state->current_sub->stack);
         var_ins->time = 0;
+        var_ins->rank = parse_rank(state, "*");
         instr_prepend(state->current_sub, var_ins);
 
         thecl_instr_t* last_ins = list_tail(&state->current_sub->instrs);
         if (last_ins == NULL || last_ins->id != TH10_INS_RET_NORMAL && last_ins->id != TH10_INS_RET_BIG) {
-            instr_add(state->current_sub, instr_new(state, TH10_INS_RET_NORMAL, ""));
+            thecl_instr_t* ret_ins = instr_new(state, TH10_INS_RET_NORMAL, "");
+            ret_ins->rank = parse_rank(state, "*");
+            instr_add(state->current_sub, ret_ins);
         }
     }
 

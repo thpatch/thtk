@@ -1302,8 +1302,6 @@ th10_trans(
             if (instr->type == THECL_INSTR_INSTR && instr->id == TH10_INS_STACK_ALLOC) {
                 thecl_param_t* param = list_head(&instr->params);
                 sub->stack = param->value.val.S;
-                list_del(&sub->instrs, node);
-                thecl_instr_free(instr);
                 continue;
             }
 
@@ -1531,33 +1529,46 @@ th10_stringify_instr(
     thecl_instr_t* instr = node->data;
     size_t p;
     char string[1024] = { '\0' };
+    char temp[256];
 
     if (instr->type != THECL_INSTR_INSTR)
         return;
 
-    eclmap_entry_t *ent = eclmap_get(g_eclmap_opcode, instr->id);
-    if(ent && ent->mnemonic) {
-        sprintf(string, "%s(", ent->mnemonic);
-    }
-    else {
-        sprintf(string, "ins_%u(", instr->id);
-    }
+    if (instr->id == TH10_INS_STACK_ALLOC && !g_ecl_rawoutput) {
+        if (sub->arity * 4 != sub->stack) {
+            /* Don't output empty var declarations. */
+            strcat(string, "var");
+            for (p = sub->arity * 4; p < sub->stack; p += 4) {
+                if (p != sub->arity * 4)
+                    strcat(string, ",");
+                sprintf(temp, " %c", 'A' + p / 4);
+                strcat(string, temp);
+            }
+        }
+    } else {
+        eclmap_entry_t *ent = eclmap_get(g_eclmap_opcode, instr->id);
+        if(ent && ent->mnemonic) {
+            sprintf(string, "%s(", ent->mnemonic);
+        }
+        else {
+            sprintf(string, "ins_%u(", instr->id);
+        }
 
-    size_t removed = 0;
-    for (p = 0; p < instr->param_count; ++p) {
-        char* param_string = th10_stringify_param(version, sub, node, p, NULL, &removed, 0);
-        if (p != 0)
-            strcat(string, ", ");
-        strcat(string, param_string);
-        free(param_string);
+        size_t removed = 0;
+        for (p = 0; p < instr->param_count; ++p) {
+            char* param_string = th10_stringify_param(version, sub, node, p, NULL, &removed, 0);
+            if (p != 0)
+               strcat(string, ", ");
+            strcat(string, param_string);
+            free(param_string);
+        }
+        for (size_t s = 0; s < removed; ++s) {
+            list_node_t* prev = node->prev;
+            thecl_instr_free(prev->data);
+            list_del(&sub->instrs, prev);
+        }
+        strcat(string, ")");
     }
-    for (size_t s = 0; s < removed; ++s) {
-        list_node_t* prev = node->prev;
-        thecl_instr_free(prev->data);
-        list_del(&sub->instrs, prev);
-    }
-    strcat(string, ")");
-
     instr->string = strdup(string);
 }
 
@@ -1597,16 +1608,6 @@ th10_dump(
             fprintf(out, "var %c", 'A' + p);
         }
         fprintf(out, ")\n{\n");
-
-        if(!g_ecl_rawoutput) {
-            fprintf(out, "    var");
-            for (p = sub->arity * 4; p < sub->stack; p += 4) {
-                if (p != sub->arity * 4)
-                    fprintf(out, ",");
-                fprintf(out, " %c", 'A' + p / 4);
-            }
-            fprintf(out, ";\n");
-        }
 
         list_node_t* node;
         list_node_t* node_next;
@@ -1727,10 +1728,12 @@ normal:
         }
 
         list_for_each(&sub->instrs, instr) {
-            if (instr->type == THECL_INSTR_INSTR) {
-                fprintf(out, "    %s;\n", instr->string);
-            } else {
-                fprintf(out, "%s\n", instr->string);
+            if (instr->string[0] != '\0') { /* In some cases string can be empty, like ins_40(0) dumps. */
+                if (instr->type == THECL_INSTR_INSTR) {
+                    fprintf(out, "    %s;\n", instr->string);
+                } else {
+                    fprintf(out, "%s\n", instr->string);
+                }
             }
         }
 
