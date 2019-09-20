@@ -92,7 +92,7 @@ static expression_t* expression_ternary_new(const parser_state_t* state, express
 
 static void expression_output(parser_state_t* state, expression_t* expr, int has_no_parents);
 static void expression_free(expression_t* expr);
-static void expression_optimize(expression_t* expr);
+static void expression_optimize(parser_state_t* state, expression_t* expr);
 #define EXPR_22(a, b, A, B) \
     expression_operation_new(state, (int[]){ a, b, 0 }, (expression_t*[]){ A, B, NULL })
 #define EXPR_12(a, A, B) \
@@ -1264,7 +1264,7 @@ instr_new_list(
                     param->value.val.S = param_id;
                 } else if(param->value.type == 'f') {
                     param->value.val.f = param_id;
-                } else if(param->value.type == 'D') {
+                } else if(param->type == 'D') {
                     int32_t* D = (int32_t*) param->value.val.m.data;
                     if (param->is_expression_param == 'S') {
                         D[1] = param_id;
@@ -1337,7 +1337,11 @@ instr_create_call(
 
     /* Add parameter casts */
     thecl_param_t *iter_param;
-    if (params != NULL)
+    if (params != NULL) {
+        expression_t* current_expr = NULL;
+
+        list_node_t* node_expr = state->expressions.tail; 
+
         list_for_each(params, iter_param) {
             param = param_new('D');
             param->stack = iter_param->stack;
@@ -1346,27 +1350,81 @@ instr_create_call(
             param->value.val.m.length = 2 * sizeof(int32_t);
             param->value.val.m.data = malloc(2 * sizeof(int32_t));
             int32_t *D = (int32_t *)param->value.val.m.data;
+            bool is_load_expression = false;
+            bool is_load_var = false;
+            if (param->is_expression_param) {
+                current_expr = (expression_t*)node_expr->data;
+                expression_optimize(state, current_expr);
+                expr_t* expr = expr_get_by_id(state->version, current_expr->id);
+                is_load_expression = (expr->symbol == LOADI || expr->symbol == LOADF);
+                if (!is_load_expression) node_expr = node_expr->prev;
+                else is_load_var = current_expr->value->stack;
+            }
             switch (iter_param->value.type) {
             case 'S':
-                D[0] = 0x6969;
-                D[1] = iter_param->value.val.S;
+                if (is_load_expression) {
+                    if (current_expr->value->type == 'f') {
+                        D[0] = 0x6966;
+                        memcpy(&D[1], &current_expr->value->value.val.f, sizeof(float));
+                    } else {
+                        D[0] = 0x6969;
+                        D[1] = current_expr->value->value.val.S;
+                    }
+                } else {
+                    if (param->is_expression_param && current_expr->result_type == 'f') {
+                        D[0] = 0x6966;
+                        float tmp = (int)iter_param->value.val.S;
+                        memcpy(&D[1], &tmp, sizeof(float));
+                        param->is_expression_param = 'f'; /* This is needed to make instr_create_list handle all stack offsets properly. */
+                    } else {
+                        D[0] = 0x6969;
+                        D[1] = iter_param->value.val.S;
+                    }
+                }
                 break;
             case 'f':
-                D[0] = 0x6666;
-                memcpy(&D[1], &iter_param->value.val.f, sizeof(float));
+                if (is_load_expression) {
+                    if (current_expr->value->type == 'f') {
+                        D[0] = 0x6666;
+                        memcpy(&D[1], &current_expr->value->value.val.f, sizeof(float));
+                    } else {
+                        D[0] = 0x6669;
+                        D[1] = current_expr->value->value.val.S;
+                    }
+                } else {
+                    if (param->is_expression_param && current_expr->result_type == 'S') {
+                        D[0] = 0x6669;
+                        D[1] = (uint32_t)iter_param->value.val.f;
+                        param->is_expression_param = 'S';
+                    } else {
+                        D[0] = 0x6666;
+                        memcpy(&D[1], &iter_param->value.val.f, sizeof(float));
+                    }
+                }
                 break;
             default:
                 yyerror(state, "invalid sub parameter");
                 g_was_error = true;
             }
+            if (is_load_expression) {
+                param->stack = is_load_var;
+                param->is_expression_param = 0;
+
+                list_node_t* tmp = node_expr;
+                node_expr = node_expr->prev;
+
+                list_del(&state->expressions, tmp);
+                expression_free(current_expr);
+            }
             param_free(iter_param);
             list_append_new(param_list, param);
         }
+    }
 
     /* Output expressions from parameters. */
     expression_t* expr;
     list_for_each(&state->expressions, expr) {
-        expression_output(state, expr, 1);
+        expression_output(state, expr, 0);
         expression_free(expr);
     }
     list_free_nodes(&state->expressions);
