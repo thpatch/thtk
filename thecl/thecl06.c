@@ -934,6 +934,7 @@ th06_open(
         memset(sub, 0, sizeof(*sub));
         sprintf(name, "Sub%zu", s);
         sub->name = strdup(name);
+        sub->format = NULL;
         list_init(&sub->instrs);
         list_init(&sub->labels);
         unsigned int time = 0;
@@ -1582,4 +1583,5 @@ const thecl_module_t th06_ecl = {
     .dump = th06_dump,
     .parse = th06_parse,
     .compile = th06_compile,
+    .create_header = NULL
 };

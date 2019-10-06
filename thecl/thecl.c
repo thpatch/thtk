@@ -53,6 +53,7 @@ thecl_new(
     thecl_t* ecl = calloc(1, sizeof(thecl_t));
     list_init(&ecl->subs);
     list_init(&ecl->timelines);
+    ecl->no_warn = false;
     return ecl;
 }
 
@@ -71,6 +72,7 @@ thecl_free(
     thecl_sub_t* sub;
     list_for_each(&ecl->subs, sub) {
         free(sub->name);
+        free(sub->format);
 
         thecl_instr_t* instr;
         list_for_each(&sub->instrs, instr)
@@ -221,9 +223,10 @@ is_post_th13(unsigned int version) {
 static void
 print_usage(void)
 {
-    printf("Usage: %s [-Vr] [[-c | -d] VERSION] [-m ECLMAP]... [INPUT [OUTPUT]]\n"
+    printf("Usage: %s [-Vrs] [[-c | -h | -d] VERSION] [-m ECLMAP]... [INPUT [OUTPUT]]\n"
            "Options:\n"
            "  -c  create ECL file\n"
+           "  -h  create header file\n"
            "  -d  dump ECL file\n"
            "  -V  display version information and exit\n"
            "  -m  use map file for translating mnemonics\n"
@@ -255,9 +258,10 @@ main(int argc, char* argv[])
     int opt;
     int ind=0;
     while(argv[util_optind]) {
-        switch(opt = util_getopt(argc, argv, ":c:d:Vm:rs")) {
+        switch(opt = util_getopt(argc, argv, ":c:h:d:Vm:rs")) {
         case 'c':
         case 'd':
+        case 'h':
             if(mode != -1) {
                 fprintf(stderr,"%s: More than one mode specified\n", argv0);
                 print_usage();
@@ -315,7 +319,7 @@ main(int argc, char* argv[])
         module = &th10_ecl;
         break;
     default:
-        if (mode == 'c' || mode == 'd') {
+        if (mode == 'c' || mode == 'd' || mode == 'h') {
             if (version == 0)
                 fprintf(stderr, "%s: version must be specified\n", argv0);
             else
@@ -327,6 +331,7 @@ main(int argc, char* argv[])
     switch (mode)
     {
     case 'c':
+    case 'h':
     case 'd': {
         if(g_ecl_rawoutput) {
             if (mode != 'd') {
@@ -335,10 +340,14 @@ main(int argc, char* argv[])
             }
         }
         if (g_ecl_simplecreate) {
-            if (mode != 'c') {
+            if (mode != 'c' && mode != 'h') {
                 fprintf(stderr, "%s: 's' option cannot be used while dumping\n", argv0);
                 exit(1);
             }
+        }
+        if (mode == 'h' && !is_post_th10(version)) {
+            fprintf(stderr, "%s: 'h' option can't be used with a pre-th10 version");
+            exit(1);
         }
 
         if (0 < argc) {
@@ -369,6 +378,12 @@ main(int argc, char* argv[])
             if (!ecl)
                 exit(1);
             module->compile(ecl, out);
+            thecl_free(ecl);
+        } else if (mode == 'h') {
+            thecl_t* ecl = module->parse(in, argv[0], version);
+            if (!ecl)
+                exit(1);
+            module->create_header(ecl, out);
             thecl_free(ecl);
         } else if (mode == 'd') {
 #ifdef WIN32

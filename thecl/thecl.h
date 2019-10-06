@@ -62,6 +62,7 @@ typedef enum {
 #define TH10_INS_RET_NORMAL     10
 #define TH10_INS_CALL           11
 #define TH10_INS_CALL_ASYNC     15
+#define TH10_INS_CALL_ASYNC_ID  16
 #define TH10_INS_STACK_ALLOC    40
 
 typedef struct thecl_param_t {
@@ -135,8 +136,10 @@ typedef struct {
     ssize_t arity;
     size_t var_count;
     thecl_variable_t** vars;
+    char* format;
     uint32_t offset;
     list_t labels;
+    bool forward_declaration;
 } thecl_sub_t;
 
 int32_t
@@ -171,8 +174,9 @@ typedef struct {
 
     size_t sub_count;
     list_t subs;
-
     list_t timelines;
+
+    bool no_warn;
 } thecl_t;
 
 thecl_t* thecl_new(
@@ -187,6 +191,8 @@ typedef struct {
 
     thecl_t* (*parse)(FILE* stream, char* filename, unsigned int ver);
     int (*compile)(const thecl_t* ecl, FILE* stream);
+
+    void (*create_header)(const thecl_t* ecl, FILE* stream);
 } thecl_module_t;
 
 typedef struct {

@@ -1168,6 +1168,8 @@ th10_open(
         thecl_sub_t* sub = malloc(sizeof(thecl_sub_t));
 
         sub->name = strdup(string_data);
+        sub->format = NULL;
+        sub->forward_declaration = false;
         list_init(&sub->instrs);
         sub->stack = 0;
         sub->arity = -1;
@@ -1284,6 +1286,26 @@ th10_set_arity(
     }
 }
 
+static void
+th10_create_forward_declaraion(
+    thecl_t* ecl,
+    char* name,
+    int arity)
+{
+    thecl_sub_t* sub = malloc(sizeof(thecl_sub_t));
+    sub->name = strdup(name);
+    sub->format = NULL;
+    sub->forward_declaration = true;
+    list_init(&sub->instrs);
+    list_init(&sub->labels);
+    sub->stack = 0;
+    sub->arity = arity;
+    sub->var_count = 0;
+    sub->vars = NULL;
+
+    list_prepend_new(&ecl->subs, sub);
+}
+
 void
 th10_trans(
     thecl_t* ecl)
@@ -1298,28 +1320,25 @@ th10_trans(
         list_node_t* node_next;
         list_for_each_node_safe(&sub->instrs, node, node_next) {
             thecl_instr_t* instr = node->data;
-
-            if (instr->type == THECL_INSTR_INSTR && instr->id == TH10_INS_STACK_ALLOC) {
-                thecl_param_t* param = list_head(&instr->params);
-                sub->stack = param->value.val.S;
-                continue;
-            }
+            thecl_param_t* param;
 
             if (instr->type == THECL_INSTR_INSTR) {
-                thecl_param_t* param;
-                list_for_each(&instr->params, param) {
-                    if (param->type == 'm') {
+                switch(instr->id) {
+                    case TH10_INS_STACK_ALLOC:
+                        param = list_head(&instr->params);
+                        sub->stack = param->value.val.S;
+                        break;
+                    case TH10_INS_CALL:
+                    case TH10_INS_CALL_ASYNC:
+                    case TH10_INS_CALL_ASYNC_ID:
+                        param = list_head(&instr->params);
                         thecl_sub_t* found_sub = th10_find_sub(ecl, param->value.val.z);
-                        if (found_sub) {
-                            if (instr->id == TH10_INS_CALL ||
-                                instr->id == TH10_INS_CALL_ASYNC) {
-                                th10_set_arity(found_sub, instr->param_count - 1);
-                            } else {
-                                thecl_sub_t* found_sub = th10_find_sub(ecl, param->value.val.z);
-                                th10_set_arity(found_sub, 0);
-                            }
-                        }
-                    }
+                        int required_param_cnt = instr->id == TH10_INS_CALL_ASYNC_ID ? 2 : 1;
+                        if (found_sub)
+                            th10_set_arity(found_sub, instr->param_count - required_param_cnt);
+                        else
+                            th10_create_forward_declaraion(ecl, param->value.val.z, instr->param_count - required_param_cnt);
+                        break;
                 }
             }
         }
@@ -1552,16 +1571,20 @@ th10_stringify_instr(
             }
         }
     } else if (
-           (instr->id == TH10_INS_CALL || instr->id == TH10_INS_CALL_ASYNC)
+           (instr->id == TH10_INS_CALL || instr->id == TH10_INS_CALL_ASYNC || instr->id == TH10_INS_CALL_ASYNC_ID)
         && !g_ecl_rawoutput
      ) {
          strcat(string, "@");
          size_t removed = 0;
+         char* async_id_str;
+         size_t first_sub_param = instr->id == TH10_INS_CALL_ASYNC_ID ? 2 : 1;
          for (p = 0; p < instr->param_count; ++p) {
              thecl_param_t* param = th10_param_index(instr, p);
              if (p == 0) {
                  strcat(string, param->value.val.z);
                  strcat(string, "(");
+             } else if (p == 1 && instr->id == TH10_INS_CALL_ASYNC_ID) {
+                 async_id_str = th10_stringify_param(version, sub, node, 0, param, &removed, 1);
              } else {
                 value_t new_value;
                 int32_t* D = (int*)param->value.val.m.data;
@@ -1591,7 +1614,7 @@ th10_stringify_instr(
                 sprintf(temp2, temp, param_string);
                 free(param_string);
 
-                if (p != 1)
+                if (p != first_sub_param)
                     strcat(string, ", ");
                 strcat(string, temp2);
              }
@@ -1604,6 +1627,11 @@ th10_stringify_instr(
         strcat(string, ")");
         if (instr->id == TH10_INS_CALL_ASYNC)
             strcat(string, " async");
+        else if (instr->id == TH10_INS_CALL_ASYNC_ID) {
+            strcat(string, " async ");
+            strcat(string, async_id_str);
+            free(async_id_str);
+        }
      } else {
         eclmap_entry_t *ent = eclmap_get(g_eclmap_opcode, instr->id);
         if(ent && ent->mnemonic) {
@@ -1666,7 +1694,14 @@ th10_dump(
                 fprintf(out, ", ");
             fprintf(out, "var %c", 'A' + p);
         }
-        fprintf(out, ")\n{\n");
+        fprintf(out, ")");
+
+        if (sub->forward_declaration) {
+            fprintf(out, ";\n");
+            continue;
+        }
+
+        fprintf(out, "\n{\n");
 
         list_node_t* node;
         list_node_t* node_next;
@@ -1869,10 +1904,24 @@ th10_parse(
 }
 
 static unsigned char*
+th10_find_sub_format(
+    char* sub_name,
+    list_t* subs)
+{
+    thecl_sub_t* sub;
+    list_for_each(subs, sub) {
+        if (!strcmp(sub->name, sub_name)) return sub->format;
+    }
+    return NULL;
+}
+
+static unsigned char*
 th10_instr_serialize(
     unsigned int version,
     thecl_sub_t* sub,
-    thecl_instr_t* instr)
+    thecl_instr_t* instr,
+    list_t* subs,
+    bool no_warn)
 {
     th10_instr_t* ret;
     thecl_param_t* param;
@@ -1901,6 +1950,48 @@ th10_instr_serialize(
         }
         if (expected_format[0] != '*' && expected_format[0] != 0)
             fprintf(stderr, "%s:th10_instr_serialize: in sub %s: too few arguments for opcode %d\n", argv0, sub->name, instr->id);
+    }
+
+    if (!g_ecl_simplecreate && (instr->id == TH10_INS_CALL || instr->id == TH10_INS_CALL_ASYNC || instr->id == TH10_INS_CALL_ASYNC_ID)) {
+        /* Validate sub call parameters. */
+        list_node_t* node = instr->params.head;
+        thecl_param_t* sub_name_param = node->data;
+        char* sub_name = sub_name_param->value.val.z;
+        const char* format = th10_find_sub_format(sub_name, subs);
+        if (format == NULL) {
+            if (!no_warn)
+                fprintf(stderr, "%s:th10_instr_serialize: in sub %s: unknown sub call \"%s\" (use the #nowarn \"true\" directive to disable this warning)\n",
+                        argv0, sub->name, sub_name);
+        } else {
+            size_t v = 0;
+            int first_iter = 1;
+            while(node = node->next) {
+                /* CALL_ASYNC_ID has an extra param for slot ID (type verified in ecsparse) */
+                if (instr->id == TH10_INS_CALL_ASYNC_ID && first_iter) {
+                    first_iter = 0;
+                    continue;
+                }
+
+                thecl_param_t* param = node->data;
+                int32_t* D = (int32_t*)param->value.val.m.data;
+                if (format[v] == '\0') {
+                    fprintf(stderr, "%s:th10_instr_serialize: in sub %s: too many parameters when calling sub \"%s\"\n",
+                            argv0, sub->name, sub_name);
+                    break;
+                 } else if (
+				    format[v] != '?' &&
+                    (((D[0] == 0x6969 || D[0] == 0x6966) && format[v] == 'f') ||
+                    ((D[0] == 0x6669 || D[0] == 0x6666) && format[v] == 'S'))
+                ) {
+                    fprintf(stderr, "%s:th10_instr_serialize: in sub %s: wrong type for parameter %i when calling sub \"%s\", expected type: %c\n",
+                            argv0, sub->name, v + 1, sub_name, format[v]);
+                }
+                ++v;
+            }
+            if (format[v] != '\0') 
+                fprintf(stderr, "%s:th10_instr_serialize: in sub %s: not enough parameters when calling sub %s\n",
+                        argv0, sub->name, sub_name);
+        }
     }
 
     list_for_each(&instr->params, param) {
@@ -2015,6 +2106,9 @@ th10_compile(
     file_seek(out, pos + ecl->sub_count * sizeof(uint32_t));
 
     list_for_each(&ecl->subs, sub) {
+        if (sub->forward_declaration)
+            continue;
+
         if (!file_write(out, sub->name, strlen(sub->name) + 1))
             return 0;
     }
@@ -2024,13 +2118,16 @@ th10_compile(
         file_seek(out, pos + 4 - pos % 4);
 
     list_for_each(&ecl->subs, sub) {
+        if (sub->forward_declaration)
+            continue;
+
         thecl_instr_t* instr;
         sub->offset = file_tell(out);
         if (!file_write(out, &sub_header, sizeof(th10_sub_t)))
             return 0;
 
         list_for_each(&sub->instrs, instr) {
-            unsigned char* data = th10_instr_serialize(ecl->version, sub, instr);
+            unsigned char* data = th10_instr_serialize(ecl->version, sub, instr, &ecl->subs, ecl->no_warn);
             if (!file_write(out, data, instr->size))
                 return 0;
             free(data);
@@ -2043,11 +2140,38 @@ th10_compile(
 
     file_seek(out, header.include_offset + header.include_length);
     list_for_each(&ecl->subs, sub) {
+        if (sub->forward_declaration)
+            continue;
         if (!file_write(out, &sub->offset, sizeof(uint32_t)))
             return 0;
     }
 
     return 1;
+}
+
+static void
+th10_create_header(
+    const thecl_t* ecl,
+    FILE* out
+) {
+    thecl_sub_t* sub;
+    list_for_each(&ecl->subs, sub) {
+        if (sub->forward_declaration)
+            continue;
+
+        fprintf(out, "\nsub %s(", sub->name);
+        for (ssize_t i = 0; i < sub->arity; ++i) {
+            thecl_variable_t* var = sub->vars[i];
+            if (i != 0) fprintf(out, ", ");
+
+            if (var->type == 'S') fprintf(out, "int ");
+            else if (var->type == 'f') fprintf(out, "float ");
+            else fprintf(out, "var ");
+
+            fprintf(out, var->name);
+        }
+        fprintf(out, ");\n");
+    }
 }
 
 const thecl_module_t th10_ecl = {
@@ -2056,4 +2180,5 @@ const thecl_module_t th10_ecl = {
     .dump = th10_dump,
     .parse = th10_parse,
     .compile = th10_compile,
+    .create_header = th10_create_header
 };
