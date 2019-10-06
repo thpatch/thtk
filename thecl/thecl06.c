@@ -870,11 +870,12 @@ th06_insert_labels(
                     list_for_each_node(&sub->instrs, node) {
                         thecl_instr_t* instr_find = node->data;
 
-                        if (instr_find->offset == instr->offset + param->value.val.S) {
-
-                            if (instr_find->type != THECL_INSTR_LABEL) {
-                                thecl_instr_t* label = thecl_instr_label(instr_find->offset);
-                                list_prepend_to(&sub->instrs, label, node);
+                        if (instr_find->offset + instr_find->size == instr->offset + param->value.val.S) {
+                            
+                            thecl_instr_t* instr_next = node->next ? (thecl_instr_t*)node->next->data : NULL;
+                            if (instr_next == NULL || (instr_next != NULL && instr_next->type != THECL_INSTR_LABEL)) {
+                                thecl_instr_t* label = thecl_instr_label(instr_find->offset + instr_find->size);
+                                list_append_to(&sub->instrs, label, node);
                             }
 
                             break;
@@ -961,6 +962,7 @@ th06_open(
 
             thecl_instr_t* instr = thecl_instr_new();
             instr->id = raw_instr->id;
+            instr->size = raw_instr->size;
             instr->offset = (ptrdiff_t)raw_instr - (ptrdiff_t)raw_sub;
 
             const char* format;
@@ -1054,6 +1056,7 @@ next:
             }
 
             thecl_instr_t* instr = thecl_instr_new();
+            instr->size = raw_instr->size;
             instr->id = raw_instr->id;
 
             const char* format = th06_find_timeline_format(version, raw_instr->id);
