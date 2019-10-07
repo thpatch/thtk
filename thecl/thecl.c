@@ -346,7 +346,7 @@ main(int argc, char* argv[])
             }
         }
         if (mode == 'h' && !is_post_th10(version)) {
-            fprintf(stderr, "%s: 'h' option can't be used with a pre-th10 version");
+            fprintf(stderr, "%s: 'h' option can't be used with a pre-th10 version", argv0);
             exit(1);
         }
 
@@ -372,7 +372,7 @@ main(int argc, char* argv[])
 
         if (mode == 'c') {
 #ifdef WIN32
-            _setmode(fileno(stdout), _O_BINARY);
+            (void)_setmode(fileno(stdout), _O_BINARY);
 #endif
             thecl_t* ecl = module->parse(in, argv[0], version);
             if (!ecl)
@@ -387,7 +387,7 @@ main(int argc, char* argv[])
             thecl_free(ecl);
         } else if (mode == 'd') {
 #ifdef WIN32
-            _setmode(fileno(stdin), _O_BINARY);
+            (void)_setmode(fileno(stdin), _O_BINARY);
 #endif
             thecl_t* ecl = module->open(in, version);
             if (!ecl)
