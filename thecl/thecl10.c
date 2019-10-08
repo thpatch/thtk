@@ -1004,6 +1004,11 @@ th10_find_format(
 {
     if (is_timeline) return NULL;
 
+    id_format_pair_t* fmt;
+    list_for_each(g_user_fmts, fmt) {
+        if (fmt->id == id) return fmt->format;
+    }
+
     const char* ret = NULL;
 
     switch (version) {
@@ -1011,15 +1016,15 @@ th10_find_format(
     case 17:
         if (!ret) ret = find_format(th17_fmts, id);
     case 165:
-        if(!ret) ret = find_format(th165_fmts, id);
+        if (!ret) ret = find_format(th165_fmts, id);
     case 16:
         if (!ret) ret = find_format(th16_fmts, id);
     case 15:
         if (!ret) ret = find_format(th15_fmts, id);
     case 143:
-         if (!ret) ret = find_format(th143_fmts, id);
+        if (!ret) ret = find_format(th143_fmts, id);
     case 14:
-         if (!ret) ret = find_format(th14_fmts, id);
+        if (!ret) ret = find_format(th14_fmts, id);
     case 13:
         if (!ret) ret = find_format(th13_fmts, id);
     case 128:

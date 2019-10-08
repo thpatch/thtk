@@ -367,6 +367,7 @@ Statement:
         free($3);
       }
     | DIRECTIVE TEXT {
+        char buf[256];
         if (strcmp($1, "include") == 0) {
             if (directive_include(state, $2) != 0) {
                 /* For proper syntax error displaying, this needs to return. */
@@ -378,8 +379,42 @@ Statement:
             directive_eclmap(state, $2);
         } else if (strcmp($1, "nowarn") == 0) {
             state->ecl->no_warn = (strcmp($2, "true") == 0);
+        } else if (strcmp($1, "ins") == 0) {
+            if (strlen($2) < 256) {
+                /* arg format: "id format", e.g. "200 SSff" */
+                char* arg = $2;
+                size_t s = 0;
+                while(arg[s] != ' ' && arg[s] != '\0') {
+                    buf[s] = arg[s];
+                    ++s;
+                }
+                buf[s] = '\0';
+                int id = strtol(buf, NULL, 10);
+                
+                arg += s;
+                s = 0;
+                size_t spaces = 0;
+                while(arg[s + spaces] != '\0') {
+                    if (arg[s + spaces] == ' ') {
+                        ++spaces;
+                        continue;
+                    }
+
+                    buf[s] = arg[s + spaces];
+                    ++s;
+                }
+                buf[s] = '\0';
+                char* format = malloc(strlen(buf) + 1);
+                strcpy(format, buf);
+                id_format_pair_t* fmt = malloc(sizeof(id_format_pair_t));
+                fmt->id = id;
+                fmt->format = format;
+                list_append_new(g_user_fmts, fmt);
+            } else {
+                yyerror(state, "#instr: specified format is too long");
+            }
+
         } else {
-            char buf[256];
             snprintf(buf, 256, "unknown directive: %s", $1);
             yyerror(state, buf);
         }

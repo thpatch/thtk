@@ -39,6 +39,7 @@
 extern const thecl_module_t th06_ecl;
 extern const thecl_module_t th10_ecl;
 
+list_t* g_user_fmts = NULL;
 eclmap_t* g_eclmap_opcode = NULL;
 eclmap_t* g_eclmap_timeline_opcode = NULL;
 eclmap_t* g_eclmap_global = NULL;
@@ -194,11 +195,18 @@ label_time(
 }
 
 static void
-free_eclmaps(void)
+free_globals(void)
 {
     eclmap_free(g_eclmap_opcode);
     eclmap_free(g_eclmap_timeline_opcode);
     eclmap_free(g_eclmap_global);
+    id_format_pair_t* fmt;
+    list_for_each(g_user_fmts, fmt) {
+        free(fmt->format);
+        free(fmt);
+    }
+    list_free_nodes(g_user_fmts);
+    free(g_user_fmts);
 }
 
 bool
@@ -252,7 +260,8 @@ main(int argc, char* argv[])
     g_eclmap_opcode = eclmap_new();
     g_eclmap_timeline_opcode = eclmap_new();
     g_eclmap_global = eclmap_new();
-    atexit(free_eclmaps);
+    g_user_fmts = list_new();
+    atexit(free_globals);
 
     argv0 = util_shortname(argv[0]);
     int opt;

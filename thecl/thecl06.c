@@ -811,6 +811,11 @@ th06_find_format(
 {
     if (is_timeline) return th06_find_timeline_format(version, id);
 
+    id_format_pair_t* fmt;
+    list_for_each(g_user_fmts, fmt) {
+        if (fmt->id == id) return fmt->format;
+    }
+
     const char* ret = NULL;
 
     switch (version) {
