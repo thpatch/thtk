@@ -468,6 +468,7 @@ ArgumentDeclaration:
 
 Instructions:
     | Instructions INTEGER ":" { set_time(state, $2); }
+    | Instructions "+" INTEGER ":" { set_time(state, state->instr_time + $3) }
     | Instructions IDENTIFIER ":" { label_create(state, $2); free($2); }
     | Instructions Instruction ";"
     | Instructions Block

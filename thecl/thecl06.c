@@ -865,6 +865,13 @@ th06_insert_labels(
             list_for_each(&instr->params, param) {
 
                 if (param->type == 'o') {
+                    if (param->value.val.S + instr->offset == 0) {
+                        /* Beginning of the sub, so the label can't be inserted
+                         * by looking for instr to insert if after. */
+                        thecl_instr_t* label = thecl_instr_label(0);
+                        list_prepend_new(&sub->instrs, label);
+                        continue;
+                    }
 
                     list_node_t* node;
                     list_for_each_node(&sub->instrs, node) {
@@ -1129,11 +1136,13 @@ th06_dump(
         fprintf(out, "\nsub %s()\n{\n", sub->name);
 
         thecl_instr_t* instr;
+        unsigned int time_last = 0;
         list_for_each(&sub->instrs, instr) {
             char temp[512];
             switch (instr->type) {
             case THECL_INSTR_TIME:
-                fprintf(out, "%u:\n", instr->time);
+                fprintf(out, "+%u:\n", instr->time - time_last);
+                time_last = instr->time;
                 break;
             case THECL_INSTR_RANK:
                 if(instr->rank == 0xFF) fprintf(out, "!*");
@@ -1189,10 +1198,15 @@ th06_dump(
     list_for_each(&ecl->timelines, timeline) {
         fprintf(out, "\ntimeline %s()\n{\n", timeline->name);
         thecl_instr_t* instr;
+        unsigned int time_last = 0;
         list_for_each(&timeline->instrs, instr) {
             switch(instr->type) {
             case THECL_INSTR_TIME:
-                fprintf(out, "%u:\n", instr->time);
+                if (instr->time != 0xffff) /* The last ins has to always be 0xffff, so let's not make it relative... */
+                    fprintf(out, "+%u:\n", instr->time - time_last);
+                else
+                    fprintf(out, "%u:\n", instr->time);
+                time_last = instr->time;
                 break;
             case THECL_INSTR_RANK:
                 if(instr->rank == 0xFF) fprintf(out, "!*\n");

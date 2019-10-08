@@ -1705,6 +1705,7 @@ th10_dump(
 
         list_node_t* node;
         list_node_t* node_next;
+        unsigned int time_last = 0;
         list_for_each_node_safe(&sub->instrs, node, node_next) {
             thecl_instr_t* instr = node->data;
 
@@ -1712,7 +1713,8 @@ th10_dump(
 
             switch (instr->type) {
             case THECL_INSTR_TIME:
-                sprintf(temp, "%u:", instr->time);
+                sprintf(temp, "+%u:", instr->time - time_last);
+                time_last = instr->time;
                 instr->string = strdup(temp);
                 break;
             case THECL_INSTR_RANK:
