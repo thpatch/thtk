@@ -411,7 +411,7 @@ Statement:
                 fmt->format = format;
                 list_append_new(g_user_fmts, fmt);
             } else {
-                yyerror(state, "#instr: specified format is too long");
+                yyerror(state, "#ins: specified format is too long");
             }
 
         } else {
