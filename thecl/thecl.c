@@ -355,7 +355,7 @@ main(int argc, char* argv[])
             }
         }
         if (mode == 'h' && !is_post_th10(version)) {
-            fprintf(stderr, "%s: 'h' option can't be used with a pre-th10 version", argv0);
+            fprintf(stderr, "%s: 'h' option can't be used with a pre-th10 version\n", argv0);
             exit(1);
         }
 
