@@ -524,6 +524,16 @@ Block:
         expression_free($2);
         instr_add(state->current_sub, instr_new(state, expr->id, "pp", $4, $6));
       }
+    | "if" Expression "goto" IDENTIFIER ";" {
+        expression_output(state, $2, 1);
+        expression_free($2);
+        expression_create_goto(state, IF, $4);
+      }
+    | "unless" Expression "goto" IDENTIFIER ";" {
+        expression_output(state, $2, 1);
+        expression_free($2);
+        expression_create_goto(state, UNLESS, $4);
+      }
     | IfBlock
     | WhileBlock
     | TimesBlock
@@ -915,6 +925,10 @@ Instruction:
         const expr_t* expr = expr_get_by_symbol(state->version, GOTO);
         instr_add(state->current_sub, instr_new(state, expr->id, "pp", $2, $4));
       }
+    | "goto" IDENTIFIER {
+        /* Timeless goto automatically sets time to the time of the target label. */
+        expression_create_goto(state, GOTO, $2);
+    }
     | Assignment
     | Expression {
         expression_output(state, $1, 1);
