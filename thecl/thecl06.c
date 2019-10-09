@@ -1146,7 +1146,7 @@ th06_dump(
             char temp[512];
             switch (instr->type) {
             case THECL_INSTR_TIME:
-                fprintf(out, "+%u:\n", instr->time - time_last);
+                fprintf(out, "+%u: //%u\n", instr->time - time_last, instr->time);
                 time_last = instr->time;
                 break;
             case THECL_INSTR_RANK:
@@ -1208,7 +1208,7 @@ th06_dump(
             switch(instr->type) {
             case THECL_INSTR_TIME:
                 if (instr->time != 0xffff) /* The last ins has to always be 0xffff, so let's not make it relative... */
-                    fprintf(out, "+%u:\n", instr->time - time_last);
+                    fprintf(out, "+%u: //%u\n", instr->time - time_last, instr->time);
                 else
                     fprintf(out, "%u:\n", instr->time);
                 time_last = instr->time;
