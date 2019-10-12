@@ -168,6 +168,7 @@ static void directive_eclmap(parser_state_t* state, char* name);
 %token <string> IDENTIFIER "identifier"
 %token <string> TEXT "text"
 %token <integer> INTEGER "integer"
+%token <integer> PLUS_INTEGER "+integer"
 %token <floating> FLOATING "floating"
 %token <string> RANK "rank"
 %token <string> DIRECTIVE "directive"
@@ -503,7 +504,7 @@ ArgumentDeclaration:
 
 Instructions:
     | Instructions INTEGER ":" { set_time(state, $2); }
-    | Instructions "+" INTEGER ":" { set_time(state, state->instr_time + $3) }
+    | Instructions PLUS_INTEGER ":" { set_time(state, state->instr_time + $2) }
     | Instructions IDENTIFIER ":" { label_create(state, $2); free($2); }
     | Instructions Instruction ";"
     | Instructions Block
@@ -1198,6 +1199,10 @@ Address_Type:
 
 Integer:
     INTEGER {
+        $$ = param_new('S');
+        $$->value.val.S = $1;
+      }
+    | PLUS_INTEGER {
         $$ = param_new('S');
         $$->value.val.S = $1;
       }
