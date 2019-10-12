@@ -159,9 +159,9 @@ ins_[0-9]+ {
     return INTEGER;
 }
 (-|\+)?0b[0-1]+ {
-    bool isNegative = yytext[0] == '-';
-    yylval.integer = strtol(yytext + (isNegative ? 3 : 2), NULL, 2);
-    if (isNegative) yylval.integer = -yylval.integer;
+    bool hasSign = yytext[0] == '-' || yytext[0] == '+';
+    yylval.integer = strtol(yytext + (hasSign ? 3 : 2), NULL, 2);
+    if (yytext[0] == '-') yylval.integer = -yylval.integer;
     return INTEGER;
 }
 ![-*ENHLWXYZO4567]+ {
