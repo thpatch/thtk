@@ -138,7 +138,7 @@ _fS return CAST_FI;
     yylval.floating = strtof(yytext, NULL);
     return FLOATING;
 }
-rad\((-|\+)?[0-9]+(\.([0-9]*f|[0-9]+)|f)\) {
+rad\((-|\+)?[0-9]+(\.([0-9]*f|[0-9]+)|f)?\) {
     yylval.floating = strtof(yytext+4, NULL) / 180.0f * 3.14159265359f;
     return FLOATING;
 }
