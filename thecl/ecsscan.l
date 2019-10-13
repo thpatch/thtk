@@ -79,6 +79,8 @@
 "var"      return VAR;
 "int"      return INT;
 "float"    return FLOAT;
+"void"     return VOID;
+"return"   return RETURN;
 "@"        return AT;
 
 "goto"     return GOTO;

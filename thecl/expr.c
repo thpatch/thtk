@@ -61,6 +61,8 @@ th10_expressions[] = {
     /* s0 is the previous instruction, s1 the one previous to s0 ... */
 
     /*SYM         ID  RET     P  A    S   DISP                      NB */
+    { RETURN,     10,   0, NULL, 0,  NULL,          "return", 0 },
+
     { GOTO,       12,   0, "ot", 0,  "S",           "goto p0 @ p1", 0 },
     { UNLESS,     13,   0, "ot", 1,  "S", "unless s0 goto p0 @ p1", 0 },
     { IF,         14,   0, "ot", 1,  "S",     "if s0 goto p0 @ p1", 0 },

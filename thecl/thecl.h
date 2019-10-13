@@ -64,6 +64,13 @@ typedef enum {
 #define TH10_INS_CALL_ASYNC     15
 #define TH10_INS_CALL_ASYNC_ID  16
 #define TH10_INS_STACK_ALLOC    40
+#define TH10_INS_SETI           43
+#define TH10_INS_SETF           45
+
+// Numbers of important variables
+// The 2 variables below are used as return registers.
+#define TH10_VAR_I3 -9982
+#define TH10_VAR_F3 -9978.0f
 
 typedef struct thecl_param_t {
     int type;
@@ -128,18 +135,21 @@ typedef struct {
     int type;
 } thecl_variable_t;
 
-/* TODO: Clean this up. */
 typedef struct {
     char* name;
-    list_t instrs;
-    size_t stack;
+    int ret_type;
+    bool forward_declaration;
+
     ssize_t arity;
+    char* format;
+    size_t stack;
     size_t var_count;
     thecl_variable_t** vars;
-    char* format;
-    uint32_t offset;
+
+    list_t instrs;
     list_t labels;
-    bool forward_declaration;
+
+    uint32_t offset;
 } thecl_sub_t;
 
 int32_t

@@ -59,11 +59,12 @@ enum expression_type {
     EXPRESSION_OP,
     EXPRESSION_VAL,
     EXPRESSION_RANK_SWITCH,
-    EXPRESSION_TERNARY
+    EXPRESSION_TERNARY,
+    EXPRESSION_CALL
 };
 
 typedef struct expression_t {
-    /* Operator or value. */
+    /* General things. */
     enum expression_type type;
     int id;
     /* For values: The value. */
@@ -71,6 +72,9 @@ typedef struct expression_t {
     /* For operators: The child expressions. */
     /* This list is also used to store values for difficulty switches. */
     list_t children;
+    /* For sub calls: the sub name and sub params. */
+    char* name;
+    list_t params;
     /* Resulting type of expression. */
     int result_type;
 } expression_t;
@@ -89,6 +93,7 @@ static expression_t* expression_rank_switch_new(
     const parser_state_t* state, list_t* exprs
 );
 static expression_t* expression_ternary_new(const parser_state_t* state, expression_t* condition, expression_t* val1, expression_t* val2);
+static expression_t* expression_call_new(const parser_state_t* state, list_t* param_list, char* sub_name);
 
 static void expression_output(parser_state_t* state, expression_t* expr, int has_no_parents);
 static void expression_free(expression_t* expr);
@@ -191,6 +196,8 @@ static void directive_eclmap(parser_state_t* state, char* name);
 %token VAR "var"
 %token INT "int"
 %token FLOAT "float"
+%token VOID "void"
+%token RETURN "return"
 %token AT "@"
 %token BRACE_OPEN "{"
 %token BRACE_CLOSE "}"
@@ -297,7 +304,7 @@ static void directive_eclmap(parser_state_t* state, char* name);
 
 %type <integer> Cast_Target
 %type <integer> Cast_Target2
-%type <integer> VarDeclareKeyword
+%type <integer> DeclareKeyword
 %type <integer> VarDeclaration
 
 %left QUESTION
@@ -318,8 +325,8 @@ Statements:
     ;
 
 Statement:
-      "sub" IDENTIFIER {
-        sub_begin(state, $2, 0);
+      DeclareKeyword IDENTIFIER {
+        sub_begin(state, $2, 0, $1);
         free($2);
       }
       "(" ArgumentDeclaration ")" {
@@ -337,7 +344,7 @@ Statement:
         sub_finish(state);
       }
     | "timeline" IDENTIFIER "(" ")" {
-        sub_begin(state, $2, 1);
+        sub_begin(state, $2, 1, 0);
       }
       Subroutine_Body {
         sub_finish(state);
@@ -460,20 +467,22 @@ Text_Semicolon_List:
       }
     ;
 
-VarDeclareKeyword:
-      "var" { $$ = '?' }
+DeclareKeyword:
+      "void" { $$ = 0 }
+    | "sub" { $$ = 0 } // for backwards compatibility
+    | "var" { $$ = '?' }
     | "int" { $$ = 'S' }
     | "float" { $$ = 'f' }
     ;
 
 VarDeclaration:
-      VarDeclareKeyword
-    | VarDeclareKeyword IDENTIFIER {
+      DeclareKeyword
+    | DeclareKeyword IDENTIFIER {
           $$ = $1;
           var_create(state, state->current_sub, $2, $1);
           free($2);
       }
-    | VarDeclareKeyword IDENTIFIER "=" Expression {
+    | DeclareKeyword IDENTIFIER "=" Expression {
           $$ = $1;
           var_create_assign(state, state->current_sub, $2, $1, $4);
           free($2);
@@ -492,11 +501,11 @@ VarDeclaration:
 
 ArgumentDeclaration:
     /* The | at the beginning is obviously intentional and needed to allow creating subs with no arguments. */
-    | VarDeclareKeyword IDENTIFIER {
+    | DeclareKeyword IDENTIFIER {
           var_create(state, state->current_sub, $2, $1);
           free($2);
       }
-    | ArgumentDeclaration "," VarDeclareKeyword IDENTIFIER {
+    | ArgumentDeclaration "," DeclareKeyword IDENTIFIER {
           var_create(state, state->current_sub, $4, $3);
           free($4);
       }
@@ -938,8 +947,32 @@ Instruction:
     | VarDeclaration {
         if (g_ecl_simplecreate)
             instr_add(state->current_sub, instr_new(state, TH10_INS_STACK_ALLOC, "S", state->current_sub->stack));
-    }
+     }
     | BreakStatement
+    | "return" Expression {
+        if (!is_post_th10(state->version))
+            yyerror(state, "return statement is not supported pre-th10");
+
+        if ($2->result_type != state->current_sub->ret_type)
+            yyerror(state, "bad return type in the return statement");
+
+        expression_output(state, $2, 1);
+        thecl_param_t* param = param_new($2->result_type);
+        param->stack = 1;
+        if ($2->result_type == 'S')
+            param->value.val.S = TH10_VAR_I3;
+        else
+            param->value.val.f = TH10_VAR_F3;
+        
+        instr_add(state->current_sub, instr_new(state, $2->result_type == 'S' ? TH10_INS_SETI : TH10_INS_SETF, "p", param));
+        instr_add(state->current_sub, instr_new(state, TH10_INS_RET_NORMAL, ""));
+     }
+    | "return" {
+        if (!is_post_th10(state->version))
+            yyerror(state, "return statement is not supported pre-th10");
+
+        instr_add(state->current_sub, instr_new(state, TH10_INS_RET_NORMAL, ""));
+    }
     ;
 
 Assignment:
@@ -1102,6 +1135,7 @@ Expression:
     | "sqrt" Expression           { $$ = EXPR_11(SQRT,                 $2); }
 
     /* Custom expressions. */
+    | IDENTIFIER "(" Instruction_Parameters ")"          { $$ = expression_call_new(state, $3, $1); }
     | Rank_Switch_List            { $$ = expression_rank_switch_new(state, $1); }
     | Expression "?" Expression_Safe ":" Expression_Safe { $$ = expression_ternary_new(state, $1, $3, $5); }
     ;
@@ -1436,6 +1470,8 @@ instr_create_call(
     param->value.val.z = name;
     list_append_new(param_list, param);
 
+    int expr_params = 0;
+
     /* Add parameter casts */
     if (params != NULL) {
         expression_t* current_expr = NULL;
@@ -1451,6 +1487,7 @@ instr_create_call(
                 memcpy(param, iter_param, sizeof(thecl_param_t));
                 list_append_new(param_list, param);
                 if (param->is_expression_param) {
+                    ++expr_params;
                     expression_optimize(state, state->expressions.tail->data);
                 }
                 continue;
@@ -1466,6 +1503,7 @@ instr_create_call(
             bool is_load_expression = false;
             bool is_load_var = false;
             if (param->is_expression_param) {
+                ++expr_params;
                 
                 current_expr = (expression_t*)node_expr->data;
                 list_node_t* last_node = node_expr;
@@ -1539,13 +1577,23 @@ instr_create_call(
         }
     }
 
-    /* Output expressions from parameters. */
+    /* Output expressions from parameters.
+     * DO NOT output all expressions, only the ones used. */
     expression_t* expr;
-    list_for_each(&state->expressions, expr) {
+    while(expr_params--) {
+        expr = list_tail(&state->expressions);
         expression_output(state, expr, 0);
         expression_free(expr);
+
+        /* "pop" expression from the list. */
+        list_node_t* last_node = state->expressions.tail;
+        state->expressions.tail = last_node->prev;
+        if (last_node->prev)
+            last_node->prev->next = NULL;
+        else
+            state->expressions.head = NULL;
+        free(last_node);
     }
-    list_free_nodes(&state->expressions);
 
     instr_add(state->current_sub, instr_new_list(state, type, param_list));
 }
@@ -1786,6 +1834,65 @@ expression_ternary_new(
     exit(2);
  }
 
+static expression_t*
+expression_call_new(
+    const parser_state_t* state,
+    list_t* param_list,
+    char* sub_name
+) {
+    expression_t* expr = malloc(sizeof(expression_t));
+    expr->type = EXPRESSION_CALL;
+    expr->name = sub_name;
+    expr->params = *param_list;
+    free(param_list);
+
+    /* This requires called sub to already be on the list at this point.
+     * Otherwise, getting expressions and everything else to work correctly
+     * would require a lot of weird workarounds with how thecl works now. 
+     * The core issue is that all sub declarations aren't being parsed and stored 
+     * before the actual code of the subs is parsed, and this is what should be changed 
+     * in the future. */
+    thecl_sub_t* iter_sub;
+    int ret_type = -1;
+    list_for_each(&state->ecl->subs, iter_sub) {
+        if (strcmp(iter_sub->name, sub_name) == 0) {
+            ret_type = iter_sub->ret_type;
+            break;
+        }
+    }
+
+    char buf[256];
+    if (ret_type == -1) {
+        snprintf(buf, 256, "sub must be declared before being used in an expression: %s", sub_name);
+        yyerror(state, buf);
+        ret_type = 'S'; /* Default to something to continue parsing despite the error */
+    } else if (ret_type == 0) {
+        sprintf(buf, 256, "sub used in expression can not have void return type: %s", sub_name);
+        yyerror(state, buf);
+        ret_type = 'S';
+    } else if (ret_type == '?') {
+        sprintf(buf, 256, "sub used in expression can not have var return type: %s", sub_name);
+        yyerror(state, buf);
+        ret_type = 'S';
+    }
+    expr->result_type = ret_type;
+
+    expr_t* tmp_expr = expr_get_by_symbol(state->version, ret_type == 'S' ? LOADI : LOADF);
+    expr->id = tmp_expr->id;
+
+    thecl_param_t* param = param_new(ret_type);
+    param->stack = 1;
+    if (ret_type == 'S')
+        param->value.val.S = TH10_VAR_I3;
+    else
+        param->value.val.f = TH10_VAR_F3;
+
+    expr->value = param;
+
+    return expr;
+}
+
+
 static expression_t *
 expression_copy(
     expression_t *expr)
@@ -1797,10 +1904,20 @@ expression_copy(
     if (expr->type == EXPRESSION_OP || expr->type == EXPRESSION_RANK_SWITCH || expr->type == EXPRESSION_TERNARY) {
         list_for_each(&expr->children, child_expr)
             list_append_new(&copy->children, expression_copy(child_expr));
-    } else if (expr->type == EXPRESSION_VAL) {
+    } else if (expr->type == EXPRESSION_VAL || expr->type == EXPRESSION_CALL) {
         thecl_param_t *param = malloc(sizeof(thecl_param_t));
         memcpy(param, expr->value, sizeof(thecl_param_t));
         copy->value = param;
+        if (expr->type == EXPRESSION_CALL) {
+            copy->name = malloc(strlen(expr->name + 1));
+            strcpy(copy->name, expr->name);
+            thecl_param_t* child_param;
+            list_for_each(&expr->params, child_param) {
+                thecl_param_t* param_copy = malloc(sizeof(thecl_param_t));
+                memcpy(param_copy, child_param, sizeof(thecl_param_t));
+                list_append_new(&copy->params, param_copy);
+            }
+        }
     }
     return copy;
 }
@@ -1897,6 +2014,9 @@ expression_output(
             }
             ++i;
         }
+    } else if (expr->type == EXPRESSION_CALL) {
+        instr_create_call(state, TH10_INS_CALL, expr->name, &expr->params);
+        instr_add(state->current_sub, instr_new(state, expr->id, "p", expr->value));
     }
 }
 
@@ -2061,13 +2181,15 @@ static void
 sub_begin(
     parser_state_t* state,
     char* name,
-    int is_timeline)
+    int is_timeline,
+    int ret_type)
 {
     state->is_timeline_sub = is_timeline;
 
     thecl_sub_t* sub = malloc(sizeof(thecl_sub_t));
 
     sub->name = strdup(name);
+    sub->ret_type = ret_type;
     list_init(&sub->instrs);
     sub->stack = 0;
     sub->arity = 0;
@@ -2156,6 +2278,10 @@ var_create(
         char buf[256];
         snprintf(buf, 256, "redeclaration of variable: %s", name);
         yyerror(state, buf);
+    }
+    if (type == 0) {
+        yyerror(state, "variables can't be declared as 'void', use 'var' to declare typeless vars.");
+        type = '?';
     }
 
     thecl_variable_t* var = malloc(sizeof(thecl_variable_t));

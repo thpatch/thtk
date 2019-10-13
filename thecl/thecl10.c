@@ -1693,7 +1693,7 @@ th10_dump(
 
         if (sub->arity == -1)
             sub->arity = 0;
-        fprintf(out, "\nsub %s(", sub->name);
+        fprintf(out, "\nvoid %s(", sub->name);
         for (p = 0; p < sub->arity; ++p) {
             if (p != 0)
                 fprintf(out, ", ");
