@@ -1519,6 +1519,7 @@ instr_create_call(
                         param->stack = is_load_var;
                         param->is_expression_param = 0;
                         list_del(&state->expressions, last_node);
+                        expr_params--;
                     }
                 }
             }
