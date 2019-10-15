@@ -901,7 +901,6 @@ Instruction:
         if (!ent) {
             /* Default to creating a sub call */
             instr_create_call(state, TH10_INS_CALL, $1, $3);
-            if ($3 != NULL) list_free_nodes($3);
         } else {
             expression_t* expr;
             list_for_each(&state->expressions, expr) {
