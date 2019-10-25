@@ -129,6 +129,9 @@ static void sub_begin(parser_state_t* state, char* name, int is_timeline, int re
 /* Closes the current subroutine. */
 static void sub_finish(parser_state_t* state);
 
+/* Returns global definition of the given name, or NULL if it doesn't exist. */
+static global_definition_t* global_get(parser_state_t* state, char* name);
+
 /* Creates a new variable in the specified subroutine. */
 static thecl_variable_t* var_create(parser_state_t* state, thecl_sub_t* sub, const char* name, int type);
 /* Creates a new variable in the specified subroutine, and assigns a value to it.. */
@@ -400,12 +403,12 @@ Statement:
         }
         string_list_free($3);
       }
-    | "global" "[" IDENTIFIER "]" "=" Global_Def ";" {
+    | "global" IDENTIFIER "=" Global_Def ";" {
         global_definition_t *def = malloc(sizeof(global_definition_t));
-        strncpy(def->name, $3, 256);
-        def->param = $6;
+        strncpy(def->name, $2, 256);
+        def->param = $4;
         list_append_new(&state->global_definitions, def);
-        free($3);
+        free($2);
       }
     | DIRECTIVE TEXT {
         char buf[256];
@@ -1207,27 +1210,6 @@ Address:
         $$ = $2;
         $$->stack = 1;
       }
-    | "[" IDENTIFIER "]" {
-        global_definition_t *def;
-        bool found = 0;
-        list_for_each(&state->global_definitions, def) {
-            if (strcmp(def->name, $2) == 0) {
-                thecl_param_t *param = malloc(sizeof(thecl_param_t));
-                memcpy(param, def->param, sizeof(thecl_param_t));
-                $$ = param;
-                found = 1;
-                break;
-            }
-        }
-        if(!found) {
-            char errbuf[256];
-            snprintf(errbuf, 256, "instr_set_types: in sub %s: global definition not found: %s",
-                     state->current_sub->name, $2);
-            yyerror(state, errbuf);
-            exit(1);
-        }
-        free($2);
-    }
     | "$" IDENTIFIER {
         $$ = param_new('S');
         $$->stack = 1;
@@ -1256,20 +1238,25 @@ Address:
             } else {
                 $$->value.val.f = var_stack(state, state->current_sub, $1);
             }
-            free($1);
         } else {
-            if (
-                   is_post_th10(state->version) /* Old versions don't have stack vars anyway, so no need to show the warning... */
-                && strncmp($1, state->current_sub->name, strlen(state->current_sub->name)) != 0
-            ) {
-                char buf[256];
-                snprintf(buf, 256, "warning: %s not found as a variable, treating like a label instead.", $1);
-                yyerror(state, buf);
+            global_definition_t *def = global_get(state, $1);
+            if (def != NULL) {
+                $$ = param_copy(def->param);
+            } else {
+                if (
+                       is_post_th10(state->version) /* Old versions don't have stack vars anyway, so no need to show the warning... */
+                    && strncmp($1, state->current_sub->name, strlen(state->current_sub->name)) != 0
+                ) {
+                    char buf[256];
+                    snprintf(buf, 256, "warning: %s not found as a variable or global definition, treating like a label instead.", $1);
+                    yyerror(state, buf);
+                }
+                $$ = param_new('o');
+                $$->value.type = 'z';
+                $$->value.val.z = strdup($1);
             }
-            $$ = param_new('o');
-            $$->value.type = 'z';
-            $$->value.val.z = $1;
         }
+        free($1);
     }
     ;
 
@@ -2616,6 +2603,19 @@ sub_finish(
     state->current_sub = NULL;
 }
 
+static global_definition_t*
+global_get(
+    parser_state_t* state,
+    char* name
+) {
+    global_definition_t *def;
+    list_for_each(&state->global_definitions, def) {
+        if (strcmp(def->name, name) == 0)
+            return def;
+    }
+    return NULL;
+}
+
 static thecl_variable_t*
 var_create(
     parser_state_t* state,
@@ -2623,26 +2623,28 @@ var_create(
     const char* name,
     int type)
 {
+    char buf[256];
     if (!is_post_th10(state->version)) {
-        char buf[256];
         snprintf(buf, 256, "stack variable declaration is not allowed in version: %i", state->version);
         yyerror(state, buf);
         exit(2);
     }
     if (g_ecl_simplecreate && type != 0) {
-        char buf[256];
         snprintf(buf, 256, "only typeless variables are allowed in simple creation mode: %s", name);
         yyerror(state, buf);
         exit(2);
     }
     if (var_exists(sub, name)) {
-        char buf[256];
         snprintf(buf, 256, "redeclaration of variable: %s", name);
         yyerror(state, buf);
     }
     if (type == 0) {
         yyerror(state, "variables can't be declared as 'void', use 'var' to declare typeless vars.");
         type = '?';
+    }
+    if (global_get(state, name) != NULL) {
+        snprintf(buf, 256, "identifier %s is already used as a global definition name", name);
+        yyerror(state, buf);
     }
 
     thecl_variable_t* var = malloc(sizeof(thecl_variable_t));
