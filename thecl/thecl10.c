@@ -1175,6 +1175,7 @@ th10_open(
         sub->name = strdup(string_data);
         sub->format = NULL;
         sub->forward_declaration = false;
+        sub->is_inline = false;
         list_init(&sub->instrs);
         sub->stack = 0;
         sub->arity = -1;
@@ -1878,6 +1879,7 @@ th10_parse(
 
     state.instr_time = 0;
     state.instr_rank = 0xff;
+    state.instr_flags = 0;
     state.version = version;
     state.uses_numbered_subs = false;
     state.has_overdrive_difficulty = is_post_th13(version);
@@ -1917,7 +1919,7 @@ th10_find_sub_format(
 {
     thecl_sub_t* sub;
     list_for_each(subs, sub) {
-        if (!strcmp(sub->name, sub_name)) return sub->format;
+        if (!sub->is_inline && !strcmp(sub->name, sub_name)) return sub->format;
     }
     return NULL;
 }
@@ -2113,7 +2115,7 @@ th10_compile(
     file_seek(out, pos + ecl->sub_count * sizeof(uint32_t));
 
     list_for_each(&ecl->subs, sub) {
-        if (sub->forward_declaration)
+        if (sub->forward_declaration || sub->is_inline)
             continue;
 
         if (!file_write(out, sub->name, strlen(sub->name) + 1))
@@ -2125,7 +2127,7 @@ th10_compile(
         file_seek(out, pos + 4 - pos % 4);
 
     list_for_each(&ecl->subs, sub) {
-        if (sub->forward_declaration)
+        if (sub->forward_declaration || sub->is_inline)
             continue;
 
         thecl_instr_t* instr;
@@ -2147,7 +2149,7 @@ th10_compile(
 
     file_seek(out, header.include_offset + header.include_length);
     list_for_each(&ecl->subs, sub) {
-        if (sub->forward_declaration)
+        if (sub->forward_declaration || sub->is_inline)
             continue;
         if (!file_write(out, &sub->offset, sizeof(uint32_t)))
             return 0;
@@ -2163,10 +2165,10 @@ th10_create_header(
 ) {
     thecl_sub_t* sub;
     list_for_each(&ecl->subs, sub) {
-        if (sub->forward_declaration)
+        if (sub->forward_declaration || sub->is_inline)
             continue;
 
-        fprintf(out, "\nsub %s(", sub->name);
+        fprintf(out, "\nvoid %s(", sub->name);
         for (ssize_t i = 0; i < sub->arity; ++i) {
             thecl_variable_t* var = sub->vars[i];
             if (i != 0) fprintf(out, ", ");

@@ -80,6 +80,7 @@
 "int"      return INT;
 "float"    return FLOAT;
 "void"     return VOID;
+"inline"   return INLINE;
 "return"   return RETURN;
 "@"        return AT;
 

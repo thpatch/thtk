@@ -101,6 +101,7 @@ thecl_instr_new(void)
 {
     thecl_instr_t* instr = calloc(1, sizeof(thecl_instr_t));
     instr->type = THECL_INSTR_INSTR;
+    instr->flags = 0;
     list_init(&instr->params);
     return instr;
 }
@@ -156,6 +157,22 @@ param_new(
     param->value.type = type;
     param->is_expression_param = 0;
     return param;
+}
+
+thecl_param_t*
+param_copy(
+    thecl_param_t* param
+) {
+    thecl_param_t* copy = calloc(1, sizeof(thecl_param_t));
+    memcpy(copy, param, sizeof(thecl_param_t));
+    /* Handle possible pointers in the value. */
+    if (copy->value.type == 'z')
+        copy->value.val.z = strdup(param->value.val.z);
+    else if (copy->value.type == 'm') {
+        copy->value.val.m.data = malloc(param->value.val.m.length);
+        memcpy(copy->value.val.m.data, param->value.val.m.data, param->value.val.m.length);
+    }
+    return copy;
 }
 
 void

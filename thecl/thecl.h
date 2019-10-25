@@ -81,6 +81,8 @@ typedef struct thecl_param_t {
 
 thecl_param_t* param_new(
     int type);
+thecl_param_t* param_copy(
+    thecl_param_t* param);
 void param_free(
     thecl_param_t* param);
 
@@ -105,6 +107,9 @@ typedef struct thecl_instr_t {
     unsigned int time;
     unsigned int rank;
     unsigned int offset;
+
+    /* Used by ecsparse.y, not present anywhere in the compiled ECL files. */
+    unsigned int flags;
 } thecl_instr_t;
 
 thecl_instr_t* thecl_instr_new(
@@ -133,12 +138,14 @@ typedef struct {
 typedef struct {
     char* name;
     int type;
+    bool is_written;
 } thecl_variable_t;
 
 typedef struct {
     char* name;
     int ret_type;
     bool forward_declaration;
+    bool is_inline;
 
     ssize_t arity;
     char* format;
@@ -208,6 +215,7 @@ typedef struct {
 typedef struct {
     int instr_time;
     int instr_rank/* = 0xff*/;
+    int instr_flags; /* Special flags that are copied to instr->flags, used by ecsparse.y */
     unsigned int version;
     bool uses_numbered_subs;
     bool has_overdrive_difficulty;
