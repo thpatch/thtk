@@ -1333,6 +1333,9 @@ th06_parse(
     list_init(&state.expressions);
     list_init(&state.block_stack);
     list_init(&state.global_definitions);
+    state.scope_stack = NULL;
+    state.scope_cnt = 0;
+    state.scope_id = 0;
     state.current_sub = NULL;
     state.ecl = thecl_new();
     state.ecl->version = version;
@@ -1354,6 +1357,8 @@ th06_parse(
         free(def);
     }
     list_free_nodes(&state.global_definitions);
+
+    free(state.scope_stack);
 
     return state.ecl;
 }

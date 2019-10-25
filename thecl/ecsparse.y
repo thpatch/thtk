@@ -129,19 +129,28 @@ static void sub_begin(parser_state_t* state, char* name, int is_timeline, int re
 /* Closes the current subroutine. */
 static void sub_finish(parser_state_t* state);
 
+/* Begins a new scope. */
+static void scope_begin(parser_state_t* state);
+/* Ends the most recently started scope. */
+static void scope_finish(parser_state_t* state);
+
 /* Returns global definition of the given name, or NULL if it doesn't exist. */
 static global_definition_t* global_get(parser_state_t* state, char* name);
 
 /* Creates a new variable in the specified subroutine. */
 static thecl_variable_t* var_create(parser_state_t* state, thecl_sub_t* sub, const char* name, int type);
-/* Creates a new variable in the specified subroutine, and assigns a value to it.. */
-static void var_create_assign(parser_state_t* state, thecl_sub_t* sub, const char* name, int type, expression_t* expr);
+/* Creates a new variable in the specified subroutine, and assigns a value to it. */
+static thecl_variable_t* var_create_assign(parser_state_t* state, thecl_sub_t* sub, const char* name, int type, expression_t* expr);
+/* Returns true if the given variable is accessible in the current scope.. */
+static bool var_accessible(parser_state_t* state, thecl_variable_t* var);
+/* Returns variable of the given name in the specified sub, or NULL if the variable doesn't exist/is out of scope */
+static thecl_variable_t* var_get(parser_state_t* state, thecl_sub_t* sub, const char* name);
 /* Returns the stack offset of a specified variable in the specified sub. */
 static int var_stack(parser_state_t* state, thecl_sub_t* sub, const char* name);
 /* Returns the type of a specified variable in the specified sub. */
 static int var_type(parser_state_t* state, thecl_sub_t* sub, const char* name);
 /* Returns 1 if a variable of a given name exists, and 0 if it doesn't. */
-static int var_exists(thecl_sub_t* sub, const char* name);
+static int var_exists(parser_state_t* state, thecl_sub_t* sub, const char* name);
 /* Compiles a shorthand assignment operation on a given variable */
 static void var_shorthand_assign(parser_state_t* state, thecl_param_t* param, expression_t* expr, int EXPRI, int EXPRF);
 /* Stores a new label in the current subroutine pointing to the current offset. */
@@ -587,7 +596,11 @@ Block:
     ;
 
 CodeBlock:
-      "{" Instructions "}"
+      "{" {
+          scope_begin(state);
+      } Instructions "}" {
+          scope_finish(state);
+      }
     | Instruction ";"
     ;
 
@@ -735,7 +748,7 @@ TimesBlock:
 
           char loop_name[256];
           snprintf(loop_name, 256, "times_%i_%i", yylloc.first_line, yylloc.first_column);
-          var_create_assign(state, state->current_sub, loop_name, 'S', $2);
+          thecl_variable_t* var = var_create_assign(state, state->current_sub, loop_name, 'S', $2);
 
           char labelstr_st[256];
           char labelstr_end[256];
@@ -746,7 +759,7 @@ TimesBlock:
           
           thecl_param_t* param = param_new('S');
           param->stack = 1;
-          param->value.val.S = state->current_sub->stack - 4;
+          param->value.val.S = var->stack;
 
           const expr_t* expr = expr_get_by_symbol(state->version, DEC);
           instr_add(state->current_sub, instr_new(state, expr->id, "p", param));
@@ -776,7 +789,10 @@ SwitchBlock:
           snprintf(labelstr, 256, "switch_%i_%i", yylloc.first_line, yylloc.first_column);
           list_prepend_new(&state->block_stack, strdup(labelstr));
           expression_create_goto(state, GOTO, labelstr);
-    } "{" CaseList "}" {
+    } "{" {
+          scope_begin(state);
+    } CaseList "}" {
+          scope_finish(state);
           list_node_t *head = state->block_stack.head;
 
           char labelstr[256];
@@ -1223,7 +1239,7 @@ Address:
         free($2);
       }
     | IDENTIFIER {
-        if (var_exists(state->current_sub, $1)) {
+        if (var_exists(state, state->current_sub, $1)) {
             int type = var_type(state, state->current_sub, $1);
             if (type == '?') {
                 char buf[256];
@@ -1597,6 +1613,9 @@ static void instr_create_inline_call(
         return;
     }
 
+    /* After making sure that everything is correct, we can now create the inline sub scope. */
+    scope_begin(state);
+
     /* This string will be prepended to label names/var names etc. */
     char name[256];
     snprintf(name, 256, "%s_%d_%d_%s_", state->current_sub->name, yylloc.first_line, yylloc.first_column, sub->name);
@@ -1636,13 +1655,13 @@ static void instr_create_inline_call(
             /* Non-static param value or the param is written to, need to create var. */
             strcpy(buf, name);
             strcat(buf, var->name);
-            var_create(state, state->current_sub, buf, param->type);
+            thecl_variable_t* var = var_create(state, state->current_sub, buf, param->type);
             thecl_param_t* new_param = param_new(param->type);
             new_param->stack = 1;
             if (new_param->type == 'S')
-                new_param->value.val.S = state->current_sub->stack - 4;
+                new_param->value.val.S = var->stack;
             else 
-                new_param->value.val.f = (float)(state->current_sub->stack - 4);
+                new_param->value.val.f = (float)var->stack;
 
 
             if (param->is_expression_param) {
@@ -1753,6 +1772,8 @@ static void instr_create_inline_call(
         }
         instr_add(state->current_sub, new_instr);
     }
+
+    scope_finish(state);
 
     /* Free stuff. */
     /* Still the same variables used here */
@@ -2519,6 +2540,8 @@ sub_begin(
     int is_timeline,
     int ret_type)
 {
+    scope_begin(state);
+
     state->is_timeline_sub = is_timeline;
 
     thecl_sub_t* sub = malloc(sizeof(thecl_sub_t));
@@ -2601,6 +2624,25 @@ sub_finish(
     if (!state->is_timeline_sub && !state->current_sub->forward_declaration && !state->current_sub->is_inline)
         ++state->ecl->sub_count;
     state->current_sub = NULL;
+
+    scope_finish(state);
+}
+
+static void
+scope_begin(
+    parser_state_t* state
+) {
+    ++state->scope_cnt;
+    state->scope_stack = realloc(state->scope_stack, sizeof(int)*state->scope_cnt);
+    state->scope_stack[state->scope_cnt - 1] = state->scope_id++;
+}
+
+static void
+scope_finish(
+    parser_state_t* state
+) {
+    --state->scope_cnt;
+    state->scope_stack = realloc(state->scope_stack, sizeof(int)*state->scope_cnt);
 }
 
 static global_definition_t*
@@ -2634,7 +2676,7 @@ var_create(
         yyerror(state, buf);
         exit(2);
     }
-    if (var_exists(sub, name)) {
+    if (var_exists(state, sub, name)) {
         snprintf(buf, 256, "redeclaration of variable: %s", name);
         yyerror(state, buf);
     }
@@ -2650,7 +2692,9 @@ var_create(
     thecl_variable_t* var = malloc(sizeof(thecl_variable_t));
     var->name = strdup(name);
     var->type = type;
+    var->stack = sub->stack;
     var->is_written = false;
+    var->scope = state->scope_stack[state->scope_cnt - 1];
 
     ++sub->var_count;
     sub->vars = realloc(sub->vars, sub->var_count * sizeof(thecl_variable_t*));
@@ -2660,7 +2704,7 @@ var_create(
     return var;
 }
 
-static void
+static thecl_variable_t*
 var_create_assign(
     parser_state_t* state,
     thecl_sub_t* sub,
@@ -2682,9 +2726,9 @@ var_create_assign(
     thecl_param_t* param = param_new(type);
     param->value.type = type;
     if (type == 'S') {
-        param->value.val.S = state->current_sub->stack - 4;
+        param->value.val.S = var->stack;
     } else {
-        param->value.val.f = state->current_sub->stack - 4;
+        param->value.val.f = (float)var->stack;
     }
     param->stack = 1;
 
@@ -2693,6 +2737,33 @@ var_create_assign(
 
     const expr_t* expr_assign = expr_get_by_symbol(state->version, type == 'S' ? ASSIGNI : ASSIGNF);
     instr_add(state->current_sub, instr_new(state, expr_assign->id, "p", param));
+
+    return var;
+}
+
+static bool
+var_accessible(
+    parser_state_t* state,
+    thecl_variable_t* var
+) {
+    for (int scope_state=0; scope_state<state->scope_cnt; ++scope_state) {
+        if (state->scope_stack[scope_state] == var->scope)
+            return true;
+    }
+    return false;
+}
+
+static thecl_variable_t*
+var_get(
+    parser_state_t* state,
+    thecl_sub_t* sub,
+    const char* name
+) {
+    for (size_t i = 0; i < sub->var_count; ++i) {
+        if (strcmp(name, sub->vars[i]->name) == 0 && var_accessible(state, sub->vars[i]))
+            return sub->vars[i];
+    }
+    return NULL;
 }
 
 static int
@@ -2706,12 +2777,11 @@ var_stack(
     eclmap_entry_t* ent = eclmap_find(g_eclmap_global, name);
     if (ent) return ent->opcode;
 
+    thecl_variable_t* var = var_get(state, sub, name);
+    if (var != NULL)
+        return var->stack;
+
     char buf[256];
-    unsigned int i;
-    for (i = 0; i < sub->var_count; ++i) {
-        if (strcmp(name, sub->vars[i]->name) == 0)
-            return i * 4;
-    }
     snprintf(buf, 256, "variable not found: %s", name);
     yyerror(state, buf);
     return 0;
@@ -2726,12 +2796,11 @@ var_type(
     eclmap_entry_t* ent = eclmap_find(g_eclmap_global, name);
     if (ent) return ent->signature[0] == '$' ? 'S' : 'f';
     
+    thecl_variable_t* var = var_get(state, sub, name);
+    if (var != NULL)
+        return var->type;
+
     char buf[256];
-    unsigned int i;
-    for (i = 0; i < sub->var_count; ++i) {
-        if (strcmp(name, sub->vars[i]->name) == 0)
-            return sub->vars[i]->type;
-    }
     snprintf(buf, 256, "variable not found: %s", name);
     yyerror(state, buf);
     return 0;
@@ -2739,18 +2808,14 @@ var_type(
 
 static int
 var_exists(
+    parser_state_t* state,
     thecl_sub_t* sub,
     const char* name)
 {
     eclmap_entry_t* ent = eclmap_find(g_eclmap_global, name);
     if (ent) return 1;
 
-    unsigned int i;
-    for (i = 0; i < sub->var_count; ++i) {
-        if (strcmp(name, sub->vars[i]->name) == 0) return 1;
-    }
-
-    return 0;
+    return var_get(state, sub, name) != NULL;
 }
 
 static void

@@ -81,7 +81,7 @@ thecl_free(
         list_free_nodes(&sub->instrs);
 
         for (size_t v = 0; v < sub->var_count; ++v)
-            free(sub->vars[v]);
+            thecl_variable_free(sub->vars[v]);
         free(sub->vars);
 
         thecl_label_t* label;
@@ -146,6 +146,12 @@ thecl_instr_free(thecl_instr_t* instr)
     list_free_nodes(&instr->params);
 
     free(instr);
+}
+
+void
+thecl_variable_free(thecl_variable_t* var) {
+    free(var->name);
+    free(var);
 }
 
 thecl_param_t*

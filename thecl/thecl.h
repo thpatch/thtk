@@ -138,8 +138,13 @@ typedef struct {
 typedef struct {
     char* name;
     int type;
+    int stack;
+    int scope;
     bool is_written;
 } thecl_variable_t;
+
+void thecl_variable_free(
+    thecl_variable_t* var);
 
 typedef struct {
     char* name;
@@ -224,6 +229,9 @@ typedef struct {
     list_t expressions;
     list_t block_stack;
     list_t global_definitions;
+    int* scope_stack;
+    int scope_cnt;
+    int scope_id;
     thecl_sub_t* current_sub;
     thecl_t* ecl;
     int path_cnt;
