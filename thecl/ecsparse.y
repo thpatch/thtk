@@ -860,8 +860,6 @@ Case:
       }
     ;
 
-    /* TODO: Check the given parameters against the parameters expected for the
-     *       instruction. */
 Instruction:
       "@" IDENTIFIER "(" Instruction_Parameters ")" {
           /* Force creating a sub call, even if it wasn't defined in the file earlier - useful for calling subs from default.ecl */
@@ -2806,8 +2804,6 @@ var_stack(
     thecl_sub_t* sub,
     const char* name)
 {
-    // TODO: Check if a local is shadowed by a global.
-
     eclmap_entry_t* ent = eclmap_find(g_eclmap_global, name);
     if (ent) return ent->opcode;
 
