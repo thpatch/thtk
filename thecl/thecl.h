@@ -141,6 +141,7 @@ typedef struct {
     int stack;
     int scope;
     bool is_written;
+    bool is_unused;
 } thecl_variable_t;
 
 void thecl_variable_free(

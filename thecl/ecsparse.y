@@ -774,6 +774,9 @@ TimesBlock:
           snprintf(labelstr_st, 256, "%s_st", (char*)head->data);
           snprintf(labelstr_end, 256, "%s_end", (char*)head->data);
           
+          thecl_variable_t* var = var_get(state, state->current_sub, (char*)head->data);
+          var->is_unused = true; /* Allow next created var to reuse the stack offset of this one. */
+
           expression_create_goto(state, GOTO, labelstr_st);
           label_create(state, labelstr_end);
           
@@ -1624,10 +1627,6 @@ static void instr_create_inline_call(
      * As mentioned earlier, it is necessary to create vars if the param ever
      * gets written to, or the passed parameter is an expression.
      * We will use a param_replace array to replace all argument variable references from the code of copied inline sub. */
-    
-    int stack_base = state->current_sub->stack; // We will later need to know where the created variables started.
-    int stack_diff = 0; // We need to save how many less variables we created than the arity of the inline sub was, to change stack offsets of things later.
-
     thecl_param_t** param_replace = calloc(sub->arity, sizeof(thecl_param_t*));
     thecl_variable_t* var;
     i = 0;
@@ -1646,7 +1645,6 @@ static void instr_create_inline_call(
                     param_replace[i] = param_copy(expr->value);
                     expression_free(expr);
                     list_del(&state->expressions, node);
-                    stack_diff += 4;
                     ++i;
                     continue;
                 }
@@ -1685,16 +1683,17 @@ static void instr_create_inline_call(
             param_replace[i] = new_param;
         } else {
             param_replace[i] = param_copy(param);
-            stack_diff += 4;
         }
         ++i;
     }
 
     /* Create non-param variables that the inline sub uses.. */
+    thecl_variable_t** stack_replace = malloc(sizeof(thecl_variable_t*) * (sub->stack/4 - sub->arity));
     for (i = sub->arity; i < sub->stack / 4; ++i) {
         thecl_variable_t* var = sub->vars[i];
         snprintf(buf, 256, "%s%s", name, var->name);
-        var_create(state, state->current_sub, buf, var->type);
+        thecl_variable_t* var_new = var_create(state, state->current_sub, buf, var->type);
+        stack_replace[i - sub->arity] = var_new;
     }
 
     /* Create labels that the inline sub uses (with changed offsets) */
@@ -1744,14 +1743,14 @@ static void instr_create_inline_call(
                         param_free(param);
                     } else if (param->value.val.S > 0) {
                         /* Regular stack variable, needs adjusting the offset. */
-                        param->value.val.S = stack_base - stack_diff + param->value.val.S;
+                        param->value.val.S = stack_replace[param->value.val.S / 4 - sub->arity]->stack;
                     }
                 } else if (param->value.type == 'f') {
                     if (param->value.val.f < (float)(sub->arity*4) && param->value.val.f >= 0.0f) {
                         param_node->data = param_copy(param_replace[(int)param->value.val.f / 4]);
                         param_free(param);
                     } else if (param->value.val.f > 0.0f) {
-                        param->value.val.f = (float)(stack_base - stack_diff) + param->value.val.f;
+                        param->value.val.f = (float)stack_replace[(int)param->value.val.f / 4 - sub->arity]->stack;
                     }
                 }
             } else if (param->type == 'o') {
@@ -1775,6 +1774,12 @@ static void instr_create_inline_call(
 
     scope_finish(state);
 
+    /* We have to mark variables that were marked as unused in the inline sub
+     * as unused in the current sub as well. */
+    for (size_t v=sub->arity; v<sub->var_count; ++v) {
+        stack_replace[v - sub->arity]->is_unused = sub->vars[v]->is_unused;
+    }
+
     /* Free stuff. */
     /* Still the same variables used here */
     i = 0;
@@ -1787,6 +1792,7 @@ static void instr_create_inline_call(
     if (params_org == NULL)
         free(params);
     free(param_replace);
+    free(stack_replace);
 }
 
 static bool
@@ -2658,6 +2664,32 @@ global_get(
     return NULL;
 }
 
+static bool
+var_stack_used(
+    parser_state_t* state,
+    thecl_sub_t* sub,
+    int stack
+) {
+    for (size_t v=0; v<sub->var_count; ++v) {
+        if (sub->vars[v]->stack == stack && !sub->vars[v]->is_unused)
+            return true;
+    }
+    return false;
+}
+
+static int
+var_get_new_stack(
+    parser_state_t* state,
+    thecl_sub_t* sub
+) {
+    int stack = 0;
+    while(1) {
+        if (!var_stack_used(state, sub, stack))
+            return stack;
+        stack += 4;
+    }
+}
+
 static thecl_variable_t*
 var_create(
     parser_state_t* state,
@@ -2692,15 +2724,17 @@ var_create(
     thecl_variable_t* var = malloc(sizeof(thecl_variable_t));
     var->name = strdup(name);
     var->type = type;
-    var->stack = sub->stack;
+    var->stack = var_get_new_stack(state, sub);
     var->is_written = false;
+    var->is_unused = false;
     var->scope = state->scope_stack[state->scope_cnt - 1];
 
     ++sub->var_count;
     sub->vars = realloc(sub->vars, sub->var_count * sizeof(thecl_variable_t*));
     sub->vars[sub->var_count - 1] = var;
 
-    sub->stack += 4;
+    if (var->stack == sub->stack) /* Only increment the stack if the variable uses aa new offset. */
+        sub->stack += 4;
     return var;
 }
 
