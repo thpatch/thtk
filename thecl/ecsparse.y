@@ -233,6 +233,7 @@ static void directive_eclmap(parser_state_t* state, char* name);
 %token TIMES "times"
 %token SWITCH "switch"
 %token CASE "case"
+%token DEFAULT "default"
 %token BREAK "break"
 %token ASYNC "async"
 %token KILL
@@ -787,16 +788,42 @@ TimesBlock:
 
 SwitchBlock:
     "switch" Expression {
-          char labelstr[256];
-          list_prepend_new(&state->block_stack, NULL);
-          snprintf(labelstr, 256, "switch_%i_%i", yylloc.first_line, yylloc.first_column);
-          list_prepend_new(&state->block_stack, strdup(labelstr));
-          expression_create_goto(state, GOTO, labelstr);
+          char name[256];
+          list_prepend_new(&state->block_stack, NULL); /* The NULL acts as a sentinel of switch cases. */
+          snprintf(name, 256, "switch_%i_%i", yylloc.first_line, yylloc.first_column);
+          list_prepend_new(&state->block_stack, strdup(name));
+          expression_create_goto(state, GOTO, name);
+          
+          /* The expression value needs to be stored in a variable, in case some kind of RAND variable was passed. */
+          thecl_variable_t* var = var_create(state, state->current_sub, name, $2->result_type);
+          expression_output(state, $2, 1);
+          thecl_param_t* param = param_new($2->result_type);
+          param->stack = 1;
+          if (param->type == 'S')
+              param->value.val.S = var->stack;
+          else
+              param->value.val.f = (float)var->stack;
+          
+          expr_t* tmp = expr_get_by_symbol(state->version, $2->result_type == 'S' ? ASSIGNI : ASSIGNF);
+          instr_add(state->current_sub, instr_new(state, tmp->id, "p", param));
+          list_prepend_new(&state->block_stack, var); /* We will need it later. */
+          expression_free($2);
     } "{" {
           scope_begin(state);
     } CaseList "}" {
           scope_finish(state);
-          list_node_t *head = state->block_stack.head;
+
+          list_node_t* head = state->block_stack.head;
+          thecl_variable_t* var = (thecl_variable_t*)head->data;
+          thecl_param_t* param = param_new(var->type);
+          param->stack = 1;
+          if (param->type == 'S')
+              param->value.val.S = var->stack;
+          else
+              param->value.val.f = (float)var->stack;
+          list_del(&state->block_stack, head);
+
+          head = state->block_stack.head;
 
           char labelstr[256];
           snprintf(labelstr, 256, "%s_end", (char*)head->data);
@@ -807,32 +834,39 @@ SwitchBlock:
           free(head->data);
           list_del(&state->block_stack, head);
 
+          expr_t* expr = expr_get_by_symbol(state->version, param->type == 'S' ? EQUALI : EQUALF);
+          int id_cmp = expr->id;
+          expr = expr_get_by_symbol(state->version, param->type == 'S' ? LOADI : LOADF);
+          int id_load = expr->id;
+
           list_node_t *node = state->block_stack.head;
           while (node->data) {
               switch_case_t *switch_case = node->data;
-              expression_output(state, switch_case->expr, 1);
-              expression_t *copy = expression_copy($2);
-              expression_output(state, copy, 1);
-              expression_free(copy);
 
-              const expr_t* expr = expr_get_by_symbol(state->version, EQUALI);
-              instr_add(state->current_sub, instr_new(state, expr->id, ""));
+              if (switch_case->expr != NULL) { /* if expr is NULL, it's the "default" case. */
+                  expression_output(state, switch_case->expr, 1);
+                  expression_free(switch_case->expr);
 
-              expression_free(switch_case->expr);
-              expression_create_goto(state, IF, switch_case->labelstr);
+                  instr_add(state->current_sub, instr_new(state, id_load, "p", param_copy(param)));
+                  instr_add(state->current_sub, instr_new(state, id_cmp, ""));
+
+                  expression_create_goto(state, IF, switch_case->labelstr);
+              } else {
+                  expression_create_goto(state, GOTO, switch_case->labelstr);
+              }
               list_node_t *buf = node;
               node = node->next;
               free(buf->data);
               free(buf);
           }
+          param_free(param);
           if (node->next != NULL) /* Prevent crashing when there is nothing else on the block stack. */
               node->next->prev = NULL;
           state->block_stack.head = node->next;
           free(node);
 
           label_create(state, labelstr);
-          free($2->value);
-          expression_free($2);
+          var->is_unused = true; /* Allow next created var to use the same stack offset as this one. */
     }
     ;
 
@@ -847,17 +881,35 @@ Case:
      "case" Expression_Safe ":" {
           switch_case_t *switch_case = malloc(sizeof(switch_case_t));
           switch_case->expr = $2;
+
+          list_node_t *node = state->block_stack.head;
+          if (((thecl_variable_t*)node->data)->type != $2->result_type)
+              yyerror(state, "wrong value type in switch case");
+
           snprintf(switch_case->labelstr, 250, "case_%i_%i", yylloc.first_line, yylloc.first_column);
 
           label_create(state, switch_case->labelstr);
+          
+          /* Every case has to be prepended to the sentinel. */
+          while(node->data) /* Sentinel has data=NULL */
+              node = node->next;
 
-          list_node_t *head = state->block_stack.head;
-          if (head->next) {
-              list_prepend_to(&state->block_stack, switch_case, head->next);
-          } else {
-              list_append_new(&state->block_stack, switch_case);
-          }
+          list_prepend_to(&state->block_stack, switch_case, node); /* Prepends to the sentinel. */
       }
+    |
+     "default" ":" {
+          switch_case_t *switch_case = malloc(sizeof(switch_case_t));
+          switch_case->expr = NULL;
+
+          snprintf(switch_case->labelstr, 250, "case_%i_%i", yylloc.first_line, yylloc.first_column);
+          label_create(state, switch_case->labelstr);
+
+          list_node_t *node = state->block_stack.head;
+          while(node->data)
+              node = node->next;
+
+          list_prepend_to(&state->block_stack, switch_case, node);
+     } 
     ;
 
 Instruction:

@@ -93,6 +93,7 @@
 "times"    return TIMES;
 "switch"   return SWITCH;
 "case"     return CASE;
+"default"  return DEFAULT;
 "break"    return BREAK;
 "async"    return ASYNC;
 "global"   return GLOBAL;
