@@ -162,6 +162,7 @@ typedef struct {
     list_t instrs;
     list_t labels;
 
+    int time;
     uint32_t offset;
 } thecl_sub_t;
 

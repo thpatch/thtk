@@ -1822,6 +1822,9 @@ static void instr_create_inline_call(
         instr_add(state->current_sub, new_instr);
     }
 
+    /* Time of the current sub has to be adjusted. */
+    set_time(state, state->instr_time + sub->time);
+
     scope_finish(state);
 
     /* We have to mark variables that were marked as unused in the inline sub
@@ -2610,6 +2613,7 @@ sub_begin(
     sub->var_count = 0;
     sub->vars = NULL;
     sub->offset = 0;
+    sub->time = 0;
     list_init(&sub->labels);
 
     if (!state->uses_numbered_subs) {
@@ -2952,6 +2956,7 @@ set_time(
         snprintf(buf, 256, "illegal timer change: %d to %d", state->instr_time, new_time);
         yyerror(state, buf);
     }
+    state->current_sub->time = new_time;
     state->instr_time = new_time;
 }
 
