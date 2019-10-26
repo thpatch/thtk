@@ -1823,7 +1823,8 @@ static void instr_create_inline_call(
     }
 
     /* Time of the current sub has to be adjusted. */
-    set_time(state, state->instr_time + sub->time);
+    if (sub->time != 0)
+        set_time(state, state->instr_time + sub->time);
 
     scope_finish(state);
 
