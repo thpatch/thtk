@@ -51,13 +51,13 @@ typedef enum {
 #define RANK_EXTRA     (1 << 4)
 #define RANK_OVERDRIVE (1 << 5)
 
-// Used to describe unused ranks
+/* Used to describe unused ranks */
 #define RANK_ID_4      (1 << 4)
 #define RANK_ID_5      (1 << 5)
 #define RANK_ID_6      (1 << 6)
 #define RANK_ID_7      (1 << 7)
 
-// Numbers of important ECL instructions
+/* Numbers of important ECL instructions */
 #define TH10_INS_RET_BIG        1
 #define TH10_INS_RET_NORMAL     10
 #define TH10_INS_CALL           11
@@ -67,8 +67,8 @@ typedef enum {
 #define TH10_INS_SETI           43
 #define TH10_INS_SETF           45
 
-// Numbers of important variables
-// The 2 variables below are used as return registers.
+/* Numbers of important variables
+   The 2 variables below are used as return registers. */
 #define TH10_VAR_I3 -9982
 #define TH10_VAR_F3 -9978.0f
 
@@ -76,7 +76,7 @@ typedef struct thecl_param_t {
     int type;
     value_t value;
     int stack;
-    char is_expression_param; // Temporary variable for ecsparse.y
+    char is_expression_param; /* Temporary variable for ecsparse.y */
 } thecl_param_t;
 
 thecl_param_t* param_new(

@@ -515,7 +515,7 @@ Text_Semicolon_List:
 
 DeclareKeyword:
       "void" { $$ = 0 }
-    | "sub" { $$ = 0 } // for backwards compatibility
+    | "sub" { $$ = 0 } /* for backwards compatibility */
     | "var" { $$ = '?' }
     | "int" { $$ = 'S' }
     | "float" { $$ = 'f' }
@@ -1581,7 +1581,7 @@ static bool param_is_system_var(
         if (param->value.type == 'S') {
             if (is_post_th10(state->version))
                 return param->value.val.S < 0;
-            return true; // in pre-th10 there are not stack variables.
+            return true; /* in pre-th10 there are no stack variables. */
         } else if (param->value.type == 'f') {
             if (is_post_th10(state->version))
                 return param->value.val.f < 0.0f;
@@ -2359,7 +2359,7 @@ expression_output(
     int has_no_parents)
 {
     if (!g_ecl_simplecreate && has_no_parents)
-        // Since expression_optimize is already done recursively for children, it shouldn't be called for child expressions.
+        /* Since expression_optimize is already done recursively for children, it shouldn't be called for child expressions. */
         expression_optimize(state, expr);
 
     if (expr->type == EXPRESSION_VAL) {
@@ -2459,19 +2459,19 @@ expression_optimize(
         ++child_cnt;
     }
 
-    // TODO: handle some single-child expressions, such as sin or cos
+    /* TODO: handle some single-child expressions, such as sin or cos */
     if (child_cnt != 2) return;
 
     if (
            child_expr_1->type != EXPRESSION_VAL
         || child_expr_2->type != EXPRESSION_VAL
-        || child_expr_1->value->stack // Variables are not acceptable, obviously.
+        || child_expr_1->value->stack /* Variables are not acceptable, obviously. */
         || child_expr_2->value->stack
     ) return;
 
     expr_t* tmp_expr = expr_get_by_id(state->version, expression->id);
     
-    // Need to get the type from tmp_expr->return_type, since expression->result_type could have been modified by typecasts.
+    /* Need to get the type from tmp_expr->return_type, since expression->result_type could have been modified by typecasts. */
     thecl_param_t* param = param_new(tmp_expr->return_type);
 
     int res1 = child_expr_1->value->type;
@@ -2562,8 +2562,8 @@ expression_optimize(
             param->value.val.S = val1S & val2S;
         break;
         default:
-            // Since the cases above cover all existing 2-parameter expressions there is no possibility of this ever hapenning.
-            // Just putting this error message in case someone adds new expressions and forgets about handling them here...
+            /* Since the cases above cover all existing 2-parameter expressions there is no possibility of this ever hapenning.
+               Just putting this error message in case someone adds new expressions and forgets about handling them here... */
             yyerror(state, "Math preprocessing error! Try using simple creation mode.");
     }
 
@@ -2621,7 +2621,7 @@ sub_begin(
             yyerror(state, "timelines don't exist in th10+");
         }
 
-        // Touhou expects the list of subs to be sorted by name.
+        /* Touhou expects the list of subs to be sorted by name. */
         thecl_sub_t* iter_sub;
         list_for_each(&state->ecl->subs, iter_sub) {
             int diff = strcmp(name, iter_sub->name);
@@ -2914,7 +2914,7 @@ var_shorthand_assign(
     int EXPRI,
     int EXPRF)
 {
-    // Can't use the same param twice, so a copy is created.
+    /* Can't use the same param twice, so a copy is created. */
     thecl_param_t* param_clone = malloc(sizeof(thecl_param_t));
     memcpy(param_clone, param, sizeof(thecl_param_t));
 
@@ -2922,7 +2922,7 @@ var_shorthand_assign(
     expression_t* expr_main = EXPR_22(EXPRI, EXPRF, expr_load, expr_assign);
     expression_output(state, expr_main, 1);
     expression_free(expr_main);
-    // No need to free expr_load or expr, since they both got freed as children of expr_main.
+    /* No need to free expr_load or expr, since they both got freed as children of expr_main. */
 
     const expr_t* expr = expr_get_by_symbol(state->version, param->type == 'S' ? ASSIGNI : ASSIGNF);
     instr_add(state->current_sub, instr_new(state, expr->id, "p", param));
