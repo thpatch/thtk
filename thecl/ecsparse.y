@@ -302,7 +302,6 @@ static void directive_eclmap(parser_state_t* state, char* name);
 %type <list> Text_Semicolon_List
 %type <list> Instruction_Parameters_List
 %type <list> Instruction_Parameters
-%type <list> Integer_List
 %type <list> Rank_Switch_List
 %type <list> Rank_Switch_Next_Value_List
 
@@ -477,17 +476,6 @@ Statement:
     }
     ;
 
-Integer_List:
-      Integer {
-        $$ = list_new();
-        list_append_new($$, $1);
-      }
-    | Integer_List Integer {
-        $$ = $1;
-        list_append_new($$, $2);
-      }
-    ;
-
 Subroutine_Body:
       "{" Instructions "}" {
           state->current_sub->forward_declaration = false;
@@ -514,11 +502,11 @@ Text_Semicolon_List:
     ;
 
 DeclareKeyword:
-      "void" { $$ = 0 }
-    | "sub" { $$ = 0 } /* for backwards compatibility */
-    | "var" { $$ = '?' }
-    | "int" { $$ = 'S' }
-    | "float" { $$ = 'f' }
+      "void" { $$ = 0; }
+    | "sub" { $$ = 0; } /* for backwards compatibility */
+    | "var" { $$ = '?'; }
+    | "int" { $$ = 'S'; }
+    | "float" { $$ = 'f'; }
     ;
 
 VarDeclaration:
@@ -559,7 +547,7 @@ ArgumentDeclaration:
 
 Instructions:
     | Instructions INTEGER ":" { set_time(state, $2); }
-    | Instructions PLUS_INTEGER ":" { set_time(state, state->instr_time + $2) }
+    | Instructions PLUS_INTEGER ":" { set_time(state, state->instr_time + $2); }
     | Instructions IDENTIFIER ":" { label_create(state, $2); free($2); }
     | Instructions Instruction ";"
     | Instructions Block
@@ -1202,7 +1190,7 @@ Instruction_Parameter:
     ;
 
 Rank_Switch_Next_Value: 
-      ":" Expression_Safe {$$ = $2}
+      ":" Expression_Safe { $$ = $2; }
     ;
 
 Rank_Switch_List:
@@ -1271,8 +1259,8 @@ Expression:
 */
 Expression_Safe:
       Load_Type                      { $$ = expression_load_new(state, $1); }
-    |             "(" Expression ")" { $$ = $2 ;}
-    | Cast_Target "(" Expression ")" { $$ = $3; $$->result_type = $1 }
+    |             "(" Expression ")" { $$ = $2; }
+    | Cast_Target "(" Expression ")" { $$ = $3; $$->result_type = $1; }
     ;
 
 Address:
