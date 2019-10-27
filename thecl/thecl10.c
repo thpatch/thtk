@@ -2131,6 +2131,18 @@ th10_compile(
     if (pos % 4 != 0)
         file_seek(out, pos + 4 - pos % 4);
 
+	uint16_t max_opcode;
+	/* TODO: Get max opcodes for the rest of the games */
+	switch (ecl->version)
+	{
+	case 14:
+		max_opcode = 1003;
+		break;
+	default:
+		max_opcode = 0xFFFFU;
+		break;
+	}
+
     list_for_each(&ecl->subs, sub) {
         if (sub->forward_declaration || sub->is_inline)
             continue;
@@ -2141,6 +2153,9 @@ th10_compile(
             return 0;
 
         list_for_each(&sub->instrs, instr) {
+			if (instr->id > max_opcode) {
+				fprintf(stderr, "%s: warning: opcode: id %hu was higher than the maximum %hu\n", argv0, instr->id, max_opcode);
+			}
             unsigned char* data = th10_instr_serialize(ecl->version, sub, instr, &ecl->subs, ecl->no_warn);
             if (!file_write(out, data, instr->size))
                 return 0;

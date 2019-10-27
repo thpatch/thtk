@@ -1545,9 +1545,6 @@ th06_compile(
     case 6:
         max_opcode = 135;
         break;
-    case 14:
-        max_opcode = 1003;
-        break;
     default:
         max_opcode = 0xFFFFU;
         break;
@@ -1559,11 +1556,9 @@ th06_compile(
         thecl_instr_t* instr;
         list_for_each(&sub->instrs, instr) {
             th06_instr_t* raw_instr = th06_instr_serialize(ecl, sub, instr);
-            if (raw_instr->id <= max_opcode)
-                file_write(out, raw_instr, raw_instr->size);
-            else {
-                fprintf(stderr, "%s: invalid opcode: id %hu was higher than the maximum %hu", argv0, raw_instr->id, max_opcode);
-                g_was_error = true;
+			file_write(out, raw_instr, raw_instr->size);
+            if (raw_instr->id > max_opcode) {
+                fprintf(stderr, "%s: warning: opcode: id %hu was higher than the maximum %hu\n", argv0, raw_instr->id, max_opcode);
             }
             free(raw_instr);
         }
