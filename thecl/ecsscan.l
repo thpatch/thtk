@@ -170,12 +170,12 @@ ins_[0-9]+ {
 }
 "false" {
     /* boolean "false" */
-    yyval.integer = 0;
+    yylval.integer = 0;
     return INTEGER;
 }
 "true" {
     /* boolean "true" */
-    yyval.integer = 1;
+    yylval.integer = 1;
     return INTEGER;
 }
 
