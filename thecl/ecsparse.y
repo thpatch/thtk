@@ -564,6 +564,7 @@ Instructions:
     | Instructions Instruction ";"
     | Instructions Block
     | Instructions RANK { state->instr_rank = parse_rank(state, $2); } 
+    | Instructions RANK ":" { state->instr_rank = parse_rank(state, $2); } Instruction { state->instr_rank = parse_rank(state, "*"); }
     ;
 
 Block:
