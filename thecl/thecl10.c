@@ -32,6 +32,7 @@
 #include <string.h>
 #include <math.h>
 #include "expr.h"
+#include "path.h"
 #include "file.h"
 #include "program.h"
 #include "thecl.h"
@@ -98,6 +99,7 @@ th10_value_from_data(
     case 'D':
         return value_from_data(data, 2 * sizeof(uint32_t), 'm', value);
     case 'o':
+    case 't':
         return value_from_data(data, data_length, 'S', value);
     case 'm':
     case 'x': {
@@ -160,9 +162,9 @@ static const id_format_pair_t th10_fmts[] = {
     { 1, "" },
     { 10, "" },
     { 11, "m*D" },
-    { 12, "oS" },
-    { 13, "oS" },
-    { 14, "oS" },
+    { 12, "ot" },
+    { 13, "ot" },
+    { 14, "ot" },
     { 15, "m*D" },
     { 16, "mS*D" },
     { 17, "S" },
@@ -391,9 +393,9 @@ static const id_format_pair_t th12_fmts[] = {
     { 1, "" },
     { 10, "" },
     { 11, "m*D" },
-    { 12, "oS" },
-    { 13, "oS" },
-    { 14, "oS" },
+    { 12, "ot" },
+    { 13, "ot" },
+    { 14, "ot" },
     { 15, "m*D" },
     { 16, "mS*D" },
     { 17, "S" },
@@ -527,7 +529,7 @@ static const id_format_pair_t th12_fmts[] = {
     { 424, "S" },
     { 425, "" },
     { 426, "f" },
-    { 427, "SfU" },
+    { 427, "SfS" },
     { 428, "SSSx" },
     { 429, "ffff" },
     { 430, "ffffff" },
@@ -583,7 +585,7 @@ static const id_format_pair_t th12_fmts[] = {
     { 523, "Sff" },
     { 524, "Sf" },
     { 525, "Sff" },
-    { 526, "fU" },
+    { 526, "fS" },
     { 527, "" },
     { 528, "" },
     { 529, "S" },
@@ -660,9 +662,9 @@ static const id_format_pair_t th13_fmts[] = {
     { 1, "" },
     { 10, "" },
     { 11, "m*D" },
-    { 12, "oS" },
-    { 13, "oS" },
-    { 14, "oS" },
+    { 12, "ot" },
+    { 13, "ot" },
+    { 14, "ot" },
     { 15, "m*D" },
     { 16, "mS*D" },
     { 17, "S" },
@@ -994,19 +996,19 @@ static const id_format_pair_t th17_fmts[] = {
     { -1, NULL }
 };
 
-
-static bool th10_is_post_th13(unsigned int version) {
-    switch(version) {
-        case 10: case 103: case 11: case 12: case 125: case 128: return false;
-        default: return true;
-    }
-}
-
 static const char*
 th10_find_format(
     unsigned int version,
-    unsigned int id)
+    unsigned int id,
+    bool is_timeline)
 {
+    if (is_timeline) return NULL;
+
+    id_format_pair_t* fmt;
+    list_for_each(g_user_fmts, fmt) {
+        if (fmt->id == id) return fmt->format;
+    }
+
     const char* ret = NULL;
 
     switch (version) {
@@ -1014,15 +1016,15 @@ th10_find_format(
     case 17:
         if (!ret) ret = find_format(th17_fmts, id);
     case 165:
-        if(!ret) ret = find_format(th165_fmts, id);
+        if (!ret) ret = find_format(th165_fmts, id);
     case 16:
         if (!ret) ret = find_format(th16_fmts, id);
     case 15:
         if (!ret) ret = find_format(th15_fmts, id);
     case 143:
-         if (!ret) ret = find_format(th143_fmts, id);
+        if (!ret) ret = find_format(th143_fmts, id);
     case 14:
-         if (!ret) ret = find_format(th14_fmts, id);
+        if (!ret) ret = find_format(th14_fmts, id);
     case 13:
         if (!ret) ret = find_format(th13_fmts, id);
     case 128:
@@ -1171,6 +1173,9 @@ th10_open(
         thecl_sub_t* sub = malloc(sizeof(thecl_sub_t));
 
         sub->name = strdup(string_data);
+        sub->format = NULL;
+        sub->forward_declaration = false;
+        sub->is_inline = false;
         list_init(&sub->instrs);
         sub->stack = 0;
         sub->arity = -1;
@@ -1218,7 +1223,7 @@ th10_open(
             list_init(&new_instr->params);
 
             uint32_t param_mask = instr->param_mask;
-            const char* format = th10_find_format(version, instr->id);
+            const char* format = th10_find_format(version, instr->id, 0);
             /* TODO: Handle format == NULL. */
             size_t param_size_total = instr->size - sizeof(th10_instr_t);
             if (format == NULL) {
@@ -1287,6 +1292,26 @@ th10_set_arity(
     }
 }
 
+static void
+th10_create_forward_declaraion(
+    thecl_t* ecl,
+    char* name,
+    int arity)
+{
+    thecl_sub_t* sub = malloc(sizeof(thecl_sub_t));
+    sub->name = strdup(name);
+    sub->format = NULL;
+    sub->forward_declaration = true;
+    list_init(&sub->instrs);
+    list_init(&sub->labels);
+    sub->stack = 0;
+    sub->arity = arity;
+    sub->var_count = 0;
+    sub->vars = NULL;
+
+    list_prepend_new(&ecl->subs, sub);
+}
+
 void
 th10_trans(
     thecl_t* ecl)
@@ -1301,30 +1326,25 @@ th10_trans(
         list_node_t* node_next;
         list_for_each_node_safe(&sub->instrs, node, node_next) {
             thecl_instr_t* instr = node->data;
-
-            if (instr->type == THECL_INSTR_INSTR && instr->id == 40) {
-                thecl_param_t* param = list_head(&instr->params);
-                sub->stack = param->value.val.S;
-                list_del(&sub->instrs, node);
-                thecl_instr_free(instr);
-                continue;
-            }
+            thecl_param_t* param;
 
             if (instr->type == THECL_INSTR_INSTR) {
-                thecl_param_t* param;
-                list_for_each(&instr->params, param) {
-                    if (param->type == 'm') {
+                switch(instr->id) {
+                    case TH10_INS_STACK_ALLOC:
+                        param = list_head(&instr->params);
+                        sub->stack = param->value.val.S;
+                        break;
+                    case TH10_INS_CALL:
+                    case TH10_INS_CALL_ASYNC:
+                    case TH10_INS_CALL_ASYNC_ID:
+                        param = list_head(&instr->params);
                         thecl_sub_t* found_sub = th10_find_sub(ecl, param->value.val.z);
-                        if (found_sub) {
-                            if (instr->id == 11 ||
-                                instr->id == 15) {
-                                th10_set_arity(found_sub, instr->param_count - 1);
-                            } else {
-                                thecl_sub_t* found_sub = th10_find_sub(ecl, param->value.val.z);
-                                th10_set_arity(found_sub, 0);
-                            }
-                        }
-                    }
+                        int required_param_cnt = instr->id == TH10_INS_CALL_ASYNC_ID ? 2 : 1;
+                        if (found_sub)
+                            th10_set_arity(found_sub, instr->param_count - required_param_cnt);
+                        else
+                            th10_create_forward_declaraion(ecl, param->value.val.z, instr->param_count - required_param_cnt);
+                        break;
                 }
             }
         }
@@ -1419,7 +1439,7 @@ th10_stringify_param(
     size_t p,
     thecl_param_t* param,
     size_t* removed,
-    int special)
+    int no_brackets)
 {
     thecl_instr_t* instr = node->data;
 
@@ -1457,7 +1477,7 @@ th10_stringify_param(
         temp_param.type = new_value.type;
         temp_param.value = new_value;
         strcat(temp, " ");
-        char* str_temp = th10_stringify_param(version, sub, node, 0, &temp_param, removed, 1);
+        char* str_temp = th10_stringify_param(version, sub, node, 0, &temp_param, removed, 0);
         strcat(temp, str_temp);
         free(str_temp);
 
@@ -1481,25 +1501,31 @@ th10_stringify_param(
         } else if (
             param->value.type == 'S' &&
             param->stack &&
-            (th10_is_post_th13(version) ? param->value.val.S == -(*removed + 1) : param->value.val.S == -1) &&
+            (is_post_th13(version) ? param->value.val.S == -(*removed + 1) : param->value.val.S == -1) &&
             rep &&
             rep->op_type) {
             ++*removed;
-            if (special)
-                sprintf(temp, "(%s)", rep->string);
-            else
-                sprintf(temp, "_S(%s)", rep->string);
+                if (rep->op_type != 'S') {
+                    sprintf(temp, "_S(%s)", rep->string);
+                } else if (!no_brackets) {
+                    sprintf(temp, "(%s)", rep->string);
+                } else {
+                    sprintf(temp, "%s", rep->string);
+                }
         } else if (
             param->value.type == 'f' &&
             param->stack &&
-            (th10_is_post_th13(version) ? param->value.val.f == -(*removed + 1.0f) : param->value.val.f == -1.0f) &&
+            (is_post_th13(version) ? param->value.val.f == -(*removed + 1.0f) : param->value.val.f == -1.0f) &&
             rep &&
             rep->op_type) {
             ++*removed;
-            if (special)
-                sprintf(temp, "(%s)", rep->string);
-            else
-                sprintf(temp, "_f(%s)", rep->string);
+                if (rep->op_type != 'f') {
+                    sprintf(temp, "_f(%s)", rep->string);
+                } else if (!no_brackets) {
+                    sprintf(temp, "(%s)", rep->string);
+                } else {
+                    sprintf(temp, "%s", rep->string);
+                }
         } else {
             if (param->stack && (param->value.type == 'f' || param->value.type == 'S')) {
                 int val = param->value.type == 'f' ? floor(param->value.val.f) : param->value.val.S;
@@ -1534,33 +1560,108 @@ th10_stringify_instr(
     thecl_instr_t* instr = node->data;
     size_t p;
     char string[1024] = { '\0' };
+    char temp[256];
 
     if (instr->type != THECL_INSTR_INSTR)
         return;
 
-    eclmap_entry_t *ent = eclmap_get(g_eclmap_opcode, instr->id);
-    if(ent && ent->mnemonic) {
-        sprintf(string, "%s(", ent->mnemonic);
-    }
-    else {
-        sprintf(string, "ins_%u(", instr->id);
-    }
+    if (instr->id == TH10_INS_STACK_ALLOC && !g_ecl_rawoutput) {
+        if (sub->arity * 4 != sub->stack) {
+            /* Don't output empty var declarations. */
+            strcat(string, "var");
+            for (p = sub->arity * 4; p < sub->stack; p += 4) {
+                if (p != sub->arity * 4)
+                    strcat(string, ",");
+                sprintf(temp, " %c", 'A' + p / 4);
+                strcat(string, temp);
+            }
+        }
+    } else if (
+           (instr->id == TH10_INS_CALL || instr->id == TH10_INS_CALL_ASYNC || instr->id == TH10_INS_CALL_ASYNC_ID)
+        && !g_ecl_rawoutput
+     ) {
+         strcat(string, "@");
+         size_t removed = 0;
+         char* async_id_str;
+         size_t first_sub_param = instr->id == TH10_INS_CALL_ASYNC_ID ? 2 : 1;
+         for (p = 0; p < instr->param_count; ++p) {
+             thecl_param_t* param = th10_param_index(instr, p);
+             if (p == 0) {
+                 strcat(string, param->value.val.z);
+                 strcat(string, "(");
+             } else if (p == 1 && instr->id == TH10_INS_CALL_ASYNC_ID) {
+                 async_id_str = th10_stringify_param(version, sub, node, 0, param, &removed, 1);
+             } else {
+                value_t new_value;
+                int32_t* D = (int*)param->value.val.m.data;
+                memcpy(&new_value.val.S, &D[1], sizeof(int32_t));
+                if (D[0] == 0x6666 /* ff */) {
+                    strcpy(temp, "%s");
+                    new_value.type = 'f';
+                } else if (D[0] == 0x6669 /* fi */) {
+                    strcpy(temp, "_f(%s)");
+                    new_value.type = 'S';
+                } else if (D[0] == 0x6966 /* if */) {
+                    strcpy(temp, "_S(%s)");
+                    new_value.type = 'f';
+                } else if (D[0] == 0x6969 /* ii */) {
+                    strcpy(temp, "%s");
+                    new_value.type = 'S';
+                } else {
+                    fprintf(stderr, "%s: bad ECL file - invalid parameter for sub-calling ins\n", argv0);
+                    abort();
+                }
 
-    size_t removed = 0;
-    for (p = 0; p < instr->param_count; ++p) {
-        char* param_string = th10_stringify_param(version, sub, node, p, NULL, &removed, 0);
-        if (p != 0)
-            strcat(string, ", ");
-        strcat(string, param_string);
-        free(param_string);
-    }
-    for (size_t s = 0; s < removed; ++s) {
-        list_node_t* prev = node->prev;
-        thecl_instr_free(prev->data);
-        list_del(&sub->instrs, prev);
-    }
-    strcat(string, ")");
+                thecl_param_t temp_param = *param;
+                temp_param.type = new_value.type;
+                temp_param.value = new_value;
+                char* param_string = th10_stringify_param(version, sub, node, 0, &temp_param, &removed, 1);
+                char temp2[256];
+                sprintf(temp2, temp, param_string);
+                free(param_string);
 
+                if (p != first_sub_param)
+                    strcat(string, ", ");
+                strcat(string, temp2);
+             }
+         }
+         for (size_t s = 0; s < removed; ++s) {
+            list_node_t* prev = node->prev;
+            thecl_instr_free(prev->data);
+            list_del(&sub->instrs, prev);
+        }
+        strcat(string, ")");
+        if (instr->id == TH10_INS_CALL_ASYNC)
+            strcat(string, " async");
+        else if (instr->id == TH10_INS_CALL_ASYNC_ID) {
+            strcat(string, " async ");
+            strcat(string, async_id_str);
+            free(async_id_str);
+        }
+     } else {
+        eclmap_entry_t *ent = eclmap_get(g_eclmap_opcode, instr->id);
+        if(ent && ent->mnemonic) {
+            sprintf(string, "%s(", ent->mnemonic);
+        }
+        else {
+            sprintf(string, "ins_%u(", instr->id);
+        }
+
+        size_t removed = 0;
+        for (p = 0; p < instr->param_count; ++p) {
+            char* param_string = th10_stringify_param(version, sub, node, p, NULL, &removed, 1);
+            if (p != 0)
+               strcat(string, ", ");
+            strcat(string, param_string);
+            free(param_string);
+        }
+        for (size_t s = 0; s < removed; ++s) {
+            list_node_t* prev = node->prev;
+            thecl_instr_free(prev->data);
+            list_del(&sub->instrs, prev);
+        }
+        strcat(string, ")");
+    }
     instr->string = strdup(string);
 }
 
@@ -1593,24 +1694,24 @@ th10_dump(
 
         if (sub->arity == -1)
             sub->arity = 0;
-        fprintf(out, "\nsub %s(", sub->name);
+        fprintf(out, "\nvoid %s(", sub->name);
         for (p = 0; p < sub->arity; ++p) {
             if (p != 0)
-                fprintf(out, " ");
-            fprintf(out, "%c", 'A' + p);
+                fprintf(out, ", ");
+            fprintf(out, "var %c", 'A' + p);
         }
-        fprintf(out, ")\n{\n");
+        fprintf(out, ")");
 
-        if(!g_ecl_rawoutput) {
-            fprintf(out, "    var");
-            for (p = sub->arity * 4; p < sub->stack; p += 4) {
-                fprintf(out, " %c", 'A' + p / 4);
-            }
+        if (sub->forward_declaration) {
             fprintf(out, ";\n");
+            continue;
         }
+
+        fprintf(out, "\n{\n");
 
         list_node_t* node;
         list_node_t* node_next;
+        unsigned int time_last = 0;
         list_for_each_node_safe(&sub->instrs, node, node_next) {
             thecl_instr_t* instr = node->data;
 
@@ -1618,16 +1719,17 @@ th10_dump(
 
             switch (instr->type) {
             case THECL_INSTR_TIME:
-                sprintf(temp, "%u:", instr->time);
+                sprintf(temp, "+%u: //%u", instr->time - time_last, instr->time);
+                time_last = instr->time;
                 instr->string = strdup(temp);
                 break;
             case THECL_INSTR_RANK:
                 if(instr->rank == 0xFF)
                     instr->string = strdup("!*");
-                else if(instr->rank == (th10_is_post_th13(ecl->version) ? 0xC0 : 0xF0))
+                else if(instr->rank == (is_post_th13(ecl->version) ? 0xC0 : 0xF0))
                     instr->string = strdup("!-");
                 else {
-                    if (th10_is_post_th13(ecl->version)) {
+                    if (is_post_th13(ecl->version)) {
                         sprintf(temp, "!%s%s%s%s%s%s%s%s",
                                 (instr->rank) & RANK_EASY      ? "E" : "",
                                 (instr->rank) & RANK_NORMAL    ? "N" : "",
@@ -1685,7 +1787,7 @@ th10_dump(
                             /* XXX: Only supports S and f. */
                             sprintf(rep_str, "%s(%s)", expr->stack_formats[s] == 'S' ? "_S" : "_f", rep->string);
                             str_replace(temp, pat, rep_str);
-                        } else if (!expr_is_leaf(10, rep->id)) {
+                        } else if (!expr_is_leaf(10, rep->id) && !expr->no_brackets) {
                             char rep_str[1024] = { '\0' };
                             sprintf(rep_str, "(%s)", rep->string);
                             str_replace(temp, pat, rep_str);
@@ -1705,7 +1807,7 @@ th10_dump(
                     for (size_t p = 0; p < param_count; ++p) {
                         size_t removed = 0;
                         sprintf(pat, "p%zu", p);
-                        char* rep_str = th10_stringify_param(ecl->version, sub, node, p, NULL, &removed, 0);
+                        char* rep_str = th10_stringify_param(ecl->version, sub, node, p, NULL, &removed, 1);
                         str_replace(temp, pat, rep_str);
                         free(rep_str);
 
@@ -1728,10 +1830,12 @@ normal:
         }
 
         list_for_each(&sub->instrs, instr) {
-            if (instr->type == THECL_INSTR_INSTR) {
-                fprintf(out, "    %s;\n", instr->string);
-            } else {
-                fprintf(out, "%s\n", instr->string);
+            if (instr->string[0] != '\0') { /* In some cases string can be empty, like ins_40(0) dumps. */
+                if (instr->type == THECL_INSTR_INSTR) {
+                    fprintf(out, "    %s;\n", instr->string);
+                } else {
+                    fprintf(out, "%s\n", instr->string);
+                }
             }
         }
 
@@ -1742,8 +1846,11 @@ normal:
 static size_t
 th10_instr_size(
     unsigned int version,
-    const thecl_instr_t* instr)
+    const thecl_instr_t* instr,
+    bool is_timeline)
 {
+    if (is_timeline) return 0;
+    
     size_t ret = sizeof(th10_instr_t);
     thecl_param_t* param;
 
@@ -1752,7 +1859,7 @@ th10_instr_size(
         if (param->type == 'm' || param->type == 'x') {
             size_t zlen = strlen(param->value.val.z);
             ret += sizeof(uint32_t) + zlen + (4 - (zlen % 4));
-        } else if (param->type == 'o') {
+        } else if (param->type == 'o' || param->type == 't') {
             ret += sizeof(uint32_t);
         } else {
             ret += value_size(&param->value);
@@ -1765,24 +1872,33 @@ th10_instr_size(
 static thecl_t*
 th10_parse(
     FILE* in,
+    char* filename,
     unsigned int version)
 {
     parser_state_t state;
 
     state.instr_time = 0;
     state.instr_rank = 0xff;
+    state.instr_flags = 0;
     state.version = version;
     state.uses_numbered_subs = false;
-    state.has_overdrive_difficulty = th10_is_post_th13(version);
-    state.uses_stack_offsets = th10_is_post_th13(version);
+    state.has_overdrive_difficulty = is_post_th13(version);
+    state.uses_stack_offsets = is_post_th13(version);
     list_init(&state.expressions);
     list_init(&state.block_stack);
     list_init(&state.global_definitions);
+    state.scope_stack = NULL;
+    state.scope_cnt = 0;
+    state.scope_id = 0;
     state.current_sub = NULL;
     state.ecl = thecl_new();
     state.ecl->version = version;
     state.instr_format = th10_find_format;
     state.instr_size = th10_instr_size;
+
+    state.path_cnt = 0;
+    state.path_stack = NULL;
+    path_add(&state, filename);
 
     yyin = in;
 
@@ -1796,28 +1912,30 @@ th10_parse(
     }
     list_free_nodes(&state.global_definitions);
 
+    free(state.scope_stack);
+
     return state.ecl;
 }
 
-static int32_t
-label_find(
-    thecl_sub_t* sub,
-    const char* name)
+static unsigned char*
+th10_find_sub_format(
+    char* sub_name,
+    list_t* subs)
 {
-    thecl_label_t* label;
-    list_for_each(&sub->labels, label) {
-        if (strcmp(label->name, name) == 0)
-            return label->offset;
+    thecl_sub_t* sub;
+    list_for_each(subs, sub) {
+        if (!sub->is_inline && !strcmp(sub->name, sub_name)) return sub->format;
     }
-    fprintf(stderr, "%s: label not found: %s\n", argv0, name);
-    return 0;
+    return NULL;
 }
 
 static unsigned char*
 th10_instr_serialize(
     unsigned int version,
     thecl_sub_t* sub,
-    thecl_instr_t* instr)
+    thecl_instr_t* instr,
+    list_t* subs,
+    bool no_warn)
 {
     th10_instr_t* ret;
     thecl_param_t* param;
@@ -1835,7 +1953,7 @@ th10_instr_serialize(
     unsigned char* param_data = ret->data;
     int param_count = 0;
 
-    const char* expected_format = th10_find_format(version, instr->id);
+    const char* expected_format = th10_find_format(version, instr->id, 0);
     if (expected_format == NULL)
         fprintf(stderr, "%s:th10_instr_serialize: in sub %s: instruction with id %d is not known to exist in version %d\n", argv0, sub->name, instr->id, version);
     else {
@@ -1848,15 +1966,68 @@ th10_instr_serialize(
             fprintf(stderr, "%s:th10_instr_serialize: in sub %s: too few arguments for opcode %d\n", argv0, sub->name, instr->id);
     }
 
+    if (!g_ecl_simplecreate && (instr->id == TH10_INS_CALL || instr->id == TH10_INS_CALL_ASYNC || instr->id == TH10_INS_CALL_ASYNC_ID)) {
+        /* Validate sub call parameters. */
+        list_node_t* node = instr->params.head;
+        thecl_param_t* sub_name_param = node->data;
+        char* sub_name = sub_name_param->value.val.z;
+        const char* format = th10_find_sub_format(sub_name, subs);
+        if (format == NULL) {
+            if (!no_warn)
+                fprintf(stderr, "%s:th10_instr_serialize: in sub %s: unknown sub call \"%s\" (use the #nowarn \"true\" directive to disable this warning)\n",
+                        argv0, sub->name, sub_name);
+        } else {
+            size_t v = 0;
+            int first_iter = 1;
+            while(node = node->next) {
+                /* CALL_ASYNC_ID has an extra param for slot ID (type verified in ecsparse) */
+                if (instr->id == TH10_INS_CALL_ASYNC_ID && first_iter) {
+                    first_iter = 0;
+                    continue;
+                }
+
+                thecl_param_t* param = node->data;
+                int32_t* D = (int32_t*)param->value.val.m.data;
+                if (format[v] == '\0') {
+                    fprintf(stderr, "%s:th10_instr_serialize: in sub %s: too many parameters when calling sub \"%s\"\n",
+                            argv0, sub->name, sub_name);
+                    break;
+                 } else if (
+				    format[v] != '?' &&
+                    (((D[0] == 0x6969 || D[0] == 0x6966) && format[v] == 'f') ||
+                    ((D[0] == 0x6669 || D[0] == 0x6666) && format[v] == 'S'))
+                ) {
+                    fprintf(stderr, "%s:th10_instr_serialize: in sub %s: wrong type for parameter %i when calling sub \"%s\", expected type: %c\n",
+                            argv0, sub->name, v + 1, sub_name, format[v]);
+                }
+                ++v;
+            }
+            if (format[v] != '\0') 
+                fprintf(stderr, "%s:th10_instr_serialize: in sub %s: not enough parameters when calling sub %s\n",
+                        argv0, sub->name, sub_name);
+        }
+    }
+
     list_for_each(&instr->params, param) {
         if (param->stack)
             ret->param_mask |= 1 << param_count;
         ++param_count;
         if (param->type == 'o') {
             /* This calculates the relative offset from the current instruction. */
-            uint32_t label = label_find(sub, param->value.val.z) - instr->offset;
+            uint32_t label = label_offset(sub, param->value.val.z) - instr->offset;
             memcpy(param_data, &label, sizeof(uint32_t));
             param_data += sizeof(uint32_t);
+        } else if (param->type == 't') {
+            /* Time value for jump instructions - either read from a label or directly
+               from param value, depenging on how the jump was created. */
+            int32_t time;
+            if (param->value.type == 'z') {
+                time = label_time(sub, param->value.val.z);
+            } else {
+                time = param->value.val.S;
+            }
+            memcpy(param_data, &time, sizeof(int32_t));
+            param_data += sizeof(int32_t);
         } else if (param->type == 'x' || param->type == 'm') {
             size_t zlen = strlen(param->value.val.z);
             uint32_t padded_length = zlen + (4 - (zlen % 4));
@@ -1870,16 +2041,7 @@ th10_instr_serialize(
         } else
             param_data += value_to_data(&param->value, param_data, instr->size - (param_data - (unsigned char*)ret));
 
-        if (param->stack && (
-               version == 13 ||
-               version == 14 ||
-               version == 143 ||
-               version == 15 ||
-               version == 16 ||
-               version == 165 ||
-               version == 17
-           )
-        ) {
+        if (param->stack && is_post_th13(version)) {
             if (param->type == 'f' && param->value.val.f == -(ret->zero + 1.0f)) {
                 ++ret->zero;
             } else if (param->type == 'S' && param->value.val.S == -(ret->zero + 1)) {
@@ -1958,6 +2120,9 @@ th10_compile(
     file_seek(out, pos + ecl->sub_count * sizeof(uint32_t));
 
     list_for_each(&ecl->subs, sub) {
+        if (sub->forward_declaration || sub->is_inline)
+            continue;
+
         if (!file_write(out, sub->name, strlen(sub->name) + 1))
             return 0;
     }
@@ -1966,14 +2131,32 @@ th10_compile(
     if (pos % 4 != 0)
         file_seek(out, pos + 4 - pos % 4);
 
+	uint16_t max_opcode;
+	/* TODO: Get max opcodes for the rest of the games */
+	switch (ecl->version)
+	{
+	case 14:
+		max_opcode = 1003;
+		break;
+	default:
+		max_opcode = 0xFFFFU;
+		break;
+	}
+
     list_for_each(&ecl->subs, sub) {
+        if (sub->forward_declaration || sub->is_inline)
+            continue;
+
         thecl_instr_t* instr;
         sub->offset = file_tell(out);
         if (!file_write(out, &sub_header, sizeof(th10_sub_t)))
             return 0;
 
         list_for_each(&sub->instrs, instr) {
-            unsigned char* data = th10_instr_serialize(ecl->version, sub, instr);
+			if (instr->id > max_opcode) {
+				fprintf(stderr, "%s: warning: opcode: id %hu was higher than the maximum %hu\n", argv0, instr->id, max_opcode);
+			}
+            unsigned char* data = th10_instr_serialize(ecl->version, sub, instr, &ecl->subs, ecl->no_warn);
             if (!file_write(out, data, instr->size))
                 return 0;
             free(data);
@@ -1986,11 +2169,38 @@ th10_compile(
 
     file_seek(out, header.include_offset + header.include_length);
     list_for_each(&ecl->subs, sub) {
+        if (sub->forward_declaration || sub->is_inline)
+            continue;
         if (!file_write(out, &sub->offset, sizeof(uint32_t)))
             return 0;
     }
 
     return 1;
+}
+
+static void
+th10_create_header(
+    const thecl_t* ecl,
+    FILE* out
+) {
+    thecl_sub_t* sub;
+    list_for_each(&ecl->subs, sub) {
+        if (sub->forward_declaration || sub->is_inline)
+            continue;
+
+        fprintf(out, "\nvoid %s(", sub->name);
+        for (ssize_t i = 0; i < sub->arity; ++i) {
+            thecl_variable_t* var = sub->vars[i];
+            if (i != 0) fprintf(out, ", ");
+
+            if (var->type == 'S') fprintf(out, "int ");
+            else if (var->type == 'f') fprintf(out, "float ");
+            else fprintf(out, "var ");
+
+            fprintf(out, var->name);
+        }
+        fprintf(out, ");\n");
+    }
 }
 
 const thecl_module_t th10_ecl = {
@@ -1999,4 +2209,5 @@ const thecl_module_t th10_ecl = {
     .dump = th10_dump,
     .parse = th10_parse,
     .compile = th10_compile,
+    .create_header = th10_create_header
 };

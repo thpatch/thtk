@@ -36,6 +36,7 @@
 #include "eclmap.h"
 #include "program.h"
 #include "util.h"
+#include "thecl.h"
 
 static void
 eclmap_dump(
@@ -142,7 +143,9 @@ eclmap_find(
 
 void
 eclmap_load(
+    unsigned int version,
     eclmap_t* opcodes,
+    eclmap_t* timeline_opcodes,
     eclmap_t* globals,
     FILE* f,
     const char* fn)
@@ -163,7 +166,7 @@ eclmap_load(
 
     int linecount = 1;
     while(fgets(buffer, sizeof(buffer), f)) {
-        bool is_global = false;
+        int ent_type = ECLMAP_ENT_INVALID;
       
         char *ptr, *ptrend;
         eclmap_entry_t ent;
@@ -195,9 +198,13 @@ eclmap_load(
         /* validate signature */
         if(ptr[0] == '?') {
             ent.signature = NULL;
+            ent_type = ECLMAP_ENT_OPCODE;
+        } else if (ptr[0] == '@') {
+            ent.signature = NULL;
+            ent_type = ECLMAP_ENT_TIMELINE_OPCODE;
         } else if(ptr[0] == '$' || ptr[0] == '%') {
             ent.signature = ptr;
-            is_global = true;
+            ent_type = ECLMAP_ENT_GLOBAL;
         } else {
             ent.signature = ptr;
             if(ptr[0] == '_') ptr[0] = '\0'; /* allow empty strings to be specified with "_" */
@@ -213,7 +220,7 @@ eclmap_load(
         }
 
         /* validate mnemonic */
-        if(ptr[0] == '?') {
+        if(ptr[0] == '?' || ptr[0] == '@') {
             ent.mnemonic = NULL;
         }
         else {
@@ -234,9 +241,28 @@ eclmap_load(
             }
             if(!util_strcmp_ref(ent.mnemonic, stringref("ins_"))) {
                 fprintf(stderr, "%s:%s:%u: mnemonic can't start with 'ins_'\n",argv0,fn,linecount);
+                continue;
+            }
+            else if(is_post_th10(version) && !strcmp(ent.mnemonic, "return")) {
+                fprintf(stderr, "%s:%s:%u: ignoring 'return' as it is not a usable mnemonic, use as keyword instead\n",argv0,fn,linecount);
+                continue;
             }
         }
 
-        eclmap_set(is_global ? globals : opcodes, &ent);
+        eclmap_t* dest;
+        switch(ent_type) {
+            case ECLMAP_ENT_INVALID:
+                continue;
+            case ECLMAP_ENT_OPCODE:
+                dest = opcodes;
+                break;
+            case ECLMAP_ENT_TIMELINE_OPCODE:
+                dest = timeline_opcodes;
+                break;
+            case ECLMAP_ENT_GLOBAL:
+                dest = globals;
+        }
+
+        eclmap_set(dest, &ent);
     }
 }

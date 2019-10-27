@@ -60,9 +60,10 @@
             result = 1; \
         } \
     }
-%x COMMENT CSTRING STRING ESCAPE_CHAR
+%x COMMENT COMMENT_SINGLE CSTRING STRING ESCAPE_CHAR
 %%
 ","        return COMMA;
+"?"        return QUESTION;
 ":"        return COLON;
 ";"        return SEMICOLON;
 "["        return SQUARE_OPEN;
@@ -74,8 +75,13 @@
 "anim"     return ANIM;
 "ecli"     return ECLI;
 "sub"      return SUB;
+"timeline" return TIMELINE;
 "var"      return VAR;
-"local"    return LOCAL;
+"int"      return INT;
+"float"    return FLOAT;
+"void"     return VOID;
+"inline"   return INLINE;
+"return"   return RETURN;
 "@"        return AT;
 
 "goto"     return GOTO;
@@ -87,10 +93,19 @@
 "times"    return TIMES;
 "switch"   return SWITCH;
 "case"     return CASE;
+"default"  return DEFAULT;
 "break"    return BREAK;
 "async"    return ASYNC;
 "global"   return GLOBAL;
 "="        return ASSIGN;
+"+="       return ASSIGNADD;
+"-="       return ASSIGNSUB;
+"*="       return ASSIGNMUL;
+"/="       return ASSIGNDIV;
+"%="       return ASSIGNMOD;
+"^="       return ASSIGNXOR;
+"|="       return ASSIGNBOR;
+"&="       return ASSIGNBAND;
 "+"        return ADD;
 "-"        return SUBTRACT;
 "*"        return MULTIPLY;
@@ -123,11 +138,11 @@ _Sf return CAST_IF;
 _ff return CAST_FF;
 _fS return CAST_FI;
 
--?[0-9]+(\.[0-9]*)?f {
+(-|\+)?[0-9]+(\.([0-9]*f|[0-9]+)|f) {
     yylval.floating = strtof(yytext, NULL);
     return FLOATING;
 }
-rad\(-?[0-9]+(\.[0-9]*)?f\) {
+rad\((-|\+)?[0-9]+(\.([0-9]*f|[0-9]+)|f)?\) {
     yylval.floating = strtof(yytext+4, NULL) / 180.0f * 3.14159265359f;
     return FLOATING;
 }
@@ -139,22 +154,37 @@ ins_[0-9]+ {
     yylval.integer = strtol(yytext, NULL, 10);
     return INTEGER;
 }
--?0x[0-9a-fA-F]+ {
+\+[0-9]+ {
+    yylval.integer = strtol(yytext, NULL, 10);
+    return PLUS_INTEGER;
+}
+(-|\+)?0x[0-9a-fA-F]+ {
     yylval.integer = strtol(yytext, NULL, 16);
     return INTEGER;
 }
--?0b[0-1]+ {
-    bool isNegative = yytext[0] == '-';
-    yylval.integer = strtol(yytext + (isNegative ? 3 : 2), NULL, 2);
-    if (isNegative) yylval.integer = -yylval.integer;
+(-|\+)?0b[0-1]+ {
+    bool hasSign = yytext[0] == '-' || yytext[0] == '+';
+    yylval.integer = strtol(yytext + (hasSign ? 3 : 2), NULL, 2);
+    if (yytext[0] == '-') yylval.integer = -yylval.integer;
     return INTEGER;
 }
+"false" {
+    /* boolean "false" */
+    yylval.integer = 0;
+    return INTEGER;
+}
+"true" {
+    /* boolean "true" */
+    yylval.integer = 1;
+    return INTEGER;
+}
+
 ![-*ENHLWXYZO4567]+ {
     yylval.string = strdup(yytext + 1);
     return RANK;
 }
 
-[a-zA-Z][a-zA-Z0-9\._]* {
+[a-zA-Z_][a-zA-Z0-9_]* {
     yylval.string = strdup(yytext);
     return IDENTIFIER;
 }
@@ -197,6 +227,15 @@ ins_[0-9]+ {
 <COMMENT>[^*]*     |
 <COMMENT>\*[^*/]*  ;
 <COMMENT>"*/"      BEGIN(INITIAL);
+
+"//"                  BEGIN(COMMENT_SINGLE);
+<COMMENT_SINGLE>.*    ;
+<COMMENT_SINGLE>"\n"  BEGIN(INITIAL);
+
+#([a-zA-Z]+) {
+    yylval.string = strdup(yytext + 1);
+    return DIRECTIVE;
+}
 
 [\t\n\r ]+ ;
 . {

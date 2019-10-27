@@ -54,70 +54,79 @@ th10_alternatives[] = {
 };
 
 static const expr_t
-th10_no_expressions[] = {
-    { 0,           0,   0, NULL, 0, NULL, NULL }
-};
-
-static const expr_t
 th10_expressions[] = {
     /* The program checks against the number of params, as well as the
      * requested stack depth, and does the replacements. */
     /* p0 is the first param, p1 the second ... */
     /* s0 is the previous instruction, s1 the one previous to s0 ... */
 
-    /*SYM         ID  RET     P  A    S   DISP */
-    { GOTO,       12,   0, "oS", 0,  "S",           "goto p0 @ p1" },
-    { UNLESS,     13,   0, "oS", 1,  "S", "unless s0 goto p0 @ p1" },
-    { IF,         14,   0, "oS", 1,  "S",     "if s0 goto p0 @ p1" },
+    /*SYM         ID  RET     P  A    S   DISP                      NB */
+    { RETURN,     10,   0, NULL, 0,  NULL,          "return", 0 },
 
-    { LOADI,      42, 'S',  "S", 0, NULL, "p0" },
-    { ASSIGNI,    43,   0,  "S", 1,  "S", "p0 = s0" },
-    { LOADF,      44, 'f',  "f", 0, NULL, "p0" },
-    { ASSIGNF,    45,   0,  "f", 1,  "f", "p0 = s0" },
+    { GOTO,       12,   0, "ot", 0,  "S",           "goto p0 @ p1", 0 },
+    { UNLESS,     13,   0, "ot", 1,  "S", "unless s0 goto p0 @ p1", 0 },
+    { IF,         14,   0, "ot", 1,  "S",     "if s0 goto p0 @ p1", 0 },
 
-    { ADDI,       50, 'S', NULL, 2, "SS", "s1 + s0" },
-    { ADDF,       51, 'f', NULL, 2, "ff", "s1 + s0" },
-    { SUBTRACTI,  52, 'S', NULL, 2, "SS", "s1 - s0" },
-    { SUBTRACTF,  53, 'f', NULL, 2, "ff", "s1 - s0" },
-    { MULTIPLYI,  54, 'S', NULL, 2, "SS", "s1 * s0" },
-    { MULTIPLYF,  55, 'f', NULL, 2, "ff", "s1 * s0" },
-    { DIVIDEI,    56, 'S', NULL, 2, "SS", "s1 / s0" },
-    { DIVIDEF,    57, 'f', NULL, 2, "ff", "s1 / s0" },
-    { MODULO,     58, 'S', NULL, 2, "SS", "s1 % s0" },
-    { EQUALI,     59, 'S', NULL, 2, "SS", "s1 == s0" },
-    { EQUALF,     60, 'S', NULL, 2, "ff", "s1 == s0" },
-    { INEQUALI,   61, 'S', NULL, 2, "SS", "s1 != s0" },
-    { INEQUALF,   62, 'S', NULL, 2, "ff", "s1 != s0" },
-    { LTI,        63, 'S', NULL, 2, "SS", "s1 < s0" },
-    { LTF,        64, 'S', NULL, 2, "ff", "s1 < s0" },
-    { LTEQI,      65, 'S', NULL, 2, "SS", "s1 <= s0" },
-    { LTEQF,      66, 'S', NULL, 2, "ff", "s1 <= s0" },
-    { GTI,        67, 'S', NULL, 2, "SS", "s1 > s0" },
-    { GTF,        68, 'S', NULL, 2, "ff", "s1 > s0" },
-    { GTEQI,      69, 'S', NULL, 2, "SS", "s1 >= s0" },
-    { GTEQF,      70, 'S', NULL, 2, "ff", "s1 >= s0" },
-    { NOT,        71, 'S', NULL, 1,  "S", "!s0" },
+    { LOADI,      42, 'S',  "S", 0, NULL, "p0", 0 },
+    { ASSIGNI,    43,   0,  "S", 1,  "S", "p0 = s0", 1 },
+    { LOADF,      44, 'f',  "f", 0, NULL, "p0", 0 },
+    { ASSIGNF,    45,   0,  "f", 1,  "f", "p0 = s0", 1 },
+
+    { ADDI,       50, 'S', NULL, 2, "SS", "s1 + s0", 0 },
+    { ADDF,       51, 'f', NULL, 2, "ff", "s1 + s0", 0 },
+    { SUBTRACTI,  52, 'S', NULL, 2, "SS", "s1 - s0", 0 },
+    { SUBTRACTF,  53, 'f', NULL, 2, "ff", "s1 - s0", 0 },
+    { MULTIPLYI,  54, 'S', NULL, 2, "SS", "s1 * s0", 0 },
+    { MULTIPLYF,  55, 'f', NULL, 2, "ff", "s1 * s0", 0 },
+    { DIVIDEI,    56, 'S', NULL, 2, "SS", "s1 / s0", 0 },
+    { DIVIDEF,    57, 'f', NULL, 2, "ff", "s1 / s0", 0 },
+    { MODULO,     58, 'S', NULL, 2, "SS", "s1 % s0", 0 },
+    { EQUALI,     59, 'S', NULL, 2, "SS", "s1 == s0", 0 },
+    { EQUALF,     60, 'S', NULL, 2, "ff", "s1 == s0", 0 },
+    { INEQUALI,   61, 'S', NULL, 2, "SS", "s1 != s0", 0 },
+    { INEQUALF,   62, 'S', NULL, 2, "ff", "s1 != s0", 0 },
+    { LTI,        63, 'S', NULL, 2, "SS", "s1 < s0", 0 },
+    { LTF,        64, 'S', NULL, 2, "ff", "s1 < s0", 0 },
+    { LTEQI,      65, 'S', NULL, 2, "SS", "s1 <= s0", 0 },
+    { LTEQF,      66, 'S', NULL, 2, "ff", "s1 <= s0", 0 },
+    { GTI,        67, 'S', NULL, 2, "SS", "s1 > s0", 0 },
+    { GTF,        68, 'S', NULL, 2, "ff", "s1 > s0", 0 },
+    { GTEQI,      69, 'S', NULL, 2, "SS", "s1 >= s0", 0 },
+    { GTEQF,      70, 'S', NULL, 2, "ff", "s1 >= s0", 0 },
+    { NOT,        71, 'S', NULL, 1,  "S", "!s0", 0 },
 /*  { XXX,        72,   0, NULL, 0, NULL, NULL },*/
-    { OR,         73, 'S', NULL, 2, "SS", "s1 || s0" },
-    { AND,        74, 'S', NULL, 2, "SS", "s1 && s0" },
-    { XOR,        75, 'S', NULL, 2, "SS", "s1 ^ s0" },
-    { B_OR,       76, 'S', NULL, 2, "SS", "s1 | s0" },
-    { B_AND,      77, 'S', NULL, 2, "SS", "s1 & s0" },
-    { DEC,        78, 'S',  "S", 0, NULL, "p0--" },
-    { SIN,        79, 'f', NULL, 1, "f", "sin(s0)" },
-    { COS,        80, 'f', NULL, 1, "f", "cos(s0)" },
-    { NEGI,       84, 'S', NULL, 1, "S", "-s0" },
-    { NEGF,       85, 'f', NULL, 1, "f", "-s0" },
-    { SQRT,       88, 'f', NULL, 1, "f", "sqrt(s0)" },
-    { 0,           0,   0, NULL, 0, NULL, NULL }
+    { OR,         73, 'S', NULL, 2, "SS", "s1 || s0", 0 },
+    { AND,        74, 'S', NULL, 2, "SS", "s1 && s0", 0 },
+    { XOR,        75, 'S', NULL, 2, "SS", "s1 ^ s0", 0 },
+    { B_OR,       76, 'S', NULL, 2, "SS", "s1 | s0", 0 },
+    { B_AND,      77, 'S', NULL, 2, "SS", "s1 & s0", 0 },
+    { DEC,        78, 'S',  "S", 0, NULL, "p0--", 0 },
+    { SIN,        79, 'f', NULL, 1, "f", "sin(s0)", 1 },
+    { COS,        80, 'f', NULL, 1, "f", "cos(s0)", 1 },
+    { SQRT,       88, 'f', NULL, 1, "f", "sqrt(s0)", 1 },
+    { 0,           0,   0, NULL, 0, NULL, NULL, 0 }
+};
+
+static const expr_t
+th13_expressions[] = {
+    /*SYM         ID  RET     P  A    S   DISP */
+    { NEGI,       83, 'S', NULL, 1, "S", "-s0", 0 },
+    { NEGF,       84, 'f', NULL, 1, "f", "-s0", 0 },
+    { 0,           0,   0, NULL, 0, NULL, NULL, 0 }
 };
 
 static const expr_t*
-expr_get_table(unsigned int version)
+expr_get_by_symbol_from_table(
+    expr_t* table,
+    int symbol)
 {
-    if (not_pre_th10(version))
-        return th10_expressions;
-    return th10_no_expressions;
+    while (table->symbol) {
+        if (table->symbol == symbol)
+            return table;
+        ++table;
+    }
+
+    return NULL;
 }
 
 const expr_t*
@@ -125,10 +134,21 @@ expr_get_by_symbol(
     unsigned int version,
     int symbol)
 {
-    const expr_t* table = expr_get_table(version);
+    expr_t* ret = NULL;
 
+    if (!ret && is_post_th13(version)) ret = expr_get_by_symbol_from_table(th13_expressions, symbol);
+    if (!ret && is_post_th10(version)) ret = expr_get_by_symbol_from_table(th10_expressions, symbol);
+
+    return ret;
+}
+
+static const expr_t*
+expr_get_by_id_from_table(
+    expr_t* table,
+    int id)
+{
     while (table->symbol) {
-        if (table->symbol == symbol)
+        if (table->id == id)
             return table;
         ++table;
     }
@@ -141,15 +161,12 @@ expr_get_by_id(
     unsigned int version,
     int id)
 {
-    const expr_t* table = expr_get_table(version);
+    expr_t* ret = NULL;
 
-    while (table->symbol) {
-        if (table->id == id)
-            return table;
-        ++table;
-    }
+    if (!ret && is_post_th13(version)) ret = expr_get_by_id_from_table(th13_expressions, id);
+    if (!ret && is_post_th10(version)) ret = expr_get_by_id_from_table(th10_expressions, id);
 
-    return NULL;
+    return ret;
 }
 
 int

@@ -67,6 +67,8 @@ void list_append(list_t* list, list_node_t* node);
 /* Creates a new node containing the data and makes it the new head of the
  * list. */
 void list_append_new(list_t* list, void* data);
+/* Inserts a new node after the specified node. */
+void list_append_to(list_t* list, void* data, list_node_t* node);
 /* Removes and frees the node from the list.
  * Does not free the data. */
 void list_del(list_t* list, list_node_t* node);

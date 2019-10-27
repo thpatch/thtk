@@ -51,32 +51,45 @@ typedef enum {
 #define RANK_EXTRA     (1 << 4)
 #define RANK_OVERDRIVE (1 << 5)
 
-// Used to describe unused ranks
+/* Used to describe unused ranks */
 #define RANK_ID_4      (1 << 4)
 #define RANK_ID_5      (1 << 5)
 #define RANK_ID_6      (1 << 6)
 #define RANK_ID_7      (1 << 7)
 
-// Numbers of important ECL instructions
+/* Numbers of important ECL instructions */
 #define TH10_INS_RET_BIG        1
 #define TH10_INS_RET_NORMAL     10
 #define TH10_INS_CALL           11
 #define TH10_INS_CALL_ASYNC     15
+#define TH10_INS_CALL_ASYNC_ID  16
 #define TH10_INS_STACK_ALLOC    40
+#define TH10_INS_SETI           43
+#define TH10_INS_SETF           45
+
+/* Numbers of important variables
+   The 2 variables below are used as return registers. */
+#define TH10_VAR_I3 -9982
+#define TH10_VAR_F3 -9978.0f
 
 typedef struct thecl_param_t {
     int type;
     value_t value;
     int stack;
-    char is_expression_param; // Temporary variable for ecsparse.y
+    char is_expression_param; /* Temporary variable for ecsparse.y */
 } thecl_param_t;
 
 thecl_param_t* param_new(
     int type);
+thecl_param_t* param_copy(
+    thecl_param_t* param);
 void param_free(
     thecl_param_t* param);
 
-int not_pre_th10(
+bool is_post_th10(
+    unsigned int version);
+
+bool is_post_th13(
     unsigned int version);
 
 typedef struct thecl_instr_t {
@@ -94,6 +107,9 @@ typedef struct thecl_instr_t {
     unsigned int time;
     unsigned int rank;
     unsigned int offset;
+
+    /* Used by ecsparse.y, not present anywhere in the compiled ECL files. */
+    unsigned int flags;
 } thecl_instr_t;
 
 thecl_instr_t* thecl_instr_new(
@@ -113,32 +129,58 @@ void thecl_instr_free(
 
 typedef struct {
     int32_t offset;
+    int32_t time;
     char name[];
 } thecl_label_t;
 
 /* TODO: Move label creation functions here. */
 
-/* TODO: Clean this up. */
 typedef struct {
     char* name;
-    list_t instrs;
-    size_t stack;
+    int type;
+    int stack;
+    int scope;
+    bool is_written;
+    bool is_unused;
+} thecl_variable_t;
+
+void thecl_variable_free(
+    thecl_variable_t* var);
+
+typedef struct {
+    char* name;
+    int ret_type;
+    bool forward_declaration;
+    bool is_inline;
+
     ssize_t arity;
+    char* format;
+    size_t stack;
     size_t var_count;
-    char** vars;
-    uint32_t offset;
+    thecl_variable_t** vars;
+
+    list_t instrs;
     list_t labels;
+
+    int time;
+    uint32_t offset;
 } thecl_sub_t;
+
+int32_t
+label_offset(
+    thecl_sub_t* sub,
+    const char* name);
+int32_t
+label_time(
+    thecl_sub_t* sub,
+    const char* name);
 
 /* TODO: Subroutine creation and deletion functions. */
 
 typedef struct {
     char name[256];
-    size_t data_length;
-    unsigned char data[];
-} thecl_local_data_t;
-
-/* TODO: Local data deletion and creation functions. */
+    list_t instrs;
+} thecl_timeline_t;
 
 typedef struct {
     thecl_param_t *param;
@@ -156,8 +198,9 @@ typedef struct {
 
     size_t sub_count;
     list_t subs;
+    list_t timelines;
 
-    list_t local_data;
+    bool no_warn;
 } thecl_t;
 
 thecl_t* thecl_new(
@@ -170,24 +213,33 @@ typedef struct {
     void (*trans)(thecl_t* ecl);
     void (*dump)(const thecl_t* ecl, FILE* stream);
 
-    thecl_t* (*parse)(FILE* stream, unsigned int ver);
+    thecl_t* (*parse)(FILE* stream, char* filename, unsigned int ver);
     int (*compile)(const thecl_t* ecl, FILE* stream);
+
+    void (*create_header)(const thecl_t* ecl, FILE* stream);
 } thecl_module_t;
 
 typedef struct {
     int instr_time;
     int instr_rank/* = 0xff*/;
+    int instr_flags; /* Special flags that are copied to instr->flags, used by ecsparse.y */
     unsigned int version;
     bool uses_numbered_subs;
     bool has_overdrive_difficulty;
     bool uses_stack_offsets;
+    bool is_timeline_sub; /* Variable for escparse.y */
     list_t expressions;
     list_t block_stack;
     list_t global_definitions;
+    int* scope_stack;
+    int scope_cnt;
+    int scope_id;
     thecl_sub_t* current_sub;
     thecl_t* ecl;
-    const char* (*instr_format)(unsigned int version, unsigned int id);
-    size_t (*instr_size)(unsigned int version, const thecl_instr_t* instr);
+    int path_cnt;
+    char** path_stack;
+    const char* (*instr_format)(unsigned int version, unsigned int id, bool is_timeline);
+    size_t (*instr_size)(unsigned int version, const thecl_instr_t* instr, bool is_timeline);
 } parser_state_t;
 
 /* TODO: Deletion and creation functions for parser state. */
@@ -195,7 +247,9 @@ typedef struct {
 extern FILE* yyin;
 extern int yyparse(parser_state_t*);
 
+extern list_t* g_user_fmts;
 extern eclmap_t* g_eclmap_opcode;
+extern eclmap_t* g_eclmap_timeline_opcode;
 extern eclmap_t* g_eclmap_global;
 extern bool g_ecl_rawoutput;
 extern bool g_ecl_simplecreate;

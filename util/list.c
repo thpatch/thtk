@@ -153,6 +153,24 @@ list_append_new(
 }
 
 void
+list_append_to(
+    list_t* list,
+    void* data,
+    list_node_t* old)
+{
+    list_node_t* new = list_node_new();
+    new->data = data;
+
+    if (old->next)
+        old->next->prev = new;
+    else
+        list->tail = new;
+    new->next = old->next;
+    new->prev = old;
+    old->next = new;
+}
+
+void
 list_del(
     list_t* list,
     list_node_t* node)

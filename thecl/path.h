@@ -27,41 +27,18 @@
  * DAMAGE.
  */
 
-#ifndef ECLMAP_H_
-#define ECLMAP_H_
+#ifndef PATH_H_
+#define PATH_H_
 
 #include <config.h>
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdio.h>
-#include "list.h"
+#include "thecl.h"
 
-typedef struct eclmap_entry_t {
-    int opcode;
-    char* signature;
-    char* mnemonic;
-} eclmap_entry_t;
 
-typedef list_t eclmap_t;
-
-enum ECLMAP_ENT_TYPES {
-    ECLMAP_ENT_INVALID,
-    ECLMAP_ENT_OPCODE,
-    ECLMAP_ENT_TIMELINE_OPCODE,
-    ECLMAP_ENT_GLOBAL
-};
-
-/* Allocates and initalizes a new eclmap */
-#define eclmap_new() ((eclmap_t*)list_new())
-/* Frees an eclmap */
-void eclmap_free(eclmap_t* map);
-/* Sets an entry in a eclmap */
-void eclmap_set(eclmap_t* map, const eclmap_entry_t* ent);
-/* Finds an entry in a eclmap by opcode */
-eclmap_entry_t* eclmap_get(eclmap_t* map, int opcode);
-/* Finds an entry in a eclmap by mnemonic */
-eclmap_entry_t* eclmap_find(eclmap_t* map, const char* mnemonic);
-/* Loads entries from eclmap file (thread unsafe) */
-void eclmap_load(unsigned int version, eclmap_t* opcodes, eclmap_t* timeline_opcodes, eclmap_t* globals, FILE* f, const char* fn);
+/* Returns a new string containing the given path the with last entry of the path stack prepended to it. */
+char* path_get_full(parser_state_t* state, char* path);
+/* Given a path to a file, pushes directory that file is in to the path stack. */
+void path_add(parser_state_t* state, char* path);
+/* Pops the last entry on the path stack and frees it. */
+void path_remove(parser_state_t* state);
 
 #endif

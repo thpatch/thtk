@@ -39,7 +39,9 @@
 extern const thecl_module_t th06_ecl;
 extern const thecl_module_t th10_ecl;
 
+list_t* g_user_fmts = NULL;
 eclmap_t* g_eclmap_opcode = NULL;
+eclmap_t* g_eclmap_timeline_opcode = NULL;
 eclmap_t* g_eclmap_global = NULL;
 bool g_ecl_rawoutput = false;
 bool g_ecl_simplecreate = false;
@@ -51,7 +53,8 @@ thecl_new(
 {
     thecl_t* ecl = calloc(1, sizeof(thecl_t));
     list_init(&ecl->subs);
-    list_init(&ecl->local_data);
+    list_init(&ecl->timelines);
+    ecl->no_warn = false;
     return ecl;
 }
 
@@ -70,6 +73,7 @@ thecl_free(
     thecl_sub_t* sub;
     list_for_each(&ecl->subs, sub) {
         free(sub->name);
+        free(sub->format);
 
         thecl_instr_t* instr;
         list_for_each(&sub->instrs, instr)
@@ -77,7 +81,7 @@ thecl_free(
         list_free_nodes(&sub->instrs);
 
         for (size_t v = 0; v < sub->var_count; ++v)
-            free(sub->vars[v]);
+            thecl_variable_free(sub->vars[v]);
         free(sub->vars);
 
         thecl_label_t* label;
@@ -89,11 +93,6 @@ thecl_free(
     }
     list_free_nodes(&ecl->subs);
 
-    thecl_local_data_t* local_data;
-    list_for_each(&ecl->local_data, local_data)
-        free(local_data);
-    list_free_nodes(&ecl->local_data);
-
     free(ecl);
 }
 
@@ -102,6 +101,7 @@ thecl_instr_new(void)
 {
     thecl_instr_t* instr = calloc(1, sizeof(thecl_instr_t));
     instr->type = THECL_INSTR_INSTR;
+    instr->flags = 0;
     list_init(&instr->params);
     return instr;
 }
@@ -148,6 +148,12 @@ thecl_instr_free(thecl_instr_t* instr)
     free(instr);
 }
 
+void
+thecl_variable_free(thecl_variable_t* var) {
+    free(var->name);
+    free(var);
+}
+
 thecl_param_t*
 param_new(
     int type)
@@ -159,6 +165,22 @@ param_new(
     return param;
 }
 
+thecl_param_t*
+param_copy(
+    thecl_param_t* param
+) {
+    thecl_param_t* copy = calloc(1, sizeof(thecl_param_t));
+    memcpy(copy, param, sizeof(thecl_param_t));
+    /* Handle possible pointers in the value. */
+    if (copy->value.type == 'z')
+        copy->value.val.z = strdup(param->value.val.z);
+    else if (copy->value.type == 'm') {
+        copy->value.val.m.data = malloc(param->value.val.m.length);
+        memcpy(copy->value.val.m.data, param->value.val.m.data, param->value.val.m.length);
+    }
+    return copy;
+}
+
 void
 param_free(
     thecl_param_t* param)
@@ -167,38 +189,75 @@ param_free(
     free(param);
 }
 
-static void
-free_eclmaps(void)
+int32_t
+label_offset(
+    thecl_sub_t* sub,
+    const char* name)
 {
-    eclmap_free(g_eclmap_opcode);
-    eclmap_free(g_eclmap_global);
+    thecl_label_t* label;
+    list_for_each(&sub->labels, label) {
+        if (strcmp(label->name, name) == 0)
+            return label->offset;
+    }
+    fprintf(stderr, "%s: label not found: %s\n", argv0, name);
+    return 0;
 }
 
-int
-not_pre_th10(
+int32_t
+label_time(
+    thecl_sub_t* sub,
+    const char* name)
+{
+    thecl_label_t* label;
+    list_for_each(&sub->labels, label) {
+        if (strcmp(label->name, name) == 0)
+            return label->time;
+    }
+    fprintf(stderr, "%s: label not found: %s\n", argv0, name);
+    return 0;
+}
+
+static void
+free_globals(void)
+{
+    eclmap_free(g_eclmap_opcode);
+    eclmap_free(g_eclmap_timeline_opcode);
+    eclmap_free(g_eclmap_global);
+    id_format_pair_t* fmt;
+    list_for_each(g_user_fmts, fmt) {
+        free(fmt->format);
+        free(fmt);
+    }
+    list_free_nodes(g_user_fmts);
+    free(g_user_fmts);
+}
+
+bool
+is_post_th10(
     unsigned int version)
 {
-    return version == 10
-        || version == 103
-        || version == 11
-        || version == 12
-        || version == 125
-        || version == 128
-        || version == 13
-        || version == 14
-        || version == 143
-        || version == 15
-        || version == 16
-        || version == 165
-        || version == 17;
+    switch(version) {
+        case 6: case 7: case 8: case 9: case 95: return false;
+        default: return true;
+    }
+}
+
+bool
+is_post_th13(unsigned int version) {
+    switch(version) {
+        case 6: case 7: case 8: case 9: case 95:
+        case 10: case 103: case 11: case 12: case 125: case 128: return false;
+        default: return true;
+    }
 }
 
 static void
 print_usage(void)
 {
-    printf("Usage: %s [-Vr] [[-c | -d] VERSION] [-m ECLMAP]... [INPUT [OUTPUT]]\n"
+    printf("Usage: %s [-Vrs] [[-c | -h | -d] VERSION] [-m ECLMAP]... [INPUT [OUTPUT]]\n"
            "Options:\n"
            "  -c  create ECL file\n"
+           "  -h  create header file\n"
            "  -d  dump ECL file\n"
            "  -V  display version information and exit\n"
            "  -m  use map file for translating mnemonics\n"
@@ -222,16 +281,19 @@ main(int argc, char* argv[])
     current_output = "(stdout)";
 
     g_eclmap_opcode = eclmap_new();
+    g_eclmap_timeline_opcode = eclmap_new();
     g_eclmap_global = eclmap_new();
-    atexit(free_eclmaps);
+    g_user_fmts = list_new();
+    atexit(free_globals);
 
     argv0 = util_shortname(argv[0]);
     int opt;
     int ind=0;
     while(argv[util_optind]) {
-        switch(opt = util_getopt(argc, argv, ":c:d:Vm:r:s")) {
+        switch(opt = util_getopt(argc, argv, ":c:h:d:Vm:rs")) {
         case 'c':
         case 'd':
+        case 'h':
             if(mode != -1) {
                 fprintf(stderr,"%s: More than one mode specified\n", argv0);
                 print_usage();
@@ -248,7 +310,7 @@ main(int argc, char* argv[])
                     argv0, util_optarg, strerror(errno));
                 exit(1);
             }
-            eclmap_load(g_eclmap_opcode, g_eclmap_global, map_file, util_optarg);
+            eclmap_load(version, g_eclmap_opcode, g_eclmap_timeline_opcode, g_eclmap_global, map_file, util_optarg);
             fclose(map_file);
             break;
         }
@@ -289,7 +351,7 @@ main(int argc, char* argv[])
         module = &th10_ecl;
         break;
     default:
-        if (mode == 'c' || mode == 'd') {
+        if (mode == 'c' || mode == 'd' || mode == 'h') {
             if (version == 0)
                 fprintf(stderr, "%s: version must be specified\n", argv0);
             else
@@ -301,6 +363,7 @@ main(int argc, char* argv[])
     switch (mode)
     {
     case 'c':
+    case 'h':
     case 'd': {
         if(g_ecl_rawoutput) {
             if (mode != 'd') {
@@ -309,10 +372,14 @@ main(int argc, char* argv[])
             }
         }
         if (g_ecl_simplecreate) {
-            if (mode != 'c') {
+            if (mode != 'c' && mode != 'h') {
                 fprintf(stderr, "%s: 's' option cannot be used while dumping\n", argv0);
                 exit(1);
             }
+        }
+        if (mode == 'h' && !is_post_th10(version)) {
+            fprintf(stderr, "%s: 'h' option can't be used with a pre-th10 version\n", argv0);
+            exit(1);
         }
 
         if (0 < argc) {
@@ -337,16 +404,22 @@ main(int argc, char* argv[])
 
         if (mode == 'c') {
 #ifdef WIN32
-            _setmode(fileno(stdout), _O_BINARY);
+            (void)_setmode(fileno(stdout), _O_BINARY);
 #endif
-            thecl_t* ecl = module->parse(in, version);
+            thecl_t* ecl = module->parse(in, argv[0], version);
             if (!ecl)
                 exit(1);
             module->compile(ecl, out);
             thecl_free(ecl);
+        } else if (mode == 'h') {
+            thecl_t* ecl = module->parse(in, argv[0], version);
+            if (!ecl)
+                exit(1);
+            module->create_header(ecl, out);
+            thecl_free(ecl);
         } else if (mode == 'd') {
 #ifdef WIN32
-            _setmode(fileno(stdin), _O_BINARY);
+            (void)_setmode(fileno(stdin), _O_BINARY);
 #endif
             thecl_t* ecl = module->open(in, version);
             if (!ecl)
