@@ -1747,7 +1747,7 @@ static void instr_create_inline_call(
     thecl_label_t* label;
     list_for_each(&sub->labels, label) {
         snprintf(buf, 256, "%s%s", name, label->name);
-        thecl_label_t* new_label = malloc(sizeof(new_label) + strlen(buf) + 1);
+        thecl_label_t* new_label = malloc(sizeof(thecl_label_t) + strlen(buf) + 1);
         new_label->offset = label->offset + state->current_sub->offset;
         new_label->time = label->time + state->instr_time;
         strcpy(new_label->name, buf);
