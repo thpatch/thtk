@@ -2893,6 +2893,8 @@ var_exists(
     thecl_sub_t* sub,
     const char* name)
 {
+    if (sub == NULL) return 0; /* we are outside of sub scope, no point in searching for variables */
+
     eclmap_entry_t* ent = eclmap_find(g_eclmap_global, name);
     if (ent) return 1;
 
