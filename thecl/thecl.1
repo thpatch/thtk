@@ -24,16 +24,16 @@
 .\" OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 .\" SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
 .\" DAMAGE.
-.Dd October 26, 2019
+.Dd October 27, 2019
 .Dt THECL 1
 .Os thtk
 .Sh NAME
 .Nm thecl
-.Nd Touhou level script tool
+.Nd Touhou enemy control language script tool
 .Sh SYNOPSIS
 .Nm
 .Op Fl Vr
-.Op Oo Fl c | d Oc Ar version
+.Op Oo Fl c | h | d Oc Ar version
 .Oo Fl m Ar eclmap Oc Ns Ar ...
 .Op Ar input Op Ar output
 .Sh DESCRIPTION
@@ -43,9 +43,11 @@ utility (de)compiles ecl scripts.
 The following commands are available:
 .Bl -tag -width Ds
 .It Nm Fl c Ar version Oo Fl s Oc Oo Fl m Ar eclmap Oc Ns Ar ... Op Ar input Op Ar output
-Compiles a level script.
+Compiles an enemy script.
+.It Nm Fl h Ar version Oo Fl m Ar eclmap Oc Ns Ar ... Op Ar input Op Ar output
+Creates a header file with forward declarations of all subs in input.
 .It Nm Fl d Ar version Oo Fl r Oc Oo Fl m Ar eclmap Oc Ns Ar ... Op Ar input Op Ar output
-Dumps a level script.
+Dumps an enemy script.
 .It Fl V
 Displays the program version.
 .El
@@ -69,7 +71,7 @@ option enables simple creation mode, which doesn't add any instructions automati
 .Pp
 Replace the
 .Ar #
-option by the level script format version requested.
+option by the enemy script format version requested.
 Running the program without a command will list the supported formats.
 .Sh EXIT STATUS
 The
