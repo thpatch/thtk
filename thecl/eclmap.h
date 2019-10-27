@@ -62,6 +62,6 @@ eclmap_entry_t* eclmap_get(eclmap_t* map, int opcode);
 /* Finds an entry in a eclmap by mnemonic */
 eclmap_entry_t* eclmap_find(eclmap_t* map, const char* mnemonic);
 /* Loads entries from eclmap file (thread unsafe) */
-void eclmap_load(eclmap_t* opcodes, eclmap_t* timeline_opcodes, eclmap_t* globals, FILE* f, const char* fn);
+void eclmap_load(unsigned int version, eclmap_t* opcodes, eclmap_t* timeline_opcodes, eclmap_t* globals, FILE* f, const char* fn);
 
 #endif

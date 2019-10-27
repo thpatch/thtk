@@ -3020,7 +3020,7 @@ char* name)
         snprintf(buf, 256, "#eclmap error: couldn't open %s for reading", path);
         yyerror(state, buf);
     } else {
-        eclmap_load(g_eclmap_opcode, g_eclmap_timeline_opcode, g_eclmap_global, map_file, path);
+        eclmap_load(state->version, g_eclmap_opcode, g_eclmap_timeline_opcode, g_eclmap_global, map_file, path);
         fclose(map_file);
     }
     free(path);

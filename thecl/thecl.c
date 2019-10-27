@@ -310,7 +310,7 @@ main(int argc, char* argv[])
                     argv0, util_optarg, strerror(errno));
                 exit(1);
             }
-            eclmap_load(g_eclmap_opcode, g_eclmap_timeline_opcode, g_eclmap_global, map_file, util_optarg);
+            eclmap_load(version, g_eclmap_opcode, g_eclmap_timeline_opcode, g_eclmap_global, map_file, util_optarg);
             fclose(map_file);
             break;
         }
