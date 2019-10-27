@@ -14,7 +14,7 @@ mkdir $releasepath-pdbs
 
 for i in thanm thecl thdat thmsg thstd; do
   echo $i
-  groff -mdoc -Tutf8 $i/$i.1 | perl -pe 's/\e\[?.*?[\@-~]//g' | unix2dos > $releasepath/README.$i.txt
+  groff -mdoc -Tutf8 -P -bu $i/$i.1 | perl -pe 's/\e\[?.*?[\@-~]//g' | unix2dos > $releasepath/README.$i.txt
   cp build/$i/RelWithDebInfo/$i.exe $releasepath/
   cp build/$i/RelWithDebInfo/$i.pdb $releasepath-pdbs/
 done
