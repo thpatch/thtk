@@ -24,7 +24,7 @@
 .\" OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 .\" SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
 .\" DAMAGE.
-.Dd March 16, 2018
+.Dd October 26, 2019
 .Dt THECL 1
 .Os thtk
 .Sh NAME
@@ -42,7 +42,7 @@ The
 utility (de)compiles ecl scripts.
 The following commands are available:
 .Bl -tag -width Ds
-.It Nm Fl c Ar version Oo Fl m Ar eclmap Oc Ns Ar ... Op Ar input Op Ar output
+.It Nm Fl c Ar version Oo Fl s Oc Oo Fl m Ar eclmap Oc Ns Ar ... Op Ar input Op Ar output
 Compiles a level script.
 .It Nm Fl d Ar version Oo Fl r Oc Oo Fl m Ar eclmap Oc Ns Ar ... Op Ar input Op Ar output
 Dumps a level script.
@@ -61,6 +61,10 @@ option can be used to map ins_* to human readable names.
 The
 .Fl r
 option suppresses code transformations like parameter detection, or expression decompilation.
+.It Fl s
+The
+.Fl s
+option enables simple creation mode, which doesn't add any instructions automatically.
 .El
 .Pp
 Replace the
