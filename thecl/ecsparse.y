@@ -111,7 +111,7 @@ static void expression_optimize(parser_state_t* state, expression_t* expr);
     expression_operation_new(state, (int[]){ a, 0 }, (expression_t*[]){ A, NULL })
 #define EXPR_1A(a, A) \
     expression_address_operation_new(state, (int[]){ a, 0 }, A)
-#define EXPR_1B(a, b, A) \
+#define EXPR_21(a, b, A) \
     expression_operation_new(state, (int[]){ a, b, 0 }, (expression_t*[]){ A, NULL })
 
 static expression_t *expression_copy(expression_t *expr);
@@ -1237,7 +1237,15 @@ Expression:
                                     if ($1->value.val.S >= 0) /* Stack variables only. This is also verrfied to be int by expression creation. */
                                         state->current_sub->vars[$1->value.val.S / 4]->is_written = true;
                                   }
-    | "-" Expression              { $$ = EXPR_1B(NEGI,      NEGF,      $2); }
+    | "-" Expression              {
+                                      if (is_post_th13(state->version)) {
+                                          $$ = EXPR_21(NEGI, NEGF, $2);
+                                      } else {
+                                          /* $$ = EXPR_11(NEGI, $2); */
+                                          yyerror(state, "neg expression is not supported pre-th13");
+                                          exit(1);
+                                      }
+                                  }
     | "sin" Expression            { $$ = EXPR_11(SIN,                  $2); }
     | "cos" Expression            { $$ = EXPR_11(COS,                  $2); }
     | "sqrt" Expression           { $$ = EXPR_11(SQRT,                 $2); }
