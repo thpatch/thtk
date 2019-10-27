@@ -173,7 +173,7 @@ ins_[0-9]+ {
     return RANK;
 }
 
-[a-zA-Z][a-zA-Z0-9\._]* {
+[a-zA-Z_][a-zA-Z0-9_]* {
     yylval.string = strdup(yytext);
     return IDENTIFIER;
 }
