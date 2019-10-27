@@ -2148,9 +2148,8 @@ expression_operation_new(
     const int* symbols,
     expression_t** operands)
 {
-    const int *symbol = symbols;
-    for (; *symbol; ++symbol) {
-        const expr_t* expr = expr_get_by_symbol(state->version, *symbol);
+    for (; *symbols; ++symbols) {
+        const expr_t* expr = expr_get_by_symbol(state->version, *symbols);
 
         for (size_t s = 0; s < expr->stack_arity; ++s)
             if (operands[s]->result_type != expr->stack_formats[s])
