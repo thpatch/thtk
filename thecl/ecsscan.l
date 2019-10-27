@@ -168,6 +168,17 @@ ins_[0-9]+ {
     if (yytext[0] == '-') yylval.integer = -yylval.integer;
     return INTEGER;
 }
+"false" {
+    /* boolean "false" */
+    yyval.integer = 0;
+    return INTEGER;
+}
+"true" {
+    /* boolean "true" */
+    yyval.integer = 1;
+    return INTEGER;
+}
+
 ![-*ENHLWXYZO4567]+ {
     yylval.string = strdup(yytext + 1);
     return RANK;
