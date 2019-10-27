@@ -240,6 +240,10 @@ eclmap_load(
             if(!util_strcmp_ref(ent.mnemonic, stringref("ins_"))) {
                 fprintf(stderr, "%s:%s:%u: mnemonic can't start with 'ins_'\n",argv0,fn,linecount);
             }
+            else if(!strcmp(ent.mnemonic, "return")) {
+                fprintf(stderr, "%s:%s:%u: ignoring 'return' as it is not a usable mnemonic, use as keyword instead\n",argv0,fn,linecount);
+                continue;
+            }
         }
 
         eclmap_t* dest;
