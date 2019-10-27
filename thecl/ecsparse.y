@@ -564,7 +564,7 @@ Instructions:
     | Instructions Instruction ";"
     | Instructions Block
     | Instructions RANK { state->instr_rank = parse_rank(state, $2); } 
-    | Instructions RANK ":" { state->instr_rank = parse_rank(state, $2); } Instruction { state->instr_rank = parse_rank(state, "*"); }
+    | Instructions RANK ":" { state->instr_rank = parse_rank(state, $2); } Instruction { state->instr_rank = parse_rank(state, "*"); } ";"
     ;
 
 Block:
@@ -1029,7 +1029,7 @@ Instruction:
     | "goto" Label "@" Integer {
         const expr_t* expr = expr_get_by_symbol(state->version, GOTO);
         instr_add(state->current_sub, instr_new(state, expr->id, "pp", $2, $4));
-      }
+    }
     | "goto" IDENTIFIER {
         /* Timeless goto automatically sets time to the time of the target label. */
         expression_create_goto(state, GOTO, $2);
