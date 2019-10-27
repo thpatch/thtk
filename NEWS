@@ -1,3 +1,80 @@
+What's new in thtk 12
+=====================
+
+A lot of improvements for thecl. If you want to recompile ZUN's files
+bit-for-bit, make sure you use the simple creation flag (-s) introduced in this
+version.
+
+#### thanm
+- Support for TH17 has been added.
+
+#### thecl
+- Scan and parse negative (-val) function. (th13+ only)
+- Complete support for th16.5.
+- Look up ≥th10 instruction formats even if they have no parameters.
+- Print the total parameter size for unknown ≥th10 instructions.
+- th10: Add neqf to format table.
+- Print error and quit if expressions contain invalid types.
+- Allow floats in the form 1.f
+- Allow floats in the form +1f (and +1.2f and +1.f)
+- Allow integers in the form +123
+- Add sin, cos and sqrt expressions.
+- Allow sub calls by name with parameters cast by type.
+- Add proper if-else blocks.
+- Add while and (simple) switch blocks.
+- Add global definitions.
+- Add missing and fix existing EoSD instructions.
+- th06: Check if instruction's opcode is higher than the max usable by the game
+- Add bitwise operators.
+- Fix argument types for a handful of th12 and th13 instructions.
+- Support for TH17 has been added.
+- Add escaping quotes and backslashes in strings.
+- Add ZUN-style difficulty switches for writing custom ECL
+- Don't force typecasts for instruction calls
+- Add syntax for writing degree-floats (auto converts value to radians).
+- Add syntax for writing binary integer literals.
+- Add forced sub calls by name.
+- Allow var declarations anywhere in the sub.
+- Add variable initialization.
+- Automatically add missing ins_10 at the end of a sub.
+- Better difficulty switch expression.
+- Add times loop.
+- Add simple creation mode.
+- Added typed variables.
+- Improved code blocks.
+- Add shorthand operators. (e.g. +=)
+- Constant math optimization pass.
+- Add #include directive
+- Add #eclmap directive
+- Add single-line comments.
+- Add proper pre-th10 timeline dumping.
+- Add #ins directive
+- Typed functions, return values.
+- Variable scoping.
+- Parse true/false as integer 1/0 respectively.
+- Add relative time labels (i.e. +60:). These are the default format when
+  dumping. The total absolute value is appended as a comment.
+- Add inline sub support. Prepend the keyword "inline" to the sub type to make
+  every call to that sub inline. Inline subs cannot call themselves.
+- Gotos will automatically assign the same time as to where the label is
+  located if no time is specified.
+
+#### thdat
+- Support for TH17 has been added.
+- Add support for th09e.dat.
+
+#### thmsg
+- Support for TH17 has been added.
+
+#### thstd
+- Support for TH17 has been added.
+
+Please submit an issue at GitHub (https://github.com/thpatch/thtk/issues) if
+you find a bug.
+
+
+-------------------------------------------------------------------------------
+
 What's new in thtk 11
 =====================
 
