@@ -1555,7 +1555,7 @@ th06_compile(
         thecl_instr_t* instr;
         list_for_each(&sub->instrs, instr) {
             th06_instr_t* raw_instr = th06_instr_serialize(ecl, sub, instr);
-			file_write(out, raw_instr, raw_instr->size);
+            file_write(out, raw_instr, raw_instr->size);
             if (raw_instr->id > max_opcode) {
                 fprintf(stderr, "%s: warning: opcode: id %hu was higher than the maximum %hu\n", argv0, raw_instr->id, max_opcode);
             }

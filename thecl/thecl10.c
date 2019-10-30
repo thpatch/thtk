@@ -1992,7 +1992,7 @@ th10_instr_serialize(
                             argv0, sub->name, sub_name);
                     break;
                  } else if (
-				    format[v] != '?' &&
+                    format[v] != '?' &&
                     (((D[0] == 0x6969 || D[0] == 0x6966) && format[v] == 'f') ||
                     ((D[0] == 0x6669 || D[0] == 0x6666) && format[v] == 'S'))
                 ) {
@@ -2130,17 +2130,17 @@ th10_compile(
     if (pos % 4 != 0)
         file_seek(out, pos + 4 - pos % 4);
 
-	uint16_t max_opcode;
-	/* TODO: Get max opcodes for the rest of the games */
-	switch (ecl->version)
-	{
-	case 14:
-		max_opcode = 1003;
-		break;
-	default:
-		max_opcode = 0xFFFFU;
-		break;
-	}
+    uint16_t max_opcode;
+    /* TODO: Get max opcodes for the rest of the games */
+    switch (ecl->version)
+    {
+    case 14:
+        max_opcode = 1003;
+        break;
+    default:
+        max_opcode = 0xFFFFU;
+        break;
+    }
 
     list_for_each(&ecl->subs, sub) {
         if (sub->forward_declaration || sub->is_inline)
@@ -2152,9 +2152,9 @@ th10_compile(
             return 0;
 
         list_for_each(&sub->instrs, instr) {
-			if (instr->id > max_opcode) {
-				fprintf(stderr, "%s: warning: opcode: id %hu was higher than the maximum %hu\n", argv0, instr->id, max_opcode);
-			}
+            if (instr->id > max_opcode) {
+                fprintf(stderr, "%s: warning: opcode: id %hu was higher than the maximum %hu\n", argv0, instr->id, max_opcode);
+            }
             unsigned char* data = th10_instr_serialize(ecl->version, sub, instr, &ecl->subs, ecl->no_warn);
             if (!file_write(out, data, instr->size))
                 return 0;
