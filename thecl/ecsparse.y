@@ -457,12 +457,8 @@ Statement:
                     ++s;
                 }
                 buf[s] = '\0';
-                char* format = malloc(strlen(buf) + 1);
-                strcpy(format, buf);
-                id_format_pair_t* fmt = malloc(sizeof(id_format_pair_t));
-                fmt->id = id;
-                fmt->format = format;
-                list_append_new(g_user_fmts, fmt);
+                seqmap_entry_t ent = { id, buf };
+                seqmap_set(g_eclmap->ins_signatures, &ent);
             } else {
                 yyerror(state, "#ins: specified format is too long");
             }

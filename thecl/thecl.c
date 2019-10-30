@@ -39,7 +39,6 @@
 extern const thecl_module_t th06_ecl;
 extern const thecl_module_t th10_ecl;
 
-list_t* g_user_fmts = NULL;
 eclmap_t *g_eclmap = NULL;
 bool g_ecl_rawoutput = false;
 bool g_ecl_simplecreate = false;
@@ -219,13 +218,6 @@ static void
 free_globals(void)
 {
     eclmap_free(g_eclmap);
-    id_format_pair_t* fmt;
-    list_for_each(g_user_fmts, fmt) {
-        free(fmt->format);
-        free(fmt);
-    }
-    list_free_nodes(g_user_fmts);
-    free(g_user_fmts);
 }
 
 bool
@@ -277,7 +269,6 @@ main(int argc, char* argv[])
     current_output = "(stdout)";
 
     g_eclmap = eclmap_new();
-    g_user_fmts = list_new();
     atexit(free_globals);
 
     argv0 = util_shortname(argv[0]);

@@ -247,7 +247,6 @@ typedef struct {
 extern FILE* yyin;
 extern int yyparse(parser_state_t*);
 
-extern list_t* g_user_fmts;
 extern eclmap_t* g_eclmap;
 extern bool g_ecl_rawoutput;
 extern bool g_ecl_simplecreate;
