@@ -38,231 +38,159 @@
 #include "util.h"
 #include "thecl.h"
 
-static void
-eclmap_dump(
-    eclmap_t* map)
+eclmap_t *
+eclmap_new()
 {
-    eclmap_entry_t* ent;
-    list_for_each(map, ent) {
-        printf("%d %s %s\n",
-            ent->opcode,
-            ent->signature ? ent->signature : "?",
-            ent->mnemonic ? ent->mnemonic : "?");
+    eclmap_t *map = (eclmap_t*)malloc(sizeof(eclmap_t));
+    if (map) {
+        map->ins_names = seqmap_new();
+        map->ins_signatures = seqmap_new();
+        map->gvar_names = seqmap_new();
+        map->gvar_types = seqmap_new();
+        map->timeline_ins_names = seqmap_new();
+        map->timeline_ins_signatures = seqmap_new();
     }
+    return map;
 }
 
 void
 eclmap_free(
-    eclmap_t* map)
+    eclmap_t *map)
 {
-    eclmap_entry_t* ent;
-
-    if(!map) return;
-
-    list_for_each(map, ent) {
-        if(ent) {
-            free(ent->signature);
-            free(ent->mnemonic);
-        }
-        free(ent);
+    if (map) {
+        seqmap_free(map->ins_names);
+        seqmap_free(map->ins_signatures);
+        seqmap_free(map->gvar_names);
+        seqmap_free(map->gvar_types);
+        seqmap_free(map->timeline_ins_names);
+        seqmap_free(map->timeline_ins_signatures);
+        free(map);
     }
-
-    list_free_nodes(map);
-
-    free(map);
 }
 
-/* Allocates new eclmap entry, appends it to a eclmap, and returns it */
-static eclmap_entry_t*
-eclmap_append_new(
-    eclmap_t* map,
-    int opcode)
+typedef struct state_t {
+    eclmap_t *emap;
+    seqmap_t *smap;
+    int ident;
+    const char *fn;
+    int is_post_th10;
+} state_t;
+
+static int
+control(
+    state_t *state,
+    int linenum,
+    const char *cline)
 {
-    eclmap_entry_t* ent = malloc(sizeof(eclmap_entry_t));
-    ent->opcode = opcode;
-    ent->signature = NULL;
-    ent->mnemonic = NULL;
-    list_append_new(map, ent);
-    return ent;
+    if (!strcmp(cline, "!ins_names")) {
+        state->smap = state->emap->ins_names;
+        state->ident = 1;
+    } else if (!strcmp(cline, "!ins_signatures")) {
+        state->smap = state->emap->ins_signatures;
+        state->ident = 0;
+    } else if (!strcmp(cline, "!gvar_names")) {
+        state->smap = state->emap->gvar_names;
+        state->ident = 1;
+    } else if (!strcmp(cline, "!gvar_types")) {
+        state->smap = state->emap->gvar_types;
+        state->ident = 0;
+    } else if (!strcmp(cline, "!timeline_ins_names")) {
+        state->smap = state->emap->timeline_ins_names;
+        state->ident = 1;
+    } else if (!strcmp(cline, "!timeline_ins_signatures")) {
+        state->smap = state->emap->timeline_ins_signatures;
+        state->ident = 0;
+    } else {
+        fprintf(stderr, "%s:%s:%u: unknown control line '%s'\n",argv0,state->fn,linenum,cline);
+        return 1;
+    }
+    return 0;
 }
 
-void
-eclmap_set(
-    eclmap_t* map,
-    const eclmap_entry_t* ent1)
+static int
+validate_ident(
+    state_t *state,
+    int linenum,
+    const char *ptr)
 {
-    eclmap_entry_t* ent2;
-    list_for_each(map, ent2) {
-        if(ent2 && ent2->opcode == ent1->opcode) {
+    if (ptr[0] >= '0' && ptr[0] <= '9') { /* first character must not be digit */
+        fprintf(stderr, "%s:%s:%u: '%s' isn't valid identifier\n", argv0, state->fn, linenum,ptr);
+        return 1;
+    }
+    while (*ptr) {
+        if (!(*ptr >= '0' && *ptr <='9' || *ptr >= 'a' && *ptr <= 'z' || *ptr >= 'A' && *ptr <= 'Z' || *ptr == '_')) {
             break;
         }
+        ptr++;
     }
-
-    if(!ent2) {
-        ent2 = eclmap_append_new(map, ent1->opcode);
+    if (*ptr) {
+        fprintf(stderr, "%s:%s:%u: '%s' isn't valid identifier\n",argv0, state->fn, linenum, ptr);
+        return 1;
     }
-
-    if(ent1->signature) {
-        free(ent2->signature);
-        ent2->signature = strdup(ent1->signature);
+    if (!util_strcmp_ref(ptr, stringref("ins_"))) {
+        fprintf(stderr, "%s:%s:%u: value can't start with 'ins_'\n",argv0, state->fn, linenum);
+        return 1;
+    } else if (state->is_post_th10 && !strcmp(ptr, "return")) {
+        fprintf(stderr, "%s:%s:%u: ignoring 'return' as it is not a usable value, use as keyword instead\n", argv0, state->fn, linenum);
+        return 1;
     }
-
-    if(ent1->mnemonic) {
-        free(ent2->mnemonic);
-        ent2->mnemonic = strdup(ent1->mnemonic);
-    }
+    return 0;
 }
 
-eclmap_entry_t*
-eclmap_get(
-    eclmap_t* map,
-    int opcode)
+static int
+validate_type(
+    state_t *state,
+    int linenum,
+    const char *ptr)
 {
-    eclmap_entry_t* ent;
-    list_for_each(map, ent) {
-        if(ent && ent->opcode == opcode) {
-            break;
-        }
+    if (ptr[0] != '$' && ptr[0] != '%' || ptr[0] && ptr[1]) {
+        fprintf(stderr, "%s:%s:%u: unknown type '%s'\n", argv0, state->fn, linenum, ptr);
+        return 1;
     }
-    return ent;
+    return 0;
 }
 
-eclmap_entry_t*
-eclmap_find(
-    eclmap_t* map,
-    const char* mnemonic)
+static int
+validate_signature(
+    state_t *state,
+    int linenum,
+    const char *ptr)
 {
-    eclmap_entry_t* ent;
-    list_for_each(map, ent) {
-        if(ent && ent->mnemonic && !strcmp(ent->mnemonic, mnemonic)) {
-            break;
-        }
+    fprintf(stderr, "%s:%s:%u: warning: signature mapping is not yet implemented\n", argv0, state->fn, linenum);
+    return 1;
+}
+
+static int
+set(
+    state_t *state,
+    int linenum,
+    const seqmap_entry_t* ent)
+{
+    if (state->ident) {
+        if (validate_ident(state, linenum, ent->value))
+            return 1;
+    } else if (state->smap == state->emap->gvar_types) {
+        if (validate_type(state, linenum, ent->value))
+            return 1;
+    } else {
+        if (validate_signature(state, linenum, ent->value))
+            return 1;
     }
-    return ent;
+    seqmap_set(state->smap, ent);
+    return 0;
 }
 
 void
 eclmap_load(
     unsigned int version,
-    eclmap_t* opcodes,
-    eclmap_t* timeline_opcodes,
-    eclmap_t* globals,
+    eclmap_t* emap,
     FILE* f,
     const char* fn)
 {
-    static char buffer[512];
-
-    /* TODO: maybe do proper parsing with lex/yacc? */
-
-    if(!fgets(buffer, sizeof(buffer), f)) {
-        fprintf(stderr, "%s:%s: couldn't read the first line\n",argv0,fn);
-        return;
-    }
-
-    if(util_strcmp_ref(buffer, stringref("eclmap"))) {
-        fprintf(stderr, "%s:%s:1: invalid magic\n",argv0,fn);
-        return;
-    }
-
-    int linecount = 1;
-    while(fgets(buffer, sizeof(buffer), f)) {
-        int ent_type = ECLMAP_ENT_INVALID;
-      
-        char *ptr, *ptrend;
-        eclmap_entry_t ent;
-
-        ++linecount;
-
-        /* remove the comments */
-        ptr = strchr(buffer, '#');
-        if(ptr) *ptr = '\0';
-
-        /* parse opcode */
-        ptr = strtok(buffer, " \t\r\n");
-        if(!ptr) continue; /* 0 tokens -> empty line, no need to error */
-
-        errno = 0;
-        ent.opcode = strtol(ptr, &ptrend, 0);
-        if(ptr == ptrend || errno != 0) {
-            fprintf(stderr, "%s:%s:%u: opcode token is not a number\n",argv0,fn,linecount);
-            continue;
-        }
-
-        /* parse signature */
-        ptr = strtok(NULL, " \t\r\n");
-        if(!ptr) {
-            fprintf(stderr, "%s:%s:%u: not enough tokens\n",argv0,fn,linecount);
-            continue;
-        }
-
-        /* validate signature */
-        if(ptr[0] == '?') {
-            ent.signature = NULL;
-            ent_type = ECLMAP_ENT_OPCODE;
-        } else if (ptr[0] == '@') {
-            ent.signature = NULL;
-            ent_type = ECLMAP_ENT_TIMELINE_OPCODE;
-        } else if(ptr[0] == '$' || ptr[0] == '%') {
-            ent.signature = ptr;
-            ent_type = ECLMAP_ENT_GLOBAL;
-        } else {
-            ent.signature = ptr;
-            if(ptr[0] == '_') ptr[0] = '\0'; /* allow empty strings to be specified with "_" */
-            /* TODO: validate signature */
-            fprintf(stderr, "%s:%s:%u: warning: signature mapping is not yet implemented\n",argv0,fn,linecount);
-        }
-
-        /* parse mnemonic */
-        ptr = strtok(NULL, " \t\r\n");
-        if(!ptr) {
-            fprintf(stderr, "%s:%s:%u: not enough tokens\n",argv0,fn,linecount);
-            continue;
-        }
-
-        /* validate mnemonic */
-        if(ptr[0] == '?' || ptr[0] == '@') {
-            ent.mnemonic = NULL;
-        }
-        else {
-            ent.mnemonic = ptr;
-            if(ptr[0] >= '0' && ptr[0] <= '9') { /* first character must not be digit */
-                fprintf(stderr, "%s:%s:%u: '%s' isn't valid identifier\n",argv0,fn,linecount,ent.mnemonic);
-                continue;
-            }
-            while(*ptr) {
-                if(!(*ptr >= '0' && *ptr <='9' || *ptr >= 'a' && *ptr <= 'z' || *ptr >= 'A' && *ptr <= 'Z' || *ptr == '_')) {
-                    break;
-                }
-                ptr++;
-            }
-            if(*ptr) {
-                fprintf(stderr, "%s:%s:%u: '%s' isn't valid identifier\n",argv0,fn,linecount,ent.mnemonic);
-                continue;
-            }
-            if(!util_strcmp_ref(ent.mnemonic, stringref("ins_"))) {
-                fprintf(stderr, "%s:%s:%u: mnemonic can't start with 'ins_'\n",argv0,fn,linecount);
-                continue;
-            }
-            else if(is_post_th10(version) && !strcmp(ent.mnemonic, "return")) {
-                fprintf(stderr, "%s:%s:%u: ignoring 'return' as it is not a usable mnemonic, use as keyword instead\n",argv0,fn,linecount);
-                continue;
-            }
-        }
-
-        eclmap_t* dest;
-        switch(ent_type) {
-            case ECLMAP_ENT_INVALID:
-                continue;
-            case ECLMAP_ENT_OPCODE:
-                dest = opcodes;
-                break;
-            case ECLMAP_ENT_TIMELINE_OPCODE:
-                dest = timeline_opcodes;
-                break;
-            case ECLMAP_ENT_GLOBAL:
-                dest = globals;
-        }
-
-        eclmap_set(dest, &ent);
-    }
+    state_t state;
+    state.emap = emap;
+    state.fn = fn;
+    state.is_post_th10 = is_post_th10(version);
+    control(&state, 0, "!ins_names"); // default section
+    seqmap_load("!eclmap", &state, (seqmap_setfunc_t)set, (seqmap_controlfunc_t)control, f, fn);
 }

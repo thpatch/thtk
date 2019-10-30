@@ -200,9 +200,9 @@ th06_stringify_param(
                 else if (param->value.type == 'f') val = floor(param->value.val.f);
                 else val = param->value.val.s;
                 
-                eclmap_entry_t* ent = eclmap_get(g_eclmap_global, val);
-                if (ent && ent->mnemonic) {
-                    snprintf(temp, 256, "%c%s", param->value.type == 'f' ? '%' : '$', ent->mnemonic);
+                seqmap_entry_t* ent = seqmap_get(g_eclmap->gvar_names, val);
+                if (ent) {
+                    snprintf(temp, 256, "%c%s", param->value.type == 'f' ? '%' : '$', ent->value);
                     return strdup(temp);
                 }
             }
@@ -1168,9 +1168,9 @@ th06_dump(
                 fprintf(out, "%s_%u:\n", sub->name, instr->offset);
                 break;
             case THECL_INSTR_INSTR: {
-                eclmap_entry_t *ent = eclmap_get(g_eclmap_opcode, instr->id);
-                if(ent && ent->mnemonic) {
-                    fprintf(out, "    %s(", ent->mnemonic);
+                seqmap_entry_t *ent = seqmap_get(g_eclmap->ins_names, instr->id);
+                if (ent) {
+                    fprintf(out, "    %s(", ent->value);
                 }
                 else {
                     fprintf(out, "    ins_%u(", instr->id);
@@ -1229,9 +1229,9 @@ th06_dump(
                 }
                 break;
             case THECL_INSTR_INSTR: {
-                eclmap_entry_t *ent = eclmap_get(g_eclmap_timeline_opcode, instr->id);
-                if(ent && ent->mnemonic)
-                    fprintf(out, "    %s(", ent->mnemonic);
+                seqmap_entry_t *ent = seqmap_get(g_eclmap->timeline_ins_names, instr->id);
+                if (ent)
+                    fprintf(out, "    %s(", ent->value);
                 else
                     fprintf(out, "    ins_%u(", instr->id);
 

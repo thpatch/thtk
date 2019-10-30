@@ -1529,9 +1529,9 @@ th10_stringify_param(
         } else {
             if (param->stack && (param->value.type == 'f' || param->value.type == 'S')) {
                 int val = param->value.type == 'f' ? floor(param->value.val.f) : param->value.val.S;
-                eclmap_entry_t* ent = eclmap_get(g_eclmap_global, val);
-                if (ent && ent->mnemonic) {
-                    sprintf(temp, "%c%s", param->value.type == 'f' ? '%' : '$', ent->mnemonic);
+                seqmap_entry_t* ent = seqmap_get(g_eclmap->gvar_names, val);
+                if (ent) {
+                    sprintf(temp, "%c%s", param->value.type == 'f' ? '%' : '$', ent->value);
                     return strdup(temp);
                 }
             }
@@ -1639,9 +1639,9 @@ th10_stringify_instr(
             free(async_id_str);
         }
      } else {
-        eclmap_entry_t *ent = eclmap_get(g_eclmap_opcode, instr->id);
-        if(ent && ent->mnemonic) {
-            sprintf(string, "%s(", ent->mnemonic);
+        seqmap_entry_t *ent = seqmap_get(g_eclmap->ins_names, instr->id);
+        if (ent) {
+            sprintf(string, "%s(", ent->value);
         }
         else {
             sprintf(string, "ins_%u(", instr->id);

@@ -981,7 +981,7 @@ Instruction:
             expression_free($6);
       }
       | IDENTIFIER "(" Instruction_Parameters ")" {
-        eclmap_entry_t* ent = eclmap_find(state->is_timeline_sub ? g_eclmap_timeline_opcode : g_eclmap_opcode, $1);
+        seqmap_entry_t* ent = seqmap_find(state->is_timeline_sub ? g_eclmap->timeline_ins_names : g_eclmap->ins_names, $1);
         if (!ent) {
             /* Default to creating a sub call */
             instr_create_call(state, TH10_INS_CALL, $1, $3, false);
@@ -992,7 +992,7 @@ Instruction:
                 expression_free(expr);
             }
             list_free_nodes(&state->expressions);
-            instr_add(state->current_sub, instr_new_list(state, ent->opcode, $3));
+            instr_add(state->current_sub, instr_new_list(state, ent->key, $3));
         }
         if ($3 != NULL) {
             list_free_nodes($3);
@@ -2857,8 +2857,8 @@ var_stack(
     thecl_sub_t* sub,
     const char* name)
 {
-    eclmap_entry_t* ent = eclmap_find(g_eclmap_global, name);
-    if (ent) return ent->opcode;
+    seqmap_entry_t* ent = seqmap_find(g_eclmap->gvar_names, name);
+    if (ent) return ent->key;
 
     thecl_variable_t* var = var_get(state, sub, name);
     if (var != NULL)
@@ -2876,8 +2876,12 @@ var_type(
     thecl_sub_t* sub,
     const char* name)
 {
-    eclmap_entry_t* ent = eclmap_find(g_eclmap_global, name);
-    if (ent) return ent->signature[0] == '$' ? 'S' : 'f';
+    seqmap_entry_t* ent = seqmap_find(g_eclmap->gvar_names, name);
+    if (ent) {
+        ent = seqmap_get(g_eclmap->gvar_types, ent->key);
+        if (ent)
+            return ent->value[0] == '$' ? 'S' : 'f';
+    }
     
     thecl_variable_t* var = var_get(state, sub, name);
     if (var != NULL)
@@ -2897,7 +2901,7 @@ var_exists(
 {
     if (sub == NULL) return 0; /* we are outside of sub scope, no point in searching for variables */
 
-    eclmap_entry_t* ent = eclmap_find(g_eclmap_global, name);
+    seqmap_entry_t* ent = seqmap_find(g_eclmap->gvar_names, name);
     if (ent) return 1;
 
     return var_get(state, sub, name) != NULL;
@@ -3017,7 +3021,7 @@ char* name)
         snprintf(buf, 256, "#eclmap error: couldn't open %s for reading", path);
         yyerror(state, buf);
     } else {
-        eclmap_load(state->version, g_eclmap_opcode, g_eclmap_timeline_opcode, g_eclmap_global, map_file, path);
+        eclmap_load(state->version, g_eclmap, map_file, path);
         fclose(map_file);
     }
     free(path);
