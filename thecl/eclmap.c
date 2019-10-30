@@ -36,7 +36,6 @@
 #include "eclmap.h"
 #include "program.h"
 #include "util.h"
-#include "thecl.h"
 
 eclmap_t *
 eclmap_new()
@@ -73,7 +72,6 @@ typedef struct state_t {
     seqmap_t *smap;
     int ident;
     const char *fn;
-    int is_post_th10;
 } state_t;
 
 static int
@@ -108,13 +106,37 @@ control(
 }
 
 static int
+is_keyword(
+    const char *value)
+{
+    static const char *keywords[] = {
+        "anim", "ecli", "sub", "timeline",
+        "var", "int", "float", "void",
+        "inline", "return", "goto", "unless",
+        "if", "else", "do", "while",
+        "times", "switch", "case", "default",
+        "break", "async", "global", "sin",
+        "cos", "sqrt", "rad", "false", "true",
+        NULL
+    };
+    const char **kwp = keywords;
+    while (*kwp) {
+        if (!strcmp(value, *kwp++)) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+static int
 validate_ident(
     state_t *state,
     int linenum,
-    const char *ptr)
+    const char *value)
 {
+    const char *ptr = value;
     if (ptr[0] >= '0' && ptr[0] <= '9') { /* first character must not be digit */
-        fprintf(stderr, "%s:%s:%u: '%s' isn't valid identifier\n", argv0, state->fn, linenum,ptr);
+        fprintf(stderr, "%s:%s:%u: '%s' isn't valid identifier\n", argv0, state->fn, linenum, value);
         return 1;
     }
     while (*ptr) {
@@ -124,14 +146,14 @@ validate_ident(
         ptr++;
     }
     if (*ptr) {
-        fprintf(stderr, "%s:%s:%u: '%s' isn't valid identifier\n",argv0, state->fn, linenum, ptr);
+        fprintf(stderr, "%s:%s:%u: '%s' isn't valid identifier\n",argv0, state->fn, linenum, value);
         return 1;
     }
-    if (!util_strcmp_ref(ptr, stringref("ins_"))) {
-        fprintf(stderr, "%s:%s:%u: value can't start with 'ins_'\n",argv0, state->fn, linenum);
+    if (!util_strcmp_ref(value, stringref("ins_"))) {
+        fprintf(stderr, "%s:%s:%u: mnemonic can't start with 'ins_'\n",argv0, state->fn, linenum);
         return 1;
-    } else if (state->is_post_th10 && !strcmp(ptr, "return")) {
-        fprintf(stderr, "%s:%s:%u: ignoring 'return' as it is not a usable value, use as keyword instead\n", argv0, state->fn, linenum);
+    } else if (is_keyword(value)) {
+        fprintf(stderr, "%s:%s:%u: '%s' is a keyword, ignoring\n", argv0, state->fn, linenum, value);
         return 1;
     }
     return 0;
@@ -154,7 +176,7 @@ static int
 validate_signature(
     state_t *state,
     int linenum,
-    const char *ptr)
+    const char *value)
 {
     fprintf(stderr, "%s:%s:%u: warning: signature mapping is not yet implemented\n", argv0, state->fn, linenum);
     return 1;
@@ -190,7 +212,6 @@ eclmap_load(
     state_t state;
     state.emap = emap;
     state.fn = fn;
-    state.is_post_th10 = is_post_th10(version);
     control(&state, 0, "!ins_names"); // default section
     seqmap_load("!eclmap", &state, (seqmap_setfunc_t)set, (seqmap_controlfunc_t)control, f, fn);
 }
