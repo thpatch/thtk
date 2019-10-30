@@ -57,14 +57,14 @@ typedef int (*seqmap_controlfunc_t)(
 /* Allocates and initalizes a new seqmap */
 #define seqmap_new() ((seqmap_t*)list_new())
 /* Frees a seqmap */
-void seqmap_free(seqmap_t* map);
+void seqmap_free(seqmap_t *map);
 /* Sets an entry in a seqmap */
-void seqmap_set(seqmap_t* map, const seqmap_entry_t* ent);
+void seqmap_set(seqmap_t *map, const seqmap_entry_t *ent);
 /* Finds an entry in a seqmap by key */
-seqmap_entry_t* seqmap_get(seqmap_t* map, int key);
+seqmap_entry_t *seqmap_get(seqmap_t *map, int key);
 /* Finds an entry in a seqmap by value */
-seqmap_entry_t* seqmap_find(seqmap_t* map, const char* value);
+seqmap_entry_t *seqmap_find(seqmap_t *map, const char *value);
 /* Loads entries from seqmap file (thread unsafe) */
-void seqmap_load(const char* magic, void* state, seqmap_setfunc_t set, seqmap_controlfunc_t control, FILE* f, const char* fn);
+void seqmap_load(const char *magic, void *state, seqmap_setfunc_t set, seqmap_controlfunc_t control, FILE *f, const char *fn);
 
 #endif

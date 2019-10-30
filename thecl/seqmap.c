@@ -39,9 +39,9 @@
 
 void
 seqmap_free(
-    seqmap_t* map)
+    seqmap_t *map)
 {
-    seqmap_entry_t* ent;
+    seqmap_entry_t *ent;
 
     if (!map) return;
 
@@ -59,46 +59,36 @@ seqmap_free(
     free(map);
 }
 
-/* Allocates new seqmap entry, appends it to a seqmap, and returns it */
-static seqmap_entry_t*
-seqmap_append_new(
-    seqmap_t* map,
+/* Allocates new seqmap entry, prepends it to a seqmap, and returns it */
+static seqmap_entry_t *
+seqmap_prepend_new(
+    seqmap_t *map,
     int key)
 {
-    seqmap_entry_t* ent = malloc(sizeof(seqmap_entry_t));
+    seqmap_entry_t *ent = malloc(sizeof(seqmap_entry_t));
     ent->key = key;
     ent->value = NULL;
     ent->flags = SEQMAP_FLAG_ALLOC;
-    list_append_new(map, ent);
+    list_prepend_new(map, ent);
     return ent;
 }
 
 void
 seqmap_set(
-    seqmap_t* map,
-    const seqmap_entry_t* ent1)
+    seqmap_t *map,
+    const seqmap_entry_t *ent1)
 {
-    seqmap_entry_t* ent2;
-    list_for_each(map, ent2) {
-        if (ent2 && ent2->key == ent1->key) {
-            break;
-        }
-    }
+    seqmap_entry_t *ent2 = seqmap_prepend_new(map, ent1->key);
 
-    if (!ent2) {
-        ent2 = seqmap_append_new(map, ent1->key);
-    }
-
-    free(ent2->value);
     ent2->value = ent1->value ? strdup(ent1->value) : NULL;
 }
 
-seqmap_entry_t*
+seqmap_entry_t *
 seqmap_get(
-    seqmap_t* map,
+    seqmap_t *map,
     int key)
 {
-    seqmap_entry_t* ent;
+    seqmap_entry_t *ent;
     list_for_each(map, ent) {
         if (ent && ent->key == key) {
             break;
@@ -109,10 +99,10 @@ seqmap_get(
 
 seqmap_entry_t*
 seqmap_find(
-    seqmap_t* map,
-    const char* value)
+    seqmap_t *map,
+    const char *value)
 {
-    seqmap_entry_t* ent;
+    seqmap_entry_t *ent;
     list_for_each(map, ent) {
         if (ent && ent->value && !strcmp(ent->value, value)) {
             break;
@@ -123,12 +113,12 @@ seqmap_find(
 
 void
 seqmap_load(
-    const char* magic,
+    const char *magic,
     void *state,
     seqmap_setfunc_t set,
     seqmap_controlfunc_t control,
-    FILE* f,
-    const char* fn)
+    FILE *f,
+    const char *fn)
 {
     static char buffer[512];
 
