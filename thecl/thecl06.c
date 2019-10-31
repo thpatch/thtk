@@ -266,6 +266,10 @@ th06_find_timeline_format(
     unsigned int version,
     unsigned int id)
 {
+    seqmap_entry_t *ent = seqmap_get(g_eclmap->timeline_ins_signatures, id);
+    if (ent)
+        return ent->value;
+
     const char* ret = NULL;
 
     switch(version) {

@@ -178,8 +178,10 @@ validate_signature(
     int linenum,
     const char *value)
 {
-    fprintf(stderr, "%s:%s:%u: warning: signature mapping is not yet implemented\n", argv0, state->fn, linenum);
-    return 1;
+    static int warned = 0;
+    if (!warned && ++warned)
+        fprintf(stderr, "%s:%s:%u: warning: signature validation is not yet implemented\n", argv0, state->fn, linenum);
+    return 0;
 }
 
 static int

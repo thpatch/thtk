@@ -432,7 +432,8 @@ Statement:
             directive_eclmap(state, $2);
         } else if (strcmp($1, "nowarn") == 0) {
             state->ecl->no_warn = (strcmp($2, "true") == 0);
-        } else if (strcmp($1, "ins") == 0) {
+        } else if (strcmp($1, "ins") == 0 || strcmp($1, "timeline_ins") == 0) {
+            int is_timeline = ($1)[0] == 't';
             if (strlen($2) < 256) {
                 /* arg format: "id format", e.g. "200 SSff" */
                 char* arg = $2;
@@ -458,7 +459,7 @@ Statement:
                 }
                 buf[s] = '\0';
                 seqmap_entry_t ent = { id, buf };
-                seqmap_set(g_eclmap->ins_signatures, &ent);
+                seqmap_set(is_timeline ? g_eclmap->timeline_ins_signatures : g_eclmap->ins_signatures, &ent);
             } else {
                 yyerror(state, "#ins: specified format is too long");
             }
