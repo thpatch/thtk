@@ -332,9 +332,9 @@ static void directive_eclmap(parser_state_t* state, char* name);
 %left LT LTEQ GT GTEQ
 %left ADD SUBTRACT
 %left MULTIPLY DIVIDE MODULO
-%right NOT NEG
-%left SIN COS SQRT
-%right DEC
+%precedence NOT NEG
+%precedence SIN COS SQRT
+%precedence DEC
 
 %%
 
