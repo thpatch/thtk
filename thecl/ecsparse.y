@@ -1161,18 +1161,6 @@ Instruction_Parameter:
         }
         param_free($2);
       }
-    | Cast_Target "(" Expression ")" {
-        list_prepend_new(&state->expressions, $3);
-
-        $$ = param_new($1);
-        $$->stack = 1;
-        $$->is_expression_param = $1;
-        if ($1 == 'S') {
-            $$->value.val.S = -1;
-        } else {
-            $$->value.val.f = -1.0f;
-        }
-      }
       | Expression {
           list_prepend_new(&state->expressions, $1);
 
