@@ -1143,9 +1143,7 @@ Cast_Type:
     ;
 
 Instruction_Parameter:
-      Address
-    | Integer
-    | Floating
+      Load_Type
     | Text
     | Cast_Target2 Cast_Type {
         $$ = param_new('D');
