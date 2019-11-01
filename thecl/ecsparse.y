@@ -860,9 +860,7 @@ SwitchBlock:
     ;
 
 CaseList:
-    Case
-    | Case Instructions
-    | CaseList Case
+    Case Instructions
     | CaseList Case Instructions
     ;
 
