@@ -1237,7 +1237,8 @@ Expression:
     /* Custom expressions. */
     | IDENTIFIER "(" Instruction_Parameters ")"          { $$ = expression_call_new(state, $3, $1); }
     | Rank_Switch_List            { $$ = expression_rank_switch_new(state, $1); }
-    | Expression "?" Expression_Safe ":" Expression_Safe { $$ = expression_ternary_new(state, $1, $3, $5); }
+    | Expression "?" Expression_Safe ":" Expression_Safe  %prec QUESTION
+                                  { $$ = expression_ternary_new(state, $1, $3, $5); }
     ;
 
 /* 
