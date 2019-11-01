@@ -290,7 +290,7 @@ static void directive_eclmap(parser_state_t* state, char* name);
 %token B_OR "|"
 %token B_AND "&"
 %token DEC "--"
-%token NEG "-"
+%token NEG
 %token NEGI
 %token NEGF
 %token SIN "sin"
@@ -1221,7 +1221,7 @@ Expression:
                                     if ($1->value.val.S >= 0) /* Stack variables only. This is also verrfied to be int by expression creation. */
                                         state->current_sub->vars[$1->value.val.S / 4]->is_written = true;
                                   }
-    | "-" Expression              {
+    | "-" Expression  %prec NEG   {
                                       if (is_post_th13(state->version)) {
                                           $$ = EXPR_21(NEGI, NEGF, $2);
                                       } else {

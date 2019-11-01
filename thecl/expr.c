@@ -32,27 +32,6 @@
 #include "ecsparse.h"
 #include "expr.h"
 
-typedef struct {
-    int symbol;
-    int symbols[2];
-} alternative_t;
-
-static const alternative_t
-th10_alternatives[] = {
-    { ADD,      { ADDI, ADDF } },
-    { SUBTRACT, { SUBTRACTI, SUBTRACTF } },
-    { MULTIPLY, { MULTIPLYI, MULTIPLYF } },
-    { DIVIDE,   { DIVIDEI, DIVIDEF } },
-    { EQUAL,    { EQUALI, EQUALF } },
-    { INEQUAL,  { INEQUALI, INEQUALF } },
-    { LT,       { LTI, LTF } },
-    { LTEQ,     { LTEQI, LTEQF } },
-    { GT,       { GTI, GTF } },
-    { GTEQ,     { GTEQI, GTEQF } },
-    { NEG,      { NEGI, NEGF } },
-    { 0,        { 0, 0 } }
-};
-
 static const expr_t
 th10_expressions[] = {
     /* The program checks against the number of params, as well as the

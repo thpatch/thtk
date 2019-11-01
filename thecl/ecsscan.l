@@ -124,7 +124,6 @@
 "|"        return B_OR;
 "&"        return B_AND;
 "--"       return DEC;
-"-"        return NEG;
 "sin"      return SIN;
 "cos"      return COS;
 "sqrt"     return SQRT;
