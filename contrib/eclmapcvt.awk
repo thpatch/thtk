@@ -9,7 +9,7 @@ BEGIN {
 }
 #{print "["$0"]", "["$1"]", "["$2"]", "["$3"]"}
 NR == 1 {
-	if ($0 == "eclmap") {
+	if ($1 == "eclmap") {
 		print "!eclmap"
 		next
 	} else {
