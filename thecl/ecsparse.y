@@ -326,8 +326,11 @@ static void directive_eclmap(parser_state_t* state, char* name);
 %type <integer> VarDeclaration
 
 %left QUESTION
-%left OR AND
-%left XOR B_OR B_AND
+%left OR
+%left AND
+%left B_OR
+%left XOR
+%left B_AND
 %left EQUAL INEQUAL
 %left LT LTEQ GT GTEQ
 %left ADD SUBTRACT
