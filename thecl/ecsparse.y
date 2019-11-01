@@ -342,6 +342,7 @@ static void directive_eclmap(parser_state_t* state, char* name);
 %%
 
 Statements:
+    %empty
     | Statements Statement
     ;
 
@@ -537,7 +538,7 @@ VarDeclaration:
     ;
 
 ArgumentDeclaration:
-    /* The | at the beginning is obviously intentional and needed to allow creating subs with no arguments. */
+    %empty
     | DeclareKeyword IDENTIFIER {
           var_create(state, state->current_sub, $2, $1);
           free($2);
@@ -549,6 +550,7 @@ ArgumentDeclaration:
     ;
 
 Instructions:
+    %empty
     | Instructions INTEGER ":" { set_time(state, $2); }
     | Instructions PLUS_INTEGER ":" { set_time(state, state->instr_time + $2); }
     | Instructions IDENTIFIER ":" { label_create(state, $2); free($2); }
@@ -650,6 +652,7 @@ IfBlock:
       ;
 
 ElseBlock:
+    %empty
     | "else"  {
           char labelstr[256];
           snprintf(labelstr, 256, "if_%i_%i", yylloc.first_line, yylloc.first_column);
@@ -1098,7 +1101,7 @@ Assignment:
 ;
 
 Instruction_Parameters:
-      { $$ = NULL; }
+    %empty { $$ = NULL; }
     | Instruction_Parameters_List
     ;
 
