@@ -63,9 +63,11 @@
     x(18, 14,143, "th143.dat") \
     x(19, 14,15, "th15.dat") \
     x(20, 14,16, "th16.dat") \
+    x(21, 14,165, "th165.dat") \
+    x(22, 14,17, "th17.dat") \
     /* thdat105 */ \
-    x(21, 105,105, NULL) \
-    x(22, 123,123, NULL)
+    x(23, 105,105, NULL) \
+    x(24, 123,123, NULL)
 
 static const thdat_detect_entry_t detect_table[] = {
 #define x(idx, var, alias, filename) {var,alias,filename},
@@ -402,6 +404,8 @@ notth03:
         SET_OUT(143);
         SET_OUT(15);
         SET_OUT(16);
+        SET_OUT(165);
+        SET_OUT(17);
     }
 
     /* heur */
