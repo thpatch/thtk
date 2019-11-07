@@ -306,6 +306,7 @@ static void directive_eclmap(parser_state_t* state, char* name);
 %type <list> Rank_Switch_Next_Value_List
 
 %type <expression> Expression
+%type <expression> ExpressionNonTrivial
 %type <expression> Expression_Safe
 
 %type <param> Instruction_Parameter
@@ -1162,7 +1163,7 @@ Instruction_Parameter:
         }
         param_free($2);
       }
-      | Expression {
+      | ExpressionNonTrivial {
           list_prepend_new(&state->expressions, $1);
 
           $$ = param_new($1->result_type);
@@ -1200,7 +1201,11 @@ Rank_Switch_Next_Value_List:
 
 Expression:
       Load_Type                      { $$ = expression_load_new(state, $1); }
-    |             "(" Expression ")" { $$ = $2; }
+    | ExpressionNonTrivial
+    ;
+
+ExpressionNonTrivial:
+                  "(" Expression ")" { $$ = $2; }
     | Cast_Target "(" Expression ")" { $$ = $3; $$->result_type = $1; }
     | Expression "+"   Expression { $$ = EXPR_22(ADDI,      ADDF,      $1, $3); }
     | Expression "-"   Expression { $$ = EXPR_22(SUBTRACTI, SUBTRACTF, $1, $3); }
