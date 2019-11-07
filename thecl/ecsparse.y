@@ -983,18 +983,10 @@ Instruction:
           if ($6->type == EXPRESSION_VAL)
             expression_free($6);
       }
-      | IDENTIFIER "(" Instruction_Parameters ")" {
-        instr_create_call(state, TH10_INS_CALL, $1, $3, false);
-        if ($3 != NULL) {
-            list_free_nodes($3);
-            free($3);
-        }
-      }
       | MNEMONIC "(" Instruction_Parameters ")" {
         seqmap_entry_t* ent = seqmap_find(state->is_timeline_sub ? g_eclmap->timeline_ins_names : g_eclmap->ins_names, $1);
         if (!ent) {
-            /* Default to creating a sub call */
-            instr_create_call(state, TH10_INS_CALL, $1, $3, false);
+            yyerror(state, "attempt to call mnemonic with no opcode");
         } else {
             expression_t* expr;
             list_for_each(&state->expressions, expr) {
