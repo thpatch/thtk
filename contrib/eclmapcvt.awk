@@ -40,9 +40,20 @@ NR == 1 {
 		if (s[$2] != cs) {
 			print (cs=s[$2])
 		}
+		if ($2 == "$" || $2 == "%") {
+			types[$1] = $2
+		}
 		num = $1
 		$1 = $2 = ""
 		print num,substr($0,3)
 	}
 	next
+}
+END {
+	if (length(types) != 0) {
+		print "!gvar_types"
+		for (k in types) {
+			print k, types[k]
+		}
+	}
 }
