@@ -135,7 +135,7 @@ static void scope_begin(parser_state_t* state);
 static void scope_finish(parser_state_t* state);
 
 /* Returns global definition of the given name, or NULL if it doesn't exist. */
-static global_definition_t* global_get(parser_state_t* state, char* name);
+static global_definition_t* global_get(parser_state_t* state, const char* name);
 
 /* Creates a new variable in the specified subroutine. */
 static thecl_variable_t* var_create(parser_state_t* state, thecl_sub_t* sub, const char* name, int type);
@@ -795,7 +795,7 @@ SwitchBlock:
           else
               param->value.val.f = (float)var->stack;
           
-          expr_t* tmp = expr_get_by_symbol(state->version, $2->result_type == 'S' ? ASSIGNI : ASSIGNF);
+          const expr_t* tmp = expr_get_by_symbol(state->version, $2->result_type == 'S' ? ASSIGNI : ASSIGNF);
           instr_add(state->current_sub, instr_new(state, tmp->id, "p", param));
           list_prepend_new(&state->block_stack, var); /* We will need it later. */
           expression_free($2);
@@ -825,7 +825,7 @@ SwitchBlock:
           free(head->data);
           list_del(&state->block_stack, head);
 
-          expr_t* expr = expr_get_by_symbol(state->version, param->type == 'S' ? EQUALI : EQUALF);
+          const expr_t* expr = expr_get_by_symbol(state->version, param->type == 'S' ? EQUALI : EQUALF);
           int id_cmp = expr->id;
           expr = expr_get_by_symbol(state->version, param->type == 'S' ? LOADI : LOADF);
           int id_load = expr->id;
@@ -1698,11 +1698,11 @@ static void instr_create_inline_call(
                 expression_free(expr);
                 list_del(&state->expressions, node);
 
-                expr_t* tmp = expr_get_by_symbol(state->version, param->type == 'S' ? ASSIGNI : ASSIGNF);
+                const expr_t* tmp = expr_get_by_symbol(state->version, param->type == 'S' ? ASSIGNI : ASSIGNF);
                 instr_add(state->current_sub, instr_new(state, tmp->id, "p", param_copy(new_param)));
             } else {
                 /* Value needs to be pushed to the stack first. */
-                expr_t* tmp = expr_get_by_symbol(state->version, param->type == 'S' ? LOADI : LOADF);
+                const expr_t* tmp = expr_get_by_symbol(state->version, param->type == 'S' ? LOADI : LOADF);
                 instr_add(state->current_sub, instr_new(state, tmp->id, "p", param_copy(param)));
 
                 tmp = expr_get_by_symbol(state->version, param->type == 'S' ? ASSIGNI : ASSIGNF);
@@ -1899,7 +1899,7 @@ instr_create_call(
                 if (current_expr->type == EXPRESSION_OP)
                     expression_optimize(state, current_expr);
                 if (current_expr->type == EXPRESSION_VAL) {
-                    expr_t* expr = expr_get_by_id(state->version, current_expr->id);
+                    const expr_t* expr = expr_get_by_id(state->version, current_expr->id);
                     is_load_expression = (expr->symbol == LOADI || expr->symbol == LOADF);
                     if (is_load_expression) {
                         is_load_var = current_expr->value->stack;
@@ -2254,7 +2254,7 @@ expression_call_new(
     }
     expr->result_type = ret_type;
 
-    expr_t* tmp_expr = expr_get_by_symbol(state->version, ret_type == 'S' ? LOADI : LOADF);
+    const expr_t* tmp_expr = expr_get_by_symbol(state->version, ret_type == 'S' ? LOADI : LOADF);
     expr->id = tmp_expr->id;
 
     thecl_param_t* param = param_new(ret_type);
@@ -2362,7 +2362,7 @@ expression_output(
         /* Set last expr to all remaining difficulties. */
         char diff_str[5] = "";
         while(diff < diff_amt) {
-            char* next_diff = diffs[diff++];
+            const char* next_diff = diffs[diff++];
             strcat(diff_str, next_diff);
         }
 
@@ -2432,7 +2432,7 @@ expression_optimize(
         || child_expr_2->value->stack
     ) return;
 
-    expr_t* tmp_expr = expr_get_by_id(state->version, expression->id);
+    const expr_t* tmp_expr = expr_get_by_id(state->version, expression->id);
     
     /* Need to get the type from tmp_expr->return_type, since expression->result_type could have been modified by typecasts. */
     thecl_param_t* param = param_new(tmp_expr->return_type);
@@ -2629,7 +2629,7 @@ sub_finish(
         }
     } else if (state->current_sub->is_inline) {
         thecl_instr_t* last_ins = list_tail(&state->current_sub->instrs);
-        expr_t* tmp = expr_get_by_symbol(state->version, GOTO);
+        const expr_t* tmp = expr_get_by_symbol(state->version, GOTO);
         if (last_ins != NULL && last_ins->id == tmp->id) {
             thecl_param_t* label_param = list_head(&last_ins->params);
             if (strcmp(label_param->value.val.z, "inline_end") == 0) {
@@ -2669,7 +2669,7 @@ scope_finish(
 static global_definition_t*
 global_get(
     parser_state_t* state,
-    char* name
+    const char* name
 ) {
     global_definition_t *def;
     list_for_each(&state->global_definitions, def) {
@@ -2928,7 +2928,7 @@ directive_include(
                 
         FILE* in_org = yyin;
         YYLTYPE loc_org = yylloc;
-        char* input_org = current_input;
+        const char* input_org = current_input;
 
         current_input = include_path;
         yyin = include_file;
