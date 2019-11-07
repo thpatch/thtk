@@ -185,6 +185,9 @@ ins_[0-9]+ {
 
 [a-zA-Z_][a-zA-Z0-9_]* {
     yylval.string = strdup(yytext);
+
+    if (eclmap_is_mnemonic(g_eclmap, yytext))
+        return MNEMONIC;
     return IDENTIFIER;
 }
 

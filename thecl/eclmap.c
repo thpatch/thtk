@@ -48,6 +48,8 @@ eclmap_new()
         map->gvar_types = seqmap_new();
         map->timeline_ins_names = seqmap_new();
         map->timeline_ins_signatures = seqmap_new();
+        map->mnem_set = NULL;
+        map->mnem_set_len = 0;
     }
     return map;
 }
@@ -63,6 +65,7 @@ eclmap_free(
         seqmap_free(map->gvar_types);
         seqmap_free(map->timeline_ins_names);
         seqmap_free(map->timeline_ins_signatures);
+        free(map->mnem_set);
         free(map);
     }
 }
@@ -216,4 +219,44 @@ eclmap_load(
     state.fn = fn;
     control(&state, 0, "!ins_names"); // default section
     seqmap_load("!eclmap", &state, (seqmap_setfunc_t)set, (seqmap_controlfunc_t)control, f, fn);
+}
+
+int
+strcmp_indirect(
+    const void *lhs,
+    const void *rhs)
+{
+    return strcmp(*(const char **)lhs, *(const char **)rhs);
+}
+
+void
+eclmap_rebuild(
+    eclmap_t *emap)
+{
+    char **p;
+    size_t count = 0;
+    seqmap_entry_t *ent;
+    list_for_each(emap->ins_names, ent)
+        ++count;
+    list_for_each(emap->timeline_ins_names, ent)
+        ++count;
+
+    free(emap->mnem_set);
+    emap->mnem_set = p = malloc(count * sizeof(char*));
+    emap->mnem_set_len = count;
+
+    list_for_each(emap->ins_names, ent)
+        *p++ = ent->value;
+    list_for_each(emap->timeline_ins_names, ent)
+        *p++ = ent->value;
+
+    qsort(emap->mnem_set, emap->mnem_set_len, sizeof(char*), strcmp_indirect);
+}
+
+int
+eclmap_is_mnemonic(
+    eclmap_t *emap,
+    const char *mnem)
+{
+    return !!bsearch(&mnem, emap->mnem_set, emap->mnem_set_len, sizeof(char*), strcmp_indirect);
 }

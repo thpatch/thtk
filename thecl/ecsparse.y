@@ -188,6 +188,7 @@ static void directive_eclmap(parser_state_t* state, char* name);
 
 %token <integer> INSTRUCTION "instruction"
 %token <string> IDENTIFIER "identifier"
+%token <string> MNEMONIC "mnemonic"
 %token <string> TEXT "text"
 %token <integer> INTEGER "integer"
 %token <integer> PLUS_INTEGER "+integer"
@@ -983,6 +984,13 @@ Instruction:
             expression_free($6);
       }
       | IDENTIFIER "(" Instruction_Parameters ")" {
+        instr_create_call(state, TH10_INS_CALL, $1, $3, false);
+        if ($3 != NULL) {
+            list_free_nodes($3);
+            free($3);
+        }
+      }
+      | MNEMONIC "(" Instruction_Parameters ")" {
         seqmap_entry_t* ent = seqmap_find(state->is_timeline_sub ? g_eclmap->timeline_ins_names : g_eclmap->ins_names, $1);
         if (!ent) {
             /* Default to creating a sub call */
@@ -3015,6 +3023,7 @@ char* name)
         yyerror(state, buf);
     } else {
         eclmap_load(state->version, g_eclmap, map_file, path);
+        eclmap_rebuild(g_eclmap);
         fclose(map_file);
     }
     free(path);
