@@ -290,7 +290,7 @@ static void directive_eclmap(parser_state_t* state, char* name);
 %token B_OR "|"
 %token B_AND "&"
 %token DEC "--"
-%token NEG "-"
+%token NEG
 %token NEGI
 %token NEGF
 %token SIN "sin"
@@ -326,19 +326,23 @@ static void directive_eclmap(parser_state_t* state, char* name);
 %type <integer> VarDeclaration
 
 %left QUESTION
-%left OR AND
-%left XOR B_OR B_AND
+%left OR
+%left AND
+%left B_OR
+%left XOR
+%left B_AND
 %left EQUAL INEQUAL
 %left LT LTEQ GT GTEQ
 %left ADD SUBTRACT
 %left MULTIPLY DIVIDE MODULO
-%right NOT NEG
-%left SIN COS SQRT
-%right DEC
+%precedence NOT NEG
+%precedence SIN COS SQRT
+%precedence DEC
 
 %%
 
 Statements:
+    %empty
     | Statements Statement
     ;
 
@@ -531,7 +535,7 @@ VarDeclaration:
     ;
 
 ArgumentDeclaration:
-    /* The | at the beginning is obviously intentional and needed to allow creating subs with no arguments. */
+    %empty
     | DeclareKeyword IDENTIFIER {
           var_create(state, state->current_sub, $2, $1);
           free($2);
@@ -543,6 +547,7 @@ ArgumentDeclaration:
     ;
 
 Instructions:
+    %empty
     | Instructions INTEGER ":" { set_time(state, $2); }
     | Instructions PLUS_INTEGER ":" { set_time(state, state->instr_time + $2); }
     | Instructions IDENTIFIER ":" { label_create(state, $2); free($2); }
@@ -644,6 +649,7 @@ IfBlock:
       ;
 
 ElseBlock:
+    %empty
     | "else"  {
           char labelstr[256];
           snprintf(labelstr, 256, "if_%i_%i", yylloc.first_line, yylloc.first_column);
@@ -857,9 +863,7 @@ SwitchBlock:
     ;
 
 CaseList:
-    Case
-    | Case Instructions
-    | CaseList Case
+    Case Instructions
     | CaseList Case Instructions
     ;
 
@@ -1094,7 +1098,7 @@ Assignment:
 ;
 
 Instruction_Parameters:
-      { $$ = NULL; }
+    %empty { $$ = NULL; }
     | Instruction_Parameters_List
     ;
 
@@ -1140,9 +1144,7 @@ Cast_Type:
     ;
 
 Instruction_Parameter:
-      Address
-    | Integer
-    | Floating
+      Load_Type
     | Text
     | Cast_Target2 Cast_Type {
         $$ = param_new('D');
@@ -1159,18 +1161,6 @@ Instruction_Parameter:
             D[1] = $2->value.val.S;
         }
         param_free($2);
-      }
-    | Cast_Target "(" Expression ")" {
-        list_prepend_new(&state->expressions, $3);
-
-        $$ = param_new($1);
-        $$->stack = 1;
-        $$->is_expression_param = $1;
-        if ($1 == 'S') {
-            $$->value.val.S = -1;
-        } else {
-            $$->value.val.f = -1.0f;
-        }
       }
       | Expression {
           list_prepend_new(&state->expressions, $1);
@@ -1234,7 +1224,7 @@ Expression:
                                     if ($1->value.val.S >= 0) /* Stack variables only. This is also verrfied to be int by expression creation. */
                                         state->current_sub->vars[$1->value.val.S / 4]->is_written = true;
                                   }
-    | "-" Expression              {
+    | "-" Expression  %prec NEG   {
                                       if (is_post_th13(state->version)) {
                                           $$ = EXPR_21(NEGI, NEGF, $2);
                                       } else {
@@ -1250,7 +1240,8 @@ Expression:
     /* Custom expressions. */
     | IDENTIFIER "(" Instruction_Parameters ")"          { $$ = expression_call_new(state, $3, $1); }
     | Rank_Switch_List            { $$ = expression_rank_switch_new(state, $1); }
-    | Expression "?" Expression_Safe ":" Expression_Safe { $$ = expression_ternary_new(state, $1, $3, $5); }
+    | Expression "?" Expression_Safe ":" Expression_Safe  %prec QUESTION
+                                  { $$ = expression_ternary_new(state, $1, $3, $5); }
     ;
 
 /* 
