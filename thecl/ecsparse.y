@@ -309,6 +309,7 @@ static void directive_eclmap(parser_state_t* state, char* name);
 %type <expression> Expression
 %type <expression> ExpressionNonTrivial
 %type <expression> Expression_Safe
+%type <expression> Rank_Switch_Next_Value
 
 %type <param> Instruction_Parameter
 %type <param> Address
@@ -320,7 +321,6 @@ static void directive_eclmap(parser_state_t* state, char* name);
 %type <param> Label
 %type <param> Load_Type
 %type <param> Cast_Type
-%type <param> Rank_Switch_Next_Value
 
 %type <integer> Cast_Target
 %type <integer> Cast_Target2
