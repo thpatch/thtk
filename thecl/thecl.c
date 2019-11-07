@@ -39,10 +39,7 @@
 extern const thecl_module_t th06_ecl;
 extern const thecl_module_t th10_ecl;
 
-list_t* g_user_fmts = NULL;
-eclmap_t* g_eclmap_opcode = NULL;
-eclmap_t* g_eclmap_timeline_opcode = NULL;
-eclmap_t* g_eclmap_global = NULL;
+eclmap_t *g_eclmap = NULL;
 bool g_ecl_rawoutput = false;
 bool g_ecl_simplecreate = false;
 bool g_was_error = false;
@@ -220,16 +217,7 @@ label_time(
 static void
 free_globals(void)
 {
-    eclmap_free(g_eclmap_opcode);
-    eclmap_free(g_eclmap_timeline_opcode);
-    eclmap_free(g_eclmap_global);
-    id_format_pair_t* fmt;
-    list_for_each(g_user_fmts, fmt) {
-        free(fmt->format);
-        free(fmt);
-    }
-    list_free_nodes(g_user_fmts);
-    free(g_user_fmts);
+    eclmap_free(g_eclmap);
 }
 
 bool
@@ -280,10 +268,7 @@ main(int argc, char* argv[])
     current_input = "(stdin)";
     current_output = "(stdout)";
 
-    g_eclmap_opcode = eclmap_new();
-    g_eclmap_timeline_opcode = eclmap_new();
-    g_eclmap_global = eclmap_new();
-    g_user_fmts = list_new();
+    g_eclmap = eclmap_new();
     atexit(free_globals);
 
     argv0 = util_shortname(argv[0]);
@@ -310,7 +295,7 @@ main(int argc, char* argv[])
                     argv0, util_optarg, strerror(errno));
                 exit(1);
             }
-            eclmap_load(version, g_eclmap_opcode, g_eclmap_timeline_opcode, g_eclmap_global, map_file, util_optarg);
+            eclmap_load(version, g_eclmap, map_file, util_optarg);
             fclose(map_file);
             break;
         }

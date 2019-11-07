@@ -200,9 +200,9 @@ th06_stringify_param(
                 else if (param->value.type == 'f') val = floor(param->value.val.f);
                 else val = param->value.val.s;
                 
-                eclmap_entry_t* ent = eclmap_get(g_eclmap_global, val);
-                if (ent && ent->mnemonic) {
-                    snprintf(temp, 256, "%c%s", param->value.type == 'f' ? '%' : '$', ent->mnemonic);
+                seqmap_entry_t* ent = seqmap_get(g_eclmap->gvar_names, val);
+                if (ent) {
+                    snprintf(temp, 256, "%c%s", param->value.type == 'f' ? '%' : '$', ent->value);
                     return strdup(temp);
                 }
             }
@@ -266,6 +266,10 @@ th06_find_timeline_format(
     unsigned int version,
     unsigned int id)
 {
+    seqmap_entry_t *ent = seqmap_get(g_eclmap->timeline_ins_signatures, id);
+    if (ent)
+        return ent->value;
+
     const char* ret = NULL;
 
     switch(version) {
@@ -811,10 +815,9 @@ th06_find_format(
 {
     if (is_timeline) return th06_find_timeline_format(version, id);
 
-    id_format_pair_t* fmt;
-    list_for_each(g_user_fmts, fmt) {
-        if (fmt->id == id) return fmt->format;
-    }
+    seqmap_entry_t *ent = seqmap_get(g_eclmap->ins_signatures, id);
+    if (ent)
+        return ent->value;
 
     const char* ret = NULL;
 
@@ -1168,9 +1171,9 @@ th06_dump(
                 fprintf(out, "%s_%u:\n", sub->name, instr->offset);
                 break;
             case THECL_INSTR_INSTR: {
-                eclmap_entry_t *ent = eclmap_get(g_eclmap_opcode, instr->id);
-                if(ent && ent->mnemonic) {
-                    fprintf(out, "    %s(", ent->mnemonic);
+                seqmap_entry_t *ent = seqmap_get(g_eclmap->ins_names, instr->id);
+                if (ent) {
+                    fprintf(out, "    %s(", ent->value);
                 }
                 else {
                     fprintf(out, "    ins_%u(", instr->id);
@@ -1229,9 +1232,9 @@ th06_dump(
                 }
                 break;
             case THECL_INSTR_INSTR: {
-                eclmap_entry_t *ent = eclmap_get(g_eclmap_timeline_opcode, instr->id);
-                if(ent && ent->mnemonic)
-                    fprintf(out, "    %s(", ent->mnemonic);
+                seqmap_entry_t *ent = seqmap_get(g_eclmap->timeline_ins_names, instr->id);
+                if (ent)
+                    fprintf(out, "    %s(", ent->value);
                 else
                     fprintf(out, "    ins_%u(", instr->id);
 
@@ -1556,7 +1559,7 @@ th06_compile(
         thecl_instr_t* instr;
         list_for_each(&sub->instrs, instr) {
             th06_instr_t* raw_instr = th06_instr_serialize(ecl, sub, instr);
-			file_write(out, raw_instr, raw_instr->size);
+            file_write(out, raw_instr, raw_instr->size);
             if (raw_instr->id > max_opcode) {
                 fprintf(stderr, "%s: warning: opcode: id %hu was higher than the maximum %hu\n", argv0, raw_instr->id, max_opcode);
             }

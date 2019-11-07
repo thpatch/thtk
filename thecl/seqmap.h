@@ -27,29 +27,44 @@
  * DAMAGE.
  */
 
-#ifndef ECLMAP_H_
-#define ECLMAP_H_
+#ifndef SEQMAP_H_
+#define SEQMAP_H_
 
 #include <config.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
-#include "seqmap.h"
+#include "list.h"
 
-typedef struct eclmap_t {
-    seqmap_t *ins_names;
-    seqmap_t *ins_signatures;
-    seqmap_t *gvar_names;
-    seqmap_t *gvar_types;
-    seqmap_t *timeline_ins_names;
-    seqmap_t *timeline_ins_signatures;
-} eclmap_t;
+#define SEQMAP_FLAG_ALLOC (1<<0)
+typedef struct seqmap_entry_t {
+    int key;
+    char *value;
+    int flags;
+} seqmap_entry_t;
 
-/* Allocates and initalizes a new eclmap */
-eclmap_t* eclmap_new();
-/* Frees an eclmap */
-void eclmap_free(eclmap_t* map);
-/* Loads entries from eclmap file (thread unsafe) */
-void eclmap_load(unsigned int version, eclmap_t* emap, FILE* f, const char* fn);
+typedef list_t seqmap_t;
+
+typedef int (*seqmap_setfunc_t)(
+    void *state,
+    int linenum,
+    const seqmap_entry_t *ent);
+typedef int (*seqmap_controlfunc_t)(
+    void *state,
+    int linenum,
+    const char *cline);
+
+/* Allocates and initalizes a new seqmap */
+#define seqmap_new() ((seqmap_t*)list_new())
+/* Frees a seqmap */
+void seqmap_free(seqmap_t *map);
+/* Sets an entry in a seqmap */
+void seqmap_set(seqmap_t *map, const seqmap_entry_t *ent);
+/* Finds an entry in a seqmap by key */
+seqmap_entry_t *seqmap_get(seqmap_t *map, int key);
+/* Finds an entry in a seqmap by value */
+seqmap_entry_t *seqmap_find(seqmap_t *map, const char *value);
+/* Loads entries from seqmap file (thread unsafe) */
+void seqmap_load(const char *magic, void *state, seqmap_setfunc_t set, seqmap_controlfunc_t control, FILE *f, const char *fn);
 
 #endif
