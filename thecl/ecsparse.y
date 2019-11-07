@@ -118,7 +118,7 @@ static expression_t *expression_copy(expression_t *expr);
 static void expression_create_goto(parser_state_t *state, int type, char *labelstr);
 
 /* Bison things. */
-void yyerror(parser_state_t*, const char*);
+void yyerror(const parser_state_t*, const char*);
 int yylex(void);
 extern FILE* yyin;
 
@@ -3023,7 +3023,7 @@ char* name)
 
 void
 yyerror(
-    parser_state_t* state,
+    const parser_state_t* state,
     const char* str)
 {
     /* TODO: Research standard row and column range formats. */
