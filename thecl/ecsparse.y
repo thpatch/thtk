@@ -118,7 +118,7 @@ static expression_t *expression_copy(expression_t *expr);
 static void expression_create_goto(parser_state_t *state, int type, char *labelstr);
 
 /* Bison things. */
-void yyerror(const parser_state_t*, const char*);
+void yyerror(const parser_state_t*, const char*, ...);
 int yylex(void);
 extern FILE* yyin;
 
@@ -471,8 +471,7 @@ Statement:
             }
 
         } else {
-            snprintf(buf, 256, "unknown directive: %s", $1);
-            yyerror(state, buf);
+            yyerror(state, "unknown directive: %s", $1);
         }
         free($1);
         free($2);
@@ -735,9 +734,7 @@ TimesBlock:
               exit(2);
           }
           if ($2->result_type != 'S') {
-              char buf[256];
-              snprintf(buf, 256, "invalid iteration count type for a times loop: %c", $2->result_type);
-              yyerror(state, buf);
+              yyerror(state, "invalid iteration count type for a times loop: %c", $2->result_type);
               exit(2);
           }
 
@@ -1285,9 +1282,7 @@ Address:
         if (var_exists(state, state->current_sub, $1)) {
             int type = var_type(state, state->current_sub, $1);
             if (type == '?') {
-                char buf[256];
-                snprintf(buf, 256, "typeless variables need to have their type specified with a %% or $ prefix when used: %s", $1);
-                yyerror(state, buf);
+                yyerror(state, "typeless variables need to have their type specified with a %% or $ prefix when used: %s", $1);
                 exit(2);
             }
             $$ = param_new(type);
@@ -1306,9 +1301,7 @@ Address:
                        is_post_th10(state->version) /* Old versions don't have stack vars anyway, so no need to show the warning... */
                     && strncmp($1, state->current_sub->name, strlen(state->current_sub->name)) != 0
                 ) {
-                    char buf[256];
-                    snprintf(buf, 256, "warning: %s not found as a variable or global definition, treating like a label instead.", $1);
-                    yyerror(state, buf);
+                    yyerror(state, "warning: %s not found as a variable or global definition, treating like a label instead.", $1);
                 }
                 $$ = param_new('o');
                 $$->value.type = 'z';
@@ -1424,11 +1417,9 @@ instr_set_types(
             !(param->type == 'S' && (new_type == 's' || new_type == 'U' || new_type == 't'))
         ) {
 
-            char errbuf[256];
-            snprintf(errbuf, 256, "instr_set_types: in sub %s: wrong argument "
+            yyerror(state, "instr_set_types: in sub %s: wrong argument "
                      "type for opcode %d (expected: %c, got: %c)",
                      state->current_sub->name, instr->id, new_type, param->type);
-            yyerror(state, errbuf);
         }
 
         param->type = new_type;
@@ -1633,15 +1624,13 @@ static void instr_create_inline_call(
     thecl_param_t* param;
     list_for_each(params, param) {
         if (sub->format[i] == '\0') {
-            snprintf(buf, 256, "too many paramters for inline sub \"%s\"", sub->name);
-            yyerror(state, buf);
+            yyerror(state, "too many paramters for inline sub \"%s\"", sub->name);
             list_for_each(params, param)
                 param_free(param);
             return;
         }
         if (sub->format[i] != param->type) {
-            snprintf(buf, 256, "wrong parameter %i when calling inline sub \"%s\", expected type: %c\n", i + 1, sub->name, sub->format[i]);
-            yyerror(state, buf);
+            yyerror(state, "wrong parameter %i when calling inline sub \"%s\", expected type: %c\n", i + 1, sub->name, sub->format[i]);
             list_for_each(params, param)
                 param_free(param);
             return;
@@ -1649,8 +1638,7 @@ static void instr_create_inline_call(
         ++i;
     }
     if (sub->format[i] != '\0') {
-        snprintf(buf, 256, "not enough parameters for inline sub \"%s\"", sub->name);
-        yyerror(state, buf);
+        yyerror(state, "not enough parameters for inline sub \"%s\"", sub->name);
         list_for_each(params, param)
             param_free(param);
         return;
@@ -2011,10 +1999,8 @@ check_rank_flag(
     if (count == 0) return false;
     else if(count == 1) return true;
     else {
-        char errbuf[256];
-        snprintf(errbuf, 256, "check_rank_flag: in sub %s: duplicate rank flag %c in '%s'",
+        yyerror(state, "check_rank_flag: in sub %s: duplicate rank flag %c in '%s'",
                  state->current_sub->name, flag, value);
-        yyerror(state, errbuf);
         return true;
     }
 }
@@ -2028,22 +2014,18 @@ parse_rank(
 
     if (check_rank_flag(state, value, '*')) {
         if (strlen(value) != 1) {
-            char errbuf[256];
-            snprintf(errbuf, 256,
+            yyerror(state,
                      "parse_rank: in sub %s: * should not be used with "
                      "other rank flags.",
                      state->current_sub->name);
-            yyerror(state, errbuf);
         }
         return 0xFF;
     } else if (check_rank_flag(state, value, '-')) {
         if (strlen(value) != 1) {
-            char errbuf[256];
-            snprintf(errbuf, 256,
+            yyerror(state,
                      "parse_rank: in sub %s: - should not be used with "
                      "other rank flags.",
                      state->current_sub->name);
-            yyerror(state, errbuf);
         }
         return rank;
     } else {
@@ -2064,25 +2046,20 @@ parse_rank(
         if (check_rank_flag(state, value, '7')) rank &= ~RANK_ID_7;
 
         if (state->has_overdrive_difficulty && (check_rank_flag(state, value, '4') || check_rank_flag(state, value, '5'))) {
-            char errbuf[256];
-            snprintf(errbuf, 256,
+            yyerror(state,
                     "parse_rank: in sub %s: Rank flags 4 and 5 are not used in "
                     "TH13+. Use X for extra, and O for overdrive instead.",
                     state->current_sub->name);
-            yyerror(state, errbuf);
         }
         if (!state->has_overdrive_difficulty && (check_rank_flag(state, value, 'X') || check_rank_flag(state, value, 'O'))) {
-            char errbuf[256];
-            snprintf(errbuf, 256,
+            yyerror(state,
                     "parse_rank: in sub %s: Rank flags X and O do not exist "
                     "before TH13. Use 4 and 5 for the unused difficulties flags "
                     "instead.",
                     state->current_sub->name);
-            yyerror(state, errbuf);
         }
         if (check_rank_flag(state, value, 'W') || check_rank_flag(state, value, 'Y') || check_rank_flag(state, value, 'Z')) {
-          char errbuf[256];
-          snprintf(errbuf, 256,
+          yyerror(state,
                    "parse_rank: in sub %s: Rank flags W, X, Y and Z no "
                    "longer refer to unused difficulties 4-7. %s",
                    state->current_sub->name,
@@ -2091,7 +2068,6 @@ parse_rank(
                          "difficulties, X for extra, and O for overdrive."
                        : "Before TH13, use 4, 5, 6, and 7 to refer to the "
                          "unused difficulties.");
-          yyerror(state, errbuf);
         }
 
         return rank;
@@ -2267,16 +2243,13 @@ expression_call_new(
 
     char buf[256];
     if (ret_type == -1) {
-        snprintf(buf, 256, "sub must be declared before being used in an expression: %s", sub_name);
-        yyerror(state, buf);
+        yyerror(state, "sub must be declared before being used in an expression: %s", sub_name);
         ret_type = 'S'; /* Default to something to continue parsing despite the error */
     } else if (ret_type == 0) {
-        sprintf(buf, 256, "sub used in expression can not have void return type: %s", sub_name);
-        yyerror(state, buf);
+        yyerror(state, "sub used in expression can not have void return type: %s", sub_name);
         ret_type = 'S';
     } else if (ret_type == '?') {
-        sprintf(buf, 256, "sub used in expression can not have var return type: %s", sub_name);
-        yyerror(state, buf);
+        yyerror(state, "sub used in expression can not have var return type: %s", sub_name);
         ret_type = 'S';
     }
     expr->result_type = ret_type;
@@ -2616,9 +2589,7 @@ sub_begin(
         list_for_each(&state->ecl->subs, iter_sub) {
             int diff = strcmp(name, iter_sub->name);
             if(diff == 0 && !iter_sub->forward_declaration) {
-                char buf[256];
-                snprintf(buf, 256, "duplicate sub: %s", name);
-                yyerror(state, buf);
+                yyerror(state, "duplicate sub: %s", name);
                 g_was_error = true;
                 break;
             } else if(diff < 0) {
@@ -2741,28 +2712,23 @@ var_create(
     const char* name,
     int type)
 {
-    char buf[256];
     if (!is_post_th10(state->version)) {
-        snprintf(buf, 256, "stack variable declaration is not allowed in version: %i", state->version);
-        yyerror(state, buf);
+        yyerror(state, "stack variable declaration is not allowed in version: %i", state->version);
         exit(2);
     }
     if (g_ecl_simplecreate && type != 0) {
-        snprintf(buf, 256, "only typeless variables are allowed in simple creation mode: %s", name);
-        yyerror(state, buf);
+        yyerror(state, "only typeless variables are allowed in simple creation mode: %s", name);
         exit(2);
     }
     if (var_exists(state, sub, name)) {
-        snprintf(buf, 256, "redeclaration of variable: %s", name);
-        yyerror(state, buf);
+        yyerror(state, "redeclaration of variable: %s", name);
     }
     if (type == 0) {
         yyerror(state, "variables can't be declared as 'void', use 'var' to declare typeless vars.");
         type = '?';
     }
     if (global_get(state, name) != NULL) {
-        snprintf(buf, 256, "identifier %s is already used as a global definition name", name);
-        yyerror(state, buf);
+        yyerror(state, "identifier %s is already used as a global definition name", name);
     }
 
     thecl_variable_t* var = malloc(sizeof(thecl_variable_t));
@@ -2857,9 +2823,7 @@ var_stack(
     if (var != NULL)
         return var->stack;
 
-    char buf[256];
-    snprintf(buf, 256, "variable not found: %s", name);
-    yyerror(state, buf);
+    yyerror(state, "variable not found: %s", name);
     return 0;
 }
 
@@ -2880,9 +2844,7 @@ var_type(
     if (var != NULL)
         return var->type;
 
-    char buf[256];
-    snprintf(buf, 256, "variable not found: %s", name);
-    yyerror(state, buf);
+    yyerror(state, "variable not found: %s", name);
     return 0;
 }
 
@@ -2948,9 +2910,7 @@ set_time(
     int new_time)
 {
     if (new_time == state->instr_time || (state->instr_time > 0 && new_time < state->instr_time)) {
-        char buf[256];
-        snprintf(buf, 256, "illegal timer change: %d to %d", state->instr_time, new_time);
-        yyerror(state, buf);
+        yyerror(state, "illegal timer change: %d to %d", state->instr_time, new_time);
     }
     state->current_sub->time = new_time;
     state->instr_time = new_time;
@@ -2993,9 +2953,7 @@ directive_include(
         yylloc = loc_org;
         current_input = input_org;
     } else {
-        char buf[256];
-        snprintf(buf, 256, "#include error: couldn't open %s for reading", path);
-        yyerror(state, buf);
+        yyerror(state, "#include error: couldn't open %s for reading", path);
         return 1;
     }
     free(path);
@@ -3010,9 +2968,7 @@ char* name)
     char* path = path_get_full(state, name);
     FILE* map_file = fopen(path, "r");
     if (map_file == NULL) {
-        char buf[256];
-        snprintf(buf, 256, "#eclmap error: couldn't open %s for reading", path);
-        yyerror(state, buf);
+        yyerror(state, "#eclmap error: couldn't open %s for reading", path);
     } else {
         eclmap_load(state->version, g_eclmap, map_file, path);
         eclmap_rebuild(g_eclmap);
@@ -3024,25 +2980,33 @@ char* name)
 void
 yyerror(
     const parser_state_t* state,
-    const char* str)
+    const char* format,
+    ...)
 {
     /* TODO: Research standard row and column range formats. */
     if (yylloc.first_line == yylloc.last_line) {
         if (yylloc.first_column == yylloc.last_column) {
             fprintf(stderr,
-                    "%s:%s:%d,%d: %s\n",
+                    "%s:%s:%d,%d: ",
                     argv0, current_input,
-                    yylloc.first_line, yylloc.first_column, str);
+                    yylloc.first_line, yylloc.first_column);
         } else {
             fprintf(stderr,
-                    "%s:%s:%d,%d-%d: %s\n",
+                    "%s:%s:%d,%d-%d: ",
                     argv0, current_input, yylloc.first_line,
-                    yylloc.first_column, yylloc.last_column, str);
+                    yylloc.first_column, yylloc.last_column);
         }
     } else {
         fprintf(stderr,
-                "%s:%s:%d,%d-%d,%d: %s\n",
+                "%s:%s:%d,%d-%d,%d: ",
                 argv0, current_input, yylloc.first_line,
-                yylloc.first_column, yylloc.last_line, yylloc.last_column, str);
+                yylloc.first_column, yylloc.last_line, yylloc.last_column);
     }
+
+    va_list ap;
+    va_start(ap, format);
+    vfprintf(stderr, format, ap);
+    va_end(ap);
+
+    fputc('\n', stderr);
 }
