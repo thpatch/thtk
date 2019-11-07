@@ -307,7 +307,11 @@ static void directive_eclmap(parser_state_t* state, char* name);
 %type <list> Rank_Switch_Next_Value_List
 
 %type <expression> Expression
-%type <expression> ExpressionNonTrivial
+%type <expression> ExpressionSubsetInstParam
+%type <expression> ExpressionSubsetInstruction
+%type <expression> ExpressionLoadType
+%type <expression> ExpressionCall
+%type <expression> ExpressionSubset
 %type <expression> Expression_Safe
 %type <expression> Rank_Switch_Next_Value
 
@@ -1030,7 +1034,7 @@ Instruction:
         expression_create_goto(state, GOTO, $2);
     }
     | Assignment
-    | Expression {
+    | ExpressionSubsetInstruction {
         expression_output(state, $1, 1);
         expression_free($1);
       }
@@ -1168,7 +1172,7 @@ Instruction_Parameter:
         }
         param_free($2);
       }
-      | ExpressionNonTrivial {
+      | ExpressionSubsetInstParam {
           list_prepend_new(&state->expressions, $1);
 
           $$ = param_new($1->result_type);
@@ -1205,11 +1209,31 @@ Rank_Switch_Next_Value_List:
     ;
 
 Expression:
-      Load_Type                      { $$ = expression_load_new(state, $1); }
-    | ExpressionNonTrivial
+      ExpressionLoadType
+    | ExpressionCall
+    | ExpressionSubset
     ;
 
-ExpressionNonTrivial:
+ExpressionSubsetInstParam:
+      ExpressionCall
+    | ExpressionSubset
+    ;
+
+ExpressionSubsetInstruction:
+      ExpressionLoadType
+    | ExpressionSubset
+    ;
+
+ExpressionLoadType:
+      Load_Type                      { $$ = expression_load_new(state, $1); }
+    ;
+
+ExpressionCall:
+      IDENTIFIER "(" Instruction_Parameters ")"          { $$ = expression_call_new(state, $3, $1); }
+    ;
+
+/* This is the lowest common denominator between expression-instructions and expression-parameters */
+ExpressionSubset:
                   "(" Expression ")" { $$ = $2; }
     | Cast_Target "(" Expression ")" { $$ = $3; $$->result_type = $1; }
     | Expression "+"   Expression { $$ = EXPR_22(ADDI,      ADDF,      $1, $3); }
@@ -1248,7 +1272,6 @@ ExpressionNonTrivial:
     | "sqrt" Expression           { $$ = EXPR_11(SQRT,                 $2); }
 
     /* Custom expressions. */
-    | IDENTIFIER "(" Instruction_Parameters ")"          { $$ = expression_call_new(state, $3, $1); }
     | Rank_Switch_List            { $$ = expression_rank_switch_new(state, $1); }
     | Expression "?" Expression_Safe ":" Expression_Safe  %prec QUESTION
                                   { $$ = expression_ternary_new(state, $1, $3, $5); }
