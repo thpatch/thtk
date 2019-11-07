@@ -65,6 +65,7 @@
     x(20, 14,16, "th16.dat") \
     x(21, 14,165, "th165.dat") \
     x(22, 14,17, "th17.dat") \
+    /* NEWHU: */
     /* thdat105 */ \
     x(23, 105,105, NULL) \
     x(24, 123,123, NULL)
@@ -406,6 +407,7 @@ notth03:
         SET_OUT(16);
         SET_OUT(165);
         SET_OUT(17);
+        /* NEWHU: */
     }
 
     /* heur */

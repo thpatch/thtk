@@ -153,6 +153,8 @@ static const id_format_pair_t th16_msg_fmts[] = {
     { 0, NULL }
 };
 
+/* NEWHU: */
+
 static const id_format_pair_t th10_msg_ed_fmts[] = {
     { 0, "" },
     { 3, "m" },
@@ -219,6 +221,7 @@ th06_find_format(unsigned int version, int id)
         case 15:
         case 16:
         case 17:
+        /* NEWHU: */
             return find_format(th10_msg_ed_fmts, id);
         default:
             fprintf(stderr, "%s: id %d was not found in the format table\n", argv0, id);
@@ -226,6 +229,7 @@ th06_find_format(unsigned int version, int id)
         }
     } else {
         switch (version) {
+        /* NEWHU: */
         case 17:
         case 165:
         case 16:

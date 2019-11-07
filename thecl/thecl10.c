@@ -996,6 +996,8 @@ static const id_format_pair_t th17_fmts[] = {
     { -1, NULL }
 };
 
+/* NEWHU: */
+
 static const char*
 th10_find_format(
     unsigned int version,
@@ -1012,6 +1014,7 @@ th10_find_format(
 
     switch (version) {
     /* Intentional fallthroughs, obviously */
+    /* NEWHU: */
     case 17:
         if (!ret) ret = find_format(th17_fmts, id);
     case 165:
