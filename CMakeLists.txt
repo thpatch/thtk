@@ -123,6 +123,8 @@ if(MSVC)
   set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} /MTd")
 endif()
 
+set(BISON_FLAGS "" CACHE STRING "Flags used by the BISON parser generator during all build types.")
+
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 add_subdirectory(extlib)
 add_subdirectory(util)
