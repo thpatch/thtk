@@ -166,7 +166,7 @@ static void directive_eclmap(parser_state_t* state, char* name);
 
 %}
 
-%error-verbose
+%define parse.error verbose
 %locations
 %parse-param {parser_state_t* state}
 
