@@ -2887,10 +2887,10 @@ var_exists(
     thecl_sub_t* sub,
     const char* name)
 {
-    if (sub == NULL) return 0; /* we are outside of sub scope, no point in searching for variables */
-
     seqmap_entry_t* ent = seqmap_find(g_eclmap->gvar_names, name);
     if (ent) return 1;
+
+    if (sub == NULL) return 0; /* we are outside of sub scope, no point in searching for variables */
 
     return var_get(state, sub, name) != NULL;
 }
