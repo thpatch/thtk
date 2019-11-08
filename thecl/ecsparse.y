@@ -304,7 +304,6 @@ static void directive_eclmap(parser_state_t* state, char* name);
 %type <list> Instruction_Parameters_List
 %type <list> Instruction_Parameters
 %type <list> Rank_Switch_List
-%type <list> Rank_Switch_Next_Value_List
 
 %type <expression> Expression
 %type <expression> ExpressionSubsetInstParam
@@ -313,7 +312,6 @@ static void directive_eclmap(parser_state_t* state, char* name);
 %type <expression> ExpressionCall
 %type <expression> ExpressionSubset
 %type <expression> Expression_Safe
-%type <expression> Rank_Switch_Next_Value
 
 %type <param> Instruction_Parameter
 %type <param> Address
@@ -1186,26 +1184,16 @@ Instruction_Parameter:
       }
     ;
 
-Rank_Switch_Next_Value: 
-      ":" Expression_Safe { $$ = $2; }
-    ;
-
 Rank_Switch_List:
-      Expression_Safe Rank_Switch_Next_Value_List {
-        $$ = $2;
-        list_prepend_new($$, $1);
-      }
-    ;
-
-Rank_Switch_Next_Value_List:
-      Rank_Switch_Next_Value {
+      Expression_Safe ":" Expression_Safe {
         $$ = list_new();
         list_append_new($$, $1);
+        list_append_new($$, $3);
       }
-    | Rank_Switch_Next_Value_List Rank_Switch_Next_Value {
+    | Rank_Switch_List ":" Expression_Safe {
         $$ = $1;
-        list_append_new($$, $2);
-    }
+        list_append_new($$, $3);
+      }
     ;
 
 Expression:
