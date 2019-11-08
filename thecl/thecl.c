@@ -313,6 +313,8 @@ main(int argc, char* argv[])
     argc = ind;
     argv[argc] = NULL;
 
+    eclmap_rebuild(g_eclmap);
+
     switch (version) {
     case 6:
     case 7:

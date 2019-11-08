@@ -70,7 +70,7 @@ path_add(
 
         size_t len = strlen(path) - strlen(tmp);
         dir_path = malloc(len + 1);
-        strncpy(dir_path, path, len);
+        memcpy(dir_path, path, len);
         dir_path[len] = '\0';
     }
     else {

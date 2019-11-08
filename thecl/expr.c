@@ -96,7 +96,7 @@ th13_expressions[] = {
 
 static const expr_t*
 expr_get_by_symbol_from_table(
-    expr_t* table,
+    const expr_t* table,
     int symbol)
 {
     while (table->symbol) {
@@ -113,7 +113,7 @@ expr_get_by_symbol(
     unsigned int version,
     int symbol)
 {
-    expr_t* ret = NULL;
+    const expr_t* ret = NULL;
 
     if (!ret && is_post_th13(version)) ret = expr_get_by_symbol_from_table(th13_expressions, symbol);
     if (!ret && is_post_th10(version)) ret = expr_get_by_symbol_from_table(th10_expressions, symbol);
@@ -123,7 +123,7 @@ expr_get_by_symbol(
 
 static const expr_t*
 expr_get_by_id_from_table(
-    expr_t* table,
+    const expr_t* table,
     int id)
 {
     while (table->symbol) {
@@ -140,7 +140,7 @@ expr_get_by_id(
     unsigned int version,
     int id)
 {
-    expr_t* ret = NULL;
+    const expr_t* ret = NULL;
 
     if (!ret && is_post_th13(version)) ret = expr_get_by_id_from_table(th13_expressions, id);
     if (!ret && is_post_th10(version)) ret = expr_get_by_id_from_table(th10_expressions, id);

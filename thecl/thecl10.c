@@ -1919,12 +1919,12 @@ th10_parse(
     return state.ecl;
 }
 
-static unsigned char*
+static const unsigned char*
 th10_find_sub_format(
     char* sub_name,
-    list_t* subs)
+    const list_t* subs)
 {
-    thecl_sub_t* sub;
+    const thecl_sub_t* sub;
     list_for_each(subs, sub) {
         if (!sub->is_inline && !strcmp(sub->name, sub_name)) return sub->format;
     }
@@ -1936,7 +1936,7 @@ th10_instr_serialize(
     unsigned int version,
     thecl_sub_t* sub,
     thecl_instr_t* instr,
-    list_t* subs,
+    const list_t* subs,
     bool no_warn)
 {
     th10_instr_t* ret;

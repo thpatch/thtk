@@ -1262,6 +1262,7 @@ th06_dump(
     }
 }
 
+static size_t
 th06_timeline_instr_size(
     unsigned int version,
     const thecl_instr_t* instr)
@@ -1587,7 +1588,7 @@ th06_compile(
             free(raw_instr);
         }
 
-        file_write(out, ecl->version < 8 ? &timeline_sentinel_th6 : &timeline_sentinel_th8, ecl->version < 8 ? 4 : 8);
+        file_write(out, ecl->version < 8 ? timeline_sentinel_th6 : timeline_sentinel_th8, ecl->version < 8 ? 4 : 8);
     }
 
     if (ecl->version != 9 && ecl->version != 6)

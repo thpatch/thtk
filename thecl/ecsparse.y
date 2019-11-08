@@ -118,7 +118,7 @@ static expression_t *expression_copy(expression_t *expr);
 static void expression_create_goto(parser_state_t *state, int type, char *labelstr);
 
 /* Bison things. */
-void yyerror(parser_state_t*, const char*);
+void yyerror(const parser_state_t*, const char*, ...);
 int yylex(void);
 extern FILE* yyin;
 
@@ -135,7 +135,7 @@ static void scope_begin(parser_state_t* state);
 static void scope_finish(parser_state_t* state);
 
 /* Returns global definition of the given name, or NULL if it doesn't exist. */
-static global_definition_t* global_get(parser_state_t* state, char* name);
+static global_definition_t* global_get(parser_state_t* state, const char* name);
 
 /* Creates a new variable in the specified subroutine. */
 static thecl_variable_t* var_create(parser_state_t* state, thecl_sub_t* sub, const char* name, int type);
@@ -166,7 +166,7 @@ static void directive_eclmap(parser_state_t* state, char* name);
 
 %}
 
-%error-verbose
+%define parse.error verbose
 %locations
 %parse-param {parser_state_t* state}
 
@@ -188,6 +188,7 @@ static void directive_eclmap(parser_state_t* state, char* name);
 
 %token <integer> INSTRUCTION "instruction"
 %token <string> IDENTIFIER "identifier"
+%token <string> MNEMONIC "mnemonic"
 %token <string> TEXT "text"
 %token <integer> INTEGER "integer"
 %token <integer> PLUS_INTEGER "+integer"
@@ -306,7 +307,13 @@ static void directive_eclmap(parser_state_t* state, char* name);
 %type <list> Rank_Switch_Next_Value_List
 
 %type <expression> Expression
+%type <expression> ExpressionSubsetInstParam
+%type <expression> ExpressionSubsetInstruction
+%type <expression> ExpressionLoadType
+%type <expression> ExpressionCall
+%type <expression> ExpressionSubset
 %type <expression> Expression_Safe
+%type <expression> Rank_Switch_Next_Value
 
 %type <param> Instruction_Parameter
 %type <param> Address
@@ -318,7 +325,6 @@ static void directive_eclmap(parser_state_t* state, char* name);
 %type <param> Label
 %type <param> Load_Type
 %type <param> Cast_Type
-%type <param> Rank_Switch_Next_Value
 
 %type <integer> Cast_Target
 %type <integer> Cast_Target2
@@ -469,8 +475,7 @@ Statement:
             }
 
         } else {
-            snprintf(buf, 256, "unknown directive: %s", $1);
-            yyerror(state, buf);
+            yyerror(state, "unknown directive: %s", $1);
         }
         free($1);
         free($2);
@@ -733,9 +738,7 @@ TimesBlock:
               exit(2);
           }
           if ($2->result_type != 'S') {
-              char buf[256];
-              snprintf(buf, 256, "invalid iteration count type for a times loop: %c", $2->result_type);
-              yyerror(state, buf);
+              yyerror(state, "invalid iteration count type for a times loop: %c", $2->result_type);
               exit(2);
           }
 
@@ -796,7 +799,7 @@ SwitchBlock:
           else
               param->value.val.f = (float)var->stack;
           
-          expr_t* tmp = expr_get_by_symbol(state->version, $2->result_type == 'S' ? ASSIGNI : ASSIGNF);
+          const expr_t* tmp = expr_get_by_symbol(state->version, $2->result_type == 'S' ? ASSIGNI : ASSIGNF);
           instr_add(state->current_sub, instr_new(state, tmp->id, "p", param));
           list_prepend_new(&state->block_stack, var); /* We will need it later. */
           expression_free($2);
@@ -826,7 +829,7 @@ SwitchBlock:
           free(head->data);
           list_del(&state->block_stack, head);
 
-          expr_t* expr = expr_get_by_symbol(state->version, param->type == 'S' ? EQUALI : EQUALF);
+          const expr_t* expr = expr_get_by_symbol(state->version, param->type == 'S' ? EQUALI : EQUALF);
           int id_cmp = expr->id;
           expr = expr_get_by_symbol(state->version, param->type == 'S' ? LOADI : LOADF);
           int id_load = expr->id;
@@ -982,6 +985,13 @@ Instruction:
             expression_free($6);
       }
       | IDENTIFIER "(" Instruction_Parameters ")" {
+        instr_create_call(state, TH10_INS_CALL, $1, $3, false);
+        if ($3 != NULL) {
+            list_free_nodes($3);
+            free($3);
+        }
+      }
+      | MNEMONIC "(" Instruction_Parameters ")" {
         seqmap_entry_t* ent = seqmap_find(state->is_timeline_sub ? g_eclmap->timeline_ins_names : g_eclmap->ins_names, $1);
         if (!ent) {
             /* Default to creating a sub call */
@@ -1024,7 +1034,7 @@ Instruction:
         expression_create_goto(state, GOTO, $2);
     }
     | Assignment
-    | Expression {
+    | ExpressionSubsetInstruction {
         expression_output(state, $1, 1);
         expression_free($1);
       }
@@ -1162,7 +1172,7 @@ Instruction_Parameter:
         }
         param_free($2);
       }
-      | Expression {
+      | ExpressionSubsetInstParam {
           list_prepend_new(&state->expressions, $1);
 
           $$ = param_new($1->result_type);
@@ -1199,8 +1209,32 @@ Rank_Switch_Next_Value_List:
     ;
 
 Expression:
+      ExpressionLoadType
+    | ExpressionCall
+    | ExpressionSubset
+    ;
+
+ExpressionSubsetInstParam:
+      ExpressionCall
+    | ExpressionSubset
+    ;
+
+ExpressionSubsetInstruction:
+      ExpressionLoadType
+    | ExpressionSubset
+    ;
+
+ExpressionLoadType:
       Load_Type                      { $$ = expression_load_new(state, $1); }
-    |             "(" Expression ")" { $$ = $2; }
+    ;
+
+ExpressionCall:
+      IDENTIFIER "(" Instruction_Parameters ")"          { $$ = expression_call_new(state, $3, $1); }
+    ;
+
+/* This is the lowest common denominator between expression-instructions and expression-parameters */
+ExpressionSubset:
+                  "(" Expression ")" { $$ = $2; }
     | Cast_Target "(" Expression ")" { $$ = $3; $$->result_type = $1; }
     | Expression "+"   Expression { $$ = EXPR_22(ADDI,      ADDF,      $1, $3); }
     | Expression "-"   Expression { $$ = EXPR_22(SUBTRACTI, SUBTRACTF, $1, $3); }
@@ -1238,7 +1272,6 @@ Expression:
     | "sqrt" Expression           { $$ = EXPR_11(SQRT,                 $2); }
 
     /* Custom expressions. */
-    | IDENTIFIER "(" Instruction_Parameters ")"          { $$ = expression_call_new(state, $3, $1); }
     | Rank_Switch_List            { $$ = expression_rank_switch_new(state, $1); }
     | Expression "?" Expression_Safe ":" Expression_Safe  %prec QUESTION
                                   { $$ = expression_ternary_new(state, $1, $3, $5); }
@@ -1280,9 +1313,7 @@ Address:
         if (var_exists(state, state->current_sub, $1)) {
             int type = var_type(state, state->current_sub, $1);
             if (type == '?') {
-                char buf[256];
-                snprintf(buf, 256, "typeless variables need to have their type specified with a %% or $ prefix when used: %s", $1);
-                yyerror(state, buf);
+                yyerror(state, "typeless variables need to have their type specified with a %% or $ prefix when used: %s", $1);
                 exit(2);
             }
             $$ = param_new(type);
@@ -1301,9 +1332,7 @@ Address:
                        is_post_th10(state->version) /* Old versions don't have stack vars anyway, so no need to show the warning... */
                     && (state->current_sub == NULL || strncmp($1, state->current_sub->name, strlen(state->current_sub->name)) != 0)
                 ) {
-                    char buf[256];
-                    snprintf(buf, 256, "warning: %s not found as a variable or global definition, treating like a label instead.", $1);
-                    yyerror(state, buf);
+                    yyerror(state, "warning: %s not found as a variable or global definition, treating like a label instead.", $1);
                 }
                 $$ = param_new('o');
                 $$->value.type = 'z';
@@ -1419,11 +1448,9 @@ instr_set_types(
             !(param->type == 'S' && (new_type == 's' || new_type == 'U' || new_type == 't'))
         ) {
 
-            char errbuf[256];
-            snprintf(errbuf, 256, "instr_set_types: in sub %s: wrong argument "
+            yyerror(state, "instr_set_types: in sub %s: wrong argument "
                      "type for opcode %d (expected: %c, got: %c)",
                      state->current_sub->name, instr->id, new_type, param->type);
-            yyerror(state, errbuf);
         }
 
         param->type = new_type;
@@ -1628,15 +1655,13 @@ static void instr_create_inline_call(
     thecl_param_t* param;
     list_for_each(params, param) {
         if (sub->format[i] == '\0') {
-            snprintf(buf, 256, "too many paramters for inline sub \"%s\"", sub->name);
-            yyerror(state, buf);
+            yyerror(state, "too many paramters for inline sub \"%s\"", sub->name);
             list_for_each(params, param)
                 param_free(param);
             return;
         }
         if (sub->format[i] != param->type) {
-            snprintf(buf, 256, "wrong parameter %i when calling inline sub \"%s\", expected type: %c\n", i + 1, sub->name, sub->format[i]);
-            yyerror(state, buf);
+            yyerror(state, "wrong parameter %i when calling inline sub \"%s\", expected type: %c\n", i + 1, sub->name, sub->format[i]);
             list_for_each(params, param)
                 param_free(param);
             return;
@@ -1644,8 +1669,7 @@ static void instr_create_inline_call(
         ++i;
     }
     if (sub->format[i] != '\0') {
-        snprintf(buf, 256, "not enough parameters for inline sub \"%s\"", sub->name);
-        yyerror(state, buf);
+        yyerror(state, "not enough parameters for inline sub \"%s\"", sub->name);
         list_for_each(params, param)
             param_free(param);
         return;
@@ -1705,11 +1729,11 @@ static void instr_create_inline_call(
                 expression_free(expr);
                 list_del(&state->expressions, node);
 
-                expr_t* tmp = expr_get_by_symbol(state->version, param->type == 'S' ? ASSIGNI : ASSIGNF);
+                const expr_t* tmp = expr_get_by_symbol(state->version, param->type == 'S' ? ASSIGNI : ASSIGNF);
                 instr_add(state->current_sub, instr_new(state, tmp->id, "p", param_copy(new_param)));
             } else {
                 /* Value needs to be pushed to the stack first. */
-                expr_t* tmp = expr_get_by_symbol(state->version, param->type == 'S' ? LOADI : LOADF);
+                const expr_t* tmp = expr_get_by_symbol(state->version, param->type == 'S' ? LOADI : LOADF);
                 instr_add(state->current_sub, instr_new(state, tmp->id, "p", param_copy(param)));
 
                 tmp = expr_get_by_symbol(state->version, param->type == 'S' ? ASSIGNI : ASSIGNF);
@@ -1906,7 +1930,7 @@ instr_create_call(
                 if (current_expr->type == EXPRESSION_OP)
                     expression_optimize(state, current_expr);
                 if (current_expr->type == EXPRESSION_VAL) {
-                    expr_t* expr = expr_get_by_id(state->version, current_expr->id);
+                    const expr_t* expr = expr_get_by_id(state->version, current_expr->id);
                     is_load_expression = (expr->symbol == LOADI || expr->symbol == LOADF);
                     if (is_load_expression) {
                         is_load_var = current_expr->value->stack;
@@ -2006,10 +2030,8 @@ check_rank_flag(
     if (count == 0) return false;
     else if(count == 1) return true;
     else {
-        char errbuf[256];
-        snprintf(errbuf, 256, "check_rank_flag: in sub %s: duplicate rank flag %c in '%s'",
+        yyerror(state, "check_rank_flag: in sub %s: duplicate rank flag %c in '%s'",
                  state->current_sub->name, flag, value);
-        yyerror(state, errbuf);
         return true;
     }
 }
@@ -2023,22 +2045,18 @@ parse_rank(
 
     if (check_rank_flag(state, value, '*')) {
         if (strlen(value) != 1) {
-            char errbuf[256];
-            snprintf(errbuf, 256,
+            yyerror(state,
                      "parse_rank: in sub %s: * should not be used with "
                      "other rank flags.",
                      state->current_sub->name);
-            yyerror(state, errbuf);
         }
         return 0xFF;
     } else if (check_rank_flag(state, value, '-')) {
         if (strlen(value) != 1) {
-            char errbuf[256];
-            snprintf(errbuf, 256,
+            yyerror(state,
                      "parse_rank: in sub %s: - should not be used with "
                      "other rank flags.",
                      state->current_sub->name);
-            yyerror(state, errbuf);
         }
         return rank;
     } else {
@@ -2059,25 +2077,20 @@ parse_rank(
         if (check_rank_flag(state, value, '7')) rank &= ~RANK_ID_7;
 
         if (state->has_overdrive_difficulty && (check_rank_flag(state, value, '4') || check_rank_flag(state, value, '5'))) {
-            char errbuf[256];
-            snprintf(errbuf, 256,
+            yyerror(state,
                     "parse_rank: in sub %s: Rank flags 4 and 5 are not used in "
                     "TH13+. Use X for extra, and O for overdrive instead.",
                     state->current_sub->name);
-            yyerror(state, errbuf);
         }
         if (!state->has_overdrive_difficulty && (check_rank_flag(state, value, 'X') || check_rank_flag(state, value, 'O'))) {
-            char errbuf[256];
-            snprintf(errbuf, 256,
+            yyerror(state,
                     "parse_rank: in sub %s: Rank flags X and O do not exist "
                     "before TH13. Use 4 and 5 for the unused difficulties flags "
                     "instead.",
                     state->current_sub->name);
-            yyerror(state, errbuf);
         }
         if (check_rank_flag(state, value, 'W') || check_rank_flag(state, value, 'Y') || check_rank_flag(state, value, 'Z')) {
-          char errbuf[256];
-          snprintf(errbuf, 256,
+          yyerror(state,
                    "parse_rank: in sub %s: Rank flags W, X, Y and Z no "
                    "longer refer to unused difficulties 4-7. %s",
                    state->current_sub->name,
@@ -2086,7 +2099,6 @@ parse_rank(
                          "difficulties, X for extra, and O for overdrive."
                        : "Before TH13, use 4, 5, 6, and 7 to refer to the "
                          "unused difficulties.");
-          yyerror(state, errbuf);
         }
 
         return rank;
@@ -2262,21 +2274,18 @@ expression_call_new(
 
     char buf[256];
     if (ret_type == -1) {
-        snprintf(buf, 256, "sub must be declared before being used in an expression: %s", sub_name);
-        yyerror(state, buf);
+        yyerror(state, "sub must be declared before being used in an expression: %s", sub_name);
         ret_type = 'S'; /* Default to something to continue parsing despite the error */
     } else if (ret_type == 0) {
-        sprintf(buf, 256, "sub used in expression can not have void return type: %s", sub_name);
-        yyerror(state, buf);
+        yyerror(state, "sub used in expression can not have void return type: %s", sub_name);
         ret_type = 'S';
     } else if (ret_type == '?') {
-        sprintf(buf, 256, "sub used in expression can not have var return type: %s", sub_name);
-        yyerror(state, buf);
+        yyerror(state, "sub used in expression can not have var return type: %s", sub_name);
         ret_type = 'S';
     }
     expr->result_type = ret_type;
 
-    expr_t* tmp_expr = expr_get_by_symbol(state->version, ret_type == 'S' ? LOADI : LOADF);
+    const expr_t* tmp_expr = expr_get_by_symbol(state->version, ret_type == 'S' ? LOADI : LOADF);
     expr->id = tmp_expr->id;
 
     thecl_param_t* param = param_new(ret_type);
@@ -2384,7 +2393,7 @@ expression_output(
         /* Set last expr to all remaining difficulties. */
         char diff_str[5] = "";
         while(diff < diff_amt) {
-            char* next_diff = diffs[diff++];
+            const char* next_diff = diffs[diff++];
             strcat(diff_str, next_diff);
         }
 
@@ -2454,7 +2463,7 @@ expression_optimize(
         || child_expr_2->value->stack
     ) return;
 
-    expr_t* tmp_expr = expr_get_by_id(state->version, expression->id);
+    const expr_t* tmp_expr = expr_get_by_id(state->version, expression->id);
     
     /* Need to get the type from tmp_expr->return_type, since expression->result_type could have been modified by typecasts. */
     thecl_param_t* param = param_new(tmp_expr->return_type);
@@ -2611,9 +2620,7 @@ sub_begin(
         list_for_each(&state->ecl->subs, iter_sub) {
             int diff = strcmp(name, iter_sub->name);
             if(diff == 0 && !iter_sub->forward_declaration) {
-                char buf[256];
-                snprintf(buf, 256, "duplicate sub: %s", name);
-                yyerror(state, buf);
+                yyerror(state, "duplicate sub: %s", name);
                 g_was_error = true;
                 break;
             } else if(diff < 0) {
@@ -2653,7 +2660,7 @@ sub_finish(
         }
     } else if (state->current_sub->is_inline) {
         thecl_instr_t* last_ins = list_tail(&state->current_sub->instrs);
-        expr_t* tmp = expr_get_by_symbol(state->version, GOTO);
+        const expr_t* tmp = expr_get_by_symbol(state->version, GOTO);
         if (last_ins != NULL && last_ins->id == tmp->id) {
             thecl_param_t* label_param = list_head(&last_ins->params);
             if (strcmp(label_param->value.val.z, "inline_end") == 0) {
@@ -2693,7 +2700,7 @@ scope_finish(
 static global_definition_t*
 global_get(
     parser_state_t* state,
-    char* name
+    const char* name
 ) {
     global_definition_t *def;
     list_for_each(&state->global_definitions, def) {
@@ -2736,28 +2743,23 @@ var_create(
     const char* name,
     int type)
 {
-    char buf[256];
     if (!is_post_th10(state->version)) {
-        snprintf(buf, 256, "stack variable declaration is not allowed in version: %i", state->version);
-        yyerror(state, buf);
+        yyerror(state, "stack variable declaration is not allowed in version: %i", state->version);
         exit(2);
     }
     if (g_ecl_simplecreate && type != 0) {
-        snprintf(buf, 256, "only typeless variables are allowed in simple creation mode: %s", name);
-        yyerror(state, buf);
+        yyerror(state, "only typeless variables are allowed in simple creation mode: %s", name);
         exit(2);
     }
     if (var_exists(state, sub, name)) {
-        snprintf(buf, 256, "redeclaration of variable: %s", name);
-        yyerror(state, buf);
+        yyerror(state, "redeclaration of variable: %s", name);
     }
     if (type == 0) {
         yyerror(state, "variables can't be declared as 'void', use 'var' to declare typeless vars.");
         type = '?';
     }
     if (global_get(state, name) != NULL) {
-        snprintf(buf, 256, "identifier %s is already used as a global definition name", name);
-        yyerror(state, buf);
+        yyerror(state, "identifier %s is already used as a global definition name", name);
     }
 
     thecl_variable_t* var = malloc(sizeof(thecl_variable_t));
@@ -2852,9 +2854,7 @@ var_stack(
     if (var != NULL)
         return var->stack;
 
-    char buf[256];
-    snprintf(buf, 256, "variable not found: %s", name);
-    yyerror(state, buf);
+    yyerror(state, "variable not found: %s", name);
     return 0;
 }
 
@@ -2875,9 +2875,7 @@ var_type(
     if (var != NULL)
         return var->type;
 
-    char buf[256];
-    snprintf(buf, 256, "variable not found: %s", name);
-    yyerror(state, buf);
+    yyerror(state, "variable not found: %s", name);
     return 0;
 }
 
@@ -2943,9 +2941,7 @@ set_time(
     int new_time)
 {
     if (new_time == state->instr_time || (state->instr_time > 0 && new_time < state->instr_time)) {
-        char buf[256];
-        snprintf(buf, 256, "illegal timer change: %d to %d", state->instr_time, new_time);
-        yyerror(state, buf);
+        yyerror(state, "illegal timer change: %d to %d", state->instr_time, new_time);
     }
     state->current_sub->time = new_time;
     state->instr_time = new_time;
@@ -2963,7 +2959,7 @@ directive_include(
                 
         FILE* in_org = yyin;
         YYLTYPE loc_org = yylloc;
-        char* input_org = current_input;
+        const char* input_org = current_input;
 
         current_input = include_path;
         yyin = include_file;
@@ -2988,9 +2984,7 @@ directive_include(
         yylloc = loc_org;
         current_input = input_org;
     } else {
-        char buf[256];
-        snprintf(buf, 256, "#include error: couldn't open %s for reading", path);
-        yyerror(state, buf);
+        yyerror(state, "#include error: couldn't open %s for reading", path);
         return 1;
     }
     free(path);
@@ -3005,11 +2999,10 @@ char* name)
     char* path = path_get_full(state, name);
     FILE* map_file = fopen(path, "r");
     if (map_file == NULL) {
-        char buf[256];
-        snprintf(buf, 256, "#eclmap error: couldn't open %s for reading", path);
-        yyerror(state, buf);
+        yyerror(state, "#eclmap error: couldn't open %s for reading", path);
     } else {
         eclmap_load(state->version, g_eclmap, map_file, path);
+        eclmap_rebuild(g_eclmap);
         fclose(map_file);
     }
     free(path);
@@ -3017,26 +3010,34 @@ char* name)
 
 void
 yyerror(
-    parser_state_t* state,
-    const char* str)
+    const parser_state_t* state,
+    const char* format,
+    ...)
 {
     /* TODO: Research standard row and column range formats. */
     if (yylloc.first_line == yylloc.last_line) {
         if (yylloc.first_column == yylloc.last_column) {
             fprintf(stderr,
-                    "%s:%s:%d,%d: %s\n",
+                    "%s:%s:%d,%d: ",
                     argv0, current_input,
-                    yylloc.first_line, yylloc.first_column, str);
+                    yylloc.first_line, yylloc.first_column);
         } else {
             fprintf(stderr,
-                    "%s:%s:%d,%d-%d: %s\n",
+                    "%s:%s:%d,%d-%d: ",
                     argv0, current_input, yylloc.first_line,
-                    yylloc.first_column, yylloc.last_column, str);
+                    yylloc.first_column, yylloc.last_column);
         }
     } else {
         fprintf(stderr,
-                "%s:%s:%d,%d-%d,%d: %s\n",
+                "%s:%s:%d,%d-%d,%d: ",
                 argv0, current_input, yylloc.first_line,
-                yylloc.first_column, yylloc.last_line, yylloc.last_column, str);
+                yylloc.first_column, yylloc.last_line, yylloc.last_column);
     }
+
+    va_list ap;
+    va_start(ap, format);
+    vfprintf(stderr, format, ap);
+    va_end(ap);
+
+    fputc('\n', stderr);
 }
