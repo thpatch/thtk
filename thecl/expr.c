@@ -43,8 +43,8 @@ th10_expressions[] = {
     { RETURN,     10,   0, NULL, 0,  NULL,          "return", 0 },
 
     { GOTO,       12,   0, "ot", 0,  "S",           "goto p0 @ p1", 0 },
-    { UNLESS,     13,   0, "ot", 1,  "S", "unless s0 goto p0 @ p1", 0 },
-    { IF,         14,   0, "ot", 1,  "S",     "if s0 goto p0 @ p1", 0 },
+    { UNLESS,     13,   0, "ot", 1,  "S", "unless (s0) goto p0 @ p1", 1 },
+    { IF,         14,   0, "ot", 1,  "S",     "if (s0) goto p0 @ p1", 1 },
 
     { LOADI,      42, 'S',  "S", 0, NULL, "p0", 0 },
     { ASSIGNI,    43,   0,  "S", 1,  "S", "p0 = s0", 1 },

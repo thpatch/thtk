@@ -312,6 +312,7 @@ static void directive_eclmap(parser_state_t* state, char* name);
 %type <expression> ExpressionCall
 %type <expression> ExpressionSubset
 %type <expression> Expression_Safe
+%type <expression> ParenExpression
 
 %type <param> Instruction_Parameter
 %type <param> Address
@@ -560,26 +561,33 @@ Instructions:
     | Instructions RANK ":" { state->instr_rank = parse_rank(state, $2); } Instruction { state->instr_rank = parse_rank(state, "*"); } ";"
     ;
 
+ParenExpression:
+      "(" Expression ")"
+        { $$ = $2; }
+    | { yyerror(state, "deprecated syntax, use parens around expr"); } Expression
+        { $$ = $2; }
+    ;
+
 Block:
       /* Moving the old if ... gotos to Block, because if else would break with them being in Instruction. */
-      "if" Expression "goto" Label "@" Integer ";" {
+      "if" ParenExpression "goto" Label "@" Integer ";" {
         const expr_t* expr = expr_get_by_symbol(state->version, IF);
         expression_output(state, $2, 1);
         expression_free($2);
         instr_add(state->current_sub, instr_new(state, expr->id, "pp", $4, $6));
       }
-    | "unless" Expression "goto" Label "@" Integer ";" {
+    | "unless" ParenExpression "goto" Label "@" Integer ";" {
         const expr_t* expr = expr_get_by_symbol(state->version, UNLESS);
         expression_output(state, $2, 1);
         expression_free($2);
         instr_add(state->current_sub, instr_new(state, expr->id, "pp", $4, $6));
       }
-    | "if" Expression "goto" IDENTIFIER ";" {
+    | "if" ParenExpression "goto" IDENTIFIER ";" {
         expression_output(state, $2, 1);
         expression_free($2);
         expression_create_goto(state, IF, $4);
       }
-    | "unless" Expression "goto" IDENTIFIER ";" {
+    | "unless" ParenExpression "goto" IDENTIFIER ";" {
         expression_output(state, $2, 1);
         expression_free($2);
         expression_create_goto(state, UNLESS, $4);
@@ -622,7 +630,7 @@ BreakStatement:
       ;
 
 IfBlock:
-    "unless" Expression {
+    "unless" ParenExpression {
           char labelstr[256];
           snprintf(labelstr, 256, "unless_%i_%i", yylloc.first_line, yylloc.first_column);
           list_prepend_new(&state->block_stack, strdup(labelstr));
@@ -636,7 +644,7 @@ IfBlock:
           free(head->data);
           list_del(&state->block_stack, head);
         }
-    | "if" Expression {
+    | "if" ParenExpression {
           char labelstr[256];
           snprintf(labelstr, 256, "if_%i_%i", yylloc.first_line, yylloc.first_column);
           list_prepend_new(&state->block_stack, strdup(labelstr));
@@ -676,7 +684,7 @@ ElseBlock:
       ;
 
 WhileBlock:
-      "while" Expression {
+      "while" ParenExpression {
           char labelstr[256];
           snprintf(labelstr, 256, "while_%i_%i", yylloc.first_line, yylloc.first_column);
           char labelstr_st[256];
@@ -712,7 +720,7 @@ WhileBlock:
 
           list_prepend_new(&state->block_stack, strdup(labelstr));
           label_create(state, labelstr_st);
-    } CodeBlock "while" Expression  {
+    } CodeBlock "while" ParenExpression  {
           char labelstr_st[256];
           char labelstr_end[256];
           list_node_t *head = state->block_stack.head;
@@ -730,7 +738,7 @@ WhileBlock:
     ;
 
 TimesBlock:
-      "times" Expression {
+      "times" ParenExpression {
           if (g_ecl_simplecreate) {
               yyerror(state, "times loops are not allowed in simple creation mode");
               exit(2);
@@ -780,7 +788,7 @@ TimesBlock:
     ;
 
 SwitchBlock:
-    "switch" Expression {
+    "switch" ParenExpression {
           char name[256];
           list_prepend_new(&state->block_stack, NULL); /* The NULL acts as a sentinel of switch cases. */
           snprintf(name, 256, "switch_%i_%i", yylloc.first_line, yylloc.first_column);
