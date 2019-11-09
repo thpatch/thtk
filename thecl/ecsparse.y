@@ -312,7 +312,6 @@ static void directive_eclmap(parser_state_t* state, char* name);
 %type <expression> ExpressionCall
 %type <expression> ExpressionSubset
 %type <expression> Expression_Safe
-%type <expression> ParenExpression
 
 %type <param> Instruction_Parameter
 %type <param> Address
@@ -344,7 +343,7 @@ static void directive_eclmap(parser_state_t* state, char* name);
 %precedence SIN COS SQRT
 %precedence DEC
 
-%expect 16
+%expect 5
 %%
 
 Statements:
@@ -562,33 +561,26 @@ Instructions:
     | Instructions RANK ":" { state->instr_rank = parse_rank(state, $2); } Instruction { state->instr_rank = parse_rank(state, "*"); } ";"
     ;
 
-ParenExpression:
-      "(" Expression ")"
-        { $$ = $2; }
-    |  %expect 8 { yyerror(state, "deprecated syntax, use parens around expr"); } Expression  %expect 2
-        { $$ = $2; }
-    ;
-
 Block:
       /* Moving the old if ... gotos to Block, because if else would break with them being in Instruction. */
-      "if" ParenExpression[cond] "goto" Label[label] "@" Integer[time] ";" {
+      "if" "(" Expression[cond] ")" "goto" Label[label] "@" Integer[time] ";" {
         const expr_t* expr = expr_get_by_symbol(state->version, IF);
         expression_output(state, $cond, 1);
         expression_free($cond);
         instr_add(state->current_sub, instr_new(state, expr->id, "pp", $label, $time));
       }
-    | "unless" ParenExpression[cond] "goto" Label[label] "@" Integer[time] ";" {
+    | "unless" "(" Expression[cond] ")" "goto" Label[label] "@" Integer[time] ";" {
         const expr_t* expr = expr_get_by_symbol(state->version, UNLESS);
         expression_output(state, $cond, 1);
         expression_free($cond);
         instr_add(state->current_sub, instr_new(state, expr->id, "pp", $label, $time));
       }
-    | "if" ParenExpression[cond] "goto" IDENTIFIER[label] ";" {
+    | "if" "(" Expression[cond] ")" "goto" IDENTIFIER[label] ";" {
         expression_output(state, $cond, 1);
         expression_free($cond);
         expression_create_goto(state, IF, $label);
       }
-    | "unless" ParenExpression[cond] "goto" IDENTIFIER[label] ";" {
+    | "unless" "(" Expression[cond] ")" "goto" IDENTIFIER[label] ";" {
         expression_output(state, $cond, 1);
         expression_free($cond);
         expression_create_goto(state, UNLESS, $label);
@@ -631,7 +623,7 @@ BreakStatement:
       ;
 
 IfBlock:
-    "unless" ParenExpression[cond]  %expect 1 {
+    "unless" "(" Expression[cond] ")"  %expect 1 {
           char labelstr[256];
           snprintf(labelstr, 256, "unless_%i_%i", yylloc.first_line, yylloc.first_column);
           list_prepend_new(&state->block_stack, strdup(labelstr));
@@ -645,7 +637,7 @@ IfBlock:
           free(head->data);
           list_del(&state->block_stack, head);
         }
-    | "if" ParenExpression[cond]  %expect 1 {
+    | "if" "(" Expression[cond] ")"  %expect 1 {
           char labelstr[256];
           snprintf(labelstr, 256, "if_%i_%i", yylloc.first_line, yylloc.first_column);
           list_prepend_new(&state->block_stack, strdup(labelstr));
@@ -685,7 +677,7 @@ ElseBlock:
       ;
 
 WhileBlock:
-      "while" ParenExpression[cond] {
+      "while" "(" Expression[cond] ")" {
           char labelstr[256];
           snprintf(labelstr, 256, "while_%i_%i", yylloc.first_line, yylloc.first_column);
           char labelstr_st[256];
@@ -721,7 +713,7 @@ WhileBlock:
 
           list_prepend_new(&state->block_stack, strdup(labelstr));
           label_create(state, labelstr_st);
-    } CodeBlock "while" ParenExpression[cond]  {
+    } CodeBlock "while" "(" Expression[cond] ")" {
           char labelstr_st[256];
           char labelstr_end[256];
           list_node_t *head = state->block_stack.head;
@@ -739,7 +731,7 @@ WhileBlock:
     ;
 
 TimesBlock:
-      "times" ParenExpression[count] {
+      "times" "(" Expression[count] ")" {
           if (g_ecl_simplecreate) {
               yyerror(state, "times loops are not allowed in simple creation mode");
               exit(2);
@@ -789,7 +781,7 @@ TimesBlock:
     ;
 
 SwitchBlock:
-    "switch" ParenExpression[cond] {
+    "switch" "(" Expression[cond] ")" {
           char name[256];
           list_prepend_new(&state->block_stack, NULL); /* The NULL acts as a sentinel of switch cases. */
           snprintf(name, 256, "switch_%i_%i", yylloc.first_line, yylloc.first_column);
@@ -1306,7 +1298,7 @@ Address:
         $$->value.val.f = var_stack(state, state->current_sub, $2);
         free($2);
       }
-    | IDENTIFIER  %expect 2 {
+    | IDENTIFIER  %expect 1 {
         if (var_exists(state, state->current_sub, $1)) {
             int type = var_type(state, state->current_sub, $1);
             if (type == '?') {
