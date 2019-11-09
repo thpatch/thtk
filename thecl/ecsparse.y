@@ -571,27 +571,27 @@ ParenExpression:
 
 Block:
       /* Moving the old if ... gotos to Block, because if else would break with them being in Instruction. */
-      "if" ParenExpression "goto" Label "@" Integer ";" {
+      "if" ParenExpression[cond] "goto" Label[label] "@" Integer[time] ";" {
         const expr_t* expr = expr_get_by_symbol(state->version, IF);
-        expression_output(state, $2, 1);
-        expression_free($2);
-        instr_add(state->current_sub, instr_new(state, expr->id, "pp", $4, $6));
+        expression_output(state, $cond, 1);
+        expression_free($cond);
+        instr_add(state->current_sub, instr_new(state, expr->id, "pp", $label, $time));
       }
-    | "unless" ParenExpression "goto" Label "@" Integer ";" {
+    | "unless" ParenExpression[cond] "goto" Label[label] "@" Integer[time] ";" {
         const expr_t* expr = expr_get_by_symbol(state->version, UNLESS);
-        expression_output(state, $2, 1);
-        expression_free($2);
-        instr_add(state->current_sub, instr_new(state, expr->id, "pp", $4, $6));
+        expression_output(state, $cond, 1);
+        expression_free($cond);
+        instr_add(state->current_sub, instr_new(state, expr->id, "pp", $label, $time));
       }
-    | "if" ParenExpression "goto" IDENTIFIER ";" {
-        expression_output(state, $2, 1);
-        expression_free($2);
-        expression_create_goto(state, IF, $4);
+    | "if" ParenExpression[cond] "goto" IDENTIFIER[label] ";" {
+        expression_output(state, $cond, 1);
+        expression_free($cond);
+        expression_create_goto(state, IF, $label);
       }
-    | "unless" ParenExpression "goto" IDENTIFIER ";" {
-        expression_output(state, $2, 1);
-        expression_free($2);
-        expression_create_goto(state, UNLESS, $4);
+    | "unless" ParenExpression[cond] "goto" IDENTIFIER[label] ";" {
+        expression_output(state, $cond, 1);
+        expression_free($cond);
+        expression_create_goto(state, UNLESS, $label);
       }
     | IfBlock
     | WhileBlock
@@ -631,12 +631,12 @@ BreakStatement:
       ;
 
 IfBlock:
-    "unless" ParenExpression  %expect 1 {
+    "unless" ParenExpression[cond]  %expect 1 {
           char labelstr[256];
           snprintf(labelstr, 256, "unless_%i_%i", yylloc.first_line, yylloc.first_column);
           list_prepend_new(&state->block_stack, strdup(labelstr));
-          expression_output(state, $2, 1);
-          expression_free($2);
+          expression_output(state, $cond, 1);
+          expression_free($cond);
           expression_create_goto(state, IF, labelstr);
       } CodeBlock ElseBlock {
           list_node_t *head = state->block_stack.head;
@@ -645,12 +645,12 @@ IfBlock:
           free(head->data);
           list_del(&state->block_stack, head);
         }
-    | "if" ParenExpression  %expect 1 {
+    | "if" ParenExpression[cond]  %expect 1 {
           char labelstr[256];
           snprintf(labelstr, 256, "if_%i_%i", yylloc.first_line, yylloc.first_column);
           list_prepend_new(&state->block_stack, strdup(labelstr));
-          expression_output(state, $2, 1);
-          expression_free($2);
+          expression_output(state, $cond, 1);
+          expression_free($cond);
           expression_create_goto(state, UNLESS, labelstr);
       } CodeBlock ElseBlock {
           list_node_t *head = state->block_stack.head;
@@ -685,7 +685,7 @@ ElseBlock:
       ;
 
 WhileBlock:
-      "while" ParenExpression {
+      "while" ParenExpression[cond] {
           char labelstr[256];
           snprintf(labelstr, 256, "while_%i_%i", yylloc.first_line, yylloc.first_column);
           char labelstr_st[256];
@@ -695,8 +695,8 @@ WhileBlock:
 
           list_prepend_new(&state->block_stack, strdup(labelstr));
           label_create(state, labelstr_st);
-          expression_output(state, $2, 1);
-          expression_free($2);
+          expression_output(state, $cond, 1);
+          expression_free($cond);
           expression_create_goto(state, UNLESS, labelstr_end);
       } CodeBlock {
           char labelstr_st[256];
@@ -721,15 +721,15 @@ WhileBlock:
 
           list_prepend_new(&state->block_stack, strdup(labelstr));
           label_create(state, labelstr_st);
-    } CodeBlock "while" ParenExpression  {
+    } CodeBlock "while" ParenExpression[cond]  {
           char labelstr_st[256];
           char labelstr_end[256];
           list_node_t *head = state->block_stack.head;
           snprintf(labelstr_st, 256, "%s_st", (char*)head->data);
           snprintf(labelstr_end, 256, "%s_end", (char*)head->data);
 
-          expression_output(state, $5, 1);
-          expression_free($5);
+          expression_output(state, $cond, 1);
+          expression_free($cond);
           expression_create_goto(state, IF, labelstr_st);
           label_create(state, labelstr_end);
 
@@ -739,19 +739,19 @@ WhileBlock:
     ;
 
 TimesBlock:
-      "times" ParenExpression {
+      "times" ParenExpression[count] {
           if (g_ecl_simplecreate) {
               yyerror(state, "times loops are not allowed in simple creation mode");
               exit(2);
           }
-          if ($2->result_type != 'S') {
-              yyerror(state, "invalid iteration count type for a times loop: %c", $2->result_type);
+          if ($count->result_type != 'S') {
+              yyerror(state, "invalid iteration count type for a times loop: %c", $count->result_type);
               exit(2);
           }
 
           char loop_name[256];
           snprintf(loop_name, 256, "times_%i_%i", yylloc.first_line, yylloc.first_column);
-          thecl_variable_t* var = var_create_assign(state, state->current_sub, loop_name, 'S', $2);
+          thecl_variable_t* var = var_create_assign(state, state->current_sub, loop_name, 'S', $count);
 
           char labelstr_st[256];
           char labelstr_end[256];
@@ -789,7 +789,7 @@ TimesBlock:
     ;
 
 SwitchBlock:
-    "switch" ParenExpression {
+    "switch" ParenExpression[cond] {
           char name[256];
           list_prepend_new(&state->block_stack, NULL); /* The NULL acts as a sentinel of switch cases. */
           snprintf(name, 256, "switch_%i_%i", yylloc.first_line, yylloc.first_column);
@@ -797,19 +797,19 @@ SwitchBlock:
           expression_create_goto(state, GOTO, name);
           
           /* The expression value needs to be stored in a variable, in case some kind of RAND variable was passed. */
-          thecl_variable_t* var = var_create(state, state->current_sub, name, $2->result_type);
-          expression_output(state, $2, 1);
-          thecl_param_t* param = param_new($2->result_type);
+          thecl_variable_t* var = var_create(state, state->current_sub, name, $cond->result_type);
+          expression_output(state, $cond, 1);
+          thecl_param_t* param = param_new($cond->result_type);
           param->stack = 1;
           if (param->type == 'S')
               param->value.val.S = var->stack;
           else
               param->value.val.f = (float)var->stack;
           
-          const expr_t* tmp = expr_get_by_symbol(state->version, $2->result_type == 'S' ? ASSIGNI : ASSIGNF);
+          const expr_t* tmp = expr_get_by_symbol(state->version, $cond->result_type == 'S' ? ASSIGNI : ASSIGNF);
           instr_add(state->current_sub, instr_new(state, tmp->id, "p", param));
           list_prepend_new(&state->block_stack, var); /* We will need it later. */
-          expression_free($2);
+          expression_free($cond);
     } "{" {
           scope_begin(state);
     } CaseList "}" {
