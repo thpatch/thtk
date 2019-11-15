@@ -659,7 +659,7 @@ static const id_format_pair_t th08_fmts[] = {
     { 67, "SSf" },
     { 70, "f" },
     { 71, "f" },
-    { 72, "SffffSf" },
+    { 72, "Sffffff" },
     { 73, "Sfff" },
     { 74, "Sff" },
     { 75, "ffff" },
