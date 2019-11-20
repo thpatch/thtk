@@ -1996,20 +1996,21 @@ instr_create_call(
     /* Output expressions from parameters.
      * DO NOT output all expressions, only the ones used. */
     expression_t* expr;
+    list_node_t* node = state->expressions.head;
     while(expr_params--) {
-        expr = list_tail(&state->expressions);
+        expr = (expression_t*)node->data;
         expression_output(state, expr, 0);
         expression_free(expr);
 
-        /* "pop" expression from the list. */
-        list_node_t* last_node = state->expressions.tail;
-        state->expressions.tail = last_node->prev;
-        if (last_node->prev)
-            last_node->prev->next = NULL;
-        else
-            state->expressions.head = NULL;
-        free(last_node);
+        list_node_t* node_prev = node;
+        node = node->next;
+        free(node_prev);
     }
+    state->expressions.head = node;
+    if (node == NULL) /* The list is empty. */
+        state->expressions.tail = NULL;
+    else
+        node->prev = NULL;
 
     instr_add(state->current_sub, instr_new_list(state, type, param_list));
     return false;
