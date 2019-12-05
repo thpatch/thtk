@@ -565,7 +565,7 @@ Instructions:
 ParenExpression:
       "(" Expression ")"
         { $$ = $2; }
-    |  %expect 8 { yyerror(state, "deprecated syntax, use parens around expr"); } Expression  %expect 2
+    |  /*%expect 8*/ { yyerror(state, "deprecated syntax, use parens around expr"); } Expression  /*%expect 2*/
         { $$ = $2; }
     ;
 
@@ -631,7 +631,7 @@ BreakStatement:
       ;
 
 IfBlock:
-    "unless" ParenExpression[cond]  %expect 1 {
+    "unless" ParenExpression[cond]  /*%expect 1*/ {
           char labelstr[256];
           snprintf(labelstr, 256, "unless_%i_%i", yylloc.first_line, yylloc.first_column);
           list_prepend_new(&state->block_stack, strdup(labelstr));
@@ -645,7 +645,7 @@ IfBlock:
           free(head->data);
           list_del(&state->block_stack, head);
         }
-    | "if" ParenExpression[cond]  %expect 1 {
+    | "if" ParenExpression[cond]  /*%expect 1*/ {
           char labelstr[256];
           snprintf(labelstr, 256, "if_%i_%i", yylloc.first_line, yylloc.first_column);
           list_prepend_new(&state->block_stack, strdup(labelstr));
@@ -1306,7 +1306,7 @@ Address:
         $$->value.val.f = var_stack(state, state->current_sub, $2);
         free($2);
       }
-    | IDENTIFIER  %expect 2 {
+    | IDENTIFIER  /*%expect 2*/ {
         if (var_exists(state, state->current_sub, $1)) {
             int type = var_type(state, state->current_sub, $1);
             if (type == '?') {
@@ -1346,11 +1346,11 @@ Address_Type:
     ;
 
 Integer:
-    INTEGER  %expect 1 {
+    INTEGER  /*%expect 1*/ {
         $$ = param_new('S');
         $$->value.val.S = $1;
       }
-    | PLUS_INTEGER  %expect 1 {
+    | PLUS_INTEGER  /*%expect 1*/ {
         $$ = param_new('S');
         $$->value.val.S = $1;
       }
