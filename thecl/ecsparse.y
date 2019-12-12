@@ -794,7 +794,6 @@ SwitchBlock:
           list_prepend_new(&state->block_stack, NULL); /* The NULL acts as a sentinel of switch cases. */
           snprintf(name, 256, "switch_%i_%i", yylloc.first_line, yylloc.first_column);
           list_prepend_new(&state->block_stack, strdup(name));
-          expression_create_goto(state, GOTO, name);
           
           /* The expression value needs to be stored in a variable, in case some kind of RAND variable was passed. */
           thecl_variable_t* var = var_create(state, state->current_sub, name, $cond->result_type);
@@ -810,6 +809,8 @@ SwitchBlock:
           instr_add(state->current_sub, instr_new(state, tmp->id, "p", param));
           list_prepend_new(&state->block_stack, var); /* We will need it later. */
           expression_free($cond);
+
+          expression_create_goto(state, GOTO, name); /* Jump to the case checks. */
     } "{" {
           scope_begin(state);
     } CaseList "}" {
