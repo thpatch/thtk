@@ -1801,7 +1801,26 @@ static void instr_create_inline_call(
             /* Still reusing the same param variable as earlier. */
             param = (thecl_param_t*)param_node->data;
             if (param->stack) {
-                if (param->value.type == 'S' || param->value.type == 'm') {
+                if (param->type == 'D') {
+                    thecl_sub_param_t* D = (thecl_sub_param_t*)param->value.val.m.data;
+                    if (D->from == 'i') {
+                        if (D->val.S < sub->arity*4 && D->val.S >= 0) {
+                            /* Parameter. */
+                            param->stack = param_replace[D->val.S / 4]->stack;
+                            D->val.S = param_replace[D->val.S / 4]->value.val.S;
+                        } else if (D->val.S > 0) {
+                            /* Regular stack variable, needs adjusting the offset. */
+                            D->val.S = stack_replace[D->val.S / 4 - sub->arity]->stack;
+                        }
+                    } else {
+                        if (D->val.f < (float)(sub->arity*4 )&& D->val.f >= 0.0f) {
+                            param->stack = param_replace[(int)D->val.f / 4]->stack;
+                            D->val.f = param_replace[(int)D->val.f / 4]->value.val.f;
+                        } else if (D->val.f > 0.0f) {
+                            D->val.f = (float)stack_replace[(int)D->val.f / 4 - sub->arity]->stack;
+                        }
+                    }
+                } else if (param->value.type == 'S') {
                     if (param->value.val.S < sub->arity*4 && param->value.val.S >= 0) {
                         /* Parameter. */
                         param_node->data = param_copy(param_replace[param->value.val.S / 4]);
