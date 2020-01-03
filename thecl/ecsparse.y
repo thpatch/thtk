@@ -164,6 +164,12 @@ static int directive_include(parser_state_t* state, char* include_path);
 /* Opens and loads an eclmap. */
 static void directive_eclmap(parser_state_t* state, char* name);
 
+/* Returned by Cast_Target2. */ 
+static const char sub_param_ii[] = {'i', 'i'};
+static const char sub_param_if[] = {'i', 'f'};
+static const char sub_param_ff[] = {'f', 'f'};
+static const char sub_param_fi[] = {'f', 'i'};
+
 %}
 
 %define parse.error verbose
@@ -326,9 +332,10 @@ static void directive_eclmap(parser_state_t* state, char* name);
 %type <param> Cast_Type
 
 %type <integer> Cast_Target
-%type <integer> Cast_Target2
 %type <integer> DeclareKeyword
 %type <integer> VarDeclaration
+
+%type <string> Cast_Target2
 
 %left QUESTION
 %left OR
@@ -1132,10 +1139,10 @@ Instruction_Parameters_List:
     ;
 
 Cast_Target2:
-      CAST_II { $$ = 0x6969; }
-    | CAST_IF { $$ = 0x6966; }
-    | CAST_FF { $$ = 0x6666; }
-    | CAST_FI { $$ = 0x6669; }
+      CAST_II { $$ = sub_param_ii; }
+    | CAST_IF { $$ = sub_param_if; }
+    | CAST_FF { $$ = sub_param_ff; }
+    | CAST_FI { $$ = sub_param_fi; }
     ;
 
 Cast_Target:
@@ -1164,21 +1171,23 @@ Cast_Type:
 Instruction_Parameter:
       Load_Type
     | Text
-    | Cast_Target2 Cast_Type {
+    | Cast_Target2[types] Cast_Type[param] {
         $$ = param_new('D');
-        $$->stack = $2->stack;
-        $$->is_expression_param = $2->is_expression_param;
+        $$->stack = $param->stack;
+        $$->is_expression_param = $param->is_expression_param;
         $$->value.type = 'm';
-        $$->value.val.m.length = 2 * sizeof(int32_t);
-        $$->value.val.m.data = malloc(2 * sizeof(int32_t));
-        int32_t* D = (int32_t*)$$->value.val.m.data;
-        D[0] = $1;
-        if ($2->type == 'f') {
-            memcpy(&D[1], &$2->value.val.f, sizeof(float));
+        $$->value.val.m.length = sizeof(thecl_sub_param_t);
+        $$->value.val.m.data = malloc(sizeof(thecl_sub_param_t));
+        thecl_sub_param_t* D = (thecl_sub_param_t*)$$->value.val.m.data;
+        D->zero = 0;
+        D->from = $types[1];
+        D->to = $types[0];
+        if ($param->type == 'f') {
+            D->val.f = $param->value.val.f;
         } else {
-            D[1] = $2->value.val.S;
+            D->val.S = $param->value.val.S;
         }
-        param_free($2);
+        param_free($param);
       }
       | ExpressionSubsetInstParam {
           list_prepend_new(&state->expressions, $1);
@@ -1514,12 +1523,11 @@ instr_new_list(
                 } else if(param->value.type == 'f') {
                     param->value.val.f = param_id;
                 } else if(param->type == 'D') {
-                    int32_t* D = (int32_t*) param->value.val.m.data;
+                    thecl_sub_param_t* D = (thecl_sub_param_t*) param->value.val.m.data;
                     if (param->is_expression_param == 'S') {
-                        D[1] = param_id;
+                        D->val.S = param_id;
                     } else {
-                        float as_float = param_id;
-                        memcpy(&D[1], &as_float, sizeof(float));
+                        D->val.f = (float)param_id;
                     }
                 }
                 param_id--;
@@ -1913,9 +1921,10 @@ instr_create_call(
             param->stack = iter_param->stack;
             param->is_expression_param = iter_param->is_expression_param;
             param->value.type = 'm';
-            param->value.val.m.length = 2 * sizeof(int32_t);
-            param->value.val.m.data = malloc(2 * sizeof(int32_t));
-            int32_t *D = (int32_t *)param->value.val.m.data;
+            param->value.val.m.length = sizeof(thecl_sub_param_t);
+            param->value.val.m.data = malloc(sizeof(thecl_sub_param_t));
+            thecl_sub_param_t* D = (thecl_sub_param_t*)param->value.val.m.data;
+            D->zero = 0;
             bool is_load_expression = false;
             bool is_load_var = false;
             if (param->is_expression_param) {
@@ -1939,50 +1948,24 @@ instr_create_call(
                     }
                 }
             }
-            switch (iter_param->value.type) {
-            case 'S':
+
+            if (iter_param->value.type == 'S' || iter_param->value.type == 'f') {
+                D->to = iter_param->value.type == 'S' ? 'i' : 'f';
                 if (is_load_expression) {
-                    if (current_expr->value->type == 'f') {
-                        D[0] = 0x6966;
-                        memcpy(&D[1], &current_expr->value->value.val.f, sizeof(float));
-                    } else {
-                        D[0] = 0x6969;
-                        D[1] = current_expr->value->value.val.S;
-                    }
+                    D->from = current_expr->value->type == 'S' ? 'i' : 'f';
+                    if (D->from == 'S')
+                        D->val.S = current_expr->value->value.val.S;
+                    else
+                        D->val.f = current_expr->value->value.val.f;
                 } else {
-                    if (param->is_expression_param && current_expr->result_type == 'f') {
-                        D[0] = 0x6966;
-                        float tmp = (int)iter_param->value.val.S;
-                        memcpy(&D[1], &tmp, sizeof(float));
-                        param->is_expression_param = 'f'; /* This is needed to make instr_create_list handle all stack offsets properly. */
-                    } else {
-                        D[0] = 0x6969;
-                        D[1] = iter_param->value.val.S;
-                    }
+                    D->from = D->to;
+                    if (D->from == 'S')
+                        D->val.S = iter_param->value.val.S;
+                    else
+                        D->val.f = iter_param->value.val.f;
                 }
-                break;
-            case 'f':
-                if (is_load_expression) {
-                    if (current_expr->value->type == 'f') {
-                        D[0] = 0x6666;
-                        memcpy(&D[1], &current_expr->value->value.val.f, sizeof(float));
-                    } else {
-                        D[0] = 0x6669;
-                        D[1] = current_expr->value->value.val.S;
-                    }
-                } else {
-                    if (param->is_expression_param && current_expr->result_type == 'S') {
-                        D[0] = 0x6669;
-                        D[1] = (uint32_t)iter_param->value.val.f;
-                        param->is_expression_param = 'S';
-                    } else {
-                        D[0] = 0x6666;
-                        memcpy(&D[1], &iter_param->value.val.f, sizeof(float));
-                    }
-                }
-                break;
-            default:
-                yyerror(state, "invalid sub parameter");
+            } else {
+                yyerror(state, "invalid sub parameter type '%c': only float/int are acceptable.", iter_param->value.type);
                 g_was_error = true;
             }
 
