@@ -433,7 +433,7 @@ Statement:
         global_definition_t *def = malloc(sizeof(global_definition_t));
         strncpy(def->name, $2, 256);
         def->param = $4;
-        list_append_new(&state->global_definitions, def);
+        list_prepend_new(&state->global_definitions, def);
         free($2);
       }
     | DIRECTIVE TEXT {
