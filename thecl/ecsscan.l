@@ -212,12 +212,31 @@ ins_[0-9]+ {
     BEGIN(INITIAL);
     return TEXT;
 }
-<ESCAPE_CHAR>[\"\\] {
-    yylval.string = realloc(yylval.string, strlen(yylval.string) + yyleng + 1);
-    strcat(yylval.string, yytext);
+<ESCAPE_CHAR>[\"\\nr0] {
+    char c;
+    switch(yytext[0]) {
+        case 'n':
+            c = '\n';
+            break;
+        case 'r':
+            c = '\r';
+            break;
+        case '0':
+            c = '\0';
+            break;
+        default:
+            c = yylval.string[0];
+    }
+    size_t len = strlen(yylval.string);
+    yylval.string = realloc(yylval.string, len + yyleng + 1);
+    /* Length of the yytext string must be 1, since only single character strings
+     * match the regex. So we can safely just write one character followed by null
+     * terminator in place of it. */
+    yylval.string[len] = c;
+    yylval.string[len + 1] = '\0';
     BEGIN(STRING);
 }
-<ESCAPE_CHAR>[^\"\\] {
+<ESCAPE_CHAR>[^\"\\nr0] {
     char buf[256];
     snprintf(buf, 256, "invalid character escape: %s", yytext);
     yyerror(NULL, buf);
