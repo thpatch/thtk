@@ -1981,17 +1981,26 @@ th10_instr_serialize(
     unsigned char* param_data = ret->data;
     int param_count = 0;
 
+    seqmap_entry_t* ent = seqmap_get(g_eclmap->ins_names, instr->id);
+    char buf[128];
+    if (ent == NULL)
+        snprintf(buf, sizeof(buf), "%d", instr->id);
+    else
+        snprintf(buf, sizeof(buf), "%d (%s)", instr->id, ent->value);
+
     const char* expected_format = th10_find_format(version, instr->id, 0);
     if (expected_format == NULL)
-        fprintf(stderr, "%s:th10_instr_serialize: in sub %s: instruction with id %d is not known to exist in version %d\n", argv0, sub->name, instr->id, version);
+        fprintf(stderr, "%s:th10_instr_serialize: in sub %s: instruction with id %s is not known to exist in version %d\n", argv0, sub->name, buf, version);
     else {
         list_for_each(&instr->params, param) {
-            if (expected_format[0] == 0)
-                fprintf(stderr, "%s:th10_instr_serialize: in sub %s: too many arguments for opcode %d\n", argv0, sub->name, instr->id);
+            if (expected_format[0] == 0) {
+                fprintf(stderr, "%s:th10_instr_serialize: in sub %s: too many arguments for opcode %s\n", argv0, sub->name, buf);
+                break;
+            }
             if (expected_format[0] != '*') expected_format++;
         }
         if (expected_format[0] != '*' && expected_format[0] != 0)
-            fprintf(stderr, "%s:th10_instr_serialize: in sub %s: too few arguments for opcode %d\n", argv0, sub->name, instr->id);
+            fprintf(stderr, "%s:th10_instr_serialize: in sub %s: too few arguments for opcode %s\n", argv0, sub->name, buf);
     }
 
     if (!g_ecl_simplecreate && (instr->id == TH10_INS_CALL || instr->id == TH10_INS_CALL_ASYNC || instr->id == TH10_INS_CALL_ASYNC_ID)) {

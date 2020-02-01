@@ -1437,8 +1437,11 @@ instr_set_types(
     thecl_instr_t* instr)
 {
     const char* format = state->instr_format(state->version, instr->id, state->is_timeline_sub);
+    if (format == NULL) /* Error message for this is shown somewhere else. */
+        return;
 
     thecl_param_t* param;
+    int param_n = 1;
     list_for_each(&instr->params, param) {
         int new_type;
         /* XXX: How to check for errors?
@@ -1454,16 +1457,28 @@ instr_set_types(
             !(param->type == 'z' && (new_type == 'm' || new_type == 'x' || new_type == 'N' || new_type == 'n')) &&
             !(param->type == 'S' && (new_type == 's' || new_type == 'U' || new_type == 't'))
         ) {
-
+            seqmap_entry_t* ent = seqmap_get(g_eclmap->ins_names, instr->id);
+            char buf[128];
+            if (ent == NULL)
+                snprintf(buf, sizeof(buf), "%d", instr->id);
+            else
+                snprintf(buf, sizeof(buf), "%d (%s)", instr->id, ent->value);
             yyerror(state, "instr_set_types: in sub %s: wrong argument "
-                     "type for opcode %d (expected: %c, got: %c)",
-                     state->current_sub->name, instr->id, new_type, param->type);
+                     "type for parameter %d for opcode %s (expected: %c, got: %c)",
+                     state->current_sub->name, param_n, buf, new_type, param->type);
         }
 
         param->type = new_type;
 
         if (*format != '*')
             ++format;
+
+        /* Do not read past the end of the format string.
+         * "Too many parameters" error will be thrown somewhere else anyway. */ 
+        if (*format == '\0')
+            break;
+
+        ++param_n;
     }
 
     return;
