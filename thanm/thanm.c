@@ -32,6 +32,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 #include <errno.h>
 #include "file.h"
 #include "image.h"
@@ -41,6 +42,7 @@
 #include "value.h"
 #include "mygetopt.h"
 
+anmmap_t* g_anmmap = NULL;
 unsigned int option_force;
 
 static const id_format_pair_t formats_v0[] = {
@@ -728,8 +730,11 @@ anm_stringify_instr(
     anm_instr_t* instr,
     const id_format_pair_t* format
 ) {
-    /* TODO: mnemonic mapping */
-    fprintf(stream, "ins_%d(", instr->type);
+    seqmap_entry_t* ent = seqmap_get(g_anmmap->ins_names, instr->type);
+    if (ent)
+        fprintf(stream, "%s(", ent->value);
+    else
+        fprintf(stream, "ins_%d(", instr->type);
     if (instr->length > sizeof(anm_instr_t)) {
         value_t* values;
         values = value_list_from_data(value_from_data, (unsigned char*)instr->data, instr->length - sizeof(anm_instr_t), format);
@@ -743,8 +748,12 @@ anm_stringify_instr(
             char* disp;
             disp = value_to_text(&values[i]);
             if (instr->param_mask & 1 << i) {
-                /* TODO: globalvar name mapping */
-                fprintf(stream, "[%s]", disp);
+                int val = values[i].type == 'f' ? floorf(values[i].val.f) : values[i].val.S;
+                ent = seqmap_get(g_anmmap->gvar_names, val);
+                if (ent)
+                    fprintf(stream, "%c%s", values[i].type == 'f' ? '%' : '$', ent->value);
+                else
+                    fprintf(stream, "[%s]", disp);
             } else {
                 fprintf(stream, "%s", disp);
             }
@@ -1417,14 +1426,15 @@ static void
 print_usage(void)
 {
 #ifdef HAVE_LIBPNG
-#define USAGE_LIBPNGFLAGS " | -x | -r | -c [-o]"
+#define USAGE_LIBPNGFLAGS " | -x | -r | -c [-om]"
 #else
 #define USAGE_LIBPNGFLAGS ""
 #endif
-    printf("Usage: %s [-Vf] [-l [-o]" USAGE_LIBPNGFLAGS "] ARCHIVE ...\n"
+    printf("Usage: %s [-Vf] [-l [-om]" USAGE_LIBPNGFLAGS "] ARCHIVE ...\n"
            "Options:\n"
            "  -l ARCHIVE            list archive\n"
-           "  -o                    use old spec format", argv0);
+           "  -o                    use old spec format"
+           "  -m                    use map file for translating mnemonics", argv0);
 #ifdef HAVE_LIBPNG
     printf("  -x ARCHIVE [FILE...]  extract entries\n"
            "  -r ARCHIVE NAME FILE  replace entry in archive\n"
@@ -1435,12 +1445,20 @@ print_usage(void)
            "Report bugs to <" PACKAGE_BUGREPORT ">.\n");
 }
 
+static void
+free_globals() {
+    anmmap_free(g_anmmap);
+}
+
 int
 main(
     int argc,
     char* argv[])
 {
-    const char commands[] = ":lo"
+    g_anmmap = anmmap_new();
+    atexit(free_globals);
+
+    const char commands[] = ":lom:"
 #ifdef HAVE_LIBPNG
                             "xrc"
 #endif
@@ -1478,6 +1496,18 @@ main(
         case 'o':
             option_old = 1;
             break;
+        case 'm': {
+            FILE* map_file = NULL;
+            map_file = fopen(util_optarg, "r");
+            if (!map_file) {
+                fprintf(stderr, "%s: couldn't open %s for reading: %s\n",
+                    argv0, util_optarg, strerror(errno));
+                exit(1);
+            }
+            anmmap_load(g_anmmap, map_file, util_optarg);
+            fclose(map_file);
+            break;
+        }
         case 'f':
             option_force = 1;
             break;

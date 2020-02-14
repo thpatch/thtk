@@ -26,50 +26,21 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
  * DAMAGE.
  */
-#ifndef THANM_H_
-#define THANM_H_
+
+#ifndef ANMMAP_H_
+#define ANMMAP_H_
 
 #include <config.h>
-#include <anm_types.h>
-#include "anmmap.h"
-#include "list.h"
+#include "seqmap.h"
 
-extern anmmap_t* g_anmmap;
-extern unsigned int option_force;
+typedef struct anmmap_t {
+    seqmap_t* ins_names;
+    seqmap_t* gvar_names;
+    seqmap_t* gvar_types;
+} anmmap_t;
 
-typedef struct {
-    anm_offset_t* offset;
-    list_t instrs;
-} anm_script_t;
-
-typedef struct {
-    uint16_t type;
-    const char* format;
-} opcode_fmt_t;
-
-typedef struct {
-    anm_header06_t* header;
-    thtx_header_t* thtx;
-
-    char* name;
-    char* name2;
-
-    /* List of sprite_t*. */
-    list_t sprites;
-    /* List of anm_script_t*. */
-    list_t scripts;
-
-    unsigned char* data;
-} anm_entry_t;
-
-typedef struct {
-    unsigned char* map;
-    long map_size;
-
-    /* List of const char*. */
-    list_t names;
-    /* List of anm_entry_t*. */
-    list_t entries;
-} anm_archive_t;
+anmmap_t* anmmap_new();
+void anmmap_free(anmmap_t* map);
+void anmmap_load(anmmap_t* map, FILE* file, const char* fn);
 
 #endif

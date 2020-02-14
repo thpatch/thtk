@@ -1,7 +1,7 @@
 include_directories(${PNG_INCLUDE_DIRS})
 add_executable(thanm
-  thanm.c image.c
-  thanm.h image.h
+  thanm.c image.c anmmap.c
+  thanm.h image.h anmmap.h
 )
 target_link_libraries(thanm util ${PNG_LIBRARY})
 link_setargv(thanm)
