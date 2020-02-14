@@ -601,8 +601,32 @@ anm_read_file(
     return archive;
 }
 
+static const id_format_pair_t*
+anm_get_formats(
+    uint32_t version
+) {
+    switch(version) {
+        case 0:
+            return formats_v0;
+        case 2:
+            return formats_v2;
+        case 3:
+            return formats_v3;
+        case 4:
+        case 7:
+            return formats_v4p;
+        case 8:
+            return formats_v8;
+        default:
+            fprintf(stderr,
+                "%s:%s: could not find a format description for version %u\n",
+                argv0, current_input, version);
+            abort();
+    }
+}
+
 static void
-anm_dump(
+anm_dump_old(
     FILE* stream,
     const anm_archive_t* anm)
 {
@@ -610,24 +634,7 @@ anm_dump(
     anm_entry_t* entry;
 
     list_for_each(&anm->entries, entry) {
-        const id_format_pair_t* formats = NULL;
-
-        if (entry->header->version == 0) {
-            formats = formats_v0;
-        } else if (entry->header->version == 2) {
-            formats = formats_v2;
-        } else if (entry->header->version == 3) {
-            formats = formats_v3;
-        } else if (entry->header->version == 4 || entry->header->version == 7) {
-            formats = formats_v4p;
-        } else if (entry->header->version == 8) {
-            formats = formats_v8;
-        } else {
-            fprintf(stderr,
-                "%s:%s: could not find a format description for version %u\n",
-                argv0, current_input, entry->header->version);
-            abort();
-        }
+        const id_format_pair_t* formats = anm_get_formats(entry->header->version);
 
         fprintf(stream, "ENTRY #%u, VERSION %u\n", entry_num++, entry->header->version);
         fprintf(stream, "Name: %s\n", entry->name);
@@ -709,6 +716,141 @@ anm_dump(
             }
 
             fprintf(stream, "\n");
+        }
+
+        fprintf(stream, "\n");
+    }
+}
+
+static void
+anm_stringify_instr(
+    FILE* stream,
+    anm_instr_t* instr,
+    const id_format_pair_t* format
+) {
+    /* TODO: mnemonic mapping */
+    fprintf(stream, "ins_%d(", instr->type);
+    if (instr->length > sizeof(anm_instr_t)) {
+        value_t* values;
+        values = value_list_from_data(value_from_data, (unsigned char*)instr->data, instr->length - sizeof(anm_instr_t), format);
+        if (!values)
+            abort();
+
+        for (size_t i = 0; values[i].type; ++i) {
+            if (i)
+                fprintf(stream, ", ");
+
+            char* disp;
+            disp = value_to_text(&values[i]);
+            if (instr->param_mask & 1 << i) {
+                /* TODO: globalvar name mapping */
+                fprintf(stream, "[%s]", disp);
+            } else {
+                fprintf(stream, "%s", disp);
+            }
+            value_free(&values[i]);
+            free(disp);
+        }
+
+        free(values);
+    }
+    fprintf(stream, ");\n");
+}
+
+static void
+anm_dump(
+    FILE* stream,
+    const anm_archive_t* anm)
+{
+    unsigned int entry_num = 0;
+    anm_entry_t* entry;
+
+    list_for_each(&anm->entries, entry) {
+        const id_format_pair_t* formats = anm_get_formats(entry->header->version);
+
+        fprintf(stream, "ENTRY #%u, VERSION %u\n", entry_num++, entry->header->version);
+        fprintf(stream, "Name: %s\n", entry->name);
+        if (entry->name2)
+            fprintf(stream, "Name2: %s\n", entry->name2);
+        fprintf(stream, "Format: %u\n", entry->header->format);
+        fprintf(stream, "Width: %u\n", entry->header->w);
+        fprintf(stream, "Height: %u\n", entry->header->h);
+        if (entry->header->x != 0)
+            fprintf(stream, "X-Offset: %u\n", entry->header->x);
+        if (!entry->name2 && entry->header->y != 0)
+            fprintf(stream, "Y-Offset: %u\n", entry->header->y);
+        if (entry->header->version < 7) {
+            fprintf(stream, "ColorKey: %08x\n", entry->header->colorkey);
+        }
+        if (entry->header->zero3 != 0)
+            fprintf(stream, "Zero3: %u\n", entry->header->zero3);
+        if (entry->header->version >= 1)
+            fprintf(stream, "MemoryPriority: %u\n", entry->header->memorypriority);
+        if (entry->header->version >= 8)
+            fprintf(stream, "LowResScale: %u\n", entry->header->lowresscale);
+        if (entry->header->hasdata) {
+            fprintf(stream, "HasData: %u\n", entry->header->hasdata);
+            fprintf(stream, "THTX-Size: %u\n", entry->thtx->size);
+            fprintf(stream, "THTX-Format: %u\n", entry->thtx->format);
+            fprintf(stream, "THTX-Width: %u\n", entry->thtx->w);
+            fprintf(stream, "THTX-Height: %u\n", entry->thtx->h);
+            fprintf(stream, "THTX-Zero: %u\n", entry->thtx->zero);
+        }
+
+        fprintf(stream, "\n");
+
+        sprite_t* sprite;
+        list_for_each(&entry->sprites, sprite) {
+            fprintf(stream, "Sprite: %u %.f*%.f+%.f+%.f\n",
+                sprite->id,
+                sprite->w, sprite->h,
+                sprite->x, sprite->y);
+        }
+
+        fprintf(stream, "\n");
+
+        anm_script_t* script;
+        list_for_each(&entry->scripts, script) {
+
+            fprintf(stream, "script script%d() {\n", script->offset->id);
+
+            uint16_t instr_time = 0;
+            int is_preexecute = 0;
+            unsigned int instr_num = 0;
+            anm_instr_t* instr;
+            list_for_each(&script->instrs, instr) {
+                const char* format = find_format(formats, instr->type);
+
+                if (!format) {
+                    fprintf(stderr, "%s: id %d was not found in the format table\n", argv0, instr->type);
+                    abort();
+                }
+
+                if (instr->time == -1) {
+                    /* Time -1 is a special value that makes the game "preexecute"
+                     * the instruction. Basically the game creates a template instance
+                     * of the ANM script that only executes the time=-1 instructions,
+                     * and then all other created instances are based on that one
+                     * (and obviously don't execute the time=-1 instrs) */
+                     if (!is_preexecute) {
+                         is_preexecute = 1;
+                         fprintf(stream, "-1:\n");
+                     }
+                } else if (instr_time != instr->time) {
+                    if (is_preexecute) {
+                        fprintf(stream, "%d:\n", instr->time);
+                        is_preexecute = 0;
+                    } else {
+                        fprintf(stream, "+%d: // %d\n", instr->time - instr_time, instr->time);
+                    }
+                    instr_time = instr->time;
+                }
+
+                fprintf(stream, "    ");
+                anm_stringify_instr(stream, instr, format);
+            }
+
+            fprintf(stream, "}\n\n");
         }
 
         fprintf(stream, "\n");
@@ -1275,13 +1417,14 @@ static void
 print_usage(void)
 {
 #ifdef HAVE_LIBPNG
-#define USAGE_LIBPNGFLAGS " | -x | -r | -c"
+#define USAGE_LIBPNGFLAGS " | -x | -r | -c [-o]"
 #else
 #define USAGE_LIBPNGFLAGS ""
 #endif
-    printf("Usage: %s [-Vf] [-l" USAGE_LIBPNGFLAGS "] ARCHIVE ...\n"
+    printf("Usage: %s [-Vf] [-l [-o]" USAGE_LIBPNGFLAGS "] ARCHIVE ...\n"
            "Options:\n"
-           "  -l ARCHIVE            list archive\n", argv0);
+           "  -l ARCHIVE            list archive\n"
+           "  -o                    use old spec format", argv0);
 #ifdef HAVE_LIBPNG
     printf("  -x ARCHIVE [FILE...]  extract entries\n"
            "  -r ARCHIVE NAME FILE  replace entry in archive\n"
@@ -1297,7 +1440,7 @@ main(
     int argc,
     char* argv[])
 {
-    const char commands[] = ":l"
+    const char commands[] = ":lo"
 #ifdef HAVE_LIBPNG
                             "xrc"
 #endif
@@ -1317,7 +1460,8 @@ main(
 
     argv0 = util_shortname(argv[0]);
     int opt;
-    int ind=0;
+    int ind = 0;
+    int option_old = 0;
     while(argv[util_optind]) {
         switch(opt = util_getopt(argc,argv,commands)) {
         case 'l':
@@ -1330,6 +1474,9 @@ main(
                 exit(1);
             }
             command = opt;
+            break;
+        case 'o':
+            option_old = 1;
             break;
         case 'f':
             option_force = 1;
@@ -1356,7 +1503,11 @@ main(
         }
         anm = anm_read_file(in);
         fclose(in);
-        anm_dump(stdout, anm);
+        if (option_old)
+            anm_dump_old(stdout, anm);
+        else
+            anm_dump(stdout, anm);
+
         anm_free(anm);
         exit(0);
 #ifdef HAVE_LIBPNG
