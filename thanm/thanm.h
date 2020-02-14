@@ -32,6 +32,7 @@
 #include <config.h>
 #include <anm_types.h>
 #include "anmmap.h"
+#include "value.h"
 #include "list.h"
 
 extern anmmap_t* g_anmmap;
@@ -39,7 +40,10 @@ extern unsigned int option_force;
 
 typedef struct {
     anm_offset_t* offset;
+    /* instrs of thanm_instr_t format */
     list_t instrs;
+    /* instrs of anm_instr_t format */
+    list_t raw_instrs;
 } anm_script_t;
 
 typedef struct {
@@ -71,5 +75,26 @@ typedef struct {
     /* List of anm_entry_t*. */
     list_t entries;
 } anm_archive_t;
+
+enum {
+    THANM_INSTR_INSTR,
+    THANM_INSTR_TIME,
+    THANM_INSTR_LABEL
+};
+
+typedef struct {
+    int type;
+    uint16_t id;
+    uint16_t param_mask;
+    int16_t time;
+    uint32_t offset;
+    list_t params;
+} thanm_instr_t;
+
+typedef struct {
+    int type;
+    int is_var;
+    value_t* val;
+} thanm_param_t;
 
 #endif

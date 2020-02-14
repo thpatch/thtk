@@ -440,6 +440,30 @@ convert_header_to_11(
 }
 #endif
 
+static const id_format_pair_t*
+anm_get_formats(
+    uint32_t version
+) {
+    switch (version) {
+    case 0:
+        return formats_v0;
+    case 2:
+        return formats_v2;
+    case 3:
+        return formats_v3;
+    case 4:
+    case 7:
+        return formats_v4p;
+    case 8:
+        return formats_v8;
+    default:
+        fprintf(stderr,
+            "%s:%s: could not find a format description for version %u\n",
+            argv0, current_input, version);
+        abort();
+    }
+}
+
 static char*
 anm_get_name(
     anm_archive_t* archive,
@@ -454,6 +478,100 @@ anm_get_name(
     other_name = strdup(name);
     list_append_new(&archive->names, other_name);
     return other_name;
+}
+
+static thanm_param_t*
+thanm_param_new(
+    int type
+) {
+    thanm_param_t* ret = (thanm_param_t*)util_malloc(sizeof(thanm_param_t));
+    ret->is_var = 0;
+    ret->type = type;
+    return ret;
+}
+
+static void
+thanm_param_free(
+    thanm_param_t* param
+) {
+    value_free(param->val);
+    free(param);
+}
+
+static void
+thanm_serialize_params(
+    anm_instr_t* raw_instr,
+    list_t* param_list,
+    const char* format
+) {
+    if (raw_instr->length > sizeof(anm_instr_t)) {
+        value_t* values;
+        values = value_list_from_data(value_from_data, (unsigned char*)raw_instr->data, raw_instr->length - sizeof(anm_instr_t), format);
+        if (!values)
+            abort();
+
+        for (size_t i = 0; values[i].type; ++i) {
+            thanm_param_t* param = thanm_param_new(values[i].type);
+            if (raw_instr->param_mask & 1 << i) {
+                param->is_var = 1;
+            }
+
+            param->val = &values[i];
+
+            list_append_new(param_list, param);
+        }
+    }
+}
+
+static thanm_instr_t*
+thanm_instr_new() {
+    thanm_instr_t* ret = (thanm_instr_t*)util_malloc(sizeof(thanm_instr_t));
+    list_init(&ret->params);
+    return ret;
+}
+
+static thanm_instr_t*
+thanm_instr_new_raw(
+    anm_instr_t* raw_instr,
+    const char* format
+) {
+    thanm_instr_t* ret = thanm_instr_new();
+    ret->type = THANM_INSTR_INSTR;
+    ret->time = raw_instr->time;
+    ret->id = raw_instr->type;
+    thanm_serialize_params(raw_instr, &ret->params, format);
+    return ret;
+}
+
+static thanm_instr_t*
+thanm_instr_new_time(
+    int16_t time
+) {
+    thanm_instr_t* ret = thanm_instr_new();
+    ret->type = THANM_INSTR_TIME;
+    ret->time = time;
+    ret->id = -1;
+    return ret;
+}
+
+static thanm_instr_t*
+thanm_instr_new_label() {
+    thanm_instr_t* ret = thanm_instr_new();
+    ret->type = THANM_INSTR_LABEL;
+    ret->time = 0;
+    ret->id = -1;
+    return ret;
+}
+
+static void
+thanm_instr_free(
+    thanm_instr_t* instr
+) {
+    thanm_param_t* param;
+    list_for_each(&instr->params, param)
+        thanm_param_free(param);
+
+    free(instr);
 }
 
 static anm_archive_t*
@@ -520,6 +638,8 @@ anm_read_file(
             }
         }
 
+        id_format_pair_t* formats = anm_get_formats(header->version);
+
         list_init(&entry->scripts);
         if (header->scripts) {
             anm_offset_t* script_offsets = 
@@ -528,6 +648,7 @@ anm_read_file(
                 anm_script_t* script = malloc(sizeof(*script));
                 script->offset = &(script_offsets[s]);
                 list_init(&script->instrs);
+                list_init(&script->raw_instrs);
 
                 unsigned char* limit = map;
                 if (s < header->scripts - 1)
@@ -540,8 +661,10 @@ anm_read_file(
                     limit += file_size;
 
                 unsigned char* instr_ptr = map + script->offset->offset;
+                anm_instr_t* instr;
+                size_t len;
+                int16_t time = 0;
                 for (;;) {
-                    anm_instr_t* instr;
                     if (header->version == 0) {
                         anm_instr0_t* temp_instr = (anm_instr0_t*)instr_ptr;
 
@@ -550,28 +673,41 @@ anm_read_file(
                             instr_ptr + sizeof(anm_instr0_t) + temp_instr->length > limit)
                             break;
 
-                        instr = malloc(sizeof(anm_instr_t) + temp_instr->length);
+                        instr = util_malloc(sizeof(anm_instr_t) + temp_instr->length);
                         instr->type = temp_instr->type;
                         instr->length = sizeof(anm_instr_t) + temp_instr->length;
                         instr->time = temp_instr->time;
                         instr->param_mask = 0;
                         memcpy(instr->data, temp_instr->data, temp_instr->length);
-
-                        list_append_new(&script->instrs, instr);
-
-                        instr_ptr += sizeof(anm_instr0_t) + temp_instr->length;
+                        
+                        len = sizeof(anm_instr0_t) + temp_instr->length;
                     } else {
-                        anm_instr_t* temp_instr = (anm_instr_t*)instr_ptr;
+                        instr = (anm_instr_t*)instr_ptr;
 
                         if (instr_ptr + sizeof(anm_instr_t) > limit ||
-                            temp_instr->type == 0xffff ||
-                            instr_ptr + temp_instr->length > limit)
+                            instr->type == 0xffff ||
+                            instr_ptr + instr->length > limit)
                             break;
 
-                        list_append_new(&script->instrs, temp_instr);
-
-                        instr_ptr += temp_instr->length;
+                        len = instr->length;
                     }
+
+                    if (instr->time != time) {
+                        thanm_instr_t* time_instr = thanm_instr_new_time(instr->time);
+                        list_append_new(&script->instrs, time_instr);
+                        time = instr->time;
+                    }
+
+                    const char* format = find_format(formats, instr->type);
+                    thanm_instr_t* thanm_instr = thanm_instr_new_raw(instr, format);
+                    thanm_instr->param_mask = instr->param_mask;
+                    thanm_instr->offset = (uint32_t)((ptrdiff_t)instr_ptr - (ptrdiff_t)(map + script->offset->offset));
+                    list_append_new(&script->instrs, thanm_instr);
+
+                    if (header->version == 0)
+                        free(instr);
+
+                    instr_ptr += len;
                 }
 
                 list_append_new(&entry->scripts, script);
@@ -601,30 +737,6 @@ anm_read_file(
     }
 
     return archive;
-}
-
-static const id_format_pair_t*
-anm_get_formats(
-    uint32_t version
-) {
-    switch(version) {
-        case 0:
-            return formats_v0;
-        case 2:
-            return formats_v2;
-        case 3:
-            return formats_v3;
-        case 4:
-        case 7:
-            return formats_v4p;
-        case 8:
-            return formats_v8;
-        default:
-            fprintf(stderr,
-                "%s:%s: could not find a format description for version %u\n",
-                argv0, current_input, version);
-            abort();
-    }
 }
 
 static void
@@ -685,33 +797,19 @@ anm_dump_old(
             fprintf(stream, "Script: %d\n", script->offset->id);
 
             unsigned int instr_num = 0;
-            anm_instr_t* instr;
+            thanm_instr_t* instr;
             list_for_each(&script->instrs, instr) {
-                const char* format = find_format(formats, instr->type);
-
-                if (!format) {
-                    fprintf(stderr, "%s: id %d was not found in the format table\n", argv0, instr->type);
-                    abort();
-                }
-
+                if (instr->type != THANM_INSTR_INSTR)
+                    continue;
+                
                 fprintf(stream, "Instruction #%u: %hd %hu %hu",
-                    instr_num++, instr->time, instr->param_mask, instr->type);
+                    instr_num++, instr->time, instr->param_mask, instr->id);
 
-                if (instr->length > sizeof(anm_instr_t)) {
-                    value_t* values;
-                    values = value_list_from_data(value_from_data, (unsigned char*)instr->data, instr->length - sizeof(anm_instr_t), format);
-                    if (!values)
-                        abort();
-
-                    for (size_t i = 0; values[i].type; ++i) {
-                        char* disp;
-                        disp = value_to_text(&values[i]);
-                        fprintf(stream, " %s", disp);
-                        value_free(&values[i]);
-                        free(disp);
-                    }
-
-                    free(values);
+                thanm_param_t* param;
+                list_for_each(&instr->params, param) {
+                    char* disp = value_to_text(param->val);
+                    fprintf(stream, " %s", disp);
+                    free(disp);
                 }
 
                 fprintf(stream, "\n");
@@ -727,42 +825,35 @@ anm_dump_old(
 static void
 anm_stringify_instr(
     FILE* stream,
-    anm_instr_t* instr,
-    const id_format_pair_t* format
+    thanm_instr_t* instr
 ) {
-    seqmap_entry_t* ent = seqmap_get(g_anmmap->ins_names, instr->type);
+    seqmap_entry_t* ent = seqmap_get(g_anmmap->ins_names, instr->id);
+
     if (ent)
         fprintf(stream, "%s(", ent->value);
     else
-        fprintf(stream, "ins_%d(", instr->type);
-    if (instr->length > sizeof(anm_instr_t)) {
-        value_t* values;
-        values = value_list_from_data(value_from_data, (unsigned char*)instr->data, instr->length - sizeof(anm_instr_t), format);
-        if (!values)
-            abort();
+        fprintf(stream, "ins_%d(", instr->id);
 
-        for (size_t i = 0; values[i].type; ++i) {
-            if (i)
-                fprintf(stream, ", ");
-
-            char* disp;
-            disp = value_to_text(&values[i]);
-            if (instr->param_mask & 1 << i) {
-                int val = values[i].type == 'f' ? floorf(values[i].val.f) : values[i].val.S;
-                ent = seqmap_get(g_anmmap->gvar_names, val);
-                if (ent)
-                    fprintf(stream, "%c%s", values[i].type == 'f' ? '%' : '$', ent->value);
-                else
-                    fprintf(stream, "[%s]", disp);
+    thanm_param_t* param;
+    list_for_each(&instr->params, param) {
+        char* disp = value_to_text(param->val);
+        if (param->is_var) {
+            int val = param->val->type == 'f' ? floorf(param->val->val.f) : param->val->val.S;
+            ent = seqmap_get(g_anmmap->gvar_names, val);
+            if (ent) {
+                fprintf(stream, "%c%s", param->val->type == 'f' ? '%' : '$', ent->value);
             } else {
-                fprintf(stream, "%s", disp);
+                fprintf(stream, "[%s]", disp);
             }
-            value_free(&values[i]);
-            free(disp);
+        } else {
+            fprintf(stream, "%s", disp);
         }
-
-        free(values);
+        free(disp);
+        if (!list_is_last_iteration()) {
+            fprintf(stream, ", ");
+        }
     }
+
     fprintf(stream, ");\n");
 }
 
@@ -819,47 +910,44 @@ anm_dump(
         fprintf(stream, "\n");
 
         anm_script_t* script;
+        int scriptn = 0;
         list_for_each(&entry->scripts, script) {
 
             fprintf(stream, "script script%d() {\n", script->offset->id);
 
-            uint16_t instr_time = 0;
-            int is_preexecute = 0;
-            unsigned int instr_num = 0;
-            anm_instr_t* instr;
+            thanm_instr_t* instr;
+            int time = 0;
+            int is_negative_time = 0;
             list_for_each(&script->instrs, instr) {
-                const char* format = find_format(formats, instr->type);
+                switch(instr->type) {
+                    case THANM_INSTR_INSTR:
+                        fprintf(stream, "   ");
+                        anm_stringify_instr(stream, instr);
+                        break;
+                    case THANM_INSTR_TIME:
+                        if (instr->time < 0)
+                            is_negative_time = 1;
 
-                if (!format) {
-                    fprintf(stderr, "%s: id %d was not found in the format table\n", argv0, instr->type);
-                    abort();
+                        if (is_negative_time)
+                            fprintf(stream, "%d:\n", instr->time);
+                        else
+                            fprintf(stream, "+%d: // %d\n", instr->time - time, instr->time);
+
+                        time = instr->time;
+
+                        /* This is here so that the instruction after the one with
+                         * negative time is also dumped as an absolute label. */
+                        if (instr->time >= 0)
+                            is_negative_time = 0;
+                        break;
+                    case THANM_INSTR_LABEL:
+                        fprintf(stream, "script%d_%u:\n", scriptn, instr->offset);
+                        break;
                 }
-
-                if (instr->time == -1) {
-                    /* Time -1 is a special value that makes the game "preexecute"
-                     * the instruction. Basically the game creates a template instance
-                     * of the ANM script that only executes the time=-1 instructions,
-                     * and then all other created instances are based on that one
-                     * (and obviously don't execute the time=-1 instrs) */
-                     if (!is_preexecute) {
-                         is_preexecute = 1;
-                         fprintf(stream, "-1:\n");
-                     }
-                } else if (instr_time != instr->time) {
-                    if (is_preexecute) {
-                        fprintf(stream, "%d:\n", instr->time);
-                        is_preexecute = 0;
-                    } else {
-                        fprintf(stream, "+%d: // %d\n", instr->time - instr_time, instr->time);
-                    }
-                    instr_time = instr->time;
-                }
-
-                fprintf(stream, "    ");
-                anm_stringify_instr(stream, instr, format);
             }
 
             fprintf(stream, "}\n\n");
+            ++scriptn;
         }
 
         fprintf(stream, "\n");
@@ -1134,6 +1222,7 @@ anm_create(
             script = malloc(sizeof(*script));
             script->offset = malloc(sizeof(*script->offset));
             list_init(&script->instrs);
+            list_init(&script->raw_instrs);
             list_append_new(&entry->scripts, script);
             if (1 != sscanf(line, "Script: %d", &script->offset->id)) {
                 ERROR("Script parsing failed for %s", line);
@@ -1185,7 +1274,7 @@ anm_create(
                 before = after;
             }
 
-            list_append_new(&script->instrs, instr);
+            list_append_new(&script->raw_instrs, instr);
         } else {
             sscanf(line, "Format: %u", &entry->header->format);
             sscanf(line, "Width: %u", &entry->header->w);
@@ -1294,7 +1383,7 @@ anm_write(
             script->offset->offset = file_tell(stream) - base;
 
             anm_instr_t* instr;
-            list_for_each(&script->instrs, instr) {
+            list_for_each(&script->raw_instrs, instr) {
                 if (entry->header->version == 0) {
                     anm_instr0_t new_instr;
                     new_instr.time = instr->time;
@@ -1387,9 +1476,13 @@ anm_free(
             if (!is_mapped)
                 free(script->offset);
 
+            thanm_instr_t* instr;
+            list_for_each(&script->instrs, instr) {
+                thanm_instr_free(instr);
+            }
             if (!is_mapped || entry->header->version == 0) {
                 anm_instr_t* instr;
-                list_for_each(&script->instrs, instr) {
+                list_for_each(&script->raw_instrs, instr) {
                     free(instr);
                 }
             }
@@ -1446,7 +1539,7 @@ print_usage(void)
 }
 
 static void
-free_globals() {
+free_globals(void) {
     anmmap_free(g_anmmap);
 }
 
