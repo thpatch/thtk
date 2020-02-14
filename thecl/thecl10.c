@@ -1230,11 +1230,13 @@ th10_open(
 
             uint32_t param_mask = instr->param_mask;
             const char* format = th10_find_format(version, instr->id, 0);
-            /* TODO: Handle format == NULL. */
+            
             size_t param_size_total = instr->size - sizeof(th10_instr_t);
             if (format == NULL) {
                 fprintf(stderr, "%s: (total parameter size is %zu)\n",
                     argv0, param_size_total);
+                /* Use default format (dump all params as integers) in order to not crash. */
+                format = "*S";
             }
 
             if (param_size_total > 0) {
