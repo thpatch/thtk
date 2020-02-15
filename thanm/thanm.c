@@ -1024,7 +1024,7 @@ anm_dump(
         anm_script_t* script;
         list_for_each(&entry->scripts, script) {
 
-            fprintf(stream, "script script%d() {\n", script->offset->id);
+            fprintf(stream, "script script%d {\n", script->offset->id);
 
             thanm_instr_t* instr;
             int time = 0;
