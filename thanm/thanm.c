@@ -1257,7 +1257,7 @@ filename_cut(
 }
 
 static anm_archive_t*
-anm_create(
+anm_create_old(
     const char* spec)
 {
     FILE* f;
@@ -1426,6 +1426,14 @@ anm_create(
     fclose(f);
 
     return anm;
+}
+
+static anm_archive_t*
+anm_create(
+    const char* spec
+) {
+    fprintf(stderr, "%s: new format creation is not supported yet\n", argv0);
+    exit(1);
 }
 
 static void
@@ -1847,7 +1855,10 @@ replace_done:
             exit(1);
         }
         current_input = argv[1];
-        anm = anm_create(argv[1]);
+        if (option_old)
+            anm = anm_create_old(argv[1]);
+        else
+            anm = anm_create(argv[1]);
 
         /* Allocate enough space for the THTX data. */
         list_for_each(&anm->entries, entry) {
