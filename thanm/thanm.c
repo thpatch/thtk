@@ -45,6 +45,12 @@
 anmmap_t* g_anmmap = NULL;
 unsigned int option_force;
 
+/* SPECIAL FORMATS:
+ * 'o' - offset (for labels)
+ * 'n' - sprite number, dumped as sprite name string
+ * 'N' - script number, dumped as script name string
+*/
+
 static const id_format_pair_t formats_v0[] = {
     { 0, "" },
     { 1, "S" },
@@ -316,8 +322,8 @@ static const id_format_pair_t formats_v8[] = {
     { 201, "SoS" },
     { 202, "SSoS" },
     { 204, "SSoS" },
-    { 300, "S" },
-    { 301, "SS" },
+    { 300, "n" },
+    { 301, "nS" },
     { 302, "S" },
     { 303, "S" },
     { 304, "S" },
@@ -365,11 +371,11 @@ static const id_format_pair_t formats_v8[] = {
     { 437, "S" },
     { 438, "S" },
     { 439, "S" },
-    { 500, "S" },
-    { 501, "S" },
-    { 502, "S" },
-    { 503, "S" },
-    { 504, "S" },
+    { 500, "N" },
+    { 501, "N" },
+    { 502, "N" },
+    { 503, "N" },
+    { 504, "N" },
     { 505, "Sff" },
     { 507, "S" },
     { 508, "S" },
@@ -511,6 +517,8 @@ thanm_serialize_params(
         ssize_t read;
         switch(format[v]) {
             case 'o':
+            case 'n':
+            case 'N':
                 read = value_from_data((const unsigned char*)&raw_instr->data[i],
                     raw_instr->length - sizeof(anm_instr_t) - i, 'S', value);
                 break;
@@ -552,6 +560,14 @@ anm_stringify_param(
     switch(param->type) {
         case 'o':
             sprintf(buf, "script%d_%u", scriptn, param->val->val.S);
+            dest = buf;
+            break;
+        case 'n':
+            sprintf(buf, "\"sprite%d\"", param->val->val.S);
+            dest = buf;
+            break;
+        case 'N':
+            sprintf(buf, "\"script%d\"", param->val->val.S);
             dest = buf;
             break;
         default:
