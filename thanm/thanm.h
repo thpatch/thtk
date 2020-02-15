@@ -88,6 +88,7 @@ typedef struct {
     uint16_t param_mask;
     int16_t time;
     uint32_t offset;
+    uint32_t size;
     list_t params;
 } thanm_instr_t;
 

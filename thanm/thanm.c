@@ -312,10 +312,10 @@ static const id_format_pair_t formats_v8[] = {
     { 125, "ff" },
     { 130, "ffff" },
     { 131, "ffff" },
-    { 200, "SS" },
-    { 201, "SSS" },
-    { 202, "SSSS" },
-    { 204, "SSSS" },
+    { 200, "oS" },
+    { 201, "SoS" },
+    { 202, "SSoS" },
+    { 204, "SSoS" },
     { 300, "S" },
     { 301, "SS" },
     { 302, "S" },
@@ -504,23 +504,78 @@ thanm_serialize_params(
     list_t* param_list,
     const char* format
 ) {
-    if (raw_instr->length > sizeof(anm_instr_t)) {
-        value_t* values;
-        values = value_list_from_data(value_from_data, (unsigned char*)raw_instr->data, raw_instr->length - sizeof(anm_instr_t), format);
-        if (!values)
+    size_t i = 0;
+    size_t v = 0;
+    while(i < raw_instr->length - sizeof(anm_instr_t)) {
+        value_t* value = (value_t*)malloc(sizeof(value_t));
+        ssize_t read;
+        switch(format[v]) {
+            case 'o':
+                read = value_from_data((const unsigned char*)&raw_instr->data[i],
+                    raw_instr->length - sizeof(anm_instr_t) - i, 'S', value);
+                break;
+            default:
+                read = value_from_data((const unsigned char*)&raw_instr->data[i],
+                    raw_instr->length - sizeof(anm_instr_t) - i, format[v], value);
+                break;
+        }
+
+        if (read == -1) {
+            fprintf(stderr, "%s: value read error\n", argv0);
             abort();
+        }
 
-        for (size_t i = 0; values[i].type; ++i) {
-            thanm_param_t* param = thanm_param_new(values[i].type);
-            if (raw_instr->param_mask & 1 << i) {
-                param->is_var = 1;
-            }
+        i += read;
+        thanm_param_t* param = thanm_param_new(format[v]);
+        if (raw_instr->param_mask & 1 << v) {
+            param->is_var = 1;
+        }
 
-            param->val = &values[i];
+        param->val = value;
 
-            list_append_new(param_list, param);
+        list_append_new(param_list, param);
+        ++v;
+    }
+}
+
+static void
+anm_stringify_param(
+    FILE* stream,
+    thanm_param_t* param,
+    thanm_instr_t* instr,
+    int scriptn
+) {
+    char* disp = NULL;
+    char* dest = NULL;
+    char buf[256];
+
+    switch(param->type) {
+        case 'o':
+            sprintf(buf, "script%d_%u", scriptn, param->val->val.S);
+            dest = buf;
+            break;
+        default:
+            disp = value_to_text(param->val);
+            dest = disp;
+            break;
+    }
+
+    if (param->is_var) {
+        int val = param->val->type == 'f' ? floorf(param->val->val.f) : param->val->val.S;
+        seqmap_entry_t* ent = seqmap_get(g_anmmap->gvar_names, val);
+        if (ent) {
+            fprintf(stream, "%c%s", param->val->type == 'f' ? '%' : '$', ent->value);
+        }
+        else {
+            fprintf(stream, "[%s]", dest);
         }
     }
+    else {
+        fprintf(stream, "%s", dest);
+    }
+
+    if (dest == disp)
+        free(disp);
 }
 
 static thanm_instr_t*
@@ -539,6 +594,8 @@ thanm_instr_new_raw(
     ret->type = THANM_INSTR_INSTR;
     ret->time = raw_instr->time;
     ret->id = raw_instr->type;
+    ret->size = raw_instr->length;
+    ret->param_mask = raw_instr->param_mask;
     thanm_serialize_params(raw_instr, &ret->params, format);
     return ret;
 }
@@ -574,6 +631,52 @@ thanm_instr_free(
     free(instr);
 }
 
+static void
+anm_insert_labels(
+    anm_script_t* script,
+    int scriptn
+) {
+    thanm_instr_t* instr;
+    list_for_each(&script->instrs, instr) {
+        if (instr->type != THANM_INSTR_INSTR)
+            continue;
+
+        thanm_param_t* param;
+        list_for_each(&instr->params, param) {
+            if (param->type == 'o') {
+                uint32_t offset = param->val->val.S;
+                thanm_instr_t* search_instr;
+                list_node_t* node;
+                list_node_t* instr_node;
+                list_for_each_node(&script->instrs, node) {
+                    thanm_instr_t* iter_instr = (thanm_instr_t*)node->data;
+                    if (iter_instr->type == THANM_INSTR_LABEL && iter_instr->offset == offset) {
+                        /* Label already exists. */
+                        break;
+                    }
+                    if (iter_instr->type == THANM_INSTR_INSTR)  {
+                        search_instr = iter_instr;
+                        instr_node = node;
+                        if (search_instr-> type == THANM_INSTR_INSTR && search_instr->offset == offset) {
+                            thanm_instr_t* instr_label = thanm_instr_new_label();
+                            instr_label->offset = offset;
+                            list_prepend_to(&script->instrs, instr_label, instr_node);
+                            break;
+                        }
+                    }
+                }
+                /* There is a possibility that the label has to be inserted after the last instruction,
+                 * and we can know that we need to do that if the loop didn't end with a break (when node is NULL) */
+                if (node == NULL && search_instr->offset + search_instr->size == offset) {
+                    thanm_instr_t* instr_label = thanm_instr_new_label();
+                    instr_label->offset = offset;
+                    list_append_to(&script->instrs, instr_label, instr_node);
+                }
+            }
+        }
+    }
+}
+
 static anm_archive_t*
 anm_read_file(
     FILE* in)
@@ -590,6 +693,7 @@ anm_read_file(
     archive->map = map_base = file_mmap(in, file_size);
     map = map_base;
 
+    int scriptn = 0;
     for (;;) {
         anm_entry_t* entry = malloc(sizeof(*entry));
         anm_header06_t* header = (anm_header06_t*)map;
@@ -700,7 +804,6 @@ anm_read_file(
 
                     const char* format = find_format(formats, instr->type);
                     thanm_instr_t* thanm_instr = thanm_instr_new_raw(instr, format);
-                    thanm_instr->param_mask = instr->param_mask;
                     thanm_instr->offset = (uint32_t)((ptrdiff_t)instr_ptr - (ptrdiff_t)(map + script->offset->offset));
                     list_append_new(&script->instrs, thanm_instr);
 
@@ -710,7 +813,9 @@ anm_read_file(
                     instr_ptr += len;
                 }
 
+                anm_insert_labels(script, scriptn);
                 list_append_new(&entry->scripts, script);
+                ++scriptn;
             }
         }
 
@@ -825,7 +930,8 @@ anm_dump_old(
 static void
 anm_stringify_instr(
     FILE* stream,
-    thanm_instr_t* instr
+    thanm_instr_t* instr,
+    int scriptn
 ) {
     seqmap_entry_t* ent = seqmap_get(g_anmmap->ins_names, instr->id);
 
@@ -836,19 +942,7 @@ anm_stringify_instr(
 
     thanm_param_t* param;
     list_for_each(&instr->params, param) {
-        char* disp = value_to_text(param->val);
-        if (param->is_var) {
-            int val = param->val->type == 'f' ? floorf(param->val->val.f) : param->val->val.S;
-            ent = seqmap_get(g_anmmap->gvar_names, val);
-            if (ent) {
-                fprintf(stream, "%c%s", param->val->type == 'f' ? '%' : '$', ent->value);
-            } else {
-                fprintf(stream, "[%s]", disp);
-            }
-        } else {
-            fprintf(stream, "%s", disp);
-        }
-        free(disp);
+        anm_stringify_param(stream, param, instr, scriptn);
         if (!list_is_last_iteration()) {
             fprintf(stream, ", ");
         }
@@ -865,6 +959,7 @@ anm_dump(
     unsigned int entry_num = 0;
     anm_entry_t* entry;
 
+    int scriptn = 0;
     list_for_each(&anm->entries, entry) {
         const id_format_pair_t* formats = anm_get_formats(entry->header->version);
 
@@ -910,7 +1005,6 @@ anm_dump(
         fprintf(stream, "\n");
 
         anm_script_t* script;
-        int scriptn = 0;
         list_for_each(&entry->scripts, script) {
 
             fprintf(stream, "script script%d() {\n", script->offset->id);
@@ -922,7 +1016,7 @@ anm_dump(
                 switch(instr->type) {
                     case THANM_INSTR_INSTR:
                         fprintf(stream, "   ");
-                        anm_stringify_instr(stream, instr);
+                        anm_stringify_instr(stream, instr, scriptn);
                         break;
                     case THANM_INSTR_TIME:
                         if (instr->time < 0)
