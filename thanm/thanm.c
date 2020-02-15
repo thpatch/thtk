@@ -1032,7 +1032,7 @@ anm_dump(
             list_for_each(&script->instrs, instr) {
                 switch(instr->type) {
                     case THANM_INSTR_INSTR:
-                        fprintf(stream, "   ");
+                        fprintf(stream, "    ");
                         anm_stringify_instr(stream, instr, scriptn);
                         break;
                     case THANM_INSTR_TIME:
