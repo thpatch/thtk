@@ -1636,15 +1636,15 @@ print_usage(void)
 #endif
     printf("Usage: %s [-Vf] [-l [-om]" USAGE_LIBPNGFLAGS "] ARCHIVE ...\n"
            "Options:\n"
-           "  -l ARCHIVE            list archive\n"
-           "  -o                    use old spec format"
-           "  -m                    use map file for translating mnemonics", argv0);
+           "  -l ARCHIVE            list archive\n", argv0);
 #ifdef HAVE_LIBPNG
     printf("  -x ARCHIVE [FILE...]  extract entries\n"
            "  -r ARCHIVE NAME FILE  replace entry in archive\n"
            "  -c ARCHIVE SPEC       create archive\n");
 #endif
-    printf("  -V                    display version information and exit\n"
+    printf("  -o                    use old spec format\n"
+           "  -m                    use map file for translating mnemonics\n"
+           "  -V                    display version information and exit\n"
            "  -f                    ignore errors when possible\n"
            "Report bugs to <" PACKAGE_BUGREPORT ">.\n");
 }
