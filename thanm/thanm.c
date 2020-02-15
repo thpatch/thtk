@@ -1311,111 +1311,117 @@ anm_create_old(
                 unsigned int temp;
                 sscanf(line, "ENTRY #%u, VERSION %u", &temp, &entry->header->version);
             }
-        } else if (util_strcmp_ref(line, stringref("Name: ")) == 0) {
-            size_t offset = stringref("Name: ").len;
-            char *name = filename_cut(line + offset, sizeof(line) - offset);
-            entry->name = anm_get_name(anm, name);
-        } else if (util_strcmp_ref(line, stringref("Name2: ")) == 0) {
-            size_t offset = stringref("Name2: ").len;
-            char *name = filename_cut(line + offset, sizeof(line) - offset);
-            entry->name2 = strdup(name);
-        } else if (util_strcmp_ref(line, stringref("Sprite: ")) == 0) {
-            sprite_t* sprite = malloc(sizeof(*sprite));
-            list_append_new(&entry->sprites, sprite);
-
-            if (5 != sscanf(line, "Sprite: %u %f*%f+%f+%f",
-                         &sprite->id, &sprite->w, &sprite->h,
-                         &sprite->x, &sprite->y)) {
-                ERROR("Sprite parsing failed for %s", line);
+        } else {
+            if (entry == NULL) {
+                ERROR("missing ENTRY\n");
                 exit(1);
             }
-        } else if (util_strcmp_ref(line, stringref("Script: ")) == 0) {
-            script = malloc(sizeof(*script));
-            script->offset = malloc(sizeof(*script->offset));
-            list_init(&script->instrs);
-            list_init(&script->raw_instrs);
-            list_append_new(&entry->scripts, script);
-            if (1 != sscanf(line, "Script: %d", &script->offset->id)) {
-                ERROR("Script parsing failed for %s", line);
-                exit(1);
-            }
-        } else if (util_strcmp_ref(line, stringref("Instruction")) == 0) {
-            char* tmp = line + stringref("Instruction").len;
-            char* before;
-            char* after = NULL;
+            if (util_strcmp_ref(line, stringref("Name: ")) == 0) {
+                size_t offset = stringref("Name: ").len;
+                char *name = filename_cut(line + offset, sizeof(line) - offset);
+                entry->name = anm_get_name(anm, name);
+            } else if (util_strcmp_ref(line, stringref("Name2: ")) == 0) {
+                size_t offset = stringref("Name2: ").len;
+                char *name = filename_cut(line + offset, sizeof(line) - offset);
+                entry->name2 = strdup(name);
+            } else if (util_strcmp_ref(line, stringref("Sprite: ")) == 0) {
+                sprite_t* sprite = malloc(sizeof(*sprite));
+                list_append_new(&entry->sprites, sprite);
 
-            tmp = strchr(tmp, ':');
-            if (!tmp) {
-                ERROR("Instruction parsing failed for %s", line);
-                exit(1);
-            }
-            tmp++;
+                if (5 != sscanf(line, "Sprite: %u %f*%f+%f+%f",
+                             &sprite->id, &sprite->w, &sprite->h,
+                             &sprite->x, &sprite->y)) {
+                    ERROR("Sprite parsing failed for %s", line);
+                    exit(1);
+                }
+            } else if (util_strcmp_ref(line, stringref("Script: ")) == 0) {
+                script = malloc(sizeof(*script));
+                script->offset = malloc(sizeof(*script->offset));
+                list_init(&script->instrs);
+                list_init(&script->raw_instrs);
+                list_append_new(&entry->scripts, script);
+                if (1 != sscanf(line, "Script: %d", &script->offset->id)) {
+                    ERROR("Script parsing failed for %s", line);
+                    exit(1);
+                }
+            } else if (util_strcmp_ref(line, stringref("Instruction")) == 0) {
+                char* tmp = line + stringref("Instruction").len;
+                char* before;
+                char* after = NULL;
 
-            instr = malloc(sizeof(*instr));
+                tmp = strchr(tmp, ':');
+                if (!tmp) {
+                    ERROR("Instruction parsing failed for %s", line);
+                    exit(1);
+                }
+                tmp++;
 
-            instr->length = 0;
-            instr->time = (int16_t)strtol(tmp, &tmp, 10);
-            instr->param_mask = strtol(tmp, &tmp, 10);
-            instr->type = strtol(tmp, &tmp, 10);
+                instr = malloc(sizeof(*instr));
 
-            before = tmp;
+                instr->length = 0;
+                instr->time = (int16_t)strtol(tmp, &tmp, 10);
+                instr->param_mask = strtol(tmp, &tmp, 10);
+                instr->type = strtol(tmp, &tmp, 10);
 
-            for (;;) {
-                int32_t i;
-                float f;
+                before = tmp;
 
-                i = strtol(before, &after, 10);
-                if (after == before) {
-                    break;
-                } else {
-                    instr->length += sizeof(int32_t);
-                    instr = realloc(instr, sizeof(anm_instr_t) + instr->length);
-                    if (*after == 'f' || *after == '.') {
-                        f = strtof(before, &after);
-                        memcpy(instr->data + instr->length - sizeof(float),
-                            &f, sizeof(float));
-                        /* Skip 'f'. */
-                        ++after;
+                for (;;) {
+                    int32_t i;
+                    float f;
+
+                    i = strtol(before, &after, 10);
+                    if (after == before) {
+                        break;
                     } else {
-                        memcpy(instr->data + instr->length - sizeof(int32_t),
-                            &i, sizeof(int32_t));
+                        instr->length += sizeof(int32_t);
+                        instr = realloc(instr, sizeof(anm_instr_t) + instr->length);
+                        if (*after == 'f' || *after == '.') {
+                            f = strtof(before, &after);
+                            memcpy(instr->data + instr->length - sizeof(float),
+                                &f, sizeof(float));
+                            /* Skip 'f'. */
+                            ++after;
+                        } else {
+                            memcpy(instr->data + instr->length - sizeof(int32_t),
+                                &i, sizeof(int32_t));
+                        }
                     }
+
+                    before = after;
                 }
 
-                before = after;
+                list_append_new(&script->raw_instrs, instr);
+            } else {
+                sscanf(line, "Format: %u", &entry->header->format);
+                sscanf(line, "Width: %u", &entry->header->w);
+                sscanf(line, "Height: %u", &entry->header->h);
+                sscanf(line, "X-Offset: %u", &entry->header->x);
+                sscanf(line, "Y-Offset: %u", &entry->header->y);
+
+                SCAN_DEPRECATED("Zero2", "%u", colorkey);
+                if (sscanf(line, "ColorKey: %08x", &entry->header->colorkey) > 0
+                    && entry->header->version >= 7)
+                    ERROR("ColorKey is no longer supported in ANM versions >= 7");
+
+                sscanf(line, "Zero3: %u", &entry->header->zero3);
+
+                SCAN_DEPRECATED("Unknown1", "%u", memorypriority);
+                if (sscanf(line, "MemoryPriority: %u", &entry->header->memorypriority)
+                    && entry->header->version == 0)
+                    ERROR("MemoryPriority is ignored in ANM version 0");
+
+                SCAN_DEPRECATED("Unknown2", "%hu", lowresscale);
+                if(sscanf(line, "LowResScale: %hu", &entry->header->lowresscale)
+                    && entry->header->version < 8)
+                    ERROR("LowResScale is ignored in ANM versions < 8");
+
+                sscanf(line, "HasData: %hu", &entry->header->hasdata);
+                sscanf(line, "THTX-Size: %u", &entry->thtx->size);
+                sscanf(line, "THTX-Format: %hu", &entry->thtx->format);
+                sscanf(line, "THTX-Width: %hu", &entry->thtx->w);
+                sscanf(line, "THTX-Height: %hu", &entry->thtx->h);
+                sscanf(line, "THTX-Zero: %hu", &entry->thtx->zero);
             }
-
-            list_append_new(&script->raw_instrs, instr);
-        } else {
-            sscanf(line, "Format: %u", &entry->header->format);
-            sscanf(line, "Width: %u", &entry->header->w);
-            sscanf(line, "Height: %u", &entry->header->h);
-            sscanf(line, "X-Offset: %u", &entry->header->x);
-            sscanf(line, "Y-Offset: %u", &entry->header->y);
-
-            SCAN_DEPRECATED("Zero2", "%u", colorkey);
-            if (sscanf(line, "ColorKey: %08x", &entry->header->colorkey) > 0
-                && entry->header->version >= 7)
-                ERROR("ColorKey is no longer supported in ANM versions >= 7");
-
-            sscanf(line, "Zero3: %u", &entry->header->zero3);
-
-            SCAN_DEPRECATED("Unknown1", "%u", memorypriority);
-            if (sscanf(line, "MemoryPriority: %u", &entry->header->memorypriority)
-                && entry->header->version == 0)
-                ERROR("MemoryPriority is ignored in ANM version 0");
-
-            SCAN_DEPRECATED("Unknown2", "%hu", lowresscale);
-            if(sscanf(line, "LowResScale: %hu", &entry->header->lowresscale)
-                && entry->header->version < 8)
-                ERROR("LowResScale is ignored in ANM versions < 8");
-
-            sscanf(line, "HasData: %hu", &entry->header->hasdata);
-            sscanf(line, "THTX-Size: %u", &entry->thtx->size);
-            sscanf(line, "THTX-Format: %hu", &entry->thtx->format);
-            sscanf(line, "THTX-Width: %hu", &entry->thtx->w);
-            sscanf(line, "THTX-Height: %hu", &entry->thtx->h);
-            sscanf(line, "THTX-Zero: %hu", &entry->thtx->zero);
         }
         linenum++;
     }
