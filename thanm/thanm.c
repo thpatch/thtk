@@ -1013,7 +1013,7 @@ anm_dump(
 
         sprite_t* sprite;
         list_for_each(&entry->sprites, sprite) {
-            fprintf(stream, "        sprite%u: { x: %.f; y: %.f; w: %.f; h:%.f; };\n",
+            fprintf(stream, "        sprite%u: { x: %.f; y: %.f; w: %.f; h: %.f; };\n",
                 sprite->id,
                 sprite->x, sprite->y,
                 sprite->w, sprite->h);
