@@ -446,7 +446,7 @@ convert_header_to_11(
 }
 #endif
 
-static const id_format_pair_t*
+const id_format_pair_t*
 anm_get_formats(
     uint32_t version
 ) {
@@ -486,7 +486,7 @@ anm_get_name(
     return other_name;
 }
 
-static thanm_param_t*
+thanm_param_t*
 thanm_param_new(
     int type
 ) {
@@ -505,7 +505,7 @@ thanm_param_free(
 }
 
 static void
-thanm_serialize_params(
+thanm_make_params(
     anm_instr_t* raw_instr,
     list_t* param_list,
     const char* format
@@ -563,7 +563,11 @@ anm_stringify_param(
             dest = buf;
             break;
         case 'n':
-            sprintf(buf, "\"sprite%d\"", param->val->val.S);
+            /* Sprite -1 is used as an empty sprite. */
+            if (param->val->val.S == -1)
+                sprintf(buf, "%d", param->val->val.S);
+            else
+                sprintf(buf, "\"sprite%d\"", param->val->val.S);
             dest = buf;
             break;
         case 'N':
@@ -594,7 +598,7 @@ anm_stringify_param(
         free(disp);
 }
 
-static thanm_instr_t*
+thanm_instr_t*
 thanm_instr_new() {
     thanm_instr_t* ret = (thanm_instr_t*)util_malloc(sizeof(thanm_instr_t));
     list_init(&ret->params);
@@ -612,7 +616,7 @@ thanm_instr_new_raw(
     ret->id = raw_instr->type;
     ret->size = raw_instr->length;
     ret->param_mask = raw_instr->param_mask;
-    thanm_serialize_params(raw_instr, &ret->params, format);
+    thanm_make_params(raw_instr, &ret->params, format);
     return ret;
 }
 
@@ -1434,12 +1438,180 @@ anm_create_old(
     return anm;
 }
 
+static label_t*
+label_find(
+    parser_state_t* state,
+    char* name
+) {
+    label_t* label;
+    list_for_each(&state->labels, label) {
+        if (strcmp(label->name, name) == 0)
+            return label;
+    }
+    return NULL;
+}
+
+static symbol_id_pair_t*
+symbol_find(
+    list_t* list,
+    char* name
+) {
+    symbol_id_pair_t* symbol;
+    list_for_each(list, symbol) {
+        if (strcmp(symbol->name, name) == 0)
+            return symbol;
+    }
+    return NULL;
+}
+
+static anm_instr_t*
+anm_serialize_instr(
+    parser_state_t* state,
+    thanm_instr_t* instr
+) {
+    anm_instr_t* raw = (anm_instr_t*)util_malloc(instr->size);
+    raw->type = instr->id;
+    raw->length = instr->size - sizeof(anm_instr_t);
+    raw->time = instr->time;
+    raw->param_mask = 0;
+    thanm_param_t* param;
+    int i = 0;
+    size_t offset = 0;
+    list_for_each(&instr->params, param) {
+        /* Format checking was done by the parser, no need to do it here again. */
+        if (param->is_var)
+            raw->param_mask |= 1 << i;
+
+        switch(param->type) {
+            case 'S':
+                memcpy(&raw->data[offset], &param->val->val.S, sizeof(int32_t));
+                offset += sizeof(int32_t);
+                break;
+            case 'f':
+                memcpy(&raw->data[offset], &param->val->val.f, sizeof(float));
+                offset += sizeof(float);
+                break;
+            case 'o': {
+                label_t* label = label_find(state, param->val->val.z);
+                if (label == NULL) {
+                    fprintf(stderr, "%s: label not found: %s\n", argv0, param->val->val.z);
+                    break;
+                }
+                memcpy(&raw->data[offset], &label->offset, sizeof(int32_t));
+                offset += sizeof(int32_t);
+                break;
+            }
+            case 'n': {
+                symbol_id_pair_t* symbol = symbol_find(&state->sprite_names, param->val->val.z);
+                if (symbol == NULL) {
+                    fprintf(stderr, "%s: sprite not found: %s\n", argv0, param->val->val.z);
+                    break;
+                }
+                memcpy(&raw->data[offset], &symbol->id, sizeof(int32_t));
+                offset += sizeof(int32_t);
+                break;
+            }
+            case 'N': {
+                symbol_id_pair_t* symbol = symbol_find(&state->script_names, param->val->val.z);
+                if (symbol == NULL) {
+                    fprintf(stderr, "%s: script not found: %s\n", argv0, param->val->val.z);
+                    break;
+                }
+                memcpy(&raw->data[offset], &symbol->id, sizeof(int32_t));
+                offset += sizeof(int32_t);
+                break;
+            }
+        }
+        ++i;
+    }
+    return raw;
+}
+
+static void
+anm_serialize_script(
+    parser_state_t* state,
+    anm_script_t* script
+) {
+    thanm_instr_t* instr;
+    list_for_each(&script->instrs, instr) {
+        anm_instr_t* raw_instr = anm_serialize_instr(state, instr);
+        if (raw_instr != NULL)
+            list_append_new(&script->raw_instrs, raw_instr);
+        thanm_instr_free(instr);
+    }
+    list_free_nodes(&script->instrs);
+}
+
 static anm_archive_t*
 anm_create(
     const char* spec
 ) {
-    fprintf(stderr, "%s: new format creation is not supported yet\n", argv0);
-    exit(1);
+    parser_state_t state;
+    state.was_error = 0;
+    state.time = 0;
+    state.sprite_id = 0;
+    state.script_id = 0;
+    list_init(&state.entries);
+    list_init(&state.script_names);
+    list_init(&state.sprite_names);
+    list_init(&state.labels);
+    state.current_entry = NULL;
+    state.current_script = NULL;
+
+    FILE* in = fopen(spec, "r");
+    yyin = in;
+    if (yyparse(&state) || state.was_error)
+        return NULL;
+
+    anm_archive_t* anm = (anm_archive_t*)util_malloc(sizeof(anm_archive_t));
+    anm->map = NULL;
+    anm->map_size = 0;
+    list_init(&anm->names);
+    anm->entries = state.entries;
+
+    anm_entry_t* entry;
+    list_for_each(&anm->entries, entry) {
+        char* name;
+        int found = 0;
+        list_for_each(&anm->names, name) {
+            if (strcmp(entry->name, name) == 0) {
+                free(entry->name);
+                entry->name = name;
+                found = 1;
+                break;
+            }
+        }
+        if (!found)
+            list_append_new(&anm->names, entry->name);
+
+        anm_script_t* script;
+        list_for_each(&entry->scripts, script) {
+            anm_serialize_script(&state, script);
+        }
+    }
+
+    /* Free stuff. */
+    symbol_id_pair_t* symbol;
+    list_for_each(&state.sprite_names, symbol) {
+        free(symbol->name);
+        free(symbol);
+    }
+    list_free_nodes(&state.sprite_names);
+
+    list_for_each(&state.script_names, symbol) {
+        free(symbol->name);
+        free(symbol);
+    }
+    list_free_nodes(&state.script_names);
+
+    label_t* label;
+    list_for_each(&state.labels, label) {
+        free(label->name);
+        free(label);
+    }
+    list_free_nodes(&state.labels);
+
+    return anm;
 }
 
 static void
@@ -1865,6 +2037,9 @@ replace_done:
             anm = anm_create_old(argv[1]);
         else
             anm = anm_create(argv[1]);
+
+        if (anm == NULL)
+            exit(0);
 
         /* Allocate enough space for the THTX data. */
         list_for_each(&anm->entries, entry) {

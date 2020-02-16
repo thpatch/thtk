@@ -38,6 +38,8 @@
 extern anmmap_t* g_anmmap;
 extern unsigned int option_force;
 
+const id_format_pair_t* anm_get_formats(uint32_t version);
+
 typedef struct {
     anm_offset_t* offset;
     /* instrs of thanm_instr_t format */
@@ -92,10 +94,46 @@ typedef struct {
     list_t params;
 } thanm_instr_t;
 
-typedef struct {
+thanm_instr_t* thanm_instr_new();
+
+typedef struct thanm_param_t {
     int type;
     int is_var;
     value_t* val;
 } thanm_param_t;
+
+thanm_param_t* thanm_param_new(int type);
+
+/* Parser things. */
+typedef struct {
+    /* Use to idicate that the compilation should not
+     * continue after parsing is finished. */
+    int was_error;
+    int16_t time;
+    uint32_t offset;
+    uint32_t sprite_id;
+    uint32_t script_id;
+    /* List of anm_entry_t */
+    list_t entries;
+    anm_entry_t* current_entry;
+    anm_script_t* current_script;
+
+    list_t labels;
+    list_t sprite_names;
+    list_t script_names;
+} parser_state_t;
+
+typedef struct symbol_id_pair_t {
+    uint32_t id;
+    char* name;
+} symbol_id_pair_t;
+
+typedef struct label_t {
+    uint32_t offset;
+    char* name;
+} label_t;
+
+extern FILE* yyin;
+extern int yyparse(parser_state_t*);
 
 #endif
