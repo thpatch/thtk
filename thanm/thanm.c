@@ -980,6 +980,8 @@ anm_dump(
     anm_entry_t* entry;
 
     int scriptn = 0;
+    int prev_sprite_id = -1;
+    int prev_script_id = -1;
     list_for_each(&anm->entries, entry) {
         const id_format_pair_t* formats = anm_get_formats(entry->header->version);
 
@@ -1016,9 +1018,8 @@ anm_dump(
         fprintf(stream, "    sprites: {\n");
 
         sprite_t* sprite;
-        int prev_id = -1;
         list_for_each(&entry->sprites, sprite) {
-            if (prev_id + 1 != sprite->id) {
+            if (prev_sprite_id + 1 != sprite->id) {
                 fprintf(stream, "        sprite%u: { x: %.f; y: %.f; w: %.f; h: %.f; id: %d; };\n",
                     sprite->id,
                     sprite->x, sprite->y,
@@ -1030,21 +1031,20 @@ anm_dump(
                     sprite->x, sprite->y,
                     sprite->w, sprite->h);
             }
-            prev_id = sprite->id;
+            prev_sprite_id = sprite->id;
         }
 
         fprintf(stream, "    };\n}\n\n");
 
         anm_script_t* script;
-        prev_id = -1;
         list_for_each(&entry->scripts, script) {
 
-            if (script->offset->id - 1 != prev_id) {
+            if (script->offset->id - 1 != prev_script_id) {
                 fprintf(stream, "script %d script%d {\n", script->offset->id, script->offset->id);
             } else {
                 fprintf(stream, "script script%d {\n", script->offset->id);
             }
-            prev_id = script->offset->id;
+            prev_script_id = script->offset->id;
 
             thanm_instr_t* instr;
             int time = 0;
