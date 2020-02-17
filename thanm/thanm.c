@@ -546,6 +546,18 @@ thanm_make_params(
     }
 }
 
+/* Used to make sure that the string contains a valid identifier after
+ * using sprintf to put a number in it. */
+static void
+replace_minus(
+    char* str
+) {
+    for (size_t i = 0; str[i] != '\0'; ++i) {
+        if (str[i] == '-')
+            str[i] = 'M';
+    }
+}
+
 static void
 anm_stringify_param(
     FILE* stream,
@@ -560,6 +572,7 @@ anm_stringify_param(
     switch(param->type) {
         case 'o':
             sprintf(buf, "script%d_%u", scriptn, param->val->val.S);
+            replace_minus(buf);
             dest = buf;
             break;
         case 'n':
@@ -572,6 +585,7 @@ anm_stringify_param(
             break;
         case 'N':
             sprintf(buf, "\"script%d\"", param->val->val.S);
+            replace_minus(buf);
             dest = buf;
             break;
         default:
@@ -976,6 +990,7 @@ anm_dump(
     FILE* stream,
     const anm_archive_t* anm)
 {
+    char buf[256];
     unsigned int entry_num = 0;
     anm_entry_t* entry;
 
@@ -1039,10 +1054,12 @@ anm_dump(
         anm_script_t* script;
         list_for_each(&entry->scripts, script) {
 
+            sprintf(buf, "script%d", script->offset->id);
+            replace_minus(buf);
             if (script->offset->id - 1 != prev_script_id) {
-                fprintf(stream, "script %d script%d {\n", script->offset->id, script->offset->id);
+                fprintf(stream, "script %d %s {\n", script->offset->id, buf);
             } else {
-                fprintf(stream, "script script%d {\n", script->offset->id);
+                fprintf(stream, "script %s {\n", buf);
             }
             prev_script_id = script->offset->id;
 
