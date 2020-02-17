@@ -214,7 +214,7 @@ Entry:
         entry->header->lowresscale = prop ? prop->value->val.S : 0;
 
         OPTIONAL("hasData", 'S', $prop_list);
-        entry->header->hasdata = prop ? prop->value->val.S : 0;
+        entry->header->hasdata = prop ? prop->value->val.S : 1;
 
         if (entry->header->hasdata) {
             REQUIRE("THTXSize", 'S', $prop_list);

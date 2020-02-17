@@ -1037,8 +1037,9 @@ anm_dump(
             fprintf(stream, "    memoryPriority: %u;\n", entry->header->memorypriority);
         if (entry->header->version >= 8)
             fprintf(stream, "    lowResScale: %u;\n", entry->header->lowresscale);
+
+        fprintf(stream, "    hasData: %u;\n", entry->header->hasdata);
         if (entry->header->hasdata) {
-            fprintf(stream, "    hasData: %u;\n", entry->header->hasdata);
             fprintf(stream, "    THTXSize: %u;\n", entry->thtx->size);
             fprintf(stream, "    THTXFormat: %u;\n", entry->thtx->format);
             fprintf(stream, "    THTXWidth: %u;\n", entry->thtx->w);
