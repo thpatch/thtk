@@ -1666,6 +1666,51 @@ anm_create(
 }
 
 static void
+anm_defaults(
+    anm_archive_t* anm
+) {
+    anm_entry_t* entry;
+    list_for_each(&anm->entries, entry) {
+        image_t* img = png_read(entry->name);
+
+        /* header->w/h must be a multiple of 2 */
+        if (entry->header->w == DEFAULTVAL) {
+            int n = 1;
+            while(img->width > n) {
+                n *= 2;
+            }
+            entry->header->w = n;
+        }
+
+        if (entry->header->h == DEFAULTVAL) {
+            int n = 1;
+            while (img->height > n) {
+                n *= 2;
+            }
+            entry->header->h = n;
+        }
+
+        if (entry->header->hasdata == 1) {
+            if (entry->thtx->format == DEFAULTVAL) {
+                entry->thtx->format = entry->header->format;
+            }
+
+            if (entry->thtx->w == DEFAULTVAL)
+                entry->thtx->w = img->width;
+
+            if (entry->thtx->h == DEFAULTVAL)
+                entry->thtx->h = img->height;
+
+            if (entry->thtx->size == DEFAULTVAL)
+                entry->thtx->size = entry->thtx->w * entry->thtx->h * format_Bpp(entry->thtx->format);
+        }
+
+        free(img->data);
+        free(img);
+    }
+}
+
+static void
 anm_write(
     anm_archive_t* anm,
     const char* filename)
@@ -2092,6 +2137,8 @@ replace_done:
 
         if (anm == NULL)
             exit(0);
+
+        anm_defaults(anm);
 
         /* Allocate enough space for the THTX data. */
         list_for_each(&anm->entries, entry) {

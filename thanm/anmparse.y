@@ -188,14 +188,14 @@ Entry:
         OPTIONAL("name2", 't', $prop_list);
         if (prop) entry->name2 = strdup(prop->value->val.t);
 
-        REQUIRE("format", 'S', $prop_list);
-        entry->header->format = prop->value->val.S;
+        OPTIONAL("format", 'S', $prop_list);
+        entry->header->format = prop ? prop->value->val.S : 1;
 
-        REQUIRE("width", 'S', $prop_list);
-        entry->header->w = prop->value->val.S;
+        OPTIONAL("width", 'S', $prop_list);
+        entry->header->w = prop ? prop->value->val.S : DEFAULTVAL;
 
-        REQUIRE("height", 'S', $prop_list);
-        entry->header->h = prop->value->val.S;
+        OPTIONAL("height", 'S', $prop_list);
+        entry->header->h = prop ? prop->value->val.S : DEFAULTVAL;
 
         OPTIONAL("xOffset", 'S', $prop_list);
         entry->header->x = prop ? prop->value->val.S : 0;
@@ -217,17 +217,17 @@ Entry:
         entry->header->hasdata = prop ? prop->value->val.S : 1;
 
         if (entry->header->hasdata) {
-            REQUIRE("THTXSize", 'S', $prop_list);
-            entry->thtx->size = prop->value->val.S;
+            OPTIONAL("THTXSize", 'S', $prop_list);
+            entry->thtx->size = prop ? prop->value->val.S : DEFAULTVAL;
 
-            REQUIRE("THTXFormat", 'S', $prop_list);
-            entry->thtx->format = prop->value->val.S;
+            OPTIONAL("THTXFormat", 'S', $prop_list);
+            entry->thtx->format = prop ? prop->value->val.S : DEFAULTVAL;
 
-            REQUIRE("THTXWidth", 'S', $prop_list);
-            entry->thtx->w = prop->value->val.S;
+            OPTIONAL("THTXWidth", 'S', $prop_list);
+            entry->thtx->w = prop ? prop->value->val.S : DEFAULTVAL;
         
-            REQUIRE("THTXHeight", 'S', $prop_list);
-            entry->thtx->h = prop->value->val.S;
+            OPTIONAL("THTXHeight", 'S', $prop_list);
+            entry->thtx->h = prop ? prop->value->val.S : DEFAULTVAL;
 
             OPTIONAL("THTXZero", 'S', $prop_list);
             entry->thtx->zero = prop ? prop->value->val.S : 0;
@@ -527,7 +527,6 @@ TextLike:
 
 Directive:
     DIRECTIVE[type] TextLike[arg] {
-        char buf[256];
         if (strcmp($type, "version") == 0) {
             uint32_t ver = strtoul($arg, NULL, 10);
             state->default_version = ver;

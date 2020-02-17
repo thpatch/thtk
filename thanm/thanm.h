@@ -137,6 +137,8 @@ typedef struct label_t {
 
 label_t* label_find(anm_script_t* script, char* name);
 
+#define DEFAULTVAL 0xffff
+
 extern FILE* yyin;
 extern int yyparse(parser_state_t*);
 
