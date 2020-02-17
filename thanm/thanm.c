@@ -996,7 +996,7 @@ anm_dump(
         if (!entry->name2 && entry->header->y != 0)
             fprintf(stream, "    yOffset: %u;\n", entry->header->y);
         if (entry->header->version < 7) {
-            fprintf(stream, "    colorKey: %08x\n;", entry->header->colorkey);
+            fprintf(stream, "    colorKey: 0x%08x;\n", entry->header->colorkey);
         }
         if (entry->header->zero3 != 0)
             fprintf(stream, "    zero3: %u;\n", entry->header->zero3);
@@ -1016,19 +1016,35 @@ anm_dump(
         fprintf(stream, "    sprites: {\n");
 
         sprite_t* sprite;
+        int prev_id = -1;
         list_for_each(&entry->sprites, sprite) {
-            fprintf(stream, "        sprite%u: { x: %.f; y: %.f; w: %.f; h: %.f; };\n",
-                sprite->id,
-                sprite->x, sprite->y,
-                sprite->w, sprite->h);
+            if (prev_id + 1 != sprite->id) {
+                fprintf(stream, "        sprite%u: { x: %.f; y: %.f; w: %.f; h: %.f; id: %d; };\n",
+                    sprite->id,
+                    sprite->x, sprite->y,
+                    sprite->w, sprite->h,
+                    sprite->id);
+            } else {
+                fprintf(stream, "        sprite%u: { x: %.f; y: %.f; w: %.f; h: %.f; };\n",
+                    sprite->id,
+                    sprite->x, sprite->y,
+                    sprite->w, sprite->h);
+            }
+            prev_id = sprite->id;
         }
 
         fprintf(stream, "    };\n}\n\n");
 
         anm_script_t* script;
+        prev_id = -1;
         list_for_each(&entry->scripts, script) {
 
-            fprintf(stream, "script script%d {\n", script->offset->id);
+            if (script->offset->id - 1 != prev_id) {
+                fprintf(stream, "script %d script%d {\n", script->offset->id, script->offset->id);
+            } else {
+                fprintf(stream, "script script%d {\n", script->offset->id);
+            }
+            prev_id = script->offset->id;
 
             thanm_instr_t* instr;
             int time = 0;
@@ -1784,6 +1800,7 @@ anm_free(
                 }
             }
             list_free_nodes(&script->instrs);
+            list_free_nodes(&script->raw_instrs);
 
             free(script);
         }

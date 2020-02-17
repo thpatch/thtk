@@ -138,8 +138,8 @@ Statement:
 Entry:
     "entry" IDENTIFIER[entry_name] "{" PropertyList[prop_list] "}" {
         anm_entry_t* entry = (anm_entry_t*)malloc(sizeof(anm_entry_t));
-        entry->header = (anm_header06_t*)malloc(sizeof(anm_header06_t));
-        entry->thtx = (thtx_header_t*)malloc(sizeof(thtx_header_t));
+        entry->header = (anm_header06_t*)calloc(1, sizeof(anm_header06_t));
+        entry->thtx = (thtx_header_t*)calloc(1, sizeof(thtx_header_t));
 
         entry->thtx->magic[0] = 'T';
         entry->thtx->magic[1] = 'H';
@@ -198,28 +198,31 @@ Entry:
         entry->header->colorkey = prop ? prop->value->val.S : 0;
 
         OPTIONAL("memoryPriority", 'S', $prop_list);
-        entry->header->memorypriority = prop ? prop->value->val.S : 10;
+        entry->header->memorypriority =
+            prop ? prop->value->val.S : (entry->header->version >= 1 ? 10 : 0);
 
         OPTIONAL("lowResScale", 'S', $prop_list);
         entry->header->lowresscale = prop ? prop->value->val.S : 0;
 
-        REQUIRE("hasData", 'S', $prop_list);
-        entry->header->hasdata = prop->value->val.S;
+        OPTIONAL("hasData", 'S', $prop_list);
+        entry->header->hasdata = prop ? prop->value->val.S : 0;
 
-        REQUIRE("THTXSize", 'S', $prop_list);
-        entry->thtx->size = prop->value->val.S;
+        if (entry->header->hasdata) {
+            REQUIRE("THTXSize", 'S', $prop_list);
+            entry->thtx->size = prop->value->val.S;
 
-        REQUIRE("THTXFormat", 'S', $prop_list);
-        entry->thtx->format = prop->value->val.S;
+            REQUIRE("THTXFormat", 'S', $prop_list);
+            entry->thtx->format = prop->value->val.S;
 
-        REQUIRE("THTXWidth", 'S', $prop_list);
-        entry->thtx->w = prop->value->val.S;
+            REQUIRE("THTXWidth", 'S', $prop_list);
+            entry->thtx->w = prop->value->val.S;
         
-        REQUIRE("THTXHeight", 'S', $prop_list);
-        entry->thtx->h = prop->value->val.S;
+            REQUIRE("THTXHeight", 'S', $prop_list);
+            entry->thtx->h = prop->value->val.S;
 
-        OPTIONAL("THTXZero", 'S', $prop_list);
-        entry->thtx->zero = prop ? prop->value->val.S : 0;
+            OPTIONAL("THTXZero", 'S', $prop_list);
+            entry->thtx->zero = prop ? prop->value->val.S : 0;
+        }
 
         OPTIONAL("sprites", 'l', $prop_list);
         if (prop) {
@@ -232,7 +235,11 @@ Entry:
                 char* name = prop->key;
 
                 sprite_t* sprite = (sprite_t*)malloc(sizeof(sprite_t));
+
+                OPTIONAL("id", 'S', inner_list);
+                if (prop) state->sprite_id = prop->value->val.S;
                 sprite->id = state->sprite_id++;
+
                 REQUIRE("x", 'S', inner_list);
                 sprite->x = (float)prop->value->val.S;
                 REQUIRE("y", 'S', inner_list);
@@ -297,7 +304,7 @@ PropertyListValue:
     }
 
 Script:
-    "script" IDENTIFIER[name] {
+    "script" ScriptOptionalId IDENTIFIER[name] {
         anm_script_t* script = (anm_script_t*)malloc(sizeof(anm_script_t));
         list_init(&script->instrs);
         list_init(&script->raw_instrs);
@@ -315,6 +322,12 @@ Script:
         state->time = 0;
     } "{" ScriptStatements "}" {
         state->current_script= NULL;
+    }
+
+ScriptOptionalId:
+    %empty
+    | INTEGER[id] {
+        state->script_id = $id;
     }
 
 ScriptStatements:
@@ -562,7 +575,7 @@ instr_get_size(
     parser_state_t* state,
     thanm_instr_t* instr
 ) {
-    uint32_t size = state->current_entry->header->version == 0 ? sizeof(anm_instr0_t) : sizeof(anm_instr_t);
+    uint32_t size = sizeof(anm_instr_t);
     /* In ANM, parameter size is always 4 bytes (only int32 or float), so we can just add 4 to size for every param... */
     list_node_t* node;
     list_for_each_node(&instr->params, node)
