@@ -308,6 +308,7 @@ Script:
         anm_script_t* script = (anm_script_t*)malloc(sizeof(anm_script_t));
         list_init(&script->instrs);
         list_init(&script->raw_instrs);
+        list_init(&script->labels);
         script->offset = malloc(sizeof(*script->offset));
         script->offset->id = state->script_id++;
 
@@ -342,10 +343,13 @@ ScriptStatement:
         state->time += $time;
     }
     | IDENTIFIER[name] ":" {
+        if (label_find(state->current_script, $name) != NULL) {
+            yyerror(state, "duplicate label: %s", $name);
+        }
         label_t* label = (label_t*)malloc(sizeof(label_t));
         label->name = $name;
         label->offset = state->offset;
-        list_append_new(&state->labels, label);
+        list_append_new(&state->current_script->labels, label);
     }
     | IDENTIFIER[ident] "(" Parameters[params] ")" ";" {
         int id = identifier_instr($ident);

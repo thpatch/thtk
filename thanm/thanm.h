@@ -46,6 +46,8 @@ typedef struct {
     list_t instrs;
     /* instrs of anm_instr_t format */
     list_t raw_instrs;
+    /* list of label_t */
+    list_t labels;
 } anm_script_t;
 
 typedef struct {
@@ -118,7 +120,6 @@ typedef struct {
     anm_entry_t* current_entry;
     anm_script_t* current_script;
 
-    list_t labels;
     list_t sprite_names;
     list_t script_names;
 } parser_state_t;
@@ -132,6 +133,8 @@ typedef struct label_t {
     uint32_t offset;
     char* name;
 } label_t;
+
+label_t* label_find(anm_script_t* script, char* name);
 
 extern FILE* yyin;
 extern int yyparse(parser_state_t*);

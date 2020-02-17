@@ -1487,13 +1487,13 @@ anm_create_old(
     return anm;
 }
 
-static label_t*
+label_t*
 label_find(
-    parser_state_t* state,
+    anm_script_t* script,
     char* name
 ) {
     label_t* label;
-    list_for_each(&state->labels, label) {
+    list_for_each(&script->labels, label) {
         if (strcmp(label->name, name) == 0)
             return label;
     }
@@ -1516,7 +1516,8 @@ symbol_find(
 static anm_instr_t*
 anm_serialize_instr(
     parser_state_t* state,
-    thanm_instr_t* instr
+    thanm_instr_t* instr,
+    anm_script_t* script
 ) {
     anm_instr_t* raw = (anm_instr_t*)util_malloc(instr->size);
     raw->type = instr->id;
@@ -1541,7 +1542,7 @@ anm_serialize_instr(
                 offset += sizeof(float);
                 break;
             case 'o': {
-                label_t* label = label_find(state, param->val->val.z);
+                label_t* label = label_find(script, param->val->val.z);
                 if (label == NULL) {
                     fprintf(stderr, "%s: label not found: %s\n", argv0, param->val->val.z);
                     break;
@@ -1583,12 +1584,19 @@ anm_serialize_script(
 ) {
     thanm_instr_t* instr;
     list_for_each(&script->instrs, instr) {
-        anm_instr_t* raw_instr = anm_serialize_instr(state, instr);
+        anm_instr_t* raw_instr = anm_serialize_instr(state, instr, script);
         if (raw_instr != NULL)
             list_append_new(&script->raw_instrs, raw_instr);
         thanm_instr_free(instr);
     }
     list_free_nodes(&script->instrs);
+
+    label_t* label;
+    list_for_each(&script->labels, label) {
+        free(label->name);
+        free(label);
+    }
+    list_free_nodes(&script->labels);
 }
 
 static anm_archive_t*
@@ -1603,7 +1611,6 @@ anm_create(
     list_init(&state.entries);
     list_init(&state.script_names);
     list_init(&state.sprite_names);
-    list_init(&state.labels);
     state.current_entry = NULL;
     state.current_script = NULL;
 
@@ -1652,13 +1659,6 @@ anm_create(
         free(symbol);
     }
     list_free_nodes(&state.script_names);
-
-    label_t* label;
-    list_for_each(&state.labels, label) {
-        free(label->name);
-        free(label);
-    }
-    list_free_nodes(&state.labels);
 
     return anm;
 }
