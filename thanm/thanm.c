@@ -1606,6 +1606,7 @@ anm_create(
     parser_state_t state;
     state.was_error = 0;
     state.time = 0;
+    state.default_version = -1;
     state.sprite_id = 0;
     state.script_id = 0;
     list_init(&state.entries);

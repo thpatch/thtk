@@ -97,6 +97,7 @@ static int identifier_instr(char* ident);
 %token <integer> INTEGER "integer"
 %token <string> IDENTIFIER "identifier"
 %token <string> TEXT "text"
+%token <string> DIRECTIVE "directive"
 
 %token PLUS "+"
 %token COMMA ","
@@ -116,6 +117,7 @@ static int identifier_instr(char* ident);
 %token ILLEGAL_TOKEN "invalid token"
 %token END_OF_FILE 0 "end of file"
 
+%type <string> TextLike
 %type <param> ParameterLiteral
 %type <param> ParameterVar
 %type <param> Parameter
@@ -134,6 +136,7 @@ Statements:
 Statement:
     Entry
     | Script
+    | Directive
 
 Entry:
     "entry" IDENTIFIER[entry_name] "{" PropertyList[prop_list] "}" {
@@ -153,7 +156,7 @@ Entry:
         entry->data = NULL;
 
         prop_list_entry_t* prop;
-        #define REQUIRE(x, y, l) \
+        #define REQUIRE(x, y, l) { \
             prop = prop_list_find(l, x); \
             if (prop == NULL)  { \
                 yyerror(state, "missing entry property: '" x "'"); \
@@ -161,17 +164,23 @@ Entry:
             } else if (prop->value->type != y) { \
                 yyerror(state, "wrong value type for entry property: '" x "'"); \
                 return 1; \
-            }
+            } \
+        }
 
-        #define OPTIONAL(x, y, l) \
+        #define OPTIONAL(x, y, l) { \
             prop = prop_list_find(l, x); \
             if (prop && prop->value->type != y) { \
                 yyerror(state, "wrong value type for entry property: '" x "'"); \
                 return 1; \
-            }
+            } \
+        }
 
-        REQUIRE("version", 'S', $prop_list);
-        entry->header->version = prop->value->val.S;
+        if (state->default_version == -1)
+            REQUIRE("version", 'S', $prop_list)
+        else
+            OPTIONAL("version", 'S', $prop_list)
+
+        entry->header->version = prop ? prop->value->val.S : state->default_version;
 
         REQUIRE("name", 't', $prop_list);
         entry->name = strdup(prop->value->val.t);
@@ -500,6 +509,35 @@ ParameterVar:
         }
         $$ = param;
     }
+
+TextLike:
+    TEXT {
+        $$ = $1;
+    }
+    | INTEGER {
+        char buf[32];
+        snprintf(buf, sizeof(buf), "%d", $1);
+        $$ = strdup(buf);
+    }
+    | FLOATING {
+        char buf[32];
+        snprintf(buf, sizeof(buf), "%f", $1);
+        $$ = strdup(buf);
+    }
+
+Directive:
+    DIRECTIVE[type] TextLike[arg] {
+        char buf[256];
+        if (strcmp($type, "version") == 0) {
+            uint32_t ver = strtoul($arg, NULL, 10);
+            state->default_version = ver;
+        } else {
+            yyerror(state, "unknown directive: %s", $type);
+        }
+        free($type);
+        free($arg);
+    }
+
 %%
 
 static prop_list_entry_t* 

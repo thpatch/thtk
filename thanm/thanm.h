@@ -112,6 +112,7 @@ typedef struct {
      * continue after parsing is finished. */
     int was_error;
     int16_t time;
+    int32_t default_version;
     uint32_t offset;
     uint32_t sprite_id;
     uint32_t script_id;
