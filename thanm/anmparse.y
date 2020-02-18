@@ -361,6 +361,10 @@ PropertyListValue:
 
 Script:
     "script" ScriptOptionalId IDENTIFIER[name] {
+        if (state->current_entry == NULL) {
+            yyerror(state, "an entry is required before a script");
+            return 1;
+        }
         anm_script_t* script = (anm_script_t*)malloc(sizeof(anm_script_t));
         list_init(&script->instrs);
         list_init(&script->raw_instrs);
