@@ -1611,6 +1611,7 @@ anm_create(
     state.sprite_id = 0;
     state.script_id = 0;
     list_init(&state.entries);
+    list_init(&state.globals);
     list_init(&state.script_names);
     list_init(&state.sprite_names);
     state.current_entry = NULL;
@@ -1662,6 +1663,13 @@ anm_create(
     }
     list_free_nodes(&state.script_names);
 
+    global_t* global;
+    list_for_each(&state.globals, global) {
+        free(global->name);
+        thanm_param_free(global->param);
+    }
+    list_free_nodes(&state.globals);
+
     return anm;
 }
 
@@ -1675,7 +1683,7 @@ anm_defaults(
 
         /* header->w/h must be a multiple of 2 */
         if (entry->header->w == DEFAULTVAL) {
-            int n = 1;
+            unsigned int n = 1;
             while(img->width > n) {
                 n *= 2;
             }
@@ -1683,7 +1691,7 @@ anm_defaults(
         }
 
         if (entry->header->h == DEFAULTVAL) {
-            int n = 1;
+            unsigned int n = 1;
             while (img->height > n) {
                 n *= 2;
             }

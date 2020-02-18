@@ -74,6 +74,12 @@ static thanm_instr_t* instr_new(parser_state_t* state, uint16_t id, list_t* para
 /* Returns instruction number given an identifier, or -1 if it's not an instruction. */
 static int identifier_instr(char* ident);
 
+/* Searches for a global definition with a given name. */
+static global_t* global_find(parser_state_t* state, const char* name);
+
+/* Creates a copy of the given param. */
+static thanm_param_t* param_copy(thanm_param_t* param);
+
 %}
 
 %define parse.error verbose
@@ -99,6 +105,7 @@ static int identifier_instr(char* ident);
 %token <string> TEXT "text"
 %token <string> DIRECTIVE "directive"
 
+%token EQUALS "="
 %token PLUS "+"
 %token COMMA ","
 %token COLON ":"
@@ -113,6 +120,7 @@ static int identifier_instr(char* ident);
 %token DOLLAR "$"
 %token ENTRY "entry"
 %token SCRIPT "script"
+%token GLOBAL "global"
 
 %token ILLEGAL_TOKEN "invalid token"
 %token END_OF_FILE 0 "end of file"
@@ -137,6 +145,12 @@ Statement:
     Entry
     | Script
     | Directive
+    | "global" IDENTIFIER[name] "=" Parameter[param] ";" {
+        global_t* global = (global_t*)malloc(sizeof(global_t));
+        global->name = $name;
+        global->param = $param;
+        list_prepend_new(&state->globals, global);
+    }
 
 Entry:
     "entry" IDENTIFIER[entry_name] "{" PropertyList[prop_list] "}" {
@@ -311,6 +325,39 @@ PropertyListValue:
         $$->type = 'l';
         $$->val.l = $2;
     }
+    | IDENTIFIER {
+        $$ = (prop_list_entry_value_t*)malloc(sizeof(prop_list_entry_value_t));
+        global_t* global = global_find(state, $1);
+        if (global == NULL) {
+            yyerror(state, "global definition not found: %s", $1);
+            $$->type = 'S';
+            $$->val.S = 0;
+        } else {
+            if (global->param->is_var)
+                yyerror(state, "variables are not acceptable in parameter lists"
+                    "(through global definition: %s)", $1);
+            switch(global->param->type) {
+                case 'S':
+                    $$->type = 'S';
+                    $$->val.S = global->param->val->val.S;
+                    break;
+                case 'f':
+                    $$->type = 'f';
+                    $$->val.f = global->param->val->val.f;
+                    break;
+                case 'z':
+                    $$->type = 't';
+                    $$->val.t = strdup(global->param->val->val.z);
+                    break;
+                default:
+                    $$->type = 'S';
+                    $$->val.S = 0;
+                    yyerror(state, "parameter type '%c' is not acceptable in parameter lists"
+                        "(through global definition: %s)", global->param->type, $1);
+                    break;
+            }
+        }
+    }
 
 Script:
     "script" ScriptOptionalId IDENTIFIER[name] {
@@ -477,37 +524,45 @@ ParameterVar:
         $$ = param;
     }
     | IDENTIFIER {
-        /* This can either be a variable or a label...
-         * Do the same as thecl - check if a variable exists, otherwise use as label. */
-        value_t* val = (value_t*)malloc(sizeof(value_t));
-        thanm_param_t* param;
-        seqmap_entry_t* ent = seqmap_find(g_anmmap->gvar_types, $1);
-        if (ent) {
-            val->type = ent->value[0] == '$' ? 'S' : 'f';
-            param = thanm_param_new(val->type);
-            param->val = val;
-            ent = seqmap_find(g_anmmap->gvar_names, $1);
-            if (ent == NULL) {
-                /* Why would you define a variable type, but not variable name? */
-                yyerror(state, "unknown variable: %s", $1);
-                if (val->type == 'S')
-                    val->val.S = 0;
-                else
-                    val->val.f = 0.0f;
-            } else {
-                if (val->type == 'S')
-                    val->val.S = ent->key;
-                else
-                    val->val.f = 0.0f;
-            }
-            free($1);
+        /* This can be a variable, a label, global definition...
+         * First check for global defs, then vars, if it's neither then treat as label. */
+        global_t* global = global_find(state, $1);
+        if (global) {
+            $$ = param_copy(global->param);
         } else {
-            val->type = 'z';
-            val->val.z = $1;
-            param = thanm_param_new('o');
-            param->val = val;
+            value_t* val = (value_t*)malloc(sizeof(value_t));
+            thanm_param_t* param;
+            seqmap_entry_t* ent = seqmap_find(g_anmmap->gvar_names, $1);
+            if (ent) {
+                int id = ent->key;
+                ent = seqmap_get(g_anmmap->gvar_types, id);
+                if (ent == NULL) {
+                    /* Unknown type */
+                    yyerror(state, "type of variable is unknown: %s", $1);
+                    val->type = 'S';
+                    val->val.S = 0;
+                    param = thanm_param_new('S');
+                    param->val = val;
+                } else {
+                    val->type = ent->value[0] == '$' ? 'S' : 'f';
+                    if (val->type == 'S')
+                        val->val.S = id;
+                    else
+                        val->val.f = (float)id;
+                    
+                    param = thanm_param_new(val->type);
+                    param->is_var = 1;
+                    param->val = val;
+                }
+                free($1);
+            } else {
+                val->type = 'z';
+                val->val.z = $1;
+                param = thanm_param_new('o');
+                param->val = val;
+            }
+            $$ = param;
         }
-        $$ = param;
     }
 
 TextLike:
@@ -670,6 +725,34 @@ identifier_instr(
     if (ent)
         return ent->key;
     return -1;
+}
+
+static global_t*
+global_find(
+    parser_state_t* state,
+    const char* name
+) {
+    global_t* global;
+    list_for_each(&state->globals, global) {
+        if (strcmp(name, global->name) == 0)
+            return global;
+    }
+    return NULL;
+}
+
+static thanm_param_t*
+param_copy(
+    thanm_param_t* param
+) {
+    thanm_param_t* copy = (thanm_param_t*)malloc(sizeof(thanm_instr_t));
+    copy->type = param->type;
+    copy->is_var = param->is_var;
+    value_t* val_copy = (value_t*)malloc(sizeof(value_t));
+    memcpy(val_copy, param->val, sizeof(value_t));
+    if (val_copy->type == 'z')
+        val_copy->val.z = strdup(val_copy->val.z);
+    copy->val = val_copy;
+    return copy;
 }
 
 void

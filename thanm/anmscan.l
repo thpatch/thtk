@@ -64,6 +64,7 @@
 
 %x COMMENT COMMENT_SINGLE STRING
 %%
+"="        return EQUALS;
 "+"        return PLUS;
 ","        return COMMA;
 ":"        return COLON;
@@ -78,6 +79,7 @@
 "$"        return DOLLAR;
 "entry"    return ENTRY;
 "script"   return SCRIPT;
+"global"   return GLOBAL;
 
 (-|\+)?[0-9]+(\.([0-9]*f|[0-9]+)|f) {
     yylval.floating = strtof(yytext, NULL);

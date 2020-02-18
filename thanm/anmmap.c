@@ -91,7 +91,7 @@ is_keyword(
     const char* value)
 {
     static const char* keywords[] = {
-        "script", "entry",
+        "script", "entry", "global",
         NULL
     };
     const char** kwp = keywords;

@@ -121,6 +121,7 @@ typedef struct {
     anm_entry_t* current_entry;
     anm_script_t* current_script;
 
+    list_t globals;
     list_t sprite_names;
     list_t script_names;
 } parser_state_t;
@@ -136,6 +137,11 @@ typedef struct label_t {
 } label_t;
 
 label_t* label_find(anm_script_t* script, char* name);
+
+typedef struct global_t {
+    char* name;
+    thanm_param_t* param;
+} global_t;
 
 #define DEFAULTVAL 0xffff
 
