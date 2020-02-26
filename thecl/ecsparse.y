@@ -1189,15 +1189,20 @@ Instruction_Parameter:
         param_free($param);
       }
       | ExpressionSubsetInstParam {
-          list_prepend_new(&state->expressions, $1);
+          if ($1->type == EXPRESSION_VAL) {
+              $$ = param_copy($1->value);
+          }
+          else {
+              list_prepend_new(&state->expressions, $1);
 
-          $$ = param_new($1->result_type);
-          $$->stack = 1;
-          $$->is_expression_param = $1->result_type;
-          if ($1->result_type == 'S') {
-              $$->value.val.S = -1;
-          } else {
-              $$->value.val.f = -1.0f;
+              $$ = param_new($1->result_type);
+              $$->stack = 1;
+              $$->is_expression_param = $1->result_type;
+              if ($1->result_type == 'S') {
+                  $$->value.val.S = -1;
+              } else {
+                  $$->value.val.f = -1.0f;
+              }
           }
       }
     ;
@@ -1718,7 +1723,6 @@ static void instr_create_inline_call(
                 /* Check if the passed expression can be simplified to a literal value. */
                 list_node_t* node = state->expressions.tail;
                 expression_t* expr = (expression_t*)node->data;
-                expression_optimize(state, expr);
                 if (expr->type == EXPRESSION_VAL && expr->result_type == expr->value->value.type) {
                     /* Static value, otherwise it wouldn't be an uncasted expression param. */
                     param_replace[i] = param_copy(expr->value);
@@ -1945,7 +1949,6 @@ instr_create_call(
                 list_append_new(param_list, param);
                 if (param->is_expression_param) {
                     ++expr_params;
-                    expression_optimize(state, state->expressions.tail->data);
                 }
                 continue;
             }
@@ -1967,8 +1970,6 @@ instr_create_call(
                 list_node_t* last_node = node_expr;
                 node_expr = node_expr->prev;
 
-                if (current_expr->type == EXPRESSION_OP)
-                    expression_optimize(state, current_expr);
                 if (current_expr->type == EXPRESSION_VAL) {
                     const expr_t* expr = expr_get_by_id(state->version, current_expr->id);
                     is_load_expression = (expr->symbol == LOADI || expr->symbol == LOADF);
@@ -2181,6 +2182,8 @@ expression_operation_new(
         }
         ret->result_type = expr->return_type;
 
+        if (!g_ecl_simplecreate)
+            expression_optimize(state, ret);
         return ret;
 
         continue_outer: ;
