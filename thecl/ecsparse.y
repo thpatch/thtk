@@ -1362,6 +1362,8 @@ Address:
 Address_Type:
       Integer
     | Floating
+    | "-" Integer { $$ = $2; }
+    | "-" Floating { $$ = $2; }
     ;
 
 Integer:
