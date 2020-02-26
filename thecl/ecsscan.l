@@ -137,34 +137,28 @@ _Sf return CAST_IF;
 _ff return CAST_FF;
 _fS return CAST_FI;
 
-(-|\+)?[0-9]+(\.([0-9]*f|[0-9]+)|f) {
+[0-9]+(\.([0-9]*f|[0-9]+)|f) {
     yylval.floating = strtof(yytext, NULL);
     return FLOATING;
 }
-rad\((-|\+)?[0-9]+(\.([0-9]*f|[0-9]+)|f)?\) {
+rad\([-\+]?[0-9]+(\.([0-9]*f|[0-9]+)|f)?\) {
     yylval.floating = strtof(yytext+4, NULL) / 180.0f * 3.14159265359f;
     return FLOATING;
 }
 ins_[0-9]+ {
-    yylval.integer = strtol(yytext + 4, NULL, 10);
+    yylval.integer = strtol(yytext+4, NULL, 10);
     return INSTRUCTION;
 }
--?[0-9]+ {
+[0-9]+ {
     yylval.integer = strtol(yytext, NULL, 10);
     return INTEGER;
 }
-\+[0-9]+ {
-    yylval.integer = strtol(yytext, NULL, 10);
-    return PLUS_INTEGER;
-}
-(-|\+)?0x[0-9a-fA-F]+ {
+0x[0-9a-fA-F]+ {
     yylval.integer = strtoul(yytext, NULL, 16);
     return INTEGER;
 }
-(-|\+)?0b[0-1]+ {
-    bool hasSign = yytext[0] == '-' || yytext[0] == '+';
-    yylval.integer = strtoul(yytext + (hasSign ? 3 : 2), NULL, 2);
-    if (yytext[0] == '-') yylval.integer = -yylval.integer;
+0b[0-1]+ {
+    yylval.integer = strtoul(yytext+2, NULL, 2);
     return INTEGER;
 }
 "false" {

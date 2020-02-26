@@ -197,7 +197,6 @@ static const char sub_param_fi[] = {'f', 'i'};
 %token <string> MNEMONIC "mnemonic"
 %token <string> TEXT "text"
 %token <integer> INTEGER "integer"
-%token <integer> PLUS_INTEGER "+integer"
 %token <floating> FLOATING "floating"
 %token <string> RANK "rank"
 %token <string> DIRECTIVE "directive"
@@ -351,7 +350,7 @@ static const char sub_param_fi[] = {'f', 'i'};
 %precedence SIN COS SQRT
 %precedence DEC
 
-%expect 16
+%expect 17
 %%
 
 Statements:
@@ -561,7 +560,7 @@ ArgumentDeclaration:
 Instructions:
     %empty
     | Instructions INTEGER ":" { set_time(state, $2); }
-    | Instructions PLUS_INTEGER ":" { set_time(state, state->instr_time + $2); }
+    | Instructions "+" INTEGER ":" { set_time(state, state->instr_time + $3); }
     | Instructions IDENTIFIER ":" { label_create(state, $2); free($2); }
     | Instructions Instruction ";"
     | Instructions Block
@@ -1260,6 +1259,7 @@ ExpressionSubset:
     | Expression "^"   Expression { $$ = EXPR_12(XOR,                  $1, $3); }
     | Expression "|" Expression   { $$ = EXPR_12(B_OR,                 $1, $3); }
     | Expression "&" Expression   { $$ = EXPR_12(B_AND,                $1, $3); }
+    | "+" Expression              { $$ = $2; }
     | Address "--"                { 
                                     $$ = EXPR_1A(DEC, $1);
                                     if ($1->value.val.S >= 0) /* Stack variables only. This is also verrfied to be int by expression creation. */
@@ -1269,9 +1269,12 @@ ExpressionSubset:
                                       if (is_post_th13(state->version)) {
                                           $$ = EXPR_21(NEGI, NEGF, $2);
                                       } else {
-                                          /* $$ = EXPR_11(NEGI, $2); */
-                                          yyerror(state, "neg expression is not supported pre-th13");
-                                          exit(1);
+                                          thecl_param_t* p = param_new($2->result_type);
+                                          if (p->value.type == 'f')
+                                            p->value.val.f = 0;
+                                          else 
+                                            p->value.val.S = 0;
+                                          $$ = EXPR_22(SUBTRACTI, SUBTRACTF, expression_load_new(state, p), $2);
                                       }
                                   }
     | "sin" Expression            { $$ = EXPR_11(SIN,                  $2); }
@@ -1357,10 +1360,6 @@ Address_Type:
 
 Integer:
     INTEGER  /*%expect 1*/ {
-        $$ = param_new('S');
-        $$->value.val.S = $1;
-      }
-    | PLUS_INTEGER  /*%expect 1*/ {
         $$ = param_new('S');
         $$->value.val.S = $1;
       }
