@@ -1190,7 +1190,8 @@ Instruction_Parameter:
       }
       | ExpressionSubsetInstParam {
           if ($1->type == EXPRESSION_VAL) {
-              $$ = param_copy($1->value);
+              $$ = $1->value;
+              expression_free($1);
           }
           else {
               list_prepend_new(&state->expressions, $1);
