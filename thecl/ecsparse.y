@@ -1376,8 +1376,14 @@ Address:
 Address_Type:
       Integer
     | Floating
-    | "-" Integer { $$ = $2; }
-    | "-" Floating { $$ = $2; }
+    | "-" Integer { 
+        $2->value.val.S = -$2->value.val.S;
+        $$ = $2;
+    }
+    | "-" Floating {
+        $2->value.val.f = -$2->value.val.f;
+        $$ = $2;
+    }
     ;
 
 Integer:
