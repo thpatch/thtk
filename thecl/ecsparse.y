@@ -499,9 +499,12 @@ Subroutine_Body:
     ;
 
 Global_Def:
-      Address
-    | Integer
-    | Floating
+    Instruction_Parameter[param] {
+        if ($param->is_expression_param) {
+            yyerror(state, "expressions that can't ve evaluated compile-time are not allowed for global definitions");
+        }
+        $$ = $param;
+    }
 ;
 
 Text_Semicolon_List:
