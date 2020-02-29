@@ -317,6 +317,7 @@ static const char sub_param_fi[] = {'f', 'i'};
 %type <expression> ExpressionLoadType
 %type <expression> ExpressionCall
 %type <expression> ExpressionSubset
+%type <expression> ExpressionSubsetUnary
 %type <expression> Expression_Safe
 %type <expression> ParenExpression
 
@@ -1246,6 +1247,9 @@ ExpressionLoadType:
 
 ExpressionCall:
       IDENTIFIER "(" Instruction_Parameters ")"          { $$ = expression_call_new(state, $3, $1); }
+    | "sin"  "(" Expression ")"         { $$ = EXPR_11(SIN,                  $3); }
+    | "cos"  "(" Expression ")"         { $$ = EXPR_11(COS,                  $3); }
+    | "sqrt" "(" Expression ")"         { $$ = EXPR_11(SQRT,                 $3); }
     ;
 
 /* This is the lowest common denominator between expression-instructions and expression-parameters */
@@ -1263,38 +1267,40 @@ ExpressionSubset:
     | Expression "<="  Expression { $$ = EXPR_22(LTEQI,     LTEQF,     $1, $3); }
     | Expression ">"   Expression { $$ = EXPR_22(GTI,       GTF,       $1, $3); }
     | Expression ">="  Expression { $$ = EXPR_22(GTEQI,     GTEQF,     $1, $3); }
-    | "!" Expression              { $$ = EXPR_11(NOT,                  $2); }
     | Expression "||"  Expression { $$ = EXPR_12(OR,                   $1, $3); }
     | Expression "&&"  Expression { $$ = EXPR_12(AND,                  $1, $3); }
     | Expression "^"   Expression { $$ = EXPR_12(XOR,                  $1, $3); }
     | Expression "|" Expression   { $$ = EXPR_12(B_OR,                 $1, $3); }
     | Expression "&" Expression   { $$ = EXPR_12(B_AND,                $1, $3); }
-    | "+" Expression              { $$ = $2; }
-    | Address "--"                { 
-                                    $$ = EXPR_1A(DEC, $1);
-                                    if ($1->value.val.S >= 0) /* Stack variables only. This is also verrfied to be int by expression creation. */
-                                        state->current_sub->vars[$1->value.val.S / 4]->is_written = true;
-                                  }
-    | "-" Expression  %prec NEG   {
-                                      if (is_post_th13(state->version)) {
-                                          $$ = EXPR_21(NEGI, NEGF, $2);
-                                      } else {
-                                          thecl_param_t* p = param_new($2->result_type);
-                                          if (p->value.type == 'f')
-                                            p->value.val.f = 0;
-                                          else 
-                                            p->value.val.S = 0;
-                                          $$ = EXPR_22(SUBTRACTI, SUBTRACTF, expression_load_new(state, p), $2);
-                                      }
-                                  }
-    | "sin" Expression            { $$ = EXPR_11(SIN,                  $2); }
-    | "cos" Expression            { $$ = EXPR_11(COS,                  $2); }
-    | "sqrt" Expression           { $$ = EXPR_11(SQRT,                 $2); }
+    
+    | ExpressionSubsetUnary
 
     /* Custom expressions. */
     | Rank_Switch_List            { $$ = expression_rank_switch_new(state, $1); }
     | Expression "?" Expression_Safe ":" Expression_Safe  %prec QUESTION
                                   { $$ = expression_ternary_new(state, $1, $3, $5); }
+    ;
+
+ExpressionSubsetUnary:
+      "!" Expression_Safe               { $$ = EXPR_11(NOT,                  $2); }
+    | "+" Expression_Safe               { $$ = $2; }
+    | Address "--"                      { 
+                                            $$ = EXPR_1A(DEC, $1);
+                                            if ($1->value.val.S >= 0) /* Stack variables only. This is also verrfied to be int by expression creation. */
+                                            state->current_sub->vars[$1->value.val.S / 4]->is_written = true;
+                                        }
+    | "-" Expression_Safe  %prec NEG    {
+                                            if (is_post_th13(state->version)) {
+                                                $$ = EXPR_21(NEGI, NEGF, $2);
+                                            } else {
+                                                thecl_param_t* p = param_new($2->result_type);
+                                                if (p->value.type == 'f')
+                                                    p->value.val.f = 0;
+                                                else 
+                                                    p->value.val.S = 0;
+                                                $$ = EXPR_22(SUBTRACTI, SUBTRACTF, expression_load_new(state, p), $2);
+                                            }
+                                        }
     ;
 
 /* 
@@ -1305,11 +1311,15 @@ ExpressionSubset:
    the rank switch expression.
    Of course, this still allows any expression to be put in - it just requires it to
    be in brackets (unless it's a literal), which prevents any bad things from happening.
+   Unary operators and calls are here too, in order to allow things like
+   `case: -1` or `1 ? callFunc1() : callFunc2()`.
 */
 Expression_Safe:
       Load_Type                      { $$ = expression_load_new(state, $1); }
     |             "(" Expression ")" { $$ = $2; }
     | Cast_Target "(" Expression ")" { $$ = $3; $$->result_type = $1; }
+    | ExpressionSubsetUnary
+    | ExpressionCall
     ;
 
 Address:
