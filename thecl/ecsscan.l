@@ -150,7 +150,7 @@ ins_[0-9]+ {
     return INSTRUCTION;
 }
 [0-9]+ {
-    yylval.integer = strtol(yytext, NULL, 10);
+    yylval.integer = strtoul(yytext, NULL, 10);
     return INTEGER;
 }
 0x[0-9a-fA-F]+ {
