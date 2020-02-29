@@ -34,6 +34,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 #include "expr.h"
 #include "path.h"
 #include "file.h"
@@ -2458,8 +2459,8 @@ expression_optimize(
     if (expression->type != EXPRESSION_OP) return;
 
     int child_cnt = 0;
-    expression_t* child_expr_1;
-    expression_t* child_expr_2;
+    expression_t* child_expr_1 = NULL;
+    expression_t* child_expr_2 = NULL;
     expression_t* child_expr;
     list_for_each(&expression->children, child_expr) {
         if (child_expr->type == EXPRESSION_OP) {
@@ -2474,112 +2475,142 @@ expression_optimize(
         ++child_cnt;
     }
 
-    /* TODO: handle some single-child expressions, such as sin or cos */
-    if (child_cnt != 2) return;
-
+    #define EXPR_RAW(x) (x->type == EXPRESSION_VAL && !x->value->stack)
     if (
-           child_expr_1->type != EXPRESSION_VAL
-        || child_expr_2->type != EXPRESSION_VAL
-        || child_expr_1->value->stack /* Variables are not acceptable, obviously. */
-        || child_expr_2->value->stack
+        child_cnt < 1 || child_cnt > 2 ||
+        !EXPR_RAW(child_expr_1) ||
+        (child_expr_2 != NULL && !EXPR_RAW(child_expr_2))
     ) return;
+    #undef EXPR_RAW
 
     const expr_t* tmp_expr = expr_get_by_id(state->version, expression->id);
-    
+
     /* Need to get the type from tmp_expr->return_type, since expression->result_type could have been modified by typecasts. */
     thecl_param_t* param = param_new(tmp_expr->return_type);
 
     int res1 = child_expr_1->value->type;
-    int res2 = child_expr_2->value->type;
-    
     int val1S = res1 == 'S' ? child_expr_1->value->value.val.S : (int)(child_expr_1->value->value.val.f);
     float val1f = res1 == 'f' ? child_expr_1->value->value.val.f : (float)(child_expr_1->value->value.val.S);
-    int val2S = res2 == 'S' ? child_expr_2->value->value.val.S : (int)(child_expr_2->value->value.val.f);
-    float val2f = res2 == 'f' ? child_expr_2->value->value.val.f : (float)(child_expr_2->value->value.val.S);
 
-    switch(tmp_expr->symbol) {
-        case ADDI:
-            param->value.val.S = val1S + val2S;
-        break;
-        case ADDF:
-            param->value.val.f = val1f + val2f;
-        break;
-        case SUBTRACTI:
-            param->value.val.S = val1S - val2S;
-        break;
-        case SUBTRACTF:
-            param->value.val.f = val1f - val2f;
-        break;
-        case MULTIPLYI:
-            param->value.val.S = val1S * val2S;
-        break;
-        case MULTIPLYF:
-            param->value.val.f = val1f * val2f;
-        break;
-        case DIVIDEI:
-            param->value.val.S = val1S / val2S;
-        break;
-        case DIVIDEF:
-            param->value.val.f = val1f / val2f;
-        break;
-        case MODULO:
-            param->value.val.S = val1S % val2S;
-        break;
-        case EQUALI:
-            param->value.val.S = val1S == val2S;
-        break;
-        case EQUALF:
-            param->value.val.S = val1f == val2f;
-        break;
-        case INEQUALI:
-            param->value.val.S = val1S != val2S;
-        break;
-        case INEQUALF:
-            param->value.val.S = val1f != val2f;
-        break;
-        case LTI:
-            param->value.val.S = val1S < val2S;
-        break;
-        case LTF:
-            param->value.val.S = val1f < val2f;
-        break;
-        case LTEQI:
-            param->value.val.S = val1S <= val2S;
-        break;
-        case LTEQF:
-            param->value.val.S = val1f <= val2f;
-        break;
-        case GTI:
-            param->value.val.S = val1S > val2S;
-        break;
-        case GTF:
-            param->value.val.S = val1f > val2f;
-        break;
-        case GTEQI:
-            param->value.val.S = val1S >= val2S;
-        break;
-        case GTEQF:
-            param->value.val.S = val1f >= val2f;
-        break;
-        case OR:
-            param->value.val.S = val1S || val2S;
-        break;
-        case AND:
-            param->value.val.S = val1S && val2S;
-        break;
-        case XOR:
-            param->value.val.S = val1S ^ val2S;
-        break;
-        case B_OR:
-            param->value.val.S = val1S | val2S;
-        break;
-        case B_AND:
-            param->value.val.S = val1S & val2S;
-        break;
-        default:
-            /* Since the cases above cover all existing 2-parameter expressions there is no possibility of this ever hapenning.
-               Just putting this error message in case someone adds new expressions and forgets about handling them here... */
-            yyerror(state, "Math preprocessing error! Try using simple creation mode.");
+    if (child_cnt == 1) {
+        switch(tmp_expr->symbol) {
+            case NEGI:
+                param->value.val.S = -val1S;
+                break;
+            case NEGF:
+                param->value.val.f = -val1f;
+                break;
+            case NOT:
+                param->value.val.S = !val1S;
+                break;
+            case SIN:
+                param->value.val.f = sinf(val1f);
+                break;
+            case COS:
+                param->value.val.f = cosf(val1f);
+                break;
+            case SQRT:
+                param->value.val.f = sqrtf(val1f);
+                break;
+            case DEC:
+                /* This happens if the user tries to use the decrement operator on a non-variable. */
+                yyerror(state, "decrement operator can't be used on literals");
+                break;
+            default:
+                /* All unary expressions are covered here, so this default case should never execute.
+                 * But who knows, maybe in the future someone will add more. */
+                yyerror(state, "Math preprocessing error! Try using simple creation mode.");
+        }
+    } else if (child_cnt == 2) {
+
+        int res2 = child_expr_2->value->type;
+        int val2S = res2 == 'S' ? child_expr_2->value->value.val.S : (int)(child_expr_2->value->value.val.f);
+        float val2f = res2 == 'f' ? child_expr_2->value->value.val.f : (float)(child_expr_2->value->value.val.S);
+
+        switch(tmp_expr->symbol) {
+            case ADDI:
+                param->value.val.S = val1S + val2S;
+                break;
+            case ADDF:
+                param->value.val.f = val1f + val2f;
+                break;
+            case SUBTRACTI:
+                param->value.val.S = val1S - val2S;
+                break;
+            case SUBTRACTF:
+                param->value.val.f = val1f - val2f;
+                break;
+            case MULTIPLYI:
+                param->value.val.S = val1S * val2S;
+                break;
+            case MULTIPLYF:
+                param->value.val.f = val1f * val2f;
+                break;
+            case DIVIDEI:
+                param->value.val.S = val1S / val2S;
+                break;
+            case DIVIDEF:
+                param->value.val.f = val1f / val2f;
+                break;
+            case MODULO:
+                param->value.val.S = val1S % val2S;
+                break;
+            case EQUALI:
+                param->value.val.S = val1S == val2S;
+                break;
+            case EQUALF:
+                param->value.val.S = val1f == val2f;
+                break;
+            case INEQUALI:
+                param->value.val.S = val1S != val2S;
+                break;
+            case INEQUALF:
+                param->value.val.S = val1f != val2f;
+                break;
+            case LTI:
+                param->value.val.S = val1S < val2S;
+                break;
+            case LTF:
+                param->value.val.S = val1f < val2f;
+                break;
+            case LTEQI:
+                param->value.val.S = val1S <= val2S;
+                break;
+            case LTEQF:
+                param->value.val.S = val1f <= val2f;
+                break;
+            case GTI:
+                param->value.val.S = val1S > val2S;
+                break;
+            case GTF:
+                param->value.val.S = val1f > val2f;
+                break;
+            case GTEQI:
+                param->value.val.S = val1S >= val2S;
+                break;
+            case GTEQF:
+                param->value.val.S = val1f >= val2f;
+                break;
+            case OR:
+                param->value.val.S = val1S || val2S;
+                break;
+            case AND:
+                param->value.val.S = val1S && val2S;
+                break;
+            case XOR:
+                param->value.val.S = val1S ^ val2S;
+                break;
+            case B_OR:
+                param->value.val.S = val1S | val2S;
+                break;
+            case B_AND:
+                param->value.val.S = val1S & val2S;
+                break;
+            default:
+                /* Since the cases above cover all existing 2-parameter expressions there is no possibility of this ever hapenning.
+                   Just putting this error message in case someone adds new expressions and forgets about handling them here... */
+                yyerror(state, "Math preprocessing error! Try using simple creation mode.");
+        }
     }
 
     expression->value = param;
@@ -2588,9 +2619,11 @@ expression_optimize(
     expression->id = tmp_expr->id;
 
     param_free(child_expr_1->value);
-    param_free(child_expr_2->value);
     expression_free(child_expr_1);
-    expression_free(child_expr_2);
+    if (child_expr_2 != NULL) {
+        param_free(child_expr_2->value);
+        expression_free(child_expr_2);
+    }
     list_free_nodes(&expression->children);
 }
 
