@@ -1193,7 +1193,7 @@ Instruction_Parameter:
         param_free($param);
       }
       | ExpressionSubsetInstParam {
-          if ($1->type == EXPRESSION_VAL) {
+          if ($1->type == EXPRESSION_VAL && $1->result_type == $1->value->type) {
               $$ = $1->value;
               expression_free($1);
           }
