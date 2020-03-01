@@ -47,6 +47,7 @@ unsigned int option_force;
 
 /* SPECIAL FORMATS:
  * 'o' - offset (for labels)
+ * 't' - time (to be read from a label)
  * 'n' - sprite number, dumped as sprite name string
  * 'N' - script number, dumped as script name string
 */
@@ -324,20 +325,20 @@ static const id_format_pair_t formats_v8[] = {
     { 125, "ff" },
     { 130, "ffff" },
     { 131, "ffff" },
-    { 200, "oS" },
-    { 201, "SoS" },
-    { 202, "SSoS" },
-    { 203, "ffoS" },
-    { 204, "SSoS" },
-    { 205, "ffoS" },
-    { 206, "SSoS" },
-    { 207, "ffoS" },
-    { 208, "SSoS" },
-    { 209, "ffoS" },
-    { 210, "SSoS" },
-    { 211, "ffoS" },
-    { 212, "SSoS" },
-    { 213, "ffoS" },
+    { 200, "ot" },
+    { 201, "Sot" },
+    { 202, "SSot" },
+    { 203, "ffot" },
+    { 204, "SSot" },
+    { 205, "ffot" },
+    { 206, "SSot" },
+    { 207, "ffot" },
+    { 208, "SSot" },
+    { 209, "ffot" },
+    { 210, "SSot" },
+    { 211, "ffot" },
+    { 212, "SSot" },
+    { 213, "ffot" },
     { 300, "n" },
     { 301, "nS" },
     { 302, "S" },
@@ -533,6 +534,7 @@ thanm_make_params(
         ssize_t read;
         switch(format[v]) {
             case 'o':
+            case 't':
             case 'n':
             case 'N':
                 read = value_from_data((const unsigned char*)&raw_instr->data[i],
@@ -1549,6 +1551,17 @@ anm_serialize_instr(
                     break;
                 }
                 memcpy(&raw->data[offset], &label->offset, sizeof(int32_t));
+                offset += sizeof(int32_t);
+                break;
+            }
+            case 't': {
+                label_t* label = label_find(script, param->val->val.z);
+                if (label == NULL) {
+                    fprintf(stderr, "%s: label not found: %s\n", argv0, param->val->val.z);
+                    break;
+                }
+                int32_t time = label->time;
+                memcpy(&raw->data[offset], &time, sizeof(int32_t));
                 offset += sizeof(int32_t);
                 break;
             }

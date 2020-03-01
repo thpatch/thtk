@@ -133,6 +133,7 @@ typedef struct symbol_id_pair_t {
 
 typedef struct label_t {
     uint32_t offset;
+    int16_t time;
     char* name;
 } label_t;
 

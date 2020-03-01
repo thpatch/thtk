@@ -121,13 +121,14 @@ static thanm_param_t* param_copy(thanm_param_t* param);
 %token ENTRY "entry"
 %token SCRIPT "script"
 %token GLOBAL "global"
+%token TIMEOF "timeof"
 
 %token ILLEGAL_TOKEN "invalid token"
 %token END_OF_FILE 0 "end of file"
 
 %type <string> TextLike
 %type <param> ParameterLiteral
-%type <param> ParameterVar
+%type <param> ParameterOther
 %type <param> Parameter
 %type <list> PropertyList
 %type <list> Parameters
@@ -409,6 +410,7 @@ ScriptStatement:
         label_t* label = (label_t*)malloc(sizeof(label_t));
         label->name = $name;
         label->offset = state->offset;
+        label->time = state->time;
         list_append_new(&state->current_script->labels, label);
     }
     | IDENTIFIER[ident] "(" Parameters[params] ")" ";" {
@@ -444,7 +446,7 @@ Parameter:
     ParameterLiteral {
         $$ = $1;
     }
-    | ParameterVar {
+    | ParameterOther {
         $$ = $1;
     }
 
@@ -474,7 +476,7 @@ ParameterLiteral:
         $$ = param;
     }
 
-ParameterVar:
+ParameterOther:
     "[" INTEGER "]" {
         value_t* val = (value_t*)malloc(sizeof(value_t));
         val->type = 'S';
@@ -568,6 +570,14 @@ ParameterVar:
             $$ = param;
         }
     }
+    | "timeof" "(" IDENTIFIER[label] ")" {
+        value_t* val = (value_t*)malloc(sizeof(value_t));
+        val->type = 'z';
+        val->val.z = $label;
+        thanm_param_t* param = thanm_param_new('t');
+        param->val = val;
+        $$ = param;
+    }
 
 TextLike:
     TEXT {
@@ -651,7 +661,13 @@ instr_check_types(
             yyerror(state, "too many parameters for opcode %d", instr->id);
             break;
         }
-        if (c == 'n' || c == 'N' || c == 'o') {
+        if (c == 'S') {
+            /* Allow types that get converted to integers later for integer formats. */
+            /* TODO: some offsetof, spriteof and scriptof operators for label offsets, sprite ids and script ids? */
+            /* I could see them being useful at times... */
+            if (param->type == 't')
+                c = param->type;
+        } else if (c == 'n' || c == 'N' || c == 'o' || c == 't') {
             if (param->type == 'z')
                 param->type = c;
             else if (param->type == 'S') /* Allow numbers for things that get converted to numbers anyway. */
