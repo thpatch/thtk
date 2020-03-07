@@ -92,6 +92,7 @@ is_keyword(
 {
     static const char* keywords[] = {
         "script", "entry", "global",
+        "timeof", "offsetof", "scriptof", "spriteof",
         NULL
     };
     const char** kwp = keywords;

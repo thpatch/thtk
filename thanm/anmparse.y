@@ -122,10 +122,14 @@ static thanm_param_t* param_copy(thanm_param_t* param);
 %token SCRIPT "script"
 %token GLOBAL "global"
 %token TIMEOF "timeof"
+%token OFFSETOF "offsetof"
+%token SCRIPTOF "scriptof"
+%token SPRITEOF "spriteof"
 
 %token ILLEGAL_TOKEN "invalid token"
 %token END_OF_FILE 0 "end of file"
 
+%type <integer> SomethingOf
 %type <string> TextLike
 %type <param> ParameterLiteral
 %type <param> ParameterOther
@@ -571,13 +575,27 @@ ParameterOther:
             $$ = param;
         }
     }
-    | "timeof" "(" IDENTIFIER[label] ")" {
+    | SomethingOf[type] "(" IDENTIFIER[label] ")" {
         value_t* val = (value_t*)malloc(sizeof(value_t));
         val->type = 'z';
         val->val.z = $label;
-        thanm_param_t* param = thanm_param_new('t');
+        thanm_param_t* param = thanm_param_new($type);
         param->val = val;
         $$ = param;
+    }
+
+SomethingOf:
+    "timeof" {
+        $$ = 't';
+    }
+    | "offsetof" {
+        $$ = 'o';
+    }
+    | "scriptof" {
+        $$ = 'N';
+    }
+    | "spriteof" {
+        $$ = 'n';
     }
 
 TextLike:
@@ -664,9 +682,7 @@ instr_check_types(
         }
         if (c == 'S') {
             /* Allow types that get converted to integers later for integer formats. */
-            /* TODO: some offsetof, spriteof and scriptof operators for label offsets, sprite ids and script ids? */
-            /* I could see them being useful at times... */
-            if (param->type == 't')
+            if (param->type == 't' || param->type == 'o' || param->type == 'N' || param->type == 'n')
                 c = param->type;
         } else if (c == 'n' || c == 'N' || c == 'o' || c == 't') {
             /* This is to tell the anm_serialize_instr function what it should do
