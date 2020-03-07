@@ -589,7 +589,7 @@ anm_stringify_param(
 
     switch(param->type) {
         case 'o':
-            sprintf(buf, "script%d_%u", scriptn, param->val->val.S);
+            sprintf(buf, "offset%u", param->val->val.S);
             replace_minus(buf);
             dest = buf;
             break;
@@ -598,11 +598,11 @@ anm_stringify_param(
             if (param->val->val.S == -1)
                 sprintf(buf, "%d", param->val->val.S);
             else
-                sprintf(buf, "\"sprite%d\"", param->val->val.S);
+                sprintf(buf, "sprite%d", param->val->val.S);
             dest = buf;
             break;
         case 'N':
-            sprintf(buf, "\"script%d\"", param->val->val.S);
+            sprintf(buf, "script%d", param->val->val.S);
             replace_minus(buf);
             dest = buf;
             break;
@@ -1108,7 +1108,7 @@ anm_dump(
                             is_negative_time = 0;
                         break;
                     case THANM_INSTR_LABEL:
-                        fprintf(stream, "script%d_%u:\n", scriptn, instr->offset);
+                        fprintf(stream, "offset%u:\n", instr->offset);
                         break;
                 }
             }

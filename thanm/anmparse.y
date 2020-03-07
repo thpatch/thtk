@@ -530,8 +530,9 @@ ParameterOther:
         $$ = param;
     }
     | IDENTIFIER {
-        /* This can be a variable, a label, global definition...
-         * First check for global defs, then vars, if it's neither then treat as label. */
+        /* First, check for variables and globaldefs.
+         * If it's neither, then simply make it a string param that
+         * will be evaluated based on context (what format the instr expects) */
         global_t* global = global_find(state, $1);
         if (global) {
             $$ = param_copy(global->param);
@@ -564,7 +565,7 @@ ParameterOther:
             } else {
                 val->type = 'z';
                 val->val.z = $1;
-                param = thanm_param_new('o');
+                param = thanm_param_new('z');
                 param->val = val;
             }
             $$ = param;
@@ -668,6 +669,8 @@ instr_check_types(
             if (param->type == 't')
                 c = param->type;
         } else if (c == 'n' || c == 'N' || c == 'o' || c == 't') {
+            /* This is to tell the anm_serialize_instr function what it should do
+             * with the string value of the param, based on the instruction format. */
             if (param->type == 'z')
                 param->type = c;
             else if (param->type == 'S') /* Allow numbers for things that get converted to numbers anyway. */
