@@ -33,6 +33,56 @@
 #include "expr.h"
 
 static const expr_t
+th06_expressions[] = {
+    /* While th06 doesn't support compiling expressions as of now,
+     * having this is still useful because the compiler will be able to
+     * simply calculate expression results compile-time (if possible).
+     * And if it fails to get a raw value out of an expression, simply
+     * throw an error... Negative ID will be used to indicate that the expression
+     * can't be outputted (must be unique). Of course, in the future thecl could be upgraded
+     * to actually compile the register-based expressions of th06 format. */
+    /* And no, this doesn't break decompiling, as th06.c doesn't check expressions at all. */
+    /*SYM         ID  RET     P  A    S   DISP  NB */
+    { LOADI,      -1, 'S',  "S", 0, NULL, "p0", 0 },
+    { LOADF,      -2, 'f',  "f", 0, NULL, "p0", 0 },
+
+    { ADDI,       -3, 'S', NULL, 2, "SS", "s1 + s0", 0 },
+    { ADDF,       -4, 'f', NULL, 2, "ff", "s1 + s0", 0 },
+    { SUBTRACTI,  -5, 'S', NULL, 2, "SS", "s1 - s0", 0 },
+    { SUBTRACTF,  -6, 'f', NULL, 2, "ff", "s1 - s0", 0 },
+    { MULTIPLYI,  -7, 'S', NULL, 2, "SS", "s1 * s0", 0 },
+    { MULTIPLYF,  -8, 'f', NULL, 2, "ff", "s1 * s0", 0 },
+    { DIVIDEI,    -9, 'S', NULL, 2, "SS", "s1 / s0", 0 },
+    { DIVIDEF,   -10, 'f', NULL, 2, "ff", "s1 / s0", 0 },
+    { MODULO,    -11, 'S', NULL, 2, "SS", "s1 % s0", 0 },
+    { EQUALI,    -12, 'S', NULL, 2, "SS", "s1 == s0", 0 },
+    { EQUALF,    -13, 'S', NULL, 2, "ff", "s1 == s0", 0 },
+    { INEQUALI,  -14, 'S', NULL, 2, "SS", "s1 != s0", 0 },
+    { INEQUALF,  -15, 'S', NULL, 2, "ff", "s1 != s0", 0 },
+    { LTI,       -16, 'S', NULL, 2, "SS", "s1 < s0", 0 },
+    { LTF,       -17, 'S', NULL, 2, "ff", "s1 < s0", 0 },
+    { LTEQI,     -18, 'S', NULL, 2, "SS", "s1 <= s0", 0 },
+    { LTEQF,     -19, 'S', NULL, 2, "ff", "s1 <= s0", 0 },
+    { GTI,       -20, 'S', NULL, 2, "SS", "s1 > s0", 0 },
+    { GTF,       -21, 'S', NULL, 2, "ff", "s1 > s0", 0 },
+    { GTEQI,     -22, 'S', NULL, 2, "SS", "s1 >= s0", 0 },
+    { GTEQF,     -23, 'S', NULL, 2, "ff", "s1 >= s0", 0 },
+    { NOT,       -24, 'S', NULL, 1,  "S", "!s0", 0 },
+    { OR,        -25, 'S', NULL, 2, "SS", "s1 || s0", 0 },
+    { AND,       -26, 'S', NULL, 2, "SS", "s1 && s0", 0 },
+    { XOR,       -27, 'S', NULL, 2, "SS", "s1 ^ s0", 0 },
+    { B_OR,      -28, 'S', NULL, 2, "SS", "s1 | s0", 0 },
+    { B_AND,     -29, 'S', NULL, 2, "SS", "s1 & s0", 0 },
+    { DEC,       -30, 'S', NULL, 0, NULL, "p0--", 0 },
+    { SIN,       -31, 'f', NULL, 1,  "f", "sin(s0)", 1 },
+    { COS,       -32, 'f', NULL, 1,  "f", "cos(s0)", 1 },
+    { NEGI,      -33, 'S', NULL, 1,  "S", "-s0", 0 },
+    { NEGF,      -34, 'f', NULL, 1,  "f", "-s0", 0 },
+    { SQRT,      -35, 'f', NULL, 1,  "f", "sqrt(s0)", 1 },
+    { 0,           0,   0, NULL, 0, NULL, NULL, 0 }
+};
+
+static const expr_t
 th10_expressions[] = {
     /* The program checks against the number of params, as well as the
      * requested stack depth, and does the replacements. */
@@ -117,6 +167,7 @@ expr_get_by_symbol(
 
     if (!ret && is_post_th13(version)) ret = expr_get_by_symbol_from_table(th13_expressions, symbol);
     if (!ret && is_post_th10(version)) ret = expr_get_by_symbol_from_table(th10_expressions, symbol);
+    if (!ret && !is_post_th10(version)) ret = expr_get_by_symbol_from_table(th06_expressions, symbol);
 
     return ret;
 }
@@ -144,6 +195,7 @@ expr_get_by_id(
 
     if (!ret && is_post_th13(version)) ret = expr_get_by_id_from_table(th13_expressions, id);
     if (!ret && is_post_th10(version)) ret = expr_get_by_id_from_table(th10_expressions, id);
+    if (!ret && !is_post_th10(version)) ret = expr_get_by_id_from_table(th06_expressions, id);
 
     return ret;
 }

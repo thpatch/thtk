@@ -2419,6 +2419,12 @@ expression_output(
         /* Since expression_optimize is already done recursively for children, it shouldn't be called for child expressions. */
         expression_optimize(state, expr);
 
+    if (expr->id < 0) {
+        /* Expression not outputtable - check expr.c for explanation in comments. */
+        yyerror(state, "expression not outputtable in current version");
+        return;
+    }
+
     if (expr->type == EXPRESSION_VAL) {
         instr_add(state->current_sub, instr_new(state, expr->id, "p", expr->value));
     } else if (expr->type == EXPRESSION_OP) {
