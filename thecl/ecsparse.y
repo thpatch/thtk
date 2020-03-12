@@ -2144,6 +2144,33 @@ parse_rank(
     }
 }
 
+/* Print expression creation error. Either operands or value has to be non-NULL. */
+static void
+expression_error(
+    const parser_state_t* state,
+    const int* symbols,
+    expression_t** operands,
+    thecl_param_t* value
+) {
+    char errbuf[512];
+    errbuf[0] = '\0';
+    const expr_t *expr = expr_get_by_symbol(state->version, *symbols);
+    if (expr) {
+        snprintf(errbuf, sizeof(errbuf) - 1, "%s: ", expr->display_format);
+    }
+    strncat(errbuf, "no expression found for type(s): ", sizeof(errbuf) - 1 - strlen(errbuf));
+    if (operands != NULL) {
+        for (size_t s = 0; operands[s]; ++s) {
+            if (s != 0)
+                strncat(errbuf, " and ", sizeof(errbuf) - 1 - strlen(errbuf));
+            strncat(errbuf, (char *)&operands[s]->result_type, 1);
+        }
+    } else {
+        strncat(errbuf, (char*)&value->type, sizeof(errbuf) - 1 - strlen(errbuf));
+    }
+    yyerror((parser_state_t *)state, errbuf);
+}
+
 static expression_t*
 expression_load_new(
     const parser_state_t* state,
@@ -2151,6 +2178,11 @@ expression_load_new(
 {
     expression_t* ret = malloc(sizeof(expression_t));
     const expr_t* expr = expr_get_by_symbol(state->version, value->type == 'S' ? LOADI : LOADF);
+    if (expr == NULL) {
+        static const int tmp_symbols[] = {LOADI, LOADF};
+        expression_error(state, tmp_symbols, NULL, value);
+        exit(2);
+    }
     ret->type = EXPRESSION_VAL;
     ret->id = expr->id;
     ret->value = value;
@@ -2166,6 +2198,8 @@ expression_address_operation_new(
 {
     for (; *symbols; ++symbols) {
         const expr_t* expr = expr_get_by_symbol(state->version, *symbols);
+        if (expr == NULL)
+            continue;
 
         if (value->type != expr->param_format[0])
             continue;
@@ -2179,7 +2213,8 @@ expression_address_operation_new(
         return ret;
     }
 
-    return NULL;
+    expression_error(state, symbols, NULL, value);
+    exit(2);
 }
 
 static expression_t*
@@ -2190,6 +2225,8 @@ expression_operation_new(
 {
     for (; *symbols; ++symbols) {
         const expr_t* expr = expr_get_by_symbol(state->version, *symbols);
+        if (expr == NULL)
+            goto continue_outer;
 
         for (size_t s = 0; s < expr->stack_arity; ++s)
             if (operands[s]->result_type != expr->stack_formats[s])
@@ -2212,22 +2249,7 @@ expression_operation_new(
         continue_outer: ;
     }
 
-    /* Create error */
-    char errbuf[512];
-    errbuf[0] = 0;
-    const expr_t *expr = expr_get_by_symbol(state->version, *symbols);
-    if (expr) {
-      snprintf(errbuf, 511, "%s: ", expr->display_format);
-    }
-    strncat(errbuf, "no expression found for type(s): ", 511 - strlen(errbuf));
-    for (size_t s = 0; operands[s]; ++s) {
-      if (s != 0)
-        strncat(errbuf, " and ", 511 - strlen(errbuf));
-      strncat(errbuf, (char *)&operands[s]->result_type, 1);
-    }
-    yyerror((parser_state_t *)state, errbuf);
-
-    /* We cannot continue after this; the program would crash */
+    expression_error(state, symbols, operands, NULL);
     exit(2);
 }
 
