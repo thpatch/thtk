@@ -5,8 +5,8 @@ flex_target(EcsScan ecsscan.l ${CMAKE_CURRENT_BINARY_DIR}/ecsscan.c)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR})
 add_executable(thecl
   ${BISON_EcsParse_OUTPUT_SOURCE} ${FLEX_EcsScan_OUTPUTS}
-  expr.c thecl.c eclmap.c path.c thecl06.c thecl10.c
-  expr.h thecl.h eclmap.h path.h)
+  expr.c thecl.c eclmap.c thecl06.c thecl10.c
+  expr.h thecl.h eclmap.h)
 if(WIN32)
     set(ADDITIONAL_LIBRARIES "")
 else()

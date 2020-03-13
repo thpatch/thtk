@@ -2968,7 +2968,7 @@ directive_include(
     parser_state_t* state,
     char* include_path)
 {
-    char* path = path_get_full(state, include_path);
+    char* path = path_get_full(&state->path_state, include_path);
     FILE* include_file = fopen(path, "rb");
 
     if (include_file != NULL) {
@@ -2984,12 +2984,12 @@ directive_include(
         yylloc.last_line = 1;
         yylloc.last_column = 1;
 
-        path_add(state, path);
+        path_add(&state->path_state, path);
 
         int err = yyparse(state);
 
         fclose(include_file);
-        path_remove(state);
+        path_remove(&state->path_state);
 
         if (err) {
             free(path);
@@ -3012,7 +3012,7 @@ directive_eclmap(
 parser_state_t* state,
 char* name) 
 {
-    char* path = path_get_full(state, name);
+    char* path = path_get_full(&state->path_state, name);
     FILE* map_file = fopen(path, "r");
     if (map_file == NULL) {
         yyerror(state, "#eclmap error: couldn't open %s for reading", path);

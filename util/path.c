@@ -30,15 +30,26 @@
 #include <config.h>
 #include <string.h>
 #include <stdlib.h>
-#include "thecl.h"
+#include "util.h"
 #include "path.h"
+
+void
+path_init(
+    path_state_t* state,
+    char* init_path,
+    const char* program_name
+) {
+    list_init(&state->path_list);
+    state->program_name = program_name;
+    path_add(state, init_path);
+}
 
 char*
 path_get_full(
-    parser_state_t* state,
+    path_state_t* state,
     char* path)
 {
-    char* current_dir = state->path_stack[state->path_cnt - 1];
+    char* current_dir = (char*)state->path_list.tail->data;
     char* ret;
 
     if (current_dir[0] != '\0') {
@@ -56,7 +67,7 @@ path_get_full(
 
 void
 path_add(
-    parser_state_t* state,
+    path_state_t* state,
     char* path)
 {
     char* dir_path;
@@ -78,15 +89,17 @@ path_add(
         strcpy(dir_path, "");
     }
 
-    ++state->path_cnt;
-    state->path_stack = realloc(state->path_stack, sizeof(char*) * state->path_cnt);
-    state->path_stack[state->path_cnt - 1] = dir_path;
+    list_append_new(&state->path_list, (void*)dir_path);
 }
 
 void
 path_remove(
-    parser_state_t* state)
+    path_state_t* state)
 {
-    --state->path_cnt;
-    free(state->path_stack[state->path_cnt]);
+    list_node_t* node = state->path_list.tail; 
+    list_del(&state->path_list, node);
+    if (state->path_list.head == NULL) {
+        fprintf(stderr, "%s: removed last element from path\n", state->program_name);
+        exit(1); 
+    }
 }
