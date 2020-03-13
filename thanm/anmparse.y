@@ -625,23 +625,60 @@ TextLike:
 
 Directive:
     DIRECTIVE[type] TextLike[arg] {
+        int was_fatal_error = 0;
+        
         if (strcmp($type, "version") == 0) {
             uint32_t ver = strtoul($arg, NULL, 10);
             state->default_version = ver;
         } else if (strcmp($type, "anmmap") == 0) {
-            FILE* map_file = fopen($arg, "r");
+            char* path = path_get_full(&state->path_state, $arg);
+            FILE* map_file = fopen(path, "r");
             if (map_file == NULL) {
                 fprintf(stderr, "%s: couldn't open %s for reading: %s\n",
-                    argv0, $arg, strerror(errno));
+                    argv0, path, strerror(errno));
             } else {
                 anmmap_load(g_anmmap, map_file, $arg);
                 fclose(map_file);
             }
+            free(path);
+        } else if (strcmp($type, "include") == 0) {
+            char* path = path_get_full(&state->path_state, $arg);
+            FILE* include_file = fopen(path, "r");
+            if (include_file == NULL) {
+                fprintf(stderr, "%s: couldn't open %s for reading: %s\n",
+                    argv0, path, strerror(errno));
+            } else {
+                FILE* in_org = yyin;
+                YYLTYPE loc_org = yylloc;
+                const char* input_org = current_input;
+
+                current_input = path;
+                yyin = include_file;
+                yylloc.first_line = 1;
+                yylloc.first_column = 1;
+                yylloc.last_line = 1;
+                yylloc.last_column = 1;
+
+                path_add(&state->path_state, path);
+
+                was_fatal_error = yyparse(state);
+
+                fclose(include_file);
+                path_remove(&state->path_state);
+
+                yyin = in_org;
+                yylloc = loc_org;
+                current_input = input_org;
+            }
+            free(path);
         } else {
             yyerror(state, "unknown directive: %s", $type);
         }
         free($type);
         free($arg);
+
+        if (was_fatal_error)
+            return 1;
     }
 
 %%

@@ -34,6 +34,7 @@
 #include "anmmap.h"
 #include "value.h"
 #include "list.h"
+#include "path.h"
 
 extern anmmap_t* g_anmmap;
 extern unsigned int option_force;
@@ -124,6 +125,8 @@ typedef struct {
     list_t globals;
     list_t sprite_names;
     list_t script_names;
+
+    path_state_t path_state;
 } parser_state_t;
 
 typedef struct symbol_id_pair_t {

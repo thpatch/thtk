@@ -1633,6 +1633,8 @@ anm_create(
     state.current_entry = NULL;
     state.current_script = NULL;
 
+    path_init(&state.path_state, spec, argv0);
+
     FILE* in = fopen(spec, "r");
     yyin = in;
     if (yyparse(&state) || state.was_error)
