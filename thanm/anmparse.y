@@ -134,6 +134,7 @@ static thanm_param_t* param_copy(thanm_param_t* param);
 %type <param> ParameterLiteral
 %type <param> ParameterOther
 %type <param> Parameter
+%type <list> Properties
 %type <list> PropertyList
 %type <list> Parameters
 %type <list> ParametersList
@@ -158,7 +159,7 @@ Statement:
     }
 
 Entry:
-    "entry" IDENTIFIER[entry_name] "{" PropertyList[prop_list] "}" {
+    "entry" IDENTIFIER[entry_name] "{" Properties[prop_list] "}" {
         anm_entry_t* entry = (anm_entry_t*)malloc(sizeof(anm_entry_t));
         entry->header = (anm_header06_t*)calloc(1, sizeof(anm_header06_t));
         entry->thtx = (thtx_header_t*)calloc(1, sizeof(thtx_header_t));
@@ -294,16 +295,25 @@ Entry:
         state->current_entry = entry;
     }
 
-PropertyList:
+Properties:
     %empty {
         $$ = list_new();
     }
-    | PropertyList[list] PropertyListEntry[prop] {
+    | PropertyList[list] {
+        $$ = $list;
+    }
+
+PropertyList:
+    PropertyListEntry[prop] {
+        $$ = list_new();
+        list_append_new($$, $prop);
+    }
+    | PropertyList[list] "," PropertyListEntry[prop] {
         list_append_new($list, $prop);
     }
 
 PropertyListEntry:
-    IDENTIFIER[key] ":" PropertyListValue[val] ";" {
+    IDENTIFIER[key] ":" PropertyListValue[val] {
         $$ = (prop_list_entry_t*)malloc(sizeof(prop_list_entry_t));
         $$->key = $key;
         $$->value = $val;
@@ -325,7 +335,7 @@ PropertyListValue:
         $$->type = 't';
         $$->val.t = $1;
     }
-    | "{" PropertyList "}" {
+    | "{" Properties "}" {
         $$ = (prop_list_entry_value_t*)malloc(sizeof(prop_list_entry_value_t));
         $$->type = 'l';
         $$->val.l = $2;

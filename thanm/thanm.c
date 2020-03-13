@@ -1019,34 +1019,34 @@ anm_dump(
         const id_format_pair_t* formats = anm_get_formats(entry->header->version);
 
         fprintf(stream, "entry entry%u {\n", entry_num++);
-        fprintf(stream, "    version: %u;\n", entry->header->version);
-        fprintf(stream, "    name: \"%s\";\n", entry->name);
+        fprintf(stream, "    version: %u,\n", entry->header->version);
+        fprintf(stream, "    name: \"%s\",\n", entry->name);
         if (entry->name2)
-            fprintf(stream, "    name2: \"%s\";\n", entry->name2);
-        fprintf(stream, "    format: %u;\n", entry->header->format);
-        fprintf(stream, "    width: %u;\n", entry->header->w);
-        fprintf(stream, "    height: %u;\n", entry->header->h);
+            fprintf(stream, "    name2: \"%s\",\n", entry->name2);
+        fprintf(stream, "    format: %u,\n", entry->header->format);
+        fprintf(stream, "    width: %u,\n", entry->header->w);
+        fprintf(stream, "    height: %u,\n", entry->header->h);
         if (entry->header->x != 0)
-            fprintf(stream, "    xOffset: %u;\n", entry->header->x);
+            fprintf(stream, "    xOffset: %u,\n", entry->header->x);
         if (!entry->name2 && entry->header->y != 0)
-            fprintf(stream, "    yOffset: %u;\n", entry->header->y);
+            fprintf(stream, "    yOffset: %u,\n", entry->header->y);
         if (entry->header->version < 7) {
-            fprintf(stream, "    colorKey: 0x%08x;\n", entry->header->colorkey);
+            fprintf(stream, "    colorKey: 0x%08x,\n", entry->header->colorkey);
         }
         if (entry->header->zero3 != 0)
-            fprintf(stream, "    zero3: %u;\n", entry->header->zero3);
+            fprintf(stream, "    zero3: %u,\n", entry->header->zero3);
         if (entry->header->version >= 1)
-            fprintf(stream, "    memoryPriority: %u;\n", entry->header->memorypriority);
+            fprintf(stream, "    memoryPriority: %u,\n", entry->header->memorypriority);
         if (entry->header->version >= 8)
-            fprintf(stream, "    lowResScale: %u;\n", entry->header->lowresscale);
+            fprintf(stream, "    lowResScale: %u,\n", entry->header->lowresscale);
 
-        fprintf(stream, "    hasData: %u;\n", entry->header->hasdata);
+        fprintf(stream, "    hasData: %u,\n", entry->header->hasdata);
         if (entry->header->hasdata) {
-            fprintf(stream, "    THTXSize: %u;\n", entry->thtx->size);
-            fprintf(stream, "    THTXFormat: %u;\n", entry->thtx->format);
-            fprintf(stream, "    THTXWidth: %u;\n", entry->thtx->w);
-            fprintf(stream, "    THTXHeight: %u;\n", entry->thtx->h);
-            fprintf(stream, "    THTXZero: %u;\n", entry->thtx->zero);
+            fprintf(stream, "    THTXSize: %u,\n", entry->thtx->size);
+            fprintf(stream, "    THTXFormat: %u,\n", entry->thtx->format);
+            fprintf(stream, "    THTXWidth: %u,\n", entry->thtx->w);
+            fprintf(stream, "    THTXHeight: %u,\n", entry->thtx->h);
+            fprintf(stream, "    THTXZero: %u,\n", entry->thtx->zero);
         }
 
         fprintf(stream, "    sprites: {\n");
@@ -1054,21 +1054,24 @@ anm_dump(
         sprite_t* sprite;
         list_for_each(&entry->sprites, sprite) {
             if (prev_sprite_id + 1 != sprite->id) {
-                fprintf(stream, "        sprite%u: { x: %.f; y: %.f; w: %.f; h: %.f; id: %d; };\n",
+                fprintf(stream, "        sprite%u: { x: %.f, y: %.f, w: %.f, h: %.f, id: %d }",
                     sprite->id,
                     sprite->x, sprite->y,
                     sprite->w, sprite->h,
                     sprite->id);
             } else {
-                fprintf(stream, "        sprite%u: { x: %.f; y: %.f; w: %.f; h: %.f; };\n",
+                fprintf(stream, "        sprite%u: { x: %.f, y: %.f, w: %.f, h: %.f }",
                     sprite->id,
                     sprite->x, sprite->y,
                     sprite->w, sprite->h);
             }
+            if (!list_is_last_iteration())
+                fprintf(stream, ",");
+            fprintf(stream, "\n");
             prev_sprite_id = sprite->id;
         }
 
-        fprintf(stream, "    };\n}\n\n");
+        fprintf(stream, "    }\n}\n\n");
 
         anm_script_t* script;
         list_for_each(&entry->scripts, script) {
