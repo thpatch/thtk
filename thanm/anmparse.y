@@ -628,6 +628,15 @@ Directive:
         if (strcmp($type, "version") == 0) {
             uint32_t ver = strtoul($arg, NULL, 10);
             state->default_version = ver;
+        } else if (strcmp($type, "anmmap") == 0) {
+            FILE* map_file = fopen($arg, "r");
+            if (map_file == NULL) {
+                fprintf(stderr, "%s: couldn't open %s for reading: %s\n",
+                    argv0, $arg, strerror(errno));
+            } else {
+                anmmap_load(g_anmmap, map_file, $arg);
+                fclose(map_file);
+            }
         } else {
             yyerror(state, "unknown directive: %s", $type);
         }
