@@ -40,6 +40,8 @@
 #include "program.h"
 #include "thanm.h"
 #include "value.h"
+#include "reg.h"
+#include "expr.h"
 
 /* Bison things. */
 void yyerror(const parser_state_t*, const char*, ...);
@@ -68,9 +70,6 @@ static prop_list_entry_t* prop_list_find(list_t* list, const char* key);
 /* Recursively frees the property list content. Does not free the list itself. */
 static void prop_list_free_nodes(list_t* list);
 
-/* Creates a new instruction. */
-static thanm_instr_t* instr_new(parser_state_t* state, uint16_t id, list_t* params);
-
 /* Returns instruction number given an identifier, or -1 if it's not an instruction. */
 static int identifier_instr(char* ident);
 
@@ -79,6 +78,17 @@ static global_t* global_find(parser_state_t* state, const char* name);
 
 /* Creates a copy of the given param. */
 static thanm_param_t* param_copy(thanm_param_t* param);
+
+/* Creates a new variable and (optionally) initializes it with the given expr if it's non-NULL. */
+static var_t* var_create(parser_state_t* state, char* name, int type, expr_t* expr);
+
+/* Adds an instruction that assigns the given expr to the variable.  */
+static void var_assign(parser_state_t* state, var_t* var, expr_t* expr);
+
+/* Returns variable of a given name (or NULL if not found). */
+static var_t* var_find(parser_state_t* state, char* name);
+
+static void instr_check_types(parser_state_t* state, thanm_instr_t* instr);
 
 %}
 
@@ -97,6 +107,7 @@ static thanm_param_t* param_copy(thanm_param_t* param);
     struct list_t* list;
     struct prop_list_entry_t* prop_list_entry;
     struct prop_list_entry_value_t* prop_list_entry_value;
+    struct expr_t* expr;
 }
 
 %token <floating> FLOATING "floating"
@@ -105,8 +116,6 @@ static thanm_param_t* param_copy(thanm_param_t* param);
 %token <string> TEXT "text"
 %token <string> DIRECTIVE "directive"
 
-%token EQUALS "="
-%token PLUS "+"
 %token COMMA ","
 %token COLON ":"
 %token SEMICOLON ";"
@@ -116,11 +125,30 @@ static thanm_param_t* param_copy(thanm_param_t* param);
 %token BRACE_CLOSE "}"
 %token PARENTHESIS_OPEN "("
 %token PARENTHESIS_CLOSE ")"
+%token ASSIGN "=" 
+%token ASSIGNADD "+="
+%token ASSIGNSUB "-="
+%token ASSIGNMUL "*="
+%token ASSIGNDIV "/="
+%token ASSIGNMOD "%="
+%token ADD "+"
+%token SUBTRACT "-"
+%token MULTIPLY "*"
+%token DIVIDE "/"
 %token MODULO "%"
+%token RAND "rand"
+%token SIN "sin"
+%token COS "cos"
+%token TAN "tan"
+/* For some reason, there is no asin instruction in the game. */
+%token ACOS "acos"
+%token ATAN "atan" 
 %token DOLLAR "$"
 %token ENTRY "entry"
 %token SCRIPT "script"
 %token GLOBAL "global"
+%token INT "int"
+%token FLOAT "float"
 %token TIMEOF "timeof"
 %token OFFSETOF "offsetof"
 %token SCRIPTOF "scriptof"
@@ -130,16 +158,28 @@ static thanm_param_t* param_copy(thanm_param_t* param);
 %token END_OF_FILE 0 "end of file"
 
 %type <integer> SomethingOf
+%type <integer> TypeDeclaration
+%type <integer> VariableDeclaration
 %type <string> TextLike
-%type <param> ParameterLiteral
-%type <param> ParameterOther
-%type <param> Parameter
+%type <param> ParameterSimple
 %type <list> Properties
 %type <list> PropertyList
-%type <list> Parameters
-%type <list> ParametersList
+%type <list> Expressions
+%type <list> ExpressionList
 %type <prop_list_entry> PropertyListEntry
 %type <prop_list_entry_value> PropertyListValue
+%type <expr> Expression
+%type <expr> ExpressionParam
+%type <expr> ExpressionSubset
+
+%right ASSIGNADD ASSIGNSUB ASSIGNMUL ASSIGNDIV ASSIGNMOD
+%right ASSIGN
+%left ADD SUBTRACT
+%left MULTIPLY DIVIDE MODULO
+%precedence NOT NEG
+%precedence RAND SIN COS TAN ACOS ATAN 
+
+%expect 0
 
 %%
 
@@ -151,11 +191,18 @@ Statement:
     Entry
     | Script
     | Directive
-    | "global" IDENTIFIER[name] "=" Parameter[param] ";" {
+    | "global" IDENTIFIER[name] "=" Expression[expr] ";" {
         global_t* global = (global_t*)malloc(sizeof(global_t));
-        global->name = $name;
-        global->param = $param;
-        list_prepend_new(&state->globals, global);
+        expr_output(state, $expr, NULL);
+        if ($expr->type == EXPR_VAL) {
+            global->name = $name;
+            global->param = $expr->param;
+            list_prepend_new(&state->globals, global);
+        }  /* No need to show error message in else: expr_output
+            * has already done that. */
+        
+        $expr->param = NULL;
+        expr_free($expr);
     }
 
 Entry:
@@ -201,6 +248,7 @@ Entry:
             OPTIONAL("version", 'S', $prop_list)
 
         entry->header->version = prop ? prop->value->val.S : state->default_version;
+        state->current_version = entry->header->version;
 
         REQUIRE("name", 't', $prop_list);
         entry->name = strdup(prop->value->val.t);
@@ -380,10 +428,8 @@ Script:
             yyerror(state, "an entry is required before a script");
             return 1;
         }
-        anm_script_t* script = (anm_script_t*)malloc(sizeof(anm_script_t));
-        list_init(&script->instrs);
-        list_init(&script->raw_instrs);
-        list_init(&script->labels);
+        anm_script_t* script = anm_script_new();
+        reg_reset(state->current_version);
         script->offset = malloc(sizeof(*script->offset));
         script->offset->id = state->script_id++;
 
@@ -397,7 +443,7 @@ Script:
         state->offset = 0;
         state->time = 0;
     } "{" ScriptStatements "}" {
-        state->current_script= NULL;
+        state->current_script = NULL;
     }
 
 ScriptOptionalId:
@@ -427,44 +473,100 @@ ScriptStatement:
         label->time = state->time;
         list_append_new(&state->current_script->labels, label);
     }
-    | IDENTIFIER[ident] "(" Parameters[params] ")" ";" {
+    | IDENTIFIER[ident] "(" Expressions[exprs] ")" ";" {
         int id = identifier_instr($ident);
         if (id == -1) {
             yyerror(state, "unknown mnemonic: %s", $ident);
             return 1;
         }
-        thanm_instr_t* instr = instr_new(state, id, $params);
+
+        list_t regs_to_free;
+        list_init(&regs_to_free);
+
+        list_t* param_list = list_new();
+
+        expr_t* expr;
+        list_for_each($exprs, expr) {
+            expr_error_t err = expr_output(state, expr, NULL);    
+            if (err)
+                yyerror(state, "expression error in instr parameter: %s", expr_strerror(err));
+                
+            if (expr->reg && expr->reg->lock == LOCK_EXPR)
+                list_append_new(&regs_to_free, expr->reg);
+                
+            list_append_new(param_list, expr->param);
+
+            expr->param = NULL;
+            expr_free(expr);
+        }
+        list_free_nodes($exprs);
+        free($exprs);
+
+        thanm_instr_t* instr = instr_new(state, id, param_list);
+        instr_check_types(state, instr);
         list_append_new(&state->current_script->instrs, instr);
+
+        reg_t* reg;
+        list_for_each(&regs_to_free, reg)
+            reg_lock(reg, LOCK_UNLOCK);
 
         free($ident);
     }
+    | VariableDeclaration ";"
+    | ExpressionSubset ";" {
+        expr_error_t err = expr_output(state, $1, NULL);
+        if (err)
+            yyerror(state, "expression error: %s", expr_strerror(err));
 
-Parameters:
+        if ($1->reg && $1->reg->lock == LOCK_EXPR)
+            reg_lock($1->reg, LOCK_UNLOCK);
+        expr_free($1);
+    }
+
+TypeDeclaration:
+    "int" {
+        $$ = 'S';
+    }
+    | "float" {
+        $$ = 'f';
+    }
+
+VariableDeclaration:
+    TypeDeclaration[type] IDENTIFIER[name] "=" Expression[expr] {
+        $$ = $type;
+        var_create(state, $name, $type, $expr);
+    }
+    | TypeDeclaration[type] IDENTIFIER[name] {
+        $$ = $type;
+        var_create(state, $name, $type, NULL);
+    }
+    | VariableDeclaration[type] "," IDENTIFIER[name] "=" Expression[expr] {
+        $$ = $type;
+        var_create(state, $name, $type, $expr);
+    }
+    | VariableDeclaration[type] "," IDENTIFIER[name] {
+        $$ = $type;
+        var_create(state, $name, $type, NULL);
+    }
+
+Expressions:
     %empty {
         $$ = list_new();
     }
-    | ParametersList {
+    | ExpressionList {
         $$ = $1;
     }
 
-ParametersList:
-    Parameter[param] {
+ExpressionList:
+    Expression[expr] {
         $$ = list_new();
-        list_append_new($$, $param);
+        list_append_new($$, $expr);
     }
-    | ParametersList[list] "," Parameter[param] {
-        list_append_new($list, $param);
-    }
-
-Parameter:
-    ParameterLiteral {
-        $$ = $1;
-    }
-    | ParameterOther {
-        $$ = $1;
+    | ExpressionList[list] "," Expression[expr] {
+        list_append_new($list, $expr);
     }
 
-ParameterLiteral:
+ParameterSimple:
     INTEGER {
         value_t* val = (value_t*)malloc(sizeof(value_t));
         val->type = 'S';
@@ -489,9 +591,10 @@ ParameterLiteral:
         param->val = val;
         $$ = param;
     }
-
-ParameterOther:
-    "[" INTEGER "]" {
+    | "[" INTEGER "]" {
+        if (reg_lock_id($2, LOCK_OTHER, state->current_version)) {
+            yyerror(state, "warning: global var [%d] is already used by the compiler", $2);
+        }
         value_t* val = (value_t*)malloc(sizeof(value_t));
         val->type = 'S';
         val->val.S = $2;
@@ -501,6 +604,9 @@ ParameterOther:
         $$ = param;
     }
     | "[" FLOATING "]" {
+        if (reg_lock_id((int)$2, LOCK_OTHER, state->current_version)) {
+            yyerror(state, "warning: global var [%f] is already used by the compiler", $2);
+        }
         value_t* val = (value_t*)malloc(sizeof(value_t));
         val->type = 'f';
         val->val.f = $2;
@@ -521,6 +627,9 @@ ParameterOther:
             yyerror(state, "unknown variable: %s", $2);
             param->val->val.S = 0;
         } else {
+            if (reg_lock_id(ent->key, LOCK_OTHER, state->current_version)) {
+                yyerror(state, "warning: global var %s is already used by the compiler", $2);
+            }
             param->val->val.S = ent->key;
         }
         free($2);
@@ -538,51 +647,62 @@ ParameterOther:
             yyerror(state, "unknown variable: %s", $2);
             param->val->val.f = 0.0f;
         } else {
+            if (reg_lock_id(ent->key, LOCK_OTHER, state->current_version)) {
+                yyerror(state, "warning: global var %s is already used by the compiler", $2);
+            }
             param->val->val.f = (float)ent->key;
         }
         free($2);
         $$ = param;
     }
     | IDENTIFIER {
-        /* First, check for variables and globaldefs.
+        /* First, check for globaldefs, localvars and globalvars.
          * If it's neither, then simply make it a string param that
          * will be evaluated based on context (what format the instr expects) */
         global_t* global = global_find(state, $1);
         if (global) {
             $$ = param_copy(global->param);
         } else {
-            value_t* val = (value_t*)malloc(sizeof(value_t));
-            thanm_param_t* param;
-            seqmap_entry_t* ent = seqmap_find(g_anmmap->gvar_names, $1);
-            if (ent) {
-                int id = ent->key;
-                ent = seqmap_get(g_anmmap->gvar_types, id);
-                if (ent == NULL) {
-                    /* Unknown type */
-                    yyerror(state, "type of variable is unknown: %s", $1);
-                    val->type = 'S';
-                    val->val.S = 0;
-                    param = thanm_param_new('S');
-                    param->val = val;
+            var_t* var = var_find(state, $1);
+            if (var) {
+                $$ = reg_to_param(var->reg);
+            } else {
+                value_t* val = (value_t*)malloc(sizeof(value_t));
+                thanm_param_t* param;
+                seqmap_entry_t* ent = seqmap_find(g_anmmap->gvar_names, $1);
+                if (ent) {
+                    int id = ent->key;
+                    if (reg_lock_id(id, LOCK_OTHER, state->current_version)) {
+                        yyerror(state, "warning: global var %s is already used by the compiler", $1);
+                    }
+                    ent = seqmap_get(g_anmmap->gvar_types, id);
+                    if (ent == NULL) {
+                        /* Unknown type */
+                        yyerror(state, "type of variable is unknown: %s", $1);
+                        val->type = 'S';
+                        val->val.S = 0;
+                        param = thanm_param_new('S');
+                        param->val = val;
+                    } else {
+                        val->type = ent->value[0] == '$' ? 'S' : 'f';
+                        if (val->type == 'S')
+                            val->val.S = id;
+                        else
+                            val->val.f = (float)id;
+
+                        param = thanm_param_new(val->type);
+                        param->is_var = 1;
+                        param->val = val;
+                    }
+                    free($1);
                 } else {
-                    val->type = ent->value[0] == '$' ? 'S' : 'f';
-                    if (val->type == 'S')
-                        val->val.S = id;
-                    else
-                        val->val.f = (float)id;
-                    
-                    param = thanm_param_new(val->type);
-                    param->is_var = 1;
+                    val->type = 'z';
+                    val->val.z = $1;
+                    param = thanm_param_new('z');
                     param->val = val;
                 }
-                free($1);
-            } else {
-                val->type = 'z';
-                val->val.z = $1;
-                param = thanm_param_new('z');
-                param->val = val;
+                $$ = param;
             }
-            $$ = param;
         }
     }
     | SomethingOf[type] "(" IDENTIFIER[label] ")" {
@@ -593,6 +713,38 @@ ParameterOther:
         param->val = val;
         $$ = param;
     }
+
+Expression:
+      ExpressionParam
+    | ExpressionSubset
+
+ExpressionParam:
+    ParameterSimple[param] { 
+        $$ = expr_new_val($param, state->current_version);
+    }
+    | "(" ExpressionParam ")" {
+        $$ = $2;
+    }
+
+ExpressionSubset:
+      "(" ExpressionSubset ")"         { $$ = $2; }
+    | ExpressionParam "=" Expression   { $$ = expr_new_assign(ASSIGN, $1, $3, state->current_version); }
+    | ExpressionParam "+=" Expression  { $$ = expr_new_assign(ADD, $1, $3, state->current_version); }
+    | ExpressionParam "-=" Expression  { $$ = expr_new_assign(SUBTRACT, $1, $3, state->current_version); }
+    | ExpressionParam "*=" Expression  { $$ = expr_new_assign(MULTIPLY, $1, $3, state->current_version); }
+    | ExpressionParam "/=" Expression  { $$ = expr_new_assign(DIVIDE, $1, $3, state->current_version); }
+    | ExpressionParam "%=" Expression  { $$ = expr_new_assign(MODULO, $1, $3, state->current_version); }
+    | Expression "+" Expression        { $$ = expr_new_binary(ADD, $1, $3, state->current_version); }
+    | Expression "-" Expression        { $$ = expr_new_binary(SUBTRACT, $1, $3, state->current_version); }
+    | Expression "*" Expression        { $$ = expr_new_binary(MULTIPLY, $1, $3, state->current_version); }
+    | Expression "/" Expression        { $$ = expr_new_binary(DIVIDE, $1, $3, state->current_version); }
+    | Expression "%" Expression        { $$ = expr_new_binary(MODULO, $1, $3, state->current_version); }
+    | "rand" "(" Expression ")"        { $$ = expr_new_unary(RAND, $3, state->current_version); }
+    | "sin" "(" Expression ")"         { $$ = expr_new_unary(SIN, $3, state->current_version); }
+    | "cos" "(" Expression ")"         { $$ = expr_new_unary(COS, $3, state->current_version); }
+    | "tan" "(" Expression ")"         { $$ = expr_new_unary(TAN, $3, state->current_version); }
+    | "acos" "(" Expression ")"        { $$ = expr_new_unary(ACOS, $3, state->current_version); }
+    | "atan" "(" Expression ")"        { $$ = expr_new_unary(ATAN, $3, state->current_version); }
 
 SomethingOf:
     "timeof" {
@@ -626,7 +778,7 @@ TextLike:
 Directive:
     DIRECTIVE[type] TextLike[arg] {
         int was_fatal_error = 0;
-        
+
         if (strcmp($type, "version") == 0) {
             uint32_t ver = strtoul($arg, NULL, 10);
             state->default_version = ver;
@@ -751,7 +903,7 @@ instr_check_types(
         
         if (param->type != c) {
             state->was_error = 1;
-            yyerror(state, "wrong parameter %d type for opcode %d, expected: %c", i, instr->id, c);
+            yyerror(state, "wrong parameter %d type for opcode %d, expected: %c", i + 1, instr->id, c);
         }
         ++i;
     }
@@ -759,39 +911,6 @@ instr_check_types(
         state->was_error = 1;
         yyerror(state, "not enough parameters for opcode %d", instr->id);
     }
-}
-
-static uint32_t
-instr_get_size(
-    parser_state_t* state,
-    thanm_instr_t* instr
-) {
-    uint32_t size = sizeof(anm_instr_t);
-    /* In ANM, parameter size is always 4 bytes (only int32 or float), so we can just add 4 to size for every param... */
-    list_node_t* node;
-    list_for_each_node(&instr->params, node)
-        size += 4;
-
-    return size;
-}
-
-static thanm_instr_t*
-instr_new(
-    parser_state_t* state,
-    uint16_t id,
-    list_t* params
-) {
-    thanm_instr_t* instr = thanm_instr_new();
-    instr->type = THANM_INSTR_INSTR;
-    instr->time = state->time;
-    instr->offset = state->offset;
-    instr->id = id;
-    instr->params = *params;
-    free(params);
-    instr->size = instr_get_size(state, instr);
-    instr_check_types(state, instr);
-    state->offset += instr->size;
-    return instr;
 }
 
 static int
@@ -848,6 +967,73 @@ param_copy(
         val_copy->val.z = strdup(val_copy->val.z);
     copy->val = val_copy;
     return copy;
+}
+
+static var_t*
+var_create(
+    parser_state_t* state,
+    char* name,
+    int type,
+    expr_t* expr
+) {
+    /* Create variables without assigning registers, and only assign them if
+     * the var is actually used. */
+    var_t* var = var_new(name, type);
+    if (expr != NULL) {
+        var_assign(state, var, expr);
+    }
+    list_append_new(&state->current_script->vars, var);
+    return var;
+}
+
+static void
+var_assign(
+    parser_state_t* state,
+    var_t* var,
+    expr_t* expr
+) {
+    reg_t* reg = reg_acquire(PURPOSE_VAR, var->type, state->current_version);
+    if (reg == NULL) {
+        yyerror(state, "unable to use variable %s: registers full", var->name);
+        return;
+    }
+    var->reg = reg;
+
+    expr_t* new_expr = expr_new_assign(ASSIGN, expr_new_val_reg(reg), expr, state->current_version);
+
+    expr_error_t err = expr_output(state, new_expr, NULL);
+    if (err)
+        yyerror(state, "expression error in variable initialization: %s", expr_strerror(err));
+    
+    if (new_expr->reg && new_expr->reg->lock == LOCK_EXPR)
+        reg_lock(reg, LOCK_UNLOCK);
+    expr_free(new_expr);
+}
+
+static var_t*
+var_find(
+    parser_state_t* state,
+    char* name
+) {
+    var_t* var;
+    if (state->current_script) {
+        list_for_each(&state->current_script->vars, var) {
+            if (strcmp(var->name, name) == 0) {
+                /* If something was looking for the variable,
+                 * it probably expects it to have a register. */
+                if (var->reg == NULL) {
+                    reg_t* reg = reg_acquire(PURPOSE_VAR, var->type, state->current_version);
+                    if (reg == NULL) {
+                        yyerror(state, "unable to use variable %s: registers full", name);
+                        return NULL;
+                    }
+                    var->reg = reg;
+                }
+                return var;
+            }
+        }
+    }
+    return NULL;
 }
 
 void

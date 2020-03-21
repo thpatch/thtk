@@ -64,8 +64,6 @@
 
 %x COMMENT COMMENT_SINGLE STRING
 %%
-"="        return EQUALS;
-"+"        return PLUS;
 ","        return COMMA;
 ":"        return COLON;
 ";"        return SEMICOLON;
@@ -75,11 +73,29 @@
 "}"        return BRACE_CLOSE;
 "("        return PARENTHESIS_OPEN;
 ")"        return PARENTHESIS_CLOSE;
+"="        return ASSIGN;
+"+="       return ASSIGNADD;
+"-="       return ASSIGNSUB;
+"*="       return ASSIGNMUL;
+"/="       return ASSIGNDIV;
+"%="       return ASSIGNMOD;
+"+"        return ADD;
+"-"        return SUBTRACT;
+"*"        return MULTIPLY;
+"/"        return DIVIDE;
 "%"        return MODULO;
+"rand"     return RAND;
+"sin"      return SIN;
+"cos"      return COS;
+"tan"      return TAN;
+"acos"     return ACOS;
+"atan"     return ATAN;
 "$"        return DOLLAR;
 "entry"    return ENTRY;
 "script"   return SCRIPT;
 "global"   return GLOBAL;
+"int"      return INT;
+"float"    return FLOAT;
 "timeof"   return TIMEOF;
 "offsetof" return OFFSETOF;
 "scriptof" return SCRIPTOF;

@@ -41,6 +41,7 @@
 #include "util.h"
 #include "value.h"
 #include "mygetopt.h"
+#include "reg.h"
 
 anmmap_t* g_anmmap = NULL;
 unsigned int option_force;
@@ -321,8 +322,13 @@ static const id_format_pair_t formats_v8[] = {
     { 120, "SSS" },
     { 121, "fff" },
     { 122, "SS" },
+    { 123, "ff" },
     { 124, "ff" },
     { 125, "ff" },
+    { 126, "ff" },
+    { 127, "ff" },
+    { 128, "ff" },
+    { 129, "f" },
     { 130, "ffff" },
     { 131, "ffff" },
     { 200, "ot" },
@@ -463,6 +469,34 @@ convert_header_to_11(
 }
 #endif
 
+anm_script_t* anm_script_new() {
+    anm_script_t* script = (anm_script_t*)malloc(sizeof(anm_script_t));
+    list_init(&script->labels);
+    list_init(&script->instrs);
+    list_init(&script->raw_instrs);
+    list_init(&script->vars);
+    script->offset = NULL;
+    return script;
+}
+
+var_t* var_new(
+    char* name,
+    int type
+) {
+    var_t* var = (var_t*)malloc(sizeof(var_t));
+    var->name = name;
+    var->type = type;
+    var->reg = NULL;
+    return var;
+}
+
+void var_free(
+    var_t* var
+) {
+    free(var->name);
+    free(var);
+}
+
 const id_format_pair_t*
 anm_get_formats(
     uint32_t version
@@ -510,14 +544,17 @@ thanm_param_new(
     thanm_param_t* ret = (thanm_param_t*)util_malloc(sizeof(thanm_param_t));
     ret->is_var = 0;
     ret->type = type;
+    ret->expr = NULL;
+    ret->val = NULL;
     return ret;
 }
 
-static void
+void
 thanm_param_free(
     thanm_param_t* param
 ) {
-    value_free(param->val);
+    if (param->val)
+        value_free(param->val);
     free(param);
 }
 
@@ -635,6 +672,37 @@ thanm_instr_new() {
     thanm_instr_t* ret = (thanm_instr_t*)util_malloc(sizeof(thanm_instr_t));
     list_init(&ret->params);
     return ret;
+}
+
+uint32_t
+instr_get_size(
+    thanm_instr_t* instr
+) {
+    uint32_t size = sizeof(anm_instr_t);
+    /* In ANM, parameter size is always 4 bytes (only int32 or float), so we can just add 4 to size for every param... */
+    list_node_t* node;
+    list_for_each_node(&instr->params, node)
+        size += 4;
+
+    return size;
+}
+
+thanm_instr_t*
+instr_new(
+    parser_state_t* state,
+    uint16_t id,
+    list_t* params
+) {
+    thanm_instr_t* instr = thanm_instr_new();
+    instr->type = THANM_INSTR_INSTR;
+    instr->time = state->time;
+    instr->offset = state->offset;
+    instr->id = id;
+    instr->params = *params;
+    free(params);
+    instr->size = instr_get_size(instr);
+    state->offset += instr->size;
+    return instr;
 }
 
 static thanm_instr_t*
@@ -801,10 +869,8 @@ anm_read_file(
             anm_offset_t* script_offsets = 
                 (anm_offset_t*)(map + sizeof(*header) + header->sprites * sizeof(uint32_t));
             for (uint32_t s = 0; s < header->scripts; ++s) {
-                anm_script_t* script = malloc(sizeof(*script));
+                anm_script_t* script = anm_script_new();
                 script->offset = &(script_offsets[s]);
-                list_init(&script->instrs);
-                list_init(&script->raw_instrs);
 
                 unsigned char* limit = map;
                 if (s < header->scripts - 1)
@@ -1624,6 +1690,7 @@ anm_create(
     state.was_error = 0;
     state.time = 0;
     state.default_version = -1;
+    state.current_version = -1;
     state.sprite_id = 0;
     state.script_id = 0;
     list_init(&state.entries);
@@ -1664,10 +1731,18 @@ anm_create(
         anm_script_t* script;
         list_for_each(&entry->scripts, script) {
             anm_serialize_script(&state, script);
+
+            /* Free vars. */
+            var_t* var;
+            list_for_each(&script->vars, var) {
+                var_free(var);
+            }
         }
     }
 
     /* Free stuff. */
+    reg_free_user();
+
     symbol_id_pair_t* symbol;
     list_for_each(&state.sprite_names, symbol) {
         free(symbol->name);

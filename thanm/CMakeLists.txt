@@ -5,8 +5,8 @@ flex_target(AnmScan anmscan.l ${CMAKE_CURRENT_BINARY_DIR}/anmscan.c)
 include_directories(${PNG_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR})
 add_executable(thanm
   ${BISON_AnmParse_OUTPUT_SOURCE} ${FLEX_AnmScan_OUTPUTS}
-  thanm.c image.c anmmap.c
-  thanm.h image.h anmmap.h
+  thanm.c image.c anmmap.c reg.c expr.c
+  thanm.h image.h anmmap.h reg.h expr.h
 )
 target_link_libraries(thanm util ${PNG_LIBRARY})
 link_setargv(thanm)

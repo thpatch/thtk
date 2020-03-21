@@ -49,7 +49,11 @@ typedef struct {
     list_t raw_instrs;
     /* list of label_t */
     list_t labels;
+    /* list of var_t */
+    list_t vars;
 } anm_script_t;
+
+anm_script_t* anm_script_new();
 
 typedef struct {
     uint16_t type;
@@ -97,23 +101,28 @@ typedef struct {
     list_t params;
 } thanm_instr_t;
 
-thanm_instr_t* thanm_instr_new();
+uint32_t instr_get_size(thanm_instr_t* instr);
+
+typedef struct expr_t expr_t;
 
 typedef struct thanm_param_t {
     int type;
     int is_var;
+    expr_t* expr;
     value_t* val;
 } thanm_param_t;
 
 thanm_param_t* thanm_param_new(int type);
+void thanm_param_free(thanm_param_t* param);
 
 /* Parser things. */
-typedef struct {
+typedef struct parser_state_t {
     /* Use to idicate that the compilation should not
      * continue after parsing is finished. */
     int was_error;
     int16_t time;
     int32_t default_version;
+    int32_t current_version;
     uint32_t offset;
     uint32_t sprite_id;
     uint32_t script_id;
@@ -146,6 +155,21 @@ typedef struct global_t {
     char* name;
     thanm_param_t* param;
 } global_t;
+
+typedef struct reg_t reg_t;
+
+typedef struct var_t {
+    char* name;
+    int type;
+    reg_t* reg;
+} var_t;
+
+var_t* var_new(char* name, int type);
+
+void var_free(var_t* var);
+
+thanm_instr_t* thanm_instr_new();
+thanm_instr_t* instr_new(parser_state_t* state, uint16_t id, list_t* params);
 
 #define DEFAULTVAL 0xffff
 
