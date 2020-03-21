@@ -74,10 +74,12 @@ op_get(
     int ver
 ) {
     const operation_t* table = op_get_table(ver);
-    while(table->symbol) {
-        if (table->symbol == symbol)
-            return table;
-        ++table;
+    if (table != NULL) {
+        while(table->symbol) {
+            if (table->symbol == symbol)
+                return table;
+            ++table;
+        }
     }
     return NULL;
 }

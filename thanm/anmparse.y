@@ -193,13 +193,15 @@ Statement:
     | Directive
     | "global" IDENTIFIER[name] "=" Expression[expr] ";" {
         global_t* global = (global_t*)malloc(sizeof(global_t));
-        expr_output(state, $expr, NULL);
+        expr_error_t err = expr_output(state, $expr, NULL);
+        if (err)
+            yyerror(state, "expression error in globaldef initialization: %s", expr_strerror(err));
+        
         if ($expr->type == EXPR_VAL) {
             global->name = $name;
             global->param = $expr->param;
             list_prepend_new(&state->globals, global);
-        }  /* No need to show error message in else: expr_output
-            * has already done that. */
+        }
         
         $expr->param = NULL;
         expr_free($expr);
@@ -716,7 +718,14 @@ ParameterSimple:
 
 Expression:
       ExpressionParam
-    | ExpressionSubset
+    | ExpressionSubset[expr] {
+        /* Expr could be NULL if no operations were found. */
+        if ($expr == NULL) {
+            yyerror(state, "unable to create expression: no operators found for current version");
+            return 1;
+        }
+        $$ = $expr;
+    }
 
 ExpressionParam:
     ParameterSimple[param] { 
@@ -782,6 +791,8 @@ Directive:
         if (strcmp($type, "version") == 0) {
             uint32_t ver = strtoul($arg, NULL, 10);
             state->default_version = ver;
+            if (state->current_version == -1)
+                state->current_version = ver;
         } else if (strcmp($type, "anmmap") == 0) {
             char* path = path_get_full(&state->path_state, $arg);
             FILE* map_file = fopen(path, "r");
