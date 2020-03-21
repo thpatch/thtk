@@ -287,7 +287,7 @@ expr_output(
             if (found)
                 out = found->reg;
             else {
-                out = reg_acquire(PURPOSE_EXPR, type, state->default_version);
+                out = reg_acquire(PURPOSE_EXPR, type, state->current_version);
                 if (out == NULL)
                     return EXPR_ERR_REG_FULL;
             }
