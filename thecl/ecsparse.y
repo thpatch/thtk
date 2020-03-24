@@ -1622,7 +1622,11 @@ static thecl_instr_t*
 instr_copy(thecl_instr_t* instr) {
     thecl_instr_t* new_instr = malloc(sizeof(thecl_instr_t));
     memcpy(new_instr, instr, sizeof(thecl_instr_t));
-    new_instr->string = strdup(instr->string);
+    if (instr->string != NULL)
+        new_instr->string = strdup(instr->string);
+    else
+        new_instr->string = NULL;
+    
     list_init(&new_instr->params);
     thecl_param_t* param;
     list_for_each(&instr->params, param) {
