@@ -156,6 +156,8 @@ static int var_exists(parser_state_t* state, thecl_sub_t* sub, const char* name)
 static void var_shorthand_assign(parser_state_t* state, thecl_param_t* param, expression_t* expr, int EXPRI, int EXPRF);
 /* Stores a new label in the current subroutine pointing to the current offset. */
 static void label_create(parser_state_t* state, char* label);
+/* Change offset of all labels in the given list that have at least offset min_offset by subtracting the given value. */
+static void labels_adjust(list_t* labels, uint32_t min_offset, int32_t adjust);
 
 /* Update the current time label. */
 void set_time(parser_state_t* state, int new_time);
@@ -1806,27 +1808,41 @@ static void instr_create_inline_call(
         stack_replace[i - sub->arity] = var_new;
     }
 
-    /* Create labels that the inline sub uses (with changed offsets) */
+    /* Temprary label list that modifications will be apply to when needed.
+     * Content of this list will be later copied into the sub that created the inline call. */
+    list_t tmp_labels;
+    list_init(&tmp_labels);
     thecl_label_t* label;
     list_for_each(&sub->labels, label) {
         snprintf(buf, 256, "%s%s", name, label->name);
-        thecl_label_t* new_label = malloc(sizeof(thecl_label_t) + strlen(buf) + 1);
-        new_label->offset = label->offset + state->current_sub->offset;
-        new_label->time = label->time + state->instr_time;
+        thecl_label_t* new_label = (thecl_label_t*)malloc(sizeof(thecl_label_t) + strlen(buf) + 1);
+        new_label->offset = label->offset;
+        new_label->time = label->time;
         strcpy(new_label->name, buf);
-        list_append_new(&state->current_sub->labels, new_label);
+        list_append_new(&tmp_labels, new_label);
     }
+
+    /* Save these for later, as labels will have to be adjusted by these values. */
+    uint32_t org_off = state->current_sub->offset;
+    uint32_t org_time = state->instr_time;
 
     /* And finally, copy the instructions. */
 
     int rank_empty = parse_rank(state, "-");
+    uint32_t offset_diff = 0;
     thecl_instr_t* instr;
     list_for_each(&sub->instrs, instr) {
         /* Don't push the return value if nothing is going to pop it. */
-        if (!needs_ret && (instr->flags & FLAG_RETURN_VAL))
+        if (!needs_ret && (instr->flags & FLAG_RETURN_VAL)) {
+            labels_adjust(&tmp_labels, instr->offset - offset_diff, instr->size);
+            offset_diff += instr->size;
             continue;
+        }
 
         thecl_instr_t* new_instr = instr_copy(instr);
+
+        /* Remove this flag as it does NOT indicate the return val of this sub. */
+        new_instr->flags &= ~FLAG_RETURN_VAL;
 
         /* Set all of these to correct values. */
         new_instr->time += state->instr_time;
@@ -1837,6 +1853,8 @@ static void instr_create_inline_call(
             /* No reason to compile instructions that won't execute on any difficulty. */
             /* The reason why we don't call thecl_instr_free is that the param pointers are still the same
              * as in the original ins, and we do not want to free them. */
+            labels_adjust(&tmp_labels, instr->offset - offset_diff, instr->size);
+            offset_diff += instr->size;
             free(new_instr);
             continue;
         }
@@ -1900,6 +1918,14 @@ static void instr_create_inline_call(
         }
         instr_add(state->current_sub, new_instr);
     }
+
+    /* Apply final adjustments to the label list and copy them into the caller sub. */
+    list_for_each(&tmp_labels, label) {
+        label->offset += org_off;
+        label->time += org_time;
+        list_append_new(&state->current_sub->labels, label);
+    }
+    list_free_nodes(&tmp_labels);
 
     /* Time of the current sub has to be adjusted. */
     if (sub->time != 0)
@@ -2783,6 +2809,19 @@ sub_finish(
     state->current_sub = NULL;
 
     scope_finish(state);
+}
+
+static void
+labels_adjust(
+    list_t* labels,
+    uint32_t min_offset,
+    uint32_t adjust
+) {
+    thecl_label_t* label;
+    list_for_each(labels, label) {
+        if (label->offset >= min_offset)
+            label->offset -= adjust;
+    }
 }
 
 static void
