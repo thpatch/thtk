@@ -2070,18 +2070,16 @@ instr_create_call(
     list_node_t* node = state->expressions.head;
     while(expr_params--) {
         expr = (expression_t*)node->data;
-        expression_output(state, expr, 0);
-        expression_free(expr);
 
+        /* Remove expr from the list before outputting it, so that
+         * it doesn't use itself when being outputted.. */
         list_node_t* node_prev = node;
         node = node->next;
-        free(node_prev);
+        list_del(&state->expressions, node_prev);
+
+        expression_output(state, expr, 0);
+        expression_free(expr);
     }
-    state->expressions.head = node;
-    if (node == NULL) /* The list is empty. */
-        state->expressions.tail = NULL;
-    else
-        node->prev = NULL;
 
     instr_add(state->current_sub, instr_new_list(state, type, param_list));
     return false;
