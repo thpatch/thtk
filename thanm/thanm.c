@@ -1772,6 +1772,9 @@ anm_defaults(
 ) {
     anm_entry_t* entry;
     list_for_each(&anm->entries, entry) {
+        if (!entry->header->hasdata)
+            continue;
+
         image_t* img = png_read(entry->name);
 
         /* header->w/h must be a multiple of 2 */
