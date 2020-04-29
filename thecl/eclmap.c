@@ -44,6 +44,7 @@ eclmap_new()
     if (map) {
         map->ins_names = seqmap_new();
         map->ins_signatures = seqmap_new();
+        map->ins_rets = seqmap_new();
         map->gvar_names = seqmap_new();
         map->gvar_types = seqmap_new();
         map->timeline_ins_names = seqmap_new();
@@ -61,6 +62,7 @@ eclmap_free(
     if (map) {
         seqmap_free(map->ins_names);
         seqmap_free(map->ins_signatures);
+        seqmap_free(map->ins_rets);
         seqmap_free(map->gvar_names);
         seqmap_free(map->gvar_types);
         seqmap_free(map->timeline_ins_names);
@@ -88,6 +90,9 @@ control(
         state->ident = 1;
     } else if (!strcmp(cline, "!ins_signatures")) {
         state->smap = state->emap->ins_signatures;
+        state->ident = 0;
+    } else if (!strcmp(cline, "!ins_rets")) {
+        state->smap = state->emap->ins_rets;
         state->ident = 0;
     } else if (!strcmp(cline, "!gvar_names")) {
         state->smap = state->emap->gvar_names;
@@ -176,6 +181,19 @@ validate_type(
 }
 
 static int
+validate_ret_type(
+    state_t* state,
+    int linenum,
+    const char* ptr)
+{
+    if (ptr[0] != 'S' && ptr[0] != 'f' || ptr[0] && ptr[1]) {
+        fprintf(stderr, "%s:%s:%u: unknown return type '%s'\n", argv0, state->fn, linenum, ptr);
+        return 1;
+    }
+    return 0;
+}
+
+static int
 validate_signature(
     state_t *state,
     int linenum,
@@ -198,6 +216,9 @@ set(
             return 1;
     } else if (state->smap == state->emap->gvar_types) {
         if (validate_type(state, linenum, ent->value))
+            return 1;
+    } else if (state->smap == state->emap->ins_rets) {
+        if (validate_ret_type(state, linenum, ent->value))
             return 1;
     } else {
         if (validate_signature(state, linenum, ent->value))

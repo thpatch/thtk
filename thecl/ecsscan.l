@@ -251,7 +251,7 @@ ins_[0-9]+ {
 <COMMENT_SINGLE>.*    ;
 <COMMENT_SINGLE>"\n"  BEGIN(INITIAL);
 
-#([a-zA-Z]+) {
+#([a-zA-Z_]+) {
     /* Some directives should be handled by the lexer */
     if (strcmp(yytext + 1, "set") == 0) {
         BEGIN(SET_SYMBOL);

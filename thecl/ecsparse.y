@@ -66,7 +66,8 @@ enum expression_type {
     EXPRESSION_VAL,
     EXPRESSION_RANK_SWITCH,
     EXPRESSION_TERNARY,
-    EXPRESSION_CALL
+    EXPRESSION_CALL,
+    EXPRESSION_INS_CALL
 };
 
 typedef struct expression_t {
@@ -78,8 +79,9 @@ typedef struct expression_t {
     /* For operators: The child expressions. */
     /* This list is also used to store values for difficulty switches. */
     list_t children;
-    /* For sub calls: the sub name and sub params. */
+    /* For calls: the sub name/ins id and params. */
     char* name;
+    int ins_id;
     list_t params;
     /* Resulting type of expression. */
     int result_type;
@@ -100,6 +102,8 @@ static expression_t* expression_rank_switch_new(
 );
 static expression_t* expression_ternary_new(const parser_state_t* state, expression_t* condition, expression_t* val1, expression_t* val2);
 static expression_t* expression_call_new(const parser_state_t* state, list_t* param_list, char* sub_name);
+static expression_t* expression_call_ins_name_new(const parser_state_t* state, list_t* param_list, char* ins_name);
+static expression_t* expression_call_ins_new(const parser_state_t* state, list_t* param_list, int ins_id);
 
 static void expression_output(parser_state_t* state, expression_t* expr, int has_no_parents);
 static void expression_free(expression_t* expr);
@@ -492,6 +496,32 @@ Statement:
                 yyerror(state, "#ins: specified format is too long");
             }
 
+        } else if (strcmp($1, "ins_ret") == 0) {
+            if (strlen($2) < 256) {
+                char* arg = $2;
+                size_t s = 0;
+                while(arg[s] != ' ' && arg[s] != '\0') {
+                    buf[s] = arg[s];
+                    ++s;
+                }
+                buf[s] = '\0';
+                int id = strtol(buf, NULL, 10);
+                
+                while(arg[s] == ' ') ++s;
+
+                if (arg[s] == '\0') {
+                    yyerror(state, "#ins_ret: no type specified");
+                } else {
+                    if ((arg[s] == 'S' || arg[s] == 'f') && arg[s + 1] == '\0') {
+                        seqmap_entry_t ent = { id, arg + s };
+                        seqmap_set(g_eclmap->ins_rets, &ent);
+                    } else {
+                        yyerror(state, "#ins_ret: invalid type: %s", arg + s);
+                    }
+                }
+            } else {
+                yyerror(state, "#ins_ret: specified type is too long");
+            }
         } else if (strcmp($1, "message") == 0) {
             printf("%s\n", $2);
         } else {
@@ -1259,6 +1289,8 @@ ExpressionLoadType:
 
 ExpressionCall:
       IDENTIFIER "(" Instruction_Parameters ")"          { $$ = expression_call_new(state, $3, $1); }
+    | MNEMONIC "(" Instruction_Parameters ")"            { $$ = expression_call_ins_name_new(state, $3, $1); }
+    | INSTRUCTION "(" Instruction_Parameters ")"         { $$ = expression_call_ins_new(state, $3, $1); }
     | "sin"  "(" Expression ")"         { $$ = EXPR_11(SIN,                  $3); }
     | "cos"  "(" Expression ")"         { $$ = EXPR_11(COS,                  $3); }
     | "sqrt" "(" Expression ")"         { $$ = EXPR_11(SQRT,                 $3); }
@@ -2007,8 +2039,7 @@ instr_create_call(
             iter_param = (thecl_param_t*)iter_node->data;
             if (!iter_node->prev && type == TH10_INS_CALL_ASYNC_ID) {
                 /* CALL_ASYNC_ID takes one more param for the slot ID at the beginning. */
-                param = malloc(sizeof(thecl_param_t));
-                memcpy(param, iter_param, sizeof(thecl_param_t));
+                param = param_copy(iter_param);
                 list_append_new(param_list, param);
                 if (param->is_expression_param) {
                     ++expr_params;
@@ -2401,6 +2432,47 @@ expression_call_new(
     return expr;
 }
 
+static expression_t*
+expression_call_ins_name_new(
+    const parser_state_t* state,
+    list_t* param_list,
+    char* ins_name
+) {
+    seqmap_entry_t* ent = seqmap_find(g_eclmap->ins_names, ins_name);
+    if (ent)
+        return expression_call_ins_new(state, param_list, ent->key);
+
+    yyerror(state, "unknown mnemonic: %s", ins_name);
+    exit(1);
+}
+
+static expression_t*
+expression_call_ins_new(
+    const parser_state_t* state,
+    list_t* param_list,
+    int ins_id
+) {
+    seqmap_entry_t* ent = seqmap_get(g_eclmap->ins_rets, ins_id);
+    if (!ent) {
+        yyerror(state, "opcode %d has no return type specified", ins_id);
+        exit(1);
+    }
+    char ret_type = ent->value[0];
+
+    expression_t* expr = malloc(sizeof(expression_t));
+    expr->type = EXPRESSION_INS_CALL;
+    expr->ins_id = ins_id;
+    expr->result_type = ret_type;
+    
+    if (param_list != NULL) {
+        expr->params = *param_list;
+        free(param_list);
+    } else {
+        list_init(&expr->params);
+    }
+
+    return expr;
+}
 
 static expression_t *
 expression_copy(
@@ -2413,18 +2485,17 @@ expression_copy(
     if (expr->type == EXPRESSION_OP || expr->type == EXPRESSION_RANK_SWITCH || expr->type == EXPRESSION_TERNARY) {
         list_for_each(&expr->children, child_expr)
             list_append_new(&copy->children, expression_copy(child_expr));
-    } else if (expr->type == EXPRESSION_VAL || expr->type == EXPRESSION_CALL) {
-        thecl_param_t *param = malloc(sizeof(thecl_param_t));
-        memcpy(param, expr->value, sizeof(thecl_param_t));
-        copy->value = param;
-        if (expr->type == EXPRESSION_CALL) {
-            copy->name = malloc(strlen(expr->name + 1));
-            strcpy(copy->name, expr->name);
+    } else if (expr->type == EXPRESSION_VAL || expr->type == EXPRESSION_CALL || expr->type == EXPRESSION_INS_CALL) {
+        copy->value = expr->value ? param_copy(expr->value) : NULL;
+        if (expr->type == EXPRESSION_CALL || expr->type == EXPRESSION_INS_CALL) {
+            if (expr->type == EXPRESSION_CALL) {
+                copy->name = strdup(expr->name);
+            } else {
+                copy->ins_id = expr->ins_id;
+            }
             thecl_param_t* child_param;
             list_for_each(&expr->params, child_param) {
-                thecl_param_t* param_copy = malloc(sizeof(thecl_param_t));
-                memcpy(param_copy, child_param, sizeof(thecl_param_t));
-                list_append_new(&copy->params, param_copy);
+                list_append_new(&copy->params, param_copy(child_param));
             }
         }
     }
@@ -2457,7 +2528,7 @@ expression_output(
         /* Since expression_optimize is already done recursively for children, it shouldn't be called for child expressions. */
         expression_optimize(state, expr);
 
-    if (expr->id < 0) {
+    if (expr->id < 0 && (expr->type == EXPRESSION_VAL || expr->type == EXPRESSION_OP)) {
         /* Expression not outputtable - check expr.c for explanation in comments. */
         yyerror(state, "expression not outputtable in current version");
         return;
@@ -2533,6 +2604,10 @@ expression_output(
         /* Inline calls don't use return registers, so only push I3/F3 if the call was not inline. */
         if (!instr_create_call(state, TH10_INS_CALL, expr->name, &expr->params, true))
             instr_add(state->current_sub, instr_new(state, expr->id, "p", expr->value));
+    } else if (expr->type == EXPRESSION_INS_CALL) {
+        list_t* list = malloc(sizeof(list_t));
+        *list = expr->params;
+        instr_add(state->current_sub, instr_new_list(state, expr->ins_id, list));
     }
 }
 
@@ -3054,8 +3129,7 @@ var_shorthand_assign(
     int EXPRF)
 {
     /* Can't use the same param twice, so a copy is created. */
-    thecl_param_t* param_clone = malloc(sizeof(thecl_param_t));
-    memcpy(param_clone, param, sizeof(thecl_param_t));
+    thecl_param_t* param_clone = param_copy(param);
 
     expression_t* expr_load = expression_load_new(state, param_clone);
     expression_t* expr_main = EXPR_22(EXPRI, EXPRF, expr_load, expr_assign);

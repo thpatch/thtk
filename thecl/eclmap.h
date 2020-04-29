@@ -39,6 +39,7 @@
 typedef struct eclmap_t {
     seqmap_t *ins_names;
     seqmap_t *ins_signatures;
+    seqmap_t* ins_rets;
     seqmap_t *gvar_names;
     seqmap_t *gvar_types;
     seqmap_t *timeline_ins_names;
