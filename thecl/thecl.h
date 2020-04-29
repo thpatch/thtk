@@ -252,6 +252,11 @@ typedef struct {
     char** path_stack;
     const char* (*instr_format)(unsigned int version, unsigned int id, bool is_timeline);
     size_t (*instr_size)(unsigned int version, const thecl_instr_t* instr, bool is_timeline);
+
+    /* Stuff for lexer */
+    list_t set_symbols;
+    int ifset_cnt;
+    int* ifset_stack;
 } parser_state_t;
 
 /* TODO: Deletion and creation functions for parser state. */

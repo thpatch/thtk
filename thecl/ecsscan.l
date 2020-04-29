@@ -36,7 +36,7 @@
     #include "thecl.h"
     #include "ecsparse.h"
     #include "util.h"
-    void yyerror(parser_state_t*, const char*);
+    void yyerror(parser_state_t*, const char*, ...);
     /* yylloc.first_column is initialized to 1. */
     #define YY_USER_INIT yylloc.first_column = 0
     /* XXX: The builtin YY_INPUT does something with the newlines that doesn't
@@ -60,7 +60,11 @@
             result = 1; \
         } \
     }
-%x COMMENT COMMENT_SINGLE CSTRING STRING ESCAPE_CHAR
+    enum ifset_stack_flags {
+        IFSET_NO_EXECUTE = 1,
+        IFSET_WAS_ELSE = 2
+    };
+%x COMMENT COMMENT_SINGLE CSTRING STRING ESCAPE_CHAR SET_SYMBOL UNSET_SYMBOL IFSET_CHECK IFNSET_CHECK IFSET_SKIP
 %%
 ","        return COMMA;
 "?"        return QUESTION;
@@ -248,14 +252,158 @@ ins_[0-9]+ {
 <COMMENT_SINGLE>"\n"  BEGIN(INITIAL);
 
 #([a-zA-Z]+) {
-    yylval.string = strdup(yytext + 1);
-    return DIRECTIVE;
+    /* Some directives should be handled by the lexer */
+    if (strcmp(yytext + 1, "set") == 0) {
+        BEGIN(SET_SYMBOL);
+    } else if (strcmp(yytext + 1, "unset") == 0) {
+        BEGIN(UNSET_SYMBOL);
+    } else if (strcmp(yytext + 1, "ifset") == 0) {
+        BEGIN(IFSET_CHECK);
+    } else if (strcmp(yytext + 1, "ifnset") == 0) {
+        BEGIN(IFNSET_CHECK);
+    } else if (strcmp(yytext + 1, "else") == 0) {
+        /* If ifset_cnt is nonzero and #else was found in INITIAL,
+         * it means that there was an #ifset before it which was true,
+         * so the else part has to be skipped. */
+        if (state->ifset_cnt && !(state->ifset_stack[state->ifset_cnt - 1] & IFSET_WAS_ELSE)) {
+            state->ifset_stack[state->ifset_cnt - 1] |= IFSET_NO_EXECUTE | IFSET_WAS_ELSE;
+            BEGIN(IFSET_SKIP);
+        } else {
+            yyerror(NULL, "illegal #else directive");
+        }
+    } else if (strcmp(yytext + 1, "endif") == 0) {
+        if (state->ifset_cnt)
+            --state->ifset_cnt;
+        else
+            yyerror(NULL, "illegal #endif directive");
+    }  else {
+        yylval.string = strdup(yytext + 1);
+        return DIRECTIVE;
+    }
 }
+
+<SET_SYMBOL>[\t\n\r ]+ ;
+<SET_SYMBOL>[a-zA-Z_][a-zA-Z0-9_]* {
+    list_append_new(&state->set_symbols, strdup(yytext));
+    BEGIN(INITIAL);
+}
+<SET_SYMBOL>. {
+    yyerror(NULL, "invalid symbol for #set");
+}
+
+<UNSET_SYMBOL>[\t\n\r ]+ ;
+<UNSET_SYMBOL>[a-zA-Z_][a-zA-Z0-9_]* {
+    list_node_t* node;
+    list_for_each_node(&state->set_symbols, node) {
+        char* symbol = (char*)node->data;
+        if (strcmp(symbol, yytext) == 0) {
+            list_del(&state->set_symbols, node);
+            free(symbol);
+            break;
+        }
+    }
+    BEGIN(INITIAL);
+}
+<UNSET_SYMBOL>. {
+    yyerror(NULL, "invalid symbol for #unset");
+}
+
+<IFSET_CHECK>[\t\n\r ]+ ;
+<IFSET_CHECK>[a-zA-Z_][a-zA-Z0-9_]* {
+    ++state->ifset_cnt;
+    state->ifset_stack = realloc(state->ifset_stack, sizeof(int) * state->ifset_cnt);
+
+    int found = 0;
+    char* symbol;
+    list_for_each(&state->set_symbols, symbol) {
+        if (strcmp(symbol, yytext) == 0) {
+            found = 1;
+        }
+    }
+    if (!found) {
+        state->ifset_stack[state->ifset_cnt - 1] = IFSET_NO_EXECUTE;
+        BEGIN(IFSET_SKIP);
+    } else {
+        state->ifset_stack[state->ifset_cnt - 1] = 0;
+        BEGIN(INITIAL);
+    }
+}
+<IFSET_CHECK>. {
+    yyerror(NULL, "invalid symbol for #ifset");
+}
+
+<IFNSET_CHECK>[\t\n\r ]+ ;
+<IFNSET_CHECK>[a-zA-Z_][a-zA-Z0-9_]* {
+    ++state->ifset_cnt;
+    state->ifset_stack = realloc(state->ifset_stack, sizeof(int) * state->ifset_cnt);
+
+    int found = 0;
+    char* symbol;
+    list_for_each(&state->set_symbols, symbol) {
+        if (strcmp(symbol, yytext) == 0) {
+            found = 1;
+        }
+    }
+    if (!found) {
+        state->ifset_stack[state->ifset_cnt - 1] = 0;
+        BEGIN(INITIAL);
+    } else {
+        state->ifset_stack[state->ifset_cnt - 1] = IFSET_NO_EXECUTE;
+        BEGIN(IFSET_SKIP);
+    }
+}
+<IFNSET_CHECK>. {
+    yyerror(NULL, "invalid symbol for #ifnset");
+}
+
+<IFSET_SKIP>#ifset {
+    ++state->ifset_cnt;
+    state->ifset_stack = realloc(state->ifset_stack, sizeof(int) * state->ifset_cnt);
+    state->ifset_stack[state->ifset_cnt - 1] = IFSET_NO_EXECUTE;
+}
+
+<IFSET_SKIP>#ifnset {
+    ++state->ifset_cnt;
+    state->ifset_stack = realloc(state->ifset_stack, sizeof(int) * state->ifset_cnt);
+    state->ifset_stack[state->ifset_cnt - 1] = IFSET_NO_EXECUTE;
+}
+
+<IFSET_SKIP>#else {
+    if (!(state->ifset_stack[state->ifset_cnt - 1] & IFSET_WAS_ELSE)) {
+        state->ifset_stack[state->ifset_cnt - 1] &= ~IFSET_NO_EXECUTE;
+        state->ifset_stack[state->ifset_cnt - 1] |= IFSET_WAS_ELSE;
+
+        /* We can only begin initial if all blocks before this one are supposed to be evaluated. */
+        int found = 0;
+        for (int i=0; i<state->ifset_cnt; ++i) {
+            if (state->ifset_stack[i] & IFSET_NO_EXECUTE)
+                found = 1;
+        }
+        if (!found)
+            BEGIN(INITIAL);
+    } else {
+        yyerror(NULL, "illegal #else directive");
+    }
+}
+
+<IFSET_SKIP>#endif {
+    --state->ifset_cnt;
+
+    /* We can only begin initial if all blocks before this one are supposed to be evaluated. */
+    int found = 0;
+    for (int i=0; i<state->ifset_cnt; ++i) {
+        if (state->ifset_stack[i] & IFSET_NO_EXECUTE)
+            found = 1;
+    }
+    if (!found)
+        BEGIN(INITIAL);
+}
+
+<IFSET_SKIP>[^#]* ; /* Check for #ifset, #else, #endif when # is found */
+<IFSET_SKIP># ; /* If it's none of them, ignore it */
 
 [\t\n\r ]+ ;
 . {
-    char buf[256];
-    snprintf(buf, 256, "illegal token: %s", yytext);
-    yyerror(NULL, buf);
+    yyerror(NULL, "illegal token: %s", yytext);
     return ILLEGAL_TOKEN;
 }

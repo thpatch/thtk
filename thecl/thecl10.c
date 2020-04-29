@@ -1917,6 +1917,9 @@ th10_parse(
     list_init(&state.expressions);
     list_init(&state.block_stack);
     list_init(&state.global_definitions);
+    list_init(&state.set_symbols);
+    state.ifset_cnt = 0;
+    state.ifset_stack = NULL;
     state.scope_stack = NULL;
     state.scope_cnt = 0;
     state.scope_id = 0;
@@ -1935,6 +1938,10 @@ th10_parse(
     if (yyparse(&state) != 0)
         return 0;
 
+    if (state.ifset_cnt != 0) {
+        fprintf(stderr, "%s:%s: missing #endif directive\n", argv0, filename);
+    }
+
     global_definition_t* def;
     list_for_each(&state.global_definitions, def) {
         free(def->param);
@@ -1942,6 +1949,13 @@ th10_parse(
     }
     list_free_nodes(&state.global_definitions);
 
+    char* symbol;
+    list_for_each(&state.set_symbols, symbol) {
+        free(symbol);
+    }
+    list_free_nodes(&state.set_symbols);
+
+    free(state.ifset_stack);
     free(state.scope_stack);
 
     return state.ecl;

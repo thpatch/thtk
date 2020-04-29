@@ -120,7 +120,7 @@ static void expression_create_goto(parser_state_t *state, int type, char *labels
 
 /* Bison things. */
 void yyerror(const parser_state_t*, const char*, ...);
-int yylex(void);
+
 extern FILE* yyin;
 
 /* Parser APIs. */
@@ -175,9 +175,17 @@ static const char sub_param_fi[] = {'f', 'i'};
 
 %}
 
+/* Has to be inserted into ecsparse.h (to make flex use the declaration from YY_DECL) */
+%code provides {
+    #define YY_DECL \
+        int yylex(parser_state_t* state)
+    YY_DECL;
+}
+
 %define parse.error verbose
 %locations
 %parse-param {parser_state_t* state}
+%lex-param {parser_state_t* state}
 
 %union {
     /* Values from Flex: */
@@ -484,6 +492,8 @@ Statement:
                 yyerror(state, "#ins: specified format is too long");
             }
 
+        } else if (strcmp($1, "message") == 0) {
+            printf("%s\n", $2);
         } else {
             yyerror(state, "unknown directive: %s", $1);
         }
@@ -3103,7 +3113,7 @@ directive_include(
         YYLTYPE loc_org = yylloc;
         const char* input_org = current_input;
 
-        current_input = include_path;
+        current_input = path;
         yyin = include_file;
         yylloc.first_line = 1;
         yylloc.first_column = 1;
@@ -3112,7 +3122,19 @@ directive_include(
 
         path_add(state, path);
 
+        int ifset_cnt = state->ifset_cnt;
+        int* ifset_stack = state->ifset_stack;
+        state->ifset_cnt = 0;
+        state->ifset_stack = NULL;
+
         int err = yyparse(state);
+
+        if (state->ifset_cnt != 0) {
+            fprintf(stderr, "%s:%s: missing #endif directive\n", argv0, path);
+        }
+        free(state->ifset_stack);
+        state->ifset_cnt = ifset_cnt;
+        state->ifset_stack = ifset_stack;
 
         fclose(include_file);
         path_remove(state);
