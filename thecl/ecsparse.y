@@ -1059,11 +1059,15 @@ Instruction:
             instr_create_call(state, TH10_INS_CALL, $1, $3, false);
         } else {
             expression_t* expr;
-            list_for_each(&state->expressions, expr) {
+            list_node_t* node;
+            while(node = state->expressions.head) {
+                expr = (expression_t*)node->data;
+                /* Remove expr from the list before outputting it, so that
+                 * it doesn't use itself when being outputted.. */
+                list_del(&state->expressions, node);
                 expression_output(state, expr, 1);
                 expression_free(expr);
             }
-            list_free_nodes(&state->expressions);
             instr_add(state->current_sub, instr_new_list(state, ent->key, $3));
         }
         if ($3 != NULL) {
@@ -1073,12 +1077,15 @@ Instruction:
       }
     | INSTRUCTION "(" Instruction_Parameters ")" {
         expression_t* expr;
-        list_for_each(&state->expressions, expr) {
+        list_node_t* node;
+        while(node = state->expressions.head) {
+            expr = (expression_t*)node->data;
+            /* Remove expr from the list before outputting it, so that
+             * it doesn't use itself when being outputted.. */
+            list_del(&state->expressions, node);
             expression_output(state, expr, 1);
             expression_free(expr);
         }
-        list_free_nodes(&state->expressions);
-
         instr_add(state->current_sub, instr_new_list(state, $1, $3));
 
         if ($3 != NULL) {
@@ -2605,6 +2612,31 @@ expression_output(
         if (!instr_create_call(state, TH10_INS_CALL, expr->name, &expr->params, true))
             instr_add(state->current_sub, instr_new(state, expr->id, "p", expr->value));
     } else if (expr->type == EXPRESSION_INS_CALL) {
+        /* Output expressions from parameters.
+         * DO NOT output all expressions, only the ones used. */
+        int expr_params = 0;
+        list_node_t* node = expr->params.head;
+        while(node) {
+            if (((thecl_param_t*)node->data)->is_expression_param)
+                ++expr_params;
+            node = node->next;
+        }
+
+        expression_t* iter_expr;
+        node = state->expressions.head;
+        while(expr_params--) {
+            iter_expr = (expression_t*)node->data;
+
+            /* Remove expr from the list before outputting it, so that
+             * it doesn't use itself when being outputted.. */
+            list_node_t* node_prev = node;
+            node = node->next;
+            list_del(&state->expressions, node_prev);
+
+            expression_output(state, iter_expr, 0);
+            expression_free(iter_expr);
+        }
+
         list_t* list = malloc(sizeof(list_t));
         *list = expr->params;
         instr_add(state->current_sub, instr_new_list(state, expr->ins_id, list));
