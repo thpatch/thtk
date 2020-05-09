@@ -184,6 +184,7 @@ static const char sub_param_fi[] = {'f', 'i'};
     int integer;
     float floating;
     char* string;
+    const char* cstring;
     struct {
         unsigned int length;
         unsigned char* data;
@@ -338,7 +339,7 @@ static const char sub_param_fi[] = {'f', 'i'};
 %type <integer> DeclareKeyword
 %type <integer> VarDeclaration
 
-%type <string> Cast_Target2
+%type <cstring> Cast_Target2
 
 %left QUESTION
 %left OR
