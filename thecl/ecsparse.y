@@ -103,7 +103,7 @@ static expression_t* expression_call_new(const parser_state_t* state, list_t* pa
 
 static void expression_output(parser_state_t* state, expression_t* expr, int has_no_parents);
 static void expression_free(expression_t* expr);
-static void expression_optimize(parser_state_t* state, expression_t* expr);
+static void expression_optimize(const parser_state_t* state, expression_t* expr);
 #define EXPR_22(a, b, A, B) \
     expression_operation_new(state, (int[]){ a, b, 0 }, (expression_t*[]){ A, B, NULL })
 #define EXPR_12(a, A, B) \
@@ -2529,7 +2529,7 @@ expression_output(
 
 static void
 expression_optimize(
-    parser_state_t* state,
+    const parser_state_t* state,
     expression_t* expression)
 {
     if (expression->type != EXPRESSION_OP) return;
