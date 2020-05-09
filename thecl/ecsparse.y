@@ -157,7 +157,7 @@ static void var_shorthand_assign(parser_state_t* state, thecl_param_t* param, ex
 /* Stores a new label in the current subroutine pointing to the current offset. */
 static void label_create(parser_state_t* state, char* label);
 /* Change offset of all labels in the given list that have at least offset min_offset by subtracting the given value. */
-static void labels_adjust(list_t* labels, uint32_t min_offset, int32_t adjust);
+static void labels_adjust(list_t* labels, uint32_t min_offset, uint32_t adjust);
 
 /* Update the current time label. */
 void set_time(parser_state_t* state, int new_time);
