@@ -1710,9 +1710,6 @@ anm_create(
     if (yyparse(&state) || state.was_error)
         return NULL;
 
-    if (symbolfp)
-        fclose(symbolfp);
-
     anm_archive_t* anm = (anm_archive_t*)util_malloc(sizeof(anm_archive_t));
     anm->map = NULL;
     anm->map_size = 0;
@@ -2253,6 +2250,9 @@ replace_done:
             anm = anm_create_old(argv[1]);
         else
             anm = anm_create(argv[1], symbolfp);
+
+        if (symbolfp)
+            fclose(symbolfp);
 
         if (anm == NULL)
             exit(0);
