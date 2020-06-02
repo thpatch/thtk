@@ -2034,7 +2034,7 @@ print_usage(void)
     printf("  -x ARCHIVE [FILE...]  extract entries\n"
            "  -r ARCHIVE NAME FILE  replace entry in archive\n"
            "  -c ARCHIVE SPEC       create archive\n"
-           "  -s SYMBOLS            save symbol ids to the given file as globaldefs\n");
+           "  -s                    save symbol ids to the given file as globaldefs\n");
 #endif
     printf("  -o                    use old spec format\n"
            "  -m                    use map file for translating mnemonics\n"
