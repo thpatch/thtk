@@ -136,6 +136,9 @@ typedef struct parser_state_t {
     list_t script_names;
 
     path_state_t path_state;
+
+    char symbol_prefix[32];
+    FILE* symbolfp;
 } parser_state_t;
 
 typedef struct symbol_id_pair_t {

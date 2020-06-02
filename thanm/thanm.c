@@ -1684,7 +1684,8 @@ anm_serialize_script(
 
 static anm_archive_t*
 anm_create(
-    const char* spec
+    const char* spec,
+    FILE* symbolfp
 ) {
     parser_state_t state;
     state.was_error = 0;
@@ -1699,6 +1700,8 @@ anm_create(
     list_init(&state.sprite_names);
     state.current_entry = NULL;
     state.current_script = NULL;
+    state.symbolfp = symbolfp;
+    strcpy(state.symbol_prefix, "");
 
     path_init(&state.path_state, spec, argv0);
 
@@ -1706,6 +1709,9 @@ anm_create(
     yyin = in;
     if (yyparse(&state) || state.was_error)
         return NULL;
+
+    if (symbolfp)
+        fclose(symbolfp);
 
     anm_archive_t* anm = (anm_archive_t*)util_malloc(sizeof(anm_archive_t));
     anm->map = NULL;
@@ -2017,17 +2023,18 @@ static void
 print_usage(void)
 {
 #ifdef HAVE_LIBPNG
-#define USAGE_LIBPNGFLAGS " | -x | -r | -c [-om]"
+#define USAGE_LIBPNGFLAGS " | -x | -r | -c"
 #else
 #define USAGE_LIBPNGFLAGS ""
 #endif
-    printf("Usage: %s [-Vf] [-l [-om]" USAGE_LIBPNGFLAGS "] ARCHIVE ...\n"
+    printf("Usage: %s [-Vf] [-l" USAGE_LIBPNGFLAGS "] [-o] [-m ANMMAP] [-s SYMBOLS] ARCHIVE ...\n"
            "Options:\n"
            "  -l ARCHIVE            list archive\n", argv0);
 #ifdef HAVE_LIBPNG
     printf("  -x ARCHIVE [FILE...]  extract entries\n"
            "  -r ARCHIVE NAME FILE  replace entry in archive\n"
-           "  -c ARCHIVE SPEC       create archive\n");
+           "  -c ARCHIVE SPEC       create archive\n"
+           "  -s SYMBOLS            save symbol ids to the given file as globaldefs\n");
 #endif
     printf("  -o                    use old spec format\n"
            "  -m                    use map file for translating mnemonics\n"
@@ -2051,7 +2058,7 @@ main(
 
     const char commands[] = ":lom:"
 #ifdef HAVE_LIBPNG
-                            "xrc"
+                            "xrcs:"
 #endif
                             "Vf";
     int command = -1;
@@ -2064,6 +2071,7 @@ main(
     char* name;
 
     FILE* anmfp;
+    FILE* symbolfp = NULL;
     int i;
 #endif
 
@@ -2093,12 +2101,19 @@ main(
             if (!map_file) {
                 fprintf(stderr, "%s: couldn't open %s for reading: %s\n",
                     argv0, util_optarg, strerror(errno));
-                exit(1);
+            } else {
+                anmmap_load(g_anmmap, map_file, util_optarg);
+                fclose(map_file);
             }
-            anmmap_load(g_anmmap, map_file, util_optarg);
-            fclose(map_file);
             break;
         }
+        case 's':
+            symbolfp = fopen(util_optarg, "w");
+            if (!symbolfp) {
+                fprintf(stderr, "%s: couldn't open %s for writing: %s\n",
+                    argv0, util_optarg, strerror(errno));
+            }
+            break;
         case 'f':
             option_force = 1;
             break;
@@ -2237,7 +2252,7 @@ replace_done:
         if (option_old)
             anm = anm_create_old(argv[1]);
         else
-            anm = anm_create(argv[1]);
+            anm = anm_create(argv[1], symbolfp);
 
         if (anm == NULL)
             exit(0);

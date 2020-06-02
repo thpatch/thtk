@@ -129,7 +129,7 @@ rad\((-|\+)?[0-9]+(\.([0-9]*f|[0-9]+)|f)?\) {
     return IDENTIFIER;
 }
 
-#([a-zA-Z]+) {
+#([a-zA-Z_]+) {
     yylval.string = strdup(yytext + 1);
     return DIRECTIVE;
 }

@@ -439,6 +439,8 @@ Script:
         symbol->id = script->offset->id;
         symbol->name = $name;
         list_append_new(&state->script_names, symbol);
+        if (state->symbolfp != NULL)
+                fprintf(state->symbolfp, "global %s%s = %d;\n", state->symbol_prefix, symbol->name, symbol->id);
 
         list_append_new(&state->current_entry->scripts, script);
         state->current_script = script;
@@ -834,6 +836,12 @@ Directive:
                 current_input = input_org;
             }
             free(path);
+        } else if (strcmp($type, "symbol_prefix") == 0) {
+            if (strlen($arg) + 1 > sizeof(state->symbol_prefix)) {
+                yyerror(state, "#symbol_prefix: specified prefix is too long");
+            } else {
+                strcpy(state->symbol_prefix, $arg);
+            }
         } else {
             yyerror(state, "unknown directive: %s", $type);
         }
