@@ -30,9 +30,11 @@
 #include <string.h>
 #include <thtk/thtk.h>
 #include <stdio.h> /* for SEEK_SET */
+#include <stdlib.h> /* for strtoul */
 #include "thcrypt.h"
 #include "thlzss.h"
 #include "dattypes.h"
+#include "thdat.h"
 #ifdef _WIN32
 # include <windows.h>
 # include <assert.h>
@@ -282,6 +284,55 @@ thdat_detect_filename_w(
 }
 #endif
 
+/* returns 0 if unknown, -1 on error */
+static int
+thdat_detect_08_95(
+    thtk_io_t* input,
+    int is95)
+{
+    // Encryption for file entries is the asme across all thdat08/95 based games.
+    thdat_t *thdat = thdat_open(is95 ? 95 : 8, input, NULL);
+    if (thdat) {
+        // We go in reverse order, because that's where the files we look for usually are.
+        for (size_t i = thdat->entry_count-1; i >= 0; i--) {
+            const char *name = thdat->entries[i].name;
+            size_t len = strlen(name);
+
+            // thXX_YYYYY.ver
+            if (len > 4 && !strcmp(name+len-4, ".ver")) {
+                if (name[0] == 't' && name[1] == 'h') {
+                    unsigned long n = strtoul(name+2, NULL, 10);
+                    switch (n) {
+                        case 8: case 9:
+                            if (!is95)
+                                return n;
+                            break;
+                        case 95: case 10: case 11: case 12:
+                        case 125: case 128: case 13: case 14:
+                        case 143: case 15: case 16: case 165:
+                        case 17: /* NEWHU: */
+                            if (is95)
+                                return n;
+                            break;
+                    }
+                }
+                // finding any ver file means we can stop looking, even if we don't recognize it.
+                return 0;
+            }
+            
+            // alcostg doesn't have a ver file
+            static const char albgmfmt[] = "albgm.fmt";
+            if (is95 && len == sizeof(albgmfmt)-1 && !strcmp(name, albgmfmt)) {
+                return 103;
+            }
+        }
+        thdat_free(thdat);
+        return 0;
+    } else {
+        return -1;
+    }
+}
+
 static int
 thdat_detect_base(
     int fnheur,
@@ -386,28 +437,37 @@ notth03:
         SET_OUT(7);
     /* th08/th09 */
     if(!memcmp(magic,"PBGZ",4)) {
-        /* TODO: differentiate */
-        SET_OUT(8);
-        SET_OUT(9);
+        int ver = thdat_detect_08_95(input, 0);
+        if (ver == 0) {
+            SET_OUT(8);
+            SET_OUT(9);
+        } else if (ver > 0) {
+            SET_OUT(ver);
+        }
     }
     /* th095+ */
     th_decrypt((unsigned char*)magic,sizeof(th95_archive_header_t),0x1b,0x37,sizeof(th95_archive_header_t),sizeof(th95_archive_header_t));
     if(!memcmp(magic,"THA1",4)) {
-        SET_OUT(95);
-        SET_OUT(10);
-        SET_OUT(103);
-        SET_OUT(11);
-        SET_OUT(12);
-        SET_OUT(125);
-        SET_OUT(128);
-        SET_OUT(13);
-        SET_OUT(14);
-        SET_OUT(143);
-        SET_OUT(15);
-        SET_OUT(16);
-        SET_OUT(165);
-        SET_OUT(17);
-        /* NEWHU: */
+        int ver = thdat_detect_08_95(input, 1);
+        if (ver == 0) {
+            SET_OUT(95);
+            SET_OUT(10);
+            SET_OUT(103);
+            SET_OUT(11);
+            SET_OUT(12);
+            SET_OUT(125);
+            SET_OUT(128);
+            SET_OUT(13);
+            SET_OUT(14);
+            SET_OUT(143);
+            SET_OUT(15);
+            SET_OUT(16);
+            SET_OUT(165);
+            SET_OUT(17);
+            /* NEWHU: */
+        } else if (ver > 0) {
+            SET_OUT(ver);
+        }
     }
 
     /* heur */
