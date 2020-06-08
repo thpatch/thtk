@@ -376,17 +376,27 @@ thdat_detect_base(
     if(-1 == thtk_io_read(input, &head2[1], head2[0].offset-sizeof(head2[0]), error)) {
         goto notth02;
     }
+    int maybe_th01 = 0, maybe_th02 = 0;
     for(int i=1;i<entry_count-1;i++) {
         if(head2[i].magic != magic1 && head2[i].magic != magic2) {
             goto notth02;
         }
+
+        head2[i].name[5] &= 0xf0;
+        // for th01 look for STAGEx.DAT
+        if (!maybe_th01 && !strcmp(head2[i].name, "\xac\xab\xbe\xb8\xba\xc0\xd1\xbb\xbe\xab"))
+            maybe_th01 = 1;
+        // for th02 look for STAGEx.M
+        if (!maybe_th02 && !strcmp(head2[i].name, "\xac\xab\xbe\xb8\xba\xc0\xd1\xb2"))
+            maybe_th02 = 1;
     }
     if(memcmp(&head2[entry_count-1],&emptyhead2, sizeof(emptyhead2))) {
         goto notth02;
     }
-    /* TODO: differentiate */
-    SET_OUT(1);
-    SET_OUT(2);
+    if (maybe_th01 || !maybe_th02)
+        SET_OUT(1);
+    if (maybe_th02 || !maybe_th01)
+        SET_OUT(2);
 notth02:
     /* th03 */
     if(-1 == thtk_io_seek(input, 0, SEEK_SET, error)) {
