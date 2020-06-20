@@ -79,13 +79,7 @@ check_function_exists("_splitpath" HAVE__SPLITPATH)
 check_function_exists("mempcpy" HAVE_MEMPCPY)
 check_function_exists("mmap" HAVE_MMAP)
 check_function_exists("munmap" HAVE_MUNMAP)
-
-check_function_exists("feof" HAVE_FEOF)
 check_function_exists("fileno" HAVE_FILENO)
-check_function_exists("fread" HAVE_FREAD)
-check_function_exists("fwrite" HAVE_FWRITE)
-check_function_exists("getc" HAVE_GETC)
-check_function_exists("putc" HAVE_PUTC)
 
 set(CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_PREFIX}/lib)
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)

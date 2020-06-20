@@ -39,7 +39,6 @@
 #endif
 #cmakedefine HAVE_SYS_TYPES_H
 #cmakedefine HAVE_STDINT_H
-#cmakedefine HAVE_STDDEF_H
 #cmakedefine HAVE_LIBGEN_H
 #cmakedefine HAVE_SYS_STAT_H
 #cmakedefine HAVE_SYS_MMAN_H
@@ -51,32 +50,17 @@
 #cmakedefine HAVE_MEMPCPY
 #cmakedefine HAVE_MMAP
 #cmakedefine HAVE_MUNMAP
-#cmakedefine HAVE_FEOF
 #cmakedefine HAVE_FILENO
-#cmakedefine HAVE_FREAD
-#cmakedefine HAVE_FWRITE
-#cmakedefine HAVE_GETC
-#cmakedefine HAVE_PUTC
 
 #ifdef _WIN32
-# ifdef HAVE_FEOF
-#  define feof_unlocked feof
-# endif
+# define feof_unlocked feof
 # ifdef HAVE_FILENO
 #  define fileno_unlocked fileno
 # endif
-# ifdef HAVE_FREAD
-#  define fread_unlocked fread
-# endif
-# ifdef HAVE_FWRITE
-#  define fwrite_unlocked fwrite
-# endif
-# ifdef HAVE_GETC
-#  define getc_unlocked getc
-# endif
-# ifdef HAVE_PUTC
-#  define putc_unlocked putc
-# endif
+# define fread_unlocked fread
+# define fwrite_unlocked fwrite
+# define getc_unlocked getc
+# define putc_unlocked putc
 
 # define API_SYMBOL __declspec(dllexport)
 
