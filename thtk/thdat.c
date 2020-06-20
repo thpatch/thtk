@@ -254,7 +254,7 @@ thdat_entry_set_name(
         strncpy(temp_name, name, 255);
 
         if (thdat->module->flags & THDAT_BASENAME) {
-#ifdef WIN32
+#ifdef _WIN32
             char filename[_MAX_FNAME];
             char ext[_MAX_EXT];
             _splitpath(temp_name, NULL, NULL, filename, ext);

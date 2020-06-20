@@ -58,7 +58,7 @@
 #cmakedefine HAVE_GETC
 #cmakedefine HAVE_PUTC
 
-#ifdef _MSC_VER
+#ifdef _WIN32
 # ifdef HAVE_FEOF
 #  define feof_unlocked feof
 # endif
