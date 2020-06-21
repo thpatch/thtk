@@ -71,12 +71,10 @@ if (NOT ${HAVE_SSIZE_T})
   " HAVE_SSIZE_T_BASETSD)
 endif()
 
-check_include_file("libgen.h" HAVE_LIBGEN_H)
 check_include_file("sys/stat.h" HAVE_SYS_STAT_H)
 check_include_file("sys/mman.h" HAVE_SYS_MMAN_H)
 check_include_file("unistd.h" HAVE_UNISTD_H)
 
-check_function_exists("_splitpath" HAVE__SPLITPATH)
 check_function_exists("mempcpy" HAVE_MEMPCPY)
 check_function_exists("mmap" HAVE_MMAP)
 check_function_exists("munmap" HAVE_MUNMAP)

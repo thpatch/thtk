@@ -28,14 +28,12 @@
  */
 #include <config.h>
 #include <ctype.h>
-#ifdef HAVE_LIBGEN_H
-#include <libgen.h>
-#endif
 #include <stdlib.h>
 #include <string.h>
 #include <thtk/thtk.h>
 #include "thdat.h"
 #include "thrle.h"
+#include "program.h"
 
 extern const thdat_module_t archive_th02;
 extern const thdat_module_t archive_th06;
@@ -254,16 +252,12 @@ thdat_entry_set_name(
         strncpy(temp_name, name, 255);
 
         if (thdat->module->flags & THDAT_BASENAME) {
-#ifdef _WIN32
-            char filename[_MAX_FNAME];
-            char ext[_MAX_EXT];
-            _splitpath(temp_name, NULL, NULL, filename, ext);
-            snprintf(temp_name, 255, "%s%s", filename, ext);
-#else
+            /* Borrow this function from detect */
+            extern const char *detect_basename(const char *path);
+
             char temp_name2[256];
             strncpy(temp_name2, temp_name, 255);
-            strncpy(temp_name, basename(temp_name2), 255);
-#endif
+            strncpy(temp_name, detect_basename(temp_name2), 255);
         }
 
         if (thdat->module->flags & THDAT_UPPERCASE) {
