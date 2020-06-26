@@ -32,13 +32,6 @@
 #include <config.h>
 #include <string.h>
 
-#ifndef HAVE_MEMPCPY
-/* "Writes" a value to a buffer and returns a pointer to the memory location
- * after the written value. */
-void* mempcpy(
-    void* dest,
-    const void* src,
-    size_t n);
-#endif
+#define MEMPCPY(d,s,n) ((void*)((char*)memcpy((d),(s),(n))+(n)))
 
 #endif

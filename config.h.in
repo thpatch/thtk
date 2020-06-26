@@ -45,7 +45,6 @@
 #ifndef HAVE_UNISTD_H
 # define YY_NO_UNISTD_H
 #endif
-#cmakedefine HAVE_MEMPCPY
 #cmakedefine HAVE_MMAP
 #cmakedefine HAVE_MUNMAP
 #cmakedefine HAVE_FILENO
