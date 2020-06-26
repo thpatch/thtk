@@ -9,7 +9,6 @@ set(PROJECT_BUGREPORT "https://github.com/thpatch/thtk/issues")
 include(CheckCSourceRuns)
 include(CheckTypeSize)
 include(CheckIncludeFile)
-include(CheckFunctionExists)
 include(CheckSymbolExists)
 
 check_c_source_runs("
@@ -71,11 +70,9 @@ if (NOT ${HAVE_SSIZE_T})
   " HAVE_SSIZE_T_BASETSD)
 endif()
 
-check_include_file("sys/mman.h" HAVE_SYS_MMAN_H)
 check_include_file("unistd.h" HAVE_UNISTD_H)
 
-check_function_exists("mmap" HAVE_MMAP)
-check_function_exists("munmap" HAVE_MUNMAP)
+check_symbol_exists("mmap" "sys/mman.h" HAVE_MMAP)
 check_symbol_exists("scandir" "dirent.h" HAVE_SCANDIR)
 check_symbol_exists("fstat" "sys/stat.h" HAVE_FSTAT)
 check_symbol_exists("fileno" "stdio.h" HAVE_FILENO)

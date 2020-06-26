@@ -39,13 +39,11 @@
 #endif
 #cmakedefine HAVE_SYS_TYPES_H
 #cmakedefine HAVE_STDINT_H
-#cmakedefine HAVE_SYS_MMAN_H
 #cmakedefine HAVE_UNISTD_H
 #ifndef HAVE_UNISTD_H
 # define YY_NO_UNISTD_H
 #endif
 #cmakedefine HAVE_MMAP
-#cmakedefine HAVE_MUNMAP
 #cmakedefine HAVE_FSTAT
 #cmakedefine HAVE_SCANDIR
 #cmakedefine HAVE_FILENO

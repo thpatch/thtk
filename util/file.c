@@ -31,7 +31,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#ifdef HAVE_SYS_MMAN_H
+#ifdef HAVE_MMAP
 #include <sys/mman.h>
 #endif
 #ifdef HAVE_FSTAT
@@ -198,7 +198,7 @@ file_munmap(
     void* map,
     size_t length)
 {
-#ifdef HAVE_MUNMAP
+#ifdef HAVE_MMAP
     if (munmap(map, length) == -1) {
         fprintf(stderr, "%s: munmap failed: %s\n", argv0, strerror(errno));
         return 0;
