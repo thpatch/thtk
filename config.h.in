@@ -51,60 +51,41 @@
 #cmakedefine HAVE_FILENO
 
 #cmakedefine HAVE_FEOF_UNLOCKED
-#cmakedefine HAVE_FILENO_UNLOCKED
 #cmakedefine HAVE_FREAD_UNLOCKED
-#cmakedefine HAVE_FWRITE_UNLOCKED
 #cmakedefine HAVE_GETC_UNLOCKED
-#cmakedefine HAVE_PUTC_UNLOCKED
 #cmakedefine HAVE__FREAD_NOLOCK
-#cmakedefine HAVE__FWRITE_NOLOCK
 #cmakedefine HAVE__GETC_NOLOCK
-#cmakedefine HAVE__PUTC_NOLOCK
+/* feof and fileno don't lock in VCRT, and thus they don't have _nolock versions. */
 #ifndef HAVE_FEOF_UNLOCKED
 # define feof_unlocked feof
-#endif
-#if defined(HAVE_FILENO) && !defined(HAVE_FILENO_UNLOCKED)
-# define fileno_unlocked fileno
+# if defined(HAVE_FILENO)
+#  define fileno_unlocked fileno
+# endif
 #endif
 #ifndef HAVE_FREAD_UNLOCKED
 # ifdef HAVE__FREAD_NOLOCK
 #  define fread_unlocked _fread_nolock
-# else
-#  define fread_unlocked fread
-# endif
-#endif
-#ifndef HAVE_FWRITE_UNLOCKED
-# ifdef HAVE__FWRITE_NOLOCK
 #  define fwrite_unlocked _fwrite_nolock
 # else
+#  define fread_unlocked fread
 #  define fwrite_unlocked fwrite
 # endif
 #endif
 #ifndef HAVE_GETC_UNLOCKED
 # ifdef HAVE__GETC_NOLOCK
 #  define getc_unlocked _getc_nolock
-# else
-#  define getc_unlocked getc
-# endif
-#endif
-#ifndef HAVE_PUTC_UNLOCKED
-# ifdef HAVE__PUTC_NOLOCK
 #  define putc_unlocked _putc_nolock
 # else
+#  define getc_unlocked getc
 #  define putc_unlocked putc
 # endif
 #endif
 /* Our code shouldn't need to check these */
 #undef HAVE_FEOF_UNLOCKED
-#undef HAVE_FILENO_UNLOCKED
 #undef HAVE_FREAD_UNLOCKED
-#undef HAVE_FWRITE_UNLOCKED
 #undef HAVE_GETC_UNLOCKED
-#undef HAVE_PUTC_UNLOCKED
 #undef HAVE__FREAD_NOLOCK
-#undef HAVE__FWRITE_NOLOCK
 #undef HAVE__GETC_NOLOCK
-#undef HAVE__PUTC_NOLOCK
 
 #ifdef _WIN32
 # define API_SYMBOL __declspec(dllexport)

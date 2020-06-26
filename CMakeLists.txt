@@ -81,17 +81,10 @@ check_symbol_exists("fstat" "sys/stat.h" HAVE_FSTAT)
 check_symbol_exists("fileno" "stdio.h" HAVE_FILENO)
 
 check_symbol_exists("feof_unlocked" "stdio.h" HAVE_FEOF_UNLOCKED)
-check_symbol_exists("fileno_unlocked" "stdio.h" HAVE_FILENO_UNLOCKED)
 check_symbol_exists("fread_unlocked" "stdio.h" HAVE_FREAD_UNLOCKED)
-check_symbol_exists("fwrite_unlocked" "stdio.h" HAVE_FWRITE_UNLOCKED)
 check_symbol_exists("getc_unlocked" "stdio.h" HAVE_GETC_UNLOCKED)
-check_symbol_exists("putc_unlocked" "stdio.h" HAVE_PUTC_UNLOCKED)
-
-# feof and fileno don't lock in VCRT, and thus they don't have _nolock versions.
 check_symbol_exists("_fread_nolock" "stdio.h" HAVE__FREAD_NOLOCK)
-check_symbol_exists("_fwrite_nolock" "stdio.h" HAVE__FWRITE_NOLOCK)
 check_symbol_exists("_getc_nolock" "stdio.h" HAVE__GETC_NOLOCK)
-check_symbol_exists("_putc_nolock" "stdio.h" HAVE__PUTC_NOLOCK)
 
 set(CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_PREFIX}/lib)
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
