@@ -71,12 +71,13 @@ if (NOT ${HAVE_SSIZE_T})
   " HAVE_SSIZE_T_BASETSD)
 endif()
 
-check_include_file("sys/stat.h" HAVE_SYS_STAT_H)
 check_include_file("sys/mman.h" HAVE_SYS_MMAN_H)
 check_include_file("unistd.h" HAVE_UNISTD_H)
 
 check_function_exists("mmap" HAVE_MMAP)
 check_function_exists("munmap" HAVE_MUNMAP)
+check_symbol_exists("scandir" "dirent.h" HAVE_SCANDIR)
+check_symbol_exists("fstat" "sys/stat.h" HAVE_FSTAT)
 check_symbol_exists("fileno" "stdio.h" HAVE_FILENO)
 
 check_symbol_exists("feof_unlocked" "stdio.h" HAVE_FEOF_UNLOCKED)

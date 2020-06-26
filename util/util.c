@@ -32,13 +32,13 @@
 #include <string.h>
 #include <inttypes.h>
 #include <errno.h>
-#ifdef HAVE_SYS_STAT_H
-#include <sys/stat.h>
-#endif
-#ifdef _WIN32
+#if defined(_WIN32)
 #include <windows.h>
-#else
+#elif defined(HAVE_FSTAT) && defined(HAVE_SCANDIR)
+#include <sys/stat.h>
 #include <dirent.h>
+#else
+#error "port util_scan_files"
 #endif
 #include "program.h"
 #include "util.h"
