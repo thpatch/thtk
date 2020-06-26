@@ -7,8 +7,8 @@
 # define PRAGMA(x) _Pragma(#x)
 #endif
 
-#cmakedefine PACK_PRAGMA
-#ifdef PACK_PRAGMA
+#cmakedefine HAVE_PACKING_PRAGMA_PUSH
+#ifdef HAVE_PACKING_PRAGMA_PUSH
 # define PACK_BEGIN PRAGMA(pack(push,1))
 # define PACK_END PRAGMA(pack(pop))
 #else
@@ -16,7 +16,12 @@
 # define PACK_END
 #endif
 
-#define PACK_ATTRIBUTE @PACK_ATTRIBUTE@
+#cmakedefine 
+#ifdef HAVE_PACKING_GNUC_ATTRIBUTE
+#define PACK_ATTRIBUTE __attribute__((__packed__))
+#else
+#define PACK_ATTRIBUTE
+#endif
 
 #cmakedefine WITH_LIBPNG_SOURCE
 #cmakedefine PNG_FOUND

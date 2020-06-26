@@ -6,39 +6,21 @@ project("Touhou Toolkit"
 set(PROJECT_URL "https://github.com/thpatch/thtk")
 set(PROJECT_BUGREPORT "https://github.com/thpatch/thtk/issues")
 
-include(CheckCSourceRuns)
+include(cmake/CheckStructPacking.cmake)
 include(CheckTypeSize)
 include(CheckIncludeFile)
 include(CheckSymbolExists)
 include(CMakePushCheckState)
 
-check_c_source_runs("
-#include <stddef.h>
-struct test_t { char a;
-#pragma pack(push,1)
-int b; };
-#pragma pack(pop)
-
-int main() {
-return offsetof(struct test_t, b) == 1 ? 0 : 1;
-}
-" PACK_PRAGMA)
-if (NOT ${PACK_PRAGMA})
-  check_c_source_runs("
-  #include <stddef.h>
-  struct test_t { char a; int b; } __attribute__((packed));
-
-  int main() {
-  return offsetof(struct test_t, b) == 1 ? 0 : 1;
-  }
-  " PACK_ATTRIBUTE_AVAILABLE)
-  if (${PACK_ATTRIBUTE_AVAILABLE})
-    set(PACK_ATTRIBUTE "__attribute__((packed))")
-  endif()
+check_packing_gnuc_attribute()
+if(NOT ${HAVE_PACKING_GNUC_ATTRIBUTE})
+    check_packing_pragma_push()
+    if(NOT ${HAVE_PACKING_PRAGMA_PUSH})
+        message(SEND_ERROR "No structure packing.")
+    endif()
 endif()
 
 check_include_file("sys/types.h" HAVE_SYS_TYPES_H)
-cmake_reset_check_state()
 if(${HAVE_SYS_TYPES_H})
   set(CMAKE_EXTRA_INCLUDE_FILES "sys/types.h")
   check_type_size(off_t OFF_T BUILTIN_TYPES_ONLY)
