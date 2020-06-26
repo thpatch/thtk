@@ -10,6 +10,7 @@ include(CheckCSourceRuns)
 include(CheckTypeSize)
 include(CheckIncludeFile)
 include(CheckSymbolExists)
+include(CMakePushCheckState)
 
 check_c_source_runs("
 #include <stddef.h>
@@ -36,40 +37,19 @@ if (NOT ${PACK_PRAGMA})
   endif()
 endif()
 
-check_type_size(off_t OFF_T)
-check_type_size(size_t SIZE_T)
-if (NOT ${HAVE_SIZE_T})
-  check_c_source_runs("
-  #ifdef _WIN32
-  # include <BaseTsd.h>
-  typedef SIZE_T size_t;
-  #else
-  # include <sys/types.h>
-  #endif
-
-  int main() {
-    size_t test = -1;
-    return test>0 ? 0 : 1;
-  }
-  " HAVE_SSIZE_T_BASETSD)
-endif()
-check_type_size(ssize_t SSIZE_T)
+cmake_push_check_state(RESET)
+set(CMAKE_EXTRA_INCLUDE_FILES "sys/types.h")
+check_type_size(off_t OFF_T BUILTIN_TYPES_ONLY)
+check_type_size(ssize_t SSIZE_T BUILTIN_TYPES_ONLY)
 if (NOT ${HAVE_SSIZE_T})
-  check_c_source_runs("
-  #ifdef _WIN32
-  # include <BaseTsd.h>
-  typedef SSIZE_T ssize_t;
-  #else
-  # include <sys/types.h>
-  #endif
-
-  int main() {
-    ssize_t test = -1;
-    return test<0 ? 0 : 1;
-  }
-  " HAVE_SSIZE_T_BASETSD)
+  cmake_reset_check_state()
+  set(CMAKE_EXTRA_INCLUDE_FILES "BaseTsd.h")
+  check_type_size(ssize_t SSIZE_T_BASETSD BUILTIN_TYPES_ONLY)
 endif()
+cmake_pop_check_state()
 
+check_include_file("sys/types.h" HAVE_SYS_TYPES_H)
+check_include_file("stdint.h" HAVE_STDINT_H)
 check_include_file("unistd.h" HAVE_UNISTD_H)
 
 check_symbol_exists("mmap" "sys/mman.h" HAVE_MMAP)

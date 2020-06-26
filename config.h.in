@@ -25,20 +25,13 @@
 #endif
 
 #cmakedefine HAVE_OFF_T
-#cmakedefine HAVE_SIZE_T
-#cmakedefine HAVE_SIZE_T_BASETSD
-#if !defined(HAVE_SIZE_T) && defined(HAVE_SIZE_T_BASETSD)
-# include <BaseTsd.h>
-  typedef SIZE_T size_t;
-#endif
 #cmakedefine HAVE_SSIZE_T
 #cmakedefine HAVE_SSIZE_T_BASETSD
 #if !defined(HAVE_SSIZE_T) && defined(HAVE_SSIZE_T_BASETSD)
 # include <BaseTsd.h>
-  typedef SSIZE_T ssize_t;
+typedef SSIZE_T ssize_t;
 #endif
 #cmakedefine HAVE_SYS_TYPES_H
-#cmakedefine HAVE_STDINT_H
 #cmakedefine HAVE_UNISTD_H
 #ifndef HAVE_UNISTD_H
 # define YY_NO_UNISTD_H
