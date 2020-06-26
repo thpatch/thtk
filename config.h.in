@@ -24,6 +24,7 @@
 # define HAVE_LIBPNG
 #endif
 
+#cmakedefine HAVE_SYS_TYPES_H
 #cmakedefine HAVE_OFF_T
 #cmakedefine HAVE_SSIZE_T
 #cmakedefine HAVE_SSIZE_T_BASETSD
@@ -31,7 +32,6 @@
 # include <BaseTsd.h>
 typedef SSIZE_T ssize_t;
 #endif
-#cmakedefine HAVE_SYS_TYPES_H
 #cmakedefine HAVE_UNISTD_H
 #ifndef HAVE_UNISTD_H
 # define YY_NO_UNISTD_H
@@ -41,16 +41,18 @@ typedef SSIZE_T ssize_t;
 #cmakedefine HAVE_SCANDIR
 #cmakedefine HAVE_FILENO
 
-#cmakedefine HAVE_FEOF_UNLOCKED
-#cmakedefine HAVE_FREAD_UNLOCKED
 #cmakedefine HAVE_GETC_UNLOCKED
-#cmakedefine HAVE__FREAD_NOLOCK
+#cmakedefine HAVE_FREAD_UNLOCKED
+#cmakedefine HAVE_FEOF_UNLOCKED
 #cmakedefine HAVE__GETC_NOLOCK
-/* feof and fileno don't lock in VCRT, and thus they don't have _nolock versions. */
-#ifndef HAVE_FEOF_UNLOCKED
-# define feof_unlocked feof
-# if defined(HAVE_FILENO)
-#  define fileno_unlocked fileno
+#cmakedefine HAVE__FREAD_NOLOCK
+#ifndef HAVE_GETC_UNLOCKED
+# ifdef HAVE__GETC_NOLOCK
+#  define getc_unlocked _getc_nolock
+#  define putc_unlocked _putc_nolock
+# else
+#  define getc_unlocked getc
+#  define putc_unlocked putc
 # endif
 #endif
 #ifndef HAVE_FREAD_UNLOCKED
@@ -62,21 +64,19 @@ typedef SSIZE_T ssize_t;
 #  define fwrite_unlocked fwrite
 # endif
 #endif
-#ifndef HAVE_GETC_UNLOCKED
-# ifdef HAVE__GETC_NOLOCK
-#  define getc_unlocked _getc_nolock
-#  define putc_unlocked _putc_nolock
-# else
-#  define getc_unlocked getc
-#  define putc_unlocked putc
+/* feof and fileno don't lock in VCRT, and thus they don't have _nolock versions. */
+#ifndef HAVE_FEOF_UNLOCKED
+# define feof_unlocked feof
+# if defined(HAVE_FILENO)
+#  define fileno_unlocked fileno
 # endif
 #endif
 /* Our code shouldn't need to check these */
-#undef HAVE_FEOF_UNLOCKED
-#undef HAVE_FREAD_UNLOCKED
 #undef HAVE_GETC_UNLOCKED
-#undef HAVE__FREAD_NOLOCK
+#undef HAVE_FREAD_UNLOCKED
+#undef HAVE_FEOF_UNLOCKED
 #undef HAVE__GETC_NOLOCK
+#undef HAVE__FREAD_NOLOCK
 
 #ifdef _WIN32
 # define API_SYMBOL __declspec(dllexport)
