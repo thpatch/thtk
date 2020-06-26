@@ -184,8 +184,10 @@ file_mmap(
     return map;
 #else
     void* buffer = malloc(length);
-    if (!file_read(stream, buffer, length))
-        return NULL;
+    if (buffer && !file_read(stream, buffer, length)) {
+        free(buffer);
+        buffer = NULL;
+    }
     return buffer;
 #endif
 }
