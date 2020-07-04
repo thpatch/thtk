@@ -27,7 +27,7 @@
  * DAMAGE.
  */
 #include <config.h>
-#include <Windows.h>
+#include <windows.h>
 #include <thtk/thtk.h>
 #include <stdexcept>
 

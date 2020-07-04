@@ -34,7 +34,7 @@
 #cmakedefine HAVE_SSIZE_T
 #cmakedefine HAVE_SSIZE_T_BASETSD
 #if !defined(HAVE_SSIZE_T) && defined(HAVE_SSIZE_T_BASETSD)
-# include <BaseTsd.h>
+# include <basetsd.h>
 typedef SSIZE_T ssize_t;
 #endif
 #cmakedefine HAVE_UNISTD_H
