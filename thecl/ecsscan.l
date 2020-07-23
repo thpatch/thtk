@@ -36,6 +36,7 @@
     #include "thecl.h"
     #include "ecsparse.h"
     #include "util.h"
+    extern char *current_input;
     void yyerror(parser_state_t*, const char*);
     /* yylloc.first_column is initialized to 1. */
     #define YY_USER_INIT yylloc.first_column = 0
@@ -83,6 +84,9 @@
 "inline"   return INLINE;
 "return"   return RETURN;
 "@"        return AT;
+"..."      return VARARGS;
+"."        return DOT;
+"insdef"   return INSDEF;
 
 "goto"     return GOTO;
 "unless"   return UNLESS;

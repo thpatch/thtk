@@ -227,6 +227,9 @@ static const char sub_param_fi[] = {'f', 'i'};
 %token INLINE "inline"
 %token RETURN "return"
 %token AT "@"
+%token DOT "."
+%token VARARGS "..."
+%token INSDEF "insdef"
 %token BRACE_OPEN "{"
 %token BRACE_CLOSE "}"
 %token PARENTHESIS_OPEN "("
@@ -340,6 +343,8 @@ static const char sub_param_fi[] = {'f', 'i'};
 %type <integer> VarDeclaration
 
 %type <cstring> Cast_Target2
+%type <string> Type_List
+%type <string> Type_Char
 
 %left QUESTION
 %left OR
@@ -355,7 +360,7 @@ static const char sub_param_fi[] = {'f', 'i'};
 %precedence SIN COS SQRT
 %precedence DEC
 
-%expect 17
+%expect 18
 %%
 
 Statements:
@@ -440,6 +445,13 @@ Statement:
         list_prepend_new(&state->global_definitions, def);
         free($2);
       }
+    | "insdef" IDENTIFIER "(" Type_List ")" "=" INTEGER ";" {
+        seqmap_entry_t sig_ent = {$7, $4};
+        seqmap_set(g_eclmap->ins_signatures, &sig_ent);
+        seqmap_entry_t name_ent = {$7, $2};
+        seqmap_set(g_eclmap->ins_names, &name_ent);
+        eclmap_rebuild(g_eclmap);
+      }
     | DIRECTIVE TEXT {
         char buf[256];
         if (strcmp($1, "include") == 0) {
@@ -500,6 +512,47 @@ Statement:
       }
     }
     ;
+
+Type_Char:
+      "..." {
+          $$ = malloc(256);
+          $$[0] = 0;
+          strcat($$, "*D");
+      }
+    | "int" {
+          $$ = malloc(256);
+          $$[0] = 'S';
+      }
+    | "float" {
+          $$ = malloc(256);
+          $$[0] = 'f';
+      }
+    | IDENTIFIER {
+        $$ = malloc(256);
+        if(0 == strcmp("string", $1)) {
+            $$[0] = 'm';
+        } else {
+            yyerror(state, "Unknown insdef type: %s", $1);
+        }
+      }
+
+Type_List:
+      %empty {
+          $$ = malloc(256);
+          $$[0] = 0;
+      }
+    | Type_Char {
+        $$ = $1;
+      }
+    | Type_Char IDENTIFIER {
+        $$ = $1;
+      }
+    | Type_List "," Type_List {
+        $$ = $1;
+        strcat($$, $3);
+        free($3);
+      }
+      ;
 
 Subroutine_Body:
       "{" Instructions "}" {
