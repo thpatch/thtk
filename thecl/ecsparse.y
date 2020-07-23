@@ -491,6 +491,14 @@ Statement:
         free($1);
         free($2);
     }
+  | DIRECTIVE INTEGER TEXT {
+      if(strcmp($1, "line") == 0) {
+          yylloc.last_line = yylloc.first_line = $2-2;
+          current_input = strdup($3);
+      } else {
+          yyerror(state, "unknown directive: %s", $1);
+      }
+    }
     ;
 
 Subroutine_Body:
