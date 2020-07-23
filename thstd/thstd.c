@@ -381,7 +381,7 @@ std_create(
 
     const id_format_pair_t *formats =
         option_version == 0 ? formats_v0 :
-        formats_v1;
+      option_version == 1 ? formats_v1 : formats_v2;
 
     f = fopen(spec, "r");
     if (!f) {
