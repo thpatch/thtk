@@ -29,6 +29,7 @@
 
 #include <config.h>
 #include <stdlib.h>
+#include <math.h>
 #include "expr.h"
 #include "thanm.h"
 #include "anmparse.h"
@@ -198,6 +199,173 @@ expr_uses_reg(
     return 0;
 }
 
+static expr_error_t
+expr_evaluate(
+    expr_t* expr
+) {
+    /* Small note about the return values of this function:
+     * EXPR_ERR_SUCCESS is returned when expr_output should continue
+     * executing. This is both the case when optimisations could be applied
+     * and when they couldn't. In this function, the "success" refers to not
+     * encountering any errors that would cause issues in the compiled code or
+     * issues in the expr_output function. An example of when this function
+     * ACTUALLY errors out is when it detects division by 0. */
+    /* To check whether optimisations have been applied, one can check
+     * if the expr->type after calling the function got changed to EXPR_VAL. */
+
+    /* Can't do much about assignments. */
+    if (expr->type != EXPR_OP)
+        return EXPR_ERR_SUCCESS;
+
+    /* Create temporary variables now to avoid a lot of duplicated
+     * code in switch cases. */
+    list_node_t* child1_node = expr->children.head;
+    list_node_t* child2_node = child1_node ? child1_node->next : NULL;
+    int child1S, child2S;
+    float child1f, child2f;
+    int type1, type2;
+    if (child1_node) {
+        thanm_param_t* param = ((expr_t*)child1_node->data)->param;
+        if (param->is_var)
+            return EXPR_ERR_SUCCESS;
+
+        type1 = param->val->type;
+        if (param->val->type == 'S') {
+            child1S = param->val->val.S;
+            child1f = (float)param->val->val.f;
+        } else if (param->val->type == 'f') {
+            child1S = (int)param->val->val.f;
+            child1f = param->val->val.f;
+        } else {
+            /* Can happen when an expression like timeof is used; Can't do much
+             * about it now because the value is unknown at the time this function runs,
+             * solving this would require making thanm multi-pass. */
+            return EXPR_ERR_SUCCESS;
+        }
+    }
+    if (child2_node) {
+        thanm_param_t* param = ((expr_t*)child2_node->data)->param;
+        if (param->is_var)
+            return EXPR_ERR_SUCCESS;
+
+        type2 = param->val->type;
+        if (param->val->type == 'S') {
+            child2S = param->val->val.S;
+            child2f = (float)param->val->val.f;
+        }
+        else if (param->val->type == 'f') {
+            child2S = (int)param->val->val.f;
+            child2f = param->val->val.f;
+        }
+        else {
+            return EXPR_ERR_SUCCESS;
+        }
+    }
+
+    /* For now, thanm doesn't support any typecasts... */
+    if (!child1_node || (child2_node && type1 != type2))
+        return EXPR_ERR_SUCCESS;
+
+    int resS = 0;
+    float resf = 0.0f;
+    switch(expr->op->symbol) {
+        case ADD:
+            if (child2_node == NULL) return EXPR_ERR_SUCCESS;
+            if (type1 == 'S')
+                resS = child1S + child2S;
+            else
+                resf = child1f + child2f;
+            break;
+        case SUBTRACT:
+            if (child2_node == NULL) return EXPR_ERR_SUCCESS;
+            if (type1 == 'S')
+                resS = child1S - child2S;
+            else
+                resf = child1f - child2f;
+            break;
+        case MULTIPLY:
+            if (child2_node == NULL) return EXPR_ERR_SUCCESS;
+            if (type1 == 'S')
+                resS = child1S * child2S;
+            else
+                resf = child1f * child2f;
+            break;
+        case DIVIDE:
+            if (child2_node == NULL) return EXPR_ERR_SUCCESS;
+            if (type1 == 'S') {
+                if (child2S == 0) {
+                    return EXPR_ERR_DIVIDE_BY_ZERO;
+                }
+                resS = child1S / child2S;
+            } else {
+                if (child2f == 0.0f)
+                    return EXPR_ERR_DIVIDE_BY_ZERO;
+                resf = child1f / child2f;
+             }
+            break;
+        case MODULO:
+            if (child2_node == NULL) return EXPR_ERR_SUCCESS;
+            if (type1 == 'S') {
+                if (child2S == 0) {
+                    return EXPR_ERR_DIVIDE_BY_ZERO;
+                }
+                resS = child1S % child2S;
+            } else {
+                if (child2f == 0.0f)
+                    return EXPR_ERR_DIVIDE_BY_ZERO;
+                resf = fmodf(child1f, child2f);
+            }
+            break;
+        case RAND:
+            /* For obvious reasons, we don't evaluate this one. */
+            return EXPR_ERR_SUCCESS;
+        case SIN:
+            if (type1 == 'S')
+                return EXPR_ERR_SUCCESS;
+            resf = sinf(child1f);
+            break;
+        case COS:
+            if (type1 == 'S')
+                return EXPR_ERR_SUCCESS;
+            resf = cosf(child1f);
+            break;
+        case TAN:
+            if (type1 == 'S')
+                return EXPR_ERR_SUCCESS;
+            resf = tanf(child1f);
+            break;
+        case ACOS:
+            if (type1 == 'S')
+                return EXPR_ERR_SUCCESS;
+            resf = acosf(child1f);
+            break;
+        case ATAN:
+            if (type1 == 'S')
+                return EXPR_ERR_SUCCESS;
+            resf = atanf(child1f);
+            break;
+    }
+    thanm_param_t* res_param = thanm_param_new(type1);
+    res_param->val = (value_t*)malloc(sizeof(value_t));
+    res_param->val->type = type1;
+    if (type1 == 'S')
+        res_param->val->val.S = resS;
+    else
+        res_param->val->val.f = resf;
+
+    /* Now we transform the expression into an EXPR_VAL, using
+     * the param we created. */
+     expr->type = EXPR_VAL;
+     expr->param = res_param;
+     /* And finally, free the old children. */
+     expr_t* child;
+     list_for_each(&expr->children, child) {
+        expr_free(child);
+     }
+     list_free_nodes(&expr->children);
+     return EXPR_ERR_SUCCESS;
+}
+
 expr_error_t
 expr_output(
     parser_state_t* state,
@@ -247,8 +415,15 @@ expr_output(
         else if (type != 0 && child->param->type != type)
             return EXPR_ERR_BAD_TYPES;
     }
+    if (out != NULL && out->type != type)
+        return EXPR_ERR_BAD_TYPES;
 
-    /* TODO: add compile-time evalutation here. */
+    /* Perform compile-time evaluation if possible. */
+    expr_error_t eval_err = expr_evaluate(expr);
+    if (eval_err != EXPR_ERR_SUCCESS)
+        return eval_err;
+    if (expr->type == EXPR_VAL)
+        return EXPR_ERR_SUCCESS;
 
     if (state->current_script == NULL)
         return EXPR_ERR_NO_SCRIPT;
@@ -381,11 +556,12 @@ expr_strerror(
 ) {
     static const char* const errs[] = {
         "success", /* EXPR_ERR_SUCCESS */
-        "parameters have different types", /* EXPR_ERR_BAD_TYPES */
+        "type mismatch", /* EXPR_ERR_BAD_TYPES */
         "invalid assignment - no register on the left-hand side", /* EXPR_ERR_BAD_LVAL */
         "no instruction found for given types", /* EXPR_ERR_NO_INSTR */
         "can't compile instructions outside of a script", /* EXPR_ERR_NO_SCRIPT */
-        "no temporary registers available" /* EXPR_ERR_REG_FULL */
+        "no temporary registers available", /* EXPR_ERR_REG_FULL */
+        "division or modulo by 0" /* EXPR_ERR_DIVIDE_BY_ZERO */
     };
     return errs[err];
 }

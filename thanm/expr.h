@@ -94,7 +94,8 @@ typedef enum expr_error_t {
     EXPR_ERR_BAD_LVAL,
     EXPR_ERR_NO_INSTR,
     EXPR_ERR_NO_SCRIPT,
-    EXPR_ERR_REG_FULL
+    EXPR_ERR_REG_FULL,
+    EXPR_ERR_DIVIDE_BY_ZERO
 } expr_error_t;
 
 void expr_free(expr_t* expr);
