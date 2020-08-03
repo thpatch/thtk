@@ -655,7 +655,14 @@ anm_stringify_param(
     }
 
     if (param->is_var) {
-        int val = param->val->type == 'f' ? floorf(param->val->val.f) : param->val->val.S;
+        int val;
+        if (param->val->type == 'f')
+            val = floorf(param->val->val.f);
+        else if (param->val->type == 'S')
+            val = param->val->val.S;
+        else if (param->val->type == 's')
+            val = param->val->val.s;
+
         seqmap_entry_t* ent = seqmap_get(g_anmmap->gvar_names, val);
         if (ent) {
             fprintf(stream, "%c%s", param->val->type == 'f' ? '%' : '$', ent->value);
