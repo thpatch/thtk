@@ -88,7 +88,7 @@ static void var_assign(parser_state_t* state, var_t* var, expr_t* expr);
 /* Returns variable of a given name (or NULL if not found). */
 static var_t* var_find(parser_state_t* state, char* name);
 
-static void instr_check_types(parser_state_t* state, thanm_instr_t* instr);
+static void instr_check_types(parser_state_t* state, int id, list_t* params);
 
 %}
 
@@ -506,8 +506,8 @@ ScriptStatement:
         list_free_nodes($exprs);
         free($exprs);
 
+        instr_check_types(state, id, param_list);
         thanm_instr_t* instr = instr_new(state, id, param_list);
-        instr_check_types(state, instr);
         list_append_new(&state->current_script->instrs, instr);
 
         reg_t* reg;
@@ -889,22 +889,23 @@ prop_list_free_nodes(
 static void
 instr_check_types(
     parser_state_t* state,
-    thanm_instr_t* instr
+    int id,
+    list_t* param_list
 ) {
     const id_format_pair_t* formats = anm_get_formats(state->current_entry->header->version);
-    const char* format = find_format(formats, instr->id);
+    const char* format = find_format(formats, id);
     if (format == NULL) {
         state->was_error = 1;
-        yyerror(state, "opcode %d is not known to exist in version %d", instr->id, state->current_entry->header->version);
+        yyerror(state, "opcode %d is not known to exist in version %d", id, state->current_entry->header->version);
         return;
     }
-    thanm_instr_t* param;
+    thanm_param_t* param;
     size_t i = 0;
-    list_for_each(&instr->params, param) {
+    list_for_each(param_list, param) {
         char c = format[i];
         if (c == '\0') {
             state->was_error = 1;
-            yyerror(state, "too many parameters for opcode %d", instr->id);
+            yyerror(state, "too many parameters for opcode %d", id);
             break;
         }
         if (c == 'S') {
@@ -918,17 +919,22 @@ instr_check_types(
                 param->type = c;
             else if (param->type == 'S') /* Allow numbers for things that get converted to numbers anyway. */
                 c = param->type;
+        } else if (c == 's' && param->type == 'S') {
+            /* Convert to int16 */
+            param->type = 's';
+            param->val->type = 's';
+            param->val->val.s = (int16_t)param->val->val.S;
         }
         
         if (param->type != c) {
             state->was_error = 1;
-            yyerror(state, "wrong parameter %d type for opcode %d, expected: %c", i + 1, instr->id, c);
+            yyerror(state, "wrong parameter %d type for opcode %d, expected: %c", i + 1, id, c);
         }
         ++i;
     }
     if (format[i] != '\0') {
         state->was_error = 1;
-        yyerror(state, "not enough parameters for opcode %d", instr->id);
+        yyerror(state, "not enough parameters for opcode %d", id);
     }
 }
 

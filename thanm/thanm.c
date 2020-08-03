@@ -378,7 +378,7 @@ static const id_format_pair_t formats_v8[] = {
     { 415, "fff" },
     { 416, "ff" },
     { 420, "SffSSSSffS" },
-    { 421, "S" }, /* ss */
+    { 421, "ss" },
     { 422, "" },
     { 423, "S" },
     { 424, "S" },
@@ -684,10 +684,16 @@ instr_get_size(
     thanm_instr_t* instr
 ) {
     uint32_t size = sizeof(anm_instr_t);
-    /* In ANM, parameter size is always 4 bytes (only int32 or float), so we can just add 4 to size for every param... */
-    list_node_t* node;
-    list_for_each_node(&instr->params, node)
-        size += 4;
+    thanm_param_t* param;
+    list_for_each(&instr->params, param) {
+        switch(param->type) {
+            case 's':
+                size += sizeof(int16_t);
+                break;
+            default:
+                size += 4;
+        }
+    }
 
     return size;
 }
@@ -1613,6 +1619,10 @@ anm_serialize_instr(
             case 'S':
                 memcpy(&raw->data[offset], &param->val->val.S, sizeof(int32_t));
                 offset += sizeof(int32_t);
+                break;
+            case 's':
+                memcpy(&raw->data[offset], &param->val->val.s, sizeof(int16_t));
+                offset += sizeof(int16_t);
                 break;
             case 'f':
                 memcpy(&raw->data[offset], &param->val->val.f, sizeof(float));
