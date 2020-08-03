@@ -892,11 +892,19 @@ instr_check_types(
     int id,
     list_t* param_list
 ) {
+    char opcode_msg[64];
+    seqmap_entry_t* ent = seqmap_get(g_anmmap->ins_names, id);
+    if (ent) {
+        snprintf(opcode_msg, sizeof(opcode_msg), "%d (%s)", id, ent->value);
+    } else {
+        snprintf(opcode_msg, sizeof(opcode_msg), "%d", id);
+    }
+
     const id_format_pair_t* formats = anm_get_formats(state->current_entry->header->version);
     const char* format = find_format(formats, id);
     if (format == NULL) {
         state->was_error = 1;
-        yyerror(state, "opcode %d is not known to exist in version %d", id, state->current_entry->header->version);
+        yyerror(state, "opcode %s is not known to exist in version %d", opcode_msg, state->current_entry->header->version);
         return;
     }
     thanm_param_t* param;
@@ -905,7 +913,7 @@ instr_check_types(
         char c = format[i];
         if (c == '\0') {
             state->was_error = 1;
-            yyerror(state, "too many parameters for opcode %d", id);
+            yyerror(state, "too many parameters for opcode %s", opcode_msg);
             break;
         }
         if (c == 'S') {
@@ -928,13 +936,13 @@ instr_check_types(
         
         if (param->type != c) {
             state->was_error = 1;
-            yyerror(state, "wrong parameter %d type for opcode %d, expected: %c", i + 1, id, c);
+            yyerror(state, "wrong parameter %d type for opcode %s, expected: %c", i + 1, opcode_msg, c);
         }
         ++i;
     }
     if (format[i] != '\0') {
         state->was_error = 1;
-        yyerror(state, "not enough parameters for opcode %d", id);
+        yyerror(state, "not enough parameters for opcode %s", opcode_msg);
     }
 }
 
