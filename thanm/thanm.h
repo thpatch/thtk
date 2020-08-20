@@ -42,6 +42,8 @@ extern unsigned int option_force;
 const id_format_pair_t* anm_get_formats(uint32_t version);
 
 typedef struct {
+    /* The id in the offset struct may not be the real index. */
+    int32_t real_index;
     anm_offset_t* offset;
     /* instrs of thanm_instr_t format */
     list_t instrs;
@@ -125,7 +127,8 @@ typedef struct parser_state_t {
     int32_t current_version;
     uint32_t offset;
     uint32_t sprite_id;
-    uint32_t script_id;
+    int32_t script_id;
+    int32_t script_real_index;
     /* List of anm_entry_t */
     list_t entries;
     anm_entry_t* current_entry;

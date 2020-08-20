@@ -657,12 +657,29 @@ replace_minus(
     }
 }
 
+static int
+anm_is_valid_script_index(
+    const anm_archive_t* anm,
+    int32_t index
+) {
+    anm_entry_t* entry;
+    anm_script_t* script;
+    list_for_each(&anm->entries, entry) {
+        list_for_each(&entry->scripts, script) {
+            if (script->real_index == index)
+                return 1;
+        }
+    }
+    return 0;
+}
+
 static void
 anm_stringify_param(
     FILE* stream,
     thanm_param_t* param,
     thanm_instr_t* instr,
-    int scriptn
+    const anm_archive_t* anm,
+    int32_t scriptn
 ) {
     char* disp = NULL;
     char* dest = NULL;
@@ -670,21 +687,25 @@ anm_stringify_param(
 
     switch(param->type) {
         case 'o':
-            sprintf(buf, "offset%u", param->val->val.S);
+            sprintf(buf, "offset%d", param->val->val.S);
             replace_minus(buf);
             dest = buf;
             break;
         case 'n':
-            /* Sprite -1 is used as an empty sprite. */
-            if (param->val->val.S == -1)
+            /* Sprite -1 is actually sometimes used to indicate no sprite. */
+            if (param->val->val.S < 0)
                 sprintf(buf, "%d", param->val->val.S);
             else
                 sprintf(buf, "sprite%d", param->val->val.S);
             dest = buf;
             break;
         case 'N':
-            sprintf(buf, "script%d", param->val->val.S);
-            replace_minus(buf);
+            if (anm_is_valid_script_index(anm, param->val->val.S)) {
+                sprintf(buf, "script%d", param->val->val.S);
+                replace_minus(buf);
+            } else {
+                sprintf(buf, "%d", param->val->val.S);
+            }
             dest = buf;
             break;
         default:
@@ -811,7 +832,7 @@ thanm_instr_free(
 static void
 anm_insert_labels(
     anm_script_t* script,
-    int scriptn
+    int32_t scriptn
 ) {
     thanm_instr_t* instr;
     list_for_each(&script->instrs, instr) {
@@ -870,7 +891,7 @@ anm_read_file(
     archive->map = map_base = file_mmap(in, file_size);
     map = map_base;
 
-    int scriptn = 0;
+    int32_t scriptn = 0;
     for (;;) {
         anm_entry_t* entry = malloc(sizeof(*entry));
         anm_header06_t* header = (anm_header06_t*)map;
@@ -927,6 +948,7 @@ anm_read_file(
                 (anm_offset_t*)(map + sizeof(*header) + header->sprites * sizeof(uint32_t));
             for (uint32_t s = 0; s < header->scripts; ++s) {
                 anm_script_t* script = anm_script_new();
+                script->real_index = scriptn;
                 script->offset = &(script_offsets[s]);
 
                 unsigned char* limit = map;
@@ -1106,7 +1128,8 @@ static void
 anm_stringify_instr(
     FILE* stream,
     thanm_instr_t* instr,
-    int scriptn
+    const anm_archive_t* anm,
+    int32_t scriptn
 ) {
     seqmap_entry_t* ent = seqmap_get(g_anmmap->ins_names, instr->id);
 
@@ -1117,7 +1140,7 @@ anm_stringify_instr(
 
     thanm_param_t* param;
     list_for_each(&instr->params, param) {
-        anm_stringify_param(stream, param, instr, scriptn);
+        anm_stringify_param(stream, param, instr, anm, scriptn);
         if (!list_is_last_iteration()) {
             fprintf(stream, ", ");
         }
@@ -1135,7 +1158,6 @@ anm_dump(
     unsigned int entry_num = 0;
     anm_entry_t* entry;
 
-    int scriptn = 0;
     int prev_sprite_id = -1;
     int prev_script_id = -1;
     list_for_each(&anm->entries, entry) {
@@ -1198,13 +1220,17 @@ anm_dump(
 
         anm_script_t* script;
         list_for_each(&entry->scripts, script) {
-
-            sprintf(buf, "script%d", script->offset->id);
-            replace_minus(buf);
+            /* We need to use the index of the script in file for the name, because that's
+             * what instructions that refer to scripts use. I'm unsure what's the actual purpose of the ID field.
+             * However! I still don't really know how old versions work, and maybe instructions refer to the
+             * ID field there? If that's the case, it should be enough to just do a check earlier that sets
+             * real_index to offset->id in old versions (and re-add the replace_minus calls).
+             * I honestly doubt that this is the case, but I want to leave a note how to change it anyway in case
+             * it's needed... */
             if (script->offset->id - 1 != prev_script_id) {
-                fprintf(stream, "script %d %s {\n", script->offset->id, buf);
+                fprintf(stream, "script %d script%d {\n", script->offset->id, script->real_index);
             } else {
-                fprintf(stream, "script %s {\n", buf);
+                fprintf(stream, "script script%d {\n", script->real_index);
             }
             prev_script_id = script->offset->id;
 
@@ -1215,7 +1241,7 @@ anm_dump(
                 switch(instr->type) {
                     case THANM_INSTR_INSTR:
                         fprintf(stream, "    ");
-                        anm_stringify_instr(stream, instr, scriptn);
+                        anm_stringify_instr(stream, instr, anm, script->real_index);
                         break;
                     case THANM_INSTR_TIME:
                         if (instr->time < 0)
@@ -1240,7 +1266,6 @@ anm_dump(
             }
 
             fprintf(stream, "}\n\n");
-            ++scriptn;
         }
 
         fprintf(stream, "\n");
@@ -1755,6 +1780,7 @@ anm_create(
     state.current_version = -1;
     state.sprite_id = 0;
     state.script_id = 0;
+    state.script_real_index = 0;
     list_init(&state.entries);
     list_init(&state.globals);
     list_init(&state.script_names);

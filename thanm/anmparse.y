@@ -434,9 +434,10 @@ Script:
         reg_reset(state->current_version);
         script->offset = malloc(sizeof(*script->offset));
         script->offset->id = state->script_id++;
+        script->real_index = state->script_real_index++;
 
         symbol_id_pair_t* symbol = (symbol_id_pair_t*)malloc(sizeof(symbol_id_pair_t));
-        symbol->id = script->offset->id;
+        symbol->id = script->real_index;
         symbol->name = $name;
         list_append_new(&state->script_names, symbol);
         if (state->symbolfp != NULL)
