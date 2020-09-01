@@ -818,9 +818,10 @@ thanm_instr_new() {
 
 uint32_t
 instr_get_size(
-    thanm_instr_t* instr
+    thanm_instr_t* instr,
+    int32_t version
 ) {
-    uint32_t size = sizeof(anm_instr_t);
+    uint32_t size = version == 0 ? sizeof(anm_instr0_t) : sizeof(anm_instr_t);
     thanm_param_t* param;
     list_for_each(&instr->params, param) {
         switch(param->type) {
@@ -848,7 +849,7 @@ instr_new(
     instr->id = id;
     instr->params = *params;
     free(params);
-    instr->size = instr_get_size(instr);
+    instr->size = instr_get_size(instr, state->current_version);
     state->offset += instr->size;
     return instr;
 }
@@ -1743,9 +1744,14 @@ anm_serialize_instr(
     thanm_instr_t* instr,
     anm_script_t* script
 ) {
-    anm_instr_t* raw = (anm_instr_t*)util_malloc(instr->size);
+    /* The size field of an instruction refers to size in its vesion.
+     * However, here we are always allocating an anm_instr_t...
+     * So we need to get size it would get as if it was anm_instr_t, no matter what. */
+    uint32_t size = instr_get_size(instr, 8);
+
+    anm_instr_t* raw = (anm_instr_t*)util_malloc(size);
     raw->type = instr->id;
-    raw->length = instr->size - sizeof(anm_instr_t);
+    raw->length = size - sizeof(anm_instr_t); /* size of parametes. */
     raw->time = instr->time;
     raw->param_mask = 0;
     thanm_param_t* param;

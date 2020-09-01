@@ -103,7 +103,7 @@ typedef struct {
     list_t params;
 } thanm_instr_t;
 
-uint32_t instr_get_size(thanm_instr_t* instr);
+uint32_t instr_get_size(thanm_instr_t* instr, int32_t version);
 
 typedef struct expr_t expr_t;
 
