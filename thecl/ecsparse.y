@@ -501,6 +501,7 @@ Statement:
         } else if (strcmp($1, "nowarn") == 0) {
             state->ecl->no_warn = (strcmp($2, "true") == 0);
         } else if (strcmp($1, "ins") == 0 || strcmp($1, "timeline_ins") == 0) {
+            yyerror(state, "#ins and #timeline_ins directives are deprecated, use insdef instead");
             int is_timeline = ($1)[0] == 't';
             if (strlen($2) < 256) {
                 /* arg format: "id format", e.g. "200 SSff" */
