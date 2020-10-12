@@ -487,7 +487,11 @@ Statement:
 
         eclmap_rebuild(g_eclmap);
       }
-    | DIRECTIVE TEXT {
+    | Directive
+    ;
+
+Directive:
+    DIRECTIVE TEXT {
         char buf[256];
         if (strcmp($1, "include") == 0) {
             if (directive_include(state, $2) != 0) {
@@ -696,6 +700,7 @@ ArgumentDeclaration:
 
 Instructions:
     %empty
+    | Instructions Directive
     | Instructions INTEGER ":" { set_time(state, $2); }
     | Instructions "+" INTEGER ":" { set_time(state, state->instr_time + $3); }
     | Instructions IDENTIFIER ":" { label_create(state, $2); free($2); }
