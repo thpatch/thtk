@@ -41,6 +41,17 @@
 #include "mygetopt.h"
 
 unsigned int option_version;
+unsigned int game_version;
+
+static const id_format_pair_t formats_v0_th06[] = {
+    { 0, "fff" },
+    { 1, "Cff" },
+    { 2, "fff" },
+    { 3, "SSS" },
+    { 4, "SSS" },
+    { 5, "SSS" },
+    { 0, NULL }
+};
 
 /* Some of the S's here are actually colors. */
 static const id_format_pair_t formats_v0[] = {
@@ -127,6 +138,24 @@ static const id_format_pair_t formats_v2[] = {
     { 21, "SSf"},
     { 0, NULL }
 };
+
+static const id_format_pair_t*
+get_format_table(
+    unsigned int version
+) {
+    switch(version) {
+        case 0:
+            if (game_version == 6)
+                return formats_v0_th06;
+            return formats_v0;
+        case 1:
+            return formats_v1;
+        case 2:
+            return formats_v2;
+        default:
+            return NULL;
+    }
+}
 
 static thstd_t*
 std_read_file(
@@ -237,9 +266,7 @@ std_dump(
     std_object_instance_t *instance;
     std_instr_t *instr;
 
-    const id_format_pair_t *formats =
-        option_version == 0 ? formats_v0 :
-      option_version == 1 ? formats_v1 : formats_v2;
+    const id_format_pair_t *formats = get_format_table(option_version);
 
     uint16_t object_id;
     uint32_t time;
@@ -403,9 +430,7 @@ std_create(
 
     uint32_t instr_time = 0;
 
-    const id_format_pair_t *formats =
-        option_version == 0 ? formats_v0 :
-      option_version == 1 ? formats_v1 : formats_v2;
+    const id_format_pair_t *formats = get_format_table(option_version);
 
     f = fopen(spec, "r");
     if (!f) {
@@ -840,7 +865,6 @@ main(
     argv0 = util_shortname(argv[0]);
     int opt;
     int ind=0;
-    unsigned int version = 0;
     while(argv[util_optind]) {
         switch(opt = util_getopt(argc,argv,commands)) {
         case 'c':
@@ -851,7 +875,7 @@ main(
                 exit(1);
             }
             command = opt;
-            version = parse_version(util_optarg);
+            game_version = parse_version(util_optarg);
             break;
         default:
             util_getopt_default(&ind,argv,opt,print_usage);
@@ -860,7 +884,7 @@ main(
     argc = ind;
     argv[argc] = NULL;
 
-    switch (version) {
+    switch (game_version) {
     case 6:
     case 7:
     case 8:
@@ -888,10 +912,10 @@ main(
         break;
     default:
         if (command == 'c' || command == 'd') {
-            if (version == 0)
+            if (game_version == 0)
                 fprintf(stderr, "%s: version must be specified\n", argv0);
             else
-                fprintf(stderr, "%s: version %u is unsupported\n", argv0, version);
+                fprintf(stderr, "%s: version %u is unsupported\n", argv0, game_version);
             exit(1);
         }
     }
