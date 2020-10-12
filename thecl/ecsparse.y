@@ -524,32 +524,6 @@ Statement:
                 yyerror(state, "#ins: specified format is too long");
             }
 
-        } else if (strcmp($1, "ins_ret") == 0) {
-            if (strlen($2) < 256) {
-                char* arg = $2;
-                size_t s = 0;
-                while(arg[s] != ' ' && arg[s] != '\0') {
-                    buf[s] = arg[s];
-                    ++s;
-                }
-                buf[s] = '\0';
-                int id = strtol(buf, NULL, 10);
-                
-                while(arg[s] == ' ') ++s;
-
-                if (arg[s] == '\0') {
-                    yyerror(state, "#ins_ret: no type specified");
-                } else {
-                    if ((arg[s] == 'S' || arg[s] == 'f') && arg[s + 1] == '\0') {
-                        seqmap_entry_t ent = { id, arg + s };
-                        seqmap_set(g_eclmap->ins_rets, &ent);
-                    } else {
-                        yyerror(state, "#ins_ret: invalid type: %s", arg + s);
-                    }
-                }
-            } else {
-                yyerror(state, "#ins_ret: specified type is too long");
-            }
         } else if (strcmp($1, "message") == 0) {
             printf("%s\n", $2);
         } else {
