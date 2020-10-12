@@ -350,6 +350,7 @@ static const char sub_param_fi[] = {'f', 'i'};
 %type <param> Load_Type
 %type <param> Cast_Type
 
+%type <integer> Optional_Timeline
 %type <integer> Cast_Target
 %type <integer> DeclareKeyword
 %type <integer> VarDeclaration
@@ -458,23 +459,30 @@ Statement:
         list_prepend_new(&state->global_definitions, def);
         free($2);
       }
-    | "insdef" DeclareKeyword[type] IDENTIFIER[name] "(" Types[types] ")" "=" INTEGER[id] ";" {
+    | "insdef" Optional_Timeline[is_timeline] DeclareKeyword[type] IDENTIFIER[name] "(" Types[types] ")" "=" INTEGER[id] ";" {
+        seqmap_t* signature_map = !$is_timeline ? g_eclmap->ins_signatures : g_eclmap->timeline_ins_signatures;
+        seqmap_t* name_map = !$is_timeline ? g_eclmap->ins_names : g_eclmap->timeline_ins_names;
+
         seqmap_entry_t sig_ent = {$id, $types};
-        seqmap_set(g_eclmap->ins_signatures, &sig_ent);
+        seqmap_set(signature_map, &sig_ent);
         free($types); /* seqmap_set does a strdup */
 
         seqmap_entry_t name_ent = {$id, $name};
-        seqmap_set(g_eclmap->ins_names, &name_ent);
+        seqmap_set(name_map, &name_ent);
         free($name); /* seqmap_set does a strdup */
 
         if ($type == '?') {
             yyerror(state, "insdef: instruction can't be defined as 'var'");
         } else if ($type != 0) {
-            char type_string[2];
-            type_string[0] = $type;
-            type_string[1] = '\0';
-            seqmap_entry_t ent = { $id, type_string };
-            seqmap_set(g_eclmap->ins_rets, &ent);
+            if (!$is_timeline) {
+                char type_string[2];
+                type_string[0] = $type;
+                type_string[1] = '\0';
+                seqmap_entry_t ent = { $id, type_string };
+                seqmap_set(g_eclmap->ins_rets, &ent);
+            } else {
+                yyerror(state, "insdef: timeline instructions can only be 'void'");
+            }
         }
 
         eclmap_rebuild(g_eclmap);
@@ -542,6 +550,11 @@ Statement:
       free($1);
       free($3);
     }
+    ;
+
+Optional_Timeline:
+      "timeline" { $$ = 1; }
+    |  %empty { $$ = 0; }
     ;
 
 Type_Char:
