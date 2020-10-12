@@ -87,6 +87,9 @@
 "inline"   return INLINE;
 "return"   return RETURN;
 "@"        return AT;
+"..."      return VARARGS;
+"."        return DOT;
+"insdef"   return INSDEF;
 
 "goto"     return GOTO;
 "unless"   return UNLESS;
@@ -157,11 +160,11 @@ ins_[0-9]+ {
     yylval.integer = strtoul(yytext, NULL, 10);
     return INTEGER;
 }
-0x[0-9a-fA-F]+ {
+0[xX][0-9a-fA-F]+ {
     yylval.integer = strtoul(yytext, NULL, 16);
     return INTEGER;
 }
-0b[0-1]+ {
+0[bB][0-1]+ {
     yylval.integer = strtoul(yytext+2, NULL, 2);
     return INTEGER;
 }

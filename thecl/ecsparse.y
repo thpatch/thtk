@@ -107,7 +107,7 @@ static expression_t* expression_call_ins_new(const parser_state_t* state, list_t
 
 static void expression_output(parser_state_t* state, expression_t* expr, int has_no_parents);
 static void expression_free(expression_t* expr);
-static void expression_optimize(parser_state_t* state, expression_t* expr);
+static void expression_optimize(const parser_state_t* state, expression_t* expr);
 #define EXPR_22(a, b, A, B) \
     expression_operation_new(state, (int[]){ a, b, 0 }, (expression_t*[]){ A, B, NULL })
 #define EXPR_12(a, A, B) \
@@ -161,7 +161,7 @@ static void var_shorthand_assign(parser_state_t* state, thecl_param_t* param, ex
 /* Stores a new label in the current subroutine pointing to the current offset. */
 static void label_create(parser_state_t* state, char* label);
 /* Change offset of all labels in the given list that have at least offset min_offset by subtracting the given value. */
-static void labels_adjust(list_t* labels, uint32_t min_offset, int32_t adjust);
+static void labels_adjust(list_t* labels, uint32_t min_offset, uint32_t adjust);
 
 /* Update the current time label. */
 void set_time(parser_state_t* state, int new_time);
@@ -196,6 +196,7 @@ static const char sub_param_fi[] = {'f', 'i'};
     int integer;
     float floating;
     char* string;
+    const char* cstring;
     struct {
         unsigned int length;
         unsigned char* data;
@@ -238,6 +239,9 @@ static const char sub_param_fi[] = {'f', 'i'};
 %token INLINE "inline"
 %token RETURN "return"
 %token AT "@"
+%token DOT "."
+%token VARARGS "..."
+%token INSDEF "insdef"
 %token BRACE_OPEN "{"
 %token BRACE_CLOSE "}"
 %token PARENTHESIS_OPEN "("
@@ -350,7 +354,10 @@ static const char sub_param_fi[] = {'f', 'i'};
 %type <integer> DeclareKeyword
 %type <integer> VarDeclaration
 
-%type <string> Cast_Target2
+%type <cstring> Cast_Target2
+%type <string> Types
+%type <string> Type_List
+%type <string> Type_Char
 
 %left QUESTION
 %left OR
@@ -451,6 +458,17 @@ Statement:
         list_prepend_new(&state->global_definitions, def);
         free($2);
       }
+    | "insdef" IDENTIFIER[name] "(" Types[types] ")" "=" INTEGER[id] ";" {
+        seqmap_entry_t sig_ent = {$id, $types};
+        seqmap_set(g_eclmap->ins_signatures, &sig_ent);
+        free($types); /* seqmap_set does a strdup */
+
+        seqmap_entry_t name_ent = {$id, $name};
+        seqmap_set(g_eclmap->ins_names, &name_ent);
+        free($name); /* seqmap_set does a strdup */
+
+        eclmap_rebuild(g_eclmap);
+      }
     | DIRECTIVE TEXT {
         char buf[256];
         if (strcmp($1, "include") == 0) {
@@ -530,6 +548,80 @@ Statement:
         free($1);
         free($2);
     }
+  | DIRECTIVE INTEGER TEXT {
+      if(strcmp($1, "line") == 0) {
+          yylloc.last_line = yylloc.first_line = $2-2;
+          current_input = strdup($3);
+      } else {
+          yyerror(state, "unknown directive: %s", $1);
+      }
+      free($1);
+      free($3);
+    }
+    ;
+
+Type_Char:
+      "..." {
+          $$ = malloc(3);
+          $$[0] = 0;
+          strcat($$, "*D");
+      }
+    | "int" {
+          $$ = malloc(2);
+          $$[0] = 'S';
+          $$[1] = '\0';
+      }
+    | "float" {
+          $$ = malloc(2);
+          $$[0] = 'f';
+          $$[1] = '\0';
+      }
+    | IDENTIFIER {
+        $$ = malloc(2);
+        if(0 == strcmp("string", $1)) {
+            $$[0] = 'm';
+            $$[1] = '\0';
+        } else {
+            $$[0] = '\0';
+            yyerror(state, "Unknown insdef type: %s", $1);
+        }
+        free($1);
+      }
+    ;
+
+Types: 
+    %empty {
+        $$ = malloc(1);
+        $$[0] = '\0';
+    }
+    | Type_List
+;
+
+Type_List:
+      Type_Char {
+        $$ = $1;
+      }
+    | Type_Char IDENTIFIER {
+        $$ = $1;
+        free($2);
+      }
+    | Type_List "," Type_Char {
+        $$ = malloc(strlen($$) + strlen($3) + 1);
+        $$[0] = '\0';
+        strcat($$, $1);
+        strcat($$, $3);
+        free($1);
+        free($3);
+      }
+    | Type_List "," Type_Char IDENTIFIER {
+        $$ = malloc(strlen($$) + strlen($3) + 1);
+        $$[0] = '\0';
+        strcat($$, $1);
+        strcat($$, $3);
+        free($1);
+        free($3);
+        free($4);
+      }
     ;
 
 Subroutine_Body:
@@ -2645,7 +2737,7 @@ expression_output(
 
 static void
 expression_optimize(
-    parser_state_t* state,
+    const parser_state_t* state,
     expression_t* expression)
 {
     if (expression->type != EXPRESSION_OP) return;

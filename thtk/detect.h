@@ -33,7 +33,7 @@
 #define API_SYMBOL /* */
 #endif
 
-#include <stdint.h>
+#include <inttypes.h>
 #include <wchar.h>
 
 #ifdef __cplusplus

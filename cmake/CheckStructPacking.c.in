@@ -1,0 +1,18 @@
+@preamble@
+
+static char info[] = { 'I', 'N', 'F', 'O', ':', 'c', 'h', 'e', 'c', 'k', '[',
+#ifndef EXPR
+    '0',
+#else
+    '0'+!!(EXPR),
+#endif
+    ']', '\0'
+};
+
+int main(int argc, char *argv[])
+{
+    int require = 0;
+    require += info[argc];
+    (void)argv;
+    return require;
+}

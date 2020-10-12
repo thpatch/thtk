@@ -6,86 +6,55 @@ project("Touhou Toolkit"
 set(PROJECT_URL "https://github.com/thpatch/thtk")
 set(PROJECT_BUGREPORT "https://github.com/thpatch/thtk/issues")
 
-include(CheckCSourceRuns)
+include(cmake/CheckStructPacking.cmake)
 include(CheckTypeSize)
 include(CheckIncludeFile)
-include(CheckFunctionExists)
+include(CheckSymbolExists)
+include(CMakePushCheckState)
 
-check_c_source_runs("
-#include <stddef.h>
-struct test_t { char a;
-#pragma pack(push,1)
-int b; };
-#pragma pack(pop)
-
-int main() {
-return offsetof(struct test_t, b) == 1 ? 0 : 1;
-}
-" PACK_PRAGMA)
-if (NOT ${PACK_PRAGMA})
-  check_c_source_runs("
-  #include <stddef.h>
-  struct test_t { char a; int b; } __attribute__((packed));
-
-  int main() {
-  return offsetof(struct test_t, b) == 1 ? 0 : 1;
-  }
-  " PACK_ATTRIBUTE_AVAILABLE)
-  if (${PACK_ATTRIBUTE_AVAILABLE})
-    set(PACK_ATTRIBUTE "__attribute__((packed))")
-  endif()
+check_packing_gnuc_attribute()
+if(NOT ${HAVE_PACKING_GNUC_ATTRIBUTE})
+    check_packing_pragma_push()
+    if(NOT ${HAVE_PACKING_PRAGMA_PUSH})
+        message(SEND_ERROR "No structure packing.")
+    endif()
 endif()
 
-check_type_size(off_t OFF_T)
-check_type_size(size_t SIZE_T)
-if (NOT ${HAVE_SIZE_T})
-  check_c_source_runs("
-  #ifdef _WIN32
-  # include <BaseTsd.h>
-  typedef SIZE_T size_t;
-  #else
-  # include <sys/types.h>
-  #endif
-
-  int main() {
-    size_t test = -1;
-    return test>0 ? 0 : 1;
-  }
-  " HAVE_SSIZE_T_BASETSD)
+check_include_file("sys/types.h" HAVE_SYS_TYPES_H)
+if(${HAVE_SYS_TYPES_H})
+  set(CMAKE_EXTRA_INCLUDE_FILES "sys/types.h")
+  check_type_size(off_t OFF_T BUILTIN_TYPES_ONLY)
+  check_type_size(ssize_t SSIZE_T BUILTIN_TYPES_ONLY)
+  cmake_reset_check_state()
 endif()
-check_type_size(ssize_t SSIZE_T)
-if (NOT ${HAVE_SSIZE_T})
-  check_c_source_runs("
-  #ifdef _WIN32
-  # include <BaseTsd.h>
-  typedef SSIZE_T ssize_t;
-  #else
-  # include <sys/types.h>
-  #endif
-
-  int main() {
-    ssize_t test = -1;
-    return test<0 ? 0 : 1;
-  }
-  " HAVE_SSIZE_T_BASETSD)
+if(NOT ${HAVE_SSIZE_T})
+  cmake_reset_check_state()
+  set(CMAKE_EXTRA_INCLUDE_FILES "basetsd.h")
+  check_type_size(SSIZE_T SSIZE_T_BASETSD BUILTIN_TYPES_ONLY)
+  cmake_reset_check_state()
 endif()
+cmake_pop_check_state()
 
-check_include_file("libgen.h" HAVE_LIBGEN_H)
-check_include_file("sys/stat.h" HAVE_SYS_STAT_H)
-check_include_file("sys/mman.h" HAVE_SYS_MMAN_H)
+check_include_file("stdint.h" HAVE_STDINT_H)
 check_include_file("unistd.h" HAVE_UNISTD_H)
 
-check_function_exists("_splitpath" HAVE__SPLITPATH)
-check_function_exists("mempcpy" HAVE_MEMPCPY)
-check_function_exists("mmap" HAVE_MMAP)
-check_function_exists("munmap" HAVE_MUNMAP)
+check_symbol_exists("mmap" "sys/mman.h" HAVE_MMAP)
+check_symbol_exists("scandir" "dirent.h" HAVE_SCANDIR)
+check_symbol_exists("fstat" "sys/stat.h" HAVE_FSTAT)
+check_symbol_exists("fileno" "stdio.h" HAVE_FILENO)
 
-check_function_exists("feof" HAVE_FEOF)
-check_function_exists("fileno" HAVE_FILENO)
-check_function_exists("fread" HAVE_FREAD)
-check_function_exists("fwrite" HAVE_FWRITE)
-check_function_exists("getc" HAVE_GETC)
-check_function_exists("putc" HAVE_PUTC)
+check_symbol_exists("getc_unlocked" "stdio.h" HAVE_GETC_UNLOCKED)
+if(${HAVE_GETC_UNLOCKED})
+  check_symbol_exists("fread_unlocked" "stdio.h" HAVE_FREAD_UNLOCKED)
+  if(${HAVE_FREAD_UNLOCKED})
+    check_symbol_exists("feof_unlocked" "stdio.h" HAVE_FEOF_UNLOCKED)
+  endif()
+else()
+  check_symbol_exists("_getc_nolock" "stdio.h" HAVE__GETC_NOLOCK)
+  if(${HAVE__GETC_NOLOCK})
+    check_symbol_exists("_fread_nolock" "stdio.h" HAVE__FREAD_NOLOCK)
+  endif()
+endif()
 
 set(CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_PREFIX}/lib)
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)

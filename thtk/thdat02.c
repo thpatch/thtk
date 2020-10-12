@@ -266,7 +266,7 @@ th02_close(
 
             memcpy(eh2.name, entry->name, 13);
 
-            buffer_ptr = mempcpy(buffer_ptr, &eh2, sizeof(eh2));
+            buffer_ptr = MEMPCPY(buffer_ptr, &eh2, sizeof(eh2));
         } else {
             th03_entry_header_t eh3 = {
                 .magic = entry->zsize == entry->size ? magic1 : magic2,
@@ -278,7 +278,7 @@ th02_close(
 
             memcpy(eh3.name, entry->name, 13);
 
-            buffer_ptr = mempcpy(buffer_ptr, &eh3, sizeof(eh3));
+            buffer_ptr = MEMPCPY(buffer_ptr, &eh3, sizeof(eh3));
         }
     }
 

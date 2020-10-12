@@ -157,12 +157,12 @@ main(int argc, char* argv[])
         }
 
         if (mode == 'c') {
-#ifdef WIN32
+#ifdef _WIN32
             _setmode(fileno(stdout), _O_BINARY);
 #endif
             ret = module->write(in, out, version);
         } else {
-#ifdef WIN32
+#ifdef _WIN32
             _setmode(fileno(stdin), _O_BINARY);
 #endif
             ret = module->read(in, out, version);

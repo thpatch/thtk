@@ -224,7 +224,7 @@ th105_close(
         *(buffer_ptr_32++) = entry->size;
         buffer_ptr = (unsigned char*) buffer_ptr_32;
         *(buffer_ptr++) = namelen;
-        buffer_ptr = mempcpy(buffer_ptr, entry->name, namelen);
+        buffer_ptr = MEMPCPY(buffer_ptr, entry->name, namelen);
     }
 
     th_crypt105_list(buffer, header_size, 0xc5, 0x83, 0x53);

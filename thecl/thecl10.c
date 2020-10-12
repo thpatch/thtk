@@ -1241,8 +1241,14 @@ th10_open(
 
             if (param_size_total > 0) {
                 value_t* values = value_list_from_data(th10_value_from_data, instr->data, instr->size - sizeof(th10_instr_t), format);
-                if (!values)
+                if (!values) {
+                    const seqmap_entry_t* ent = seqmap_get(g_eclmap->ins_names, instr->id);
+                    if (ent)
+                        fprintf(stderr, "%s: error when dumping opcode %d (%s)\n", argv0, instr->id, ent->value);
+                    else
+                        fprintf(stderr, "%s: error when dumping opcode %d\n", argv0, instr->id);
                     return NULL;
+                }
                 value_t* value_iter = values;
 
                 size_t p = 0;

@@ -7,8 +7,8 @@
 # define PRAGMA(x) _Pragma(#x)
 #endif
 
-#cmakedefine PACK_PRAGMA
-#ifdef PACK_PRAGMA
+#cmakedefine HAVE_PACKING_PRAGMA_PUSH
+#ifdef HAVE_PACKING_PRAGMA_PUSH
 # define PACK_BEGIN PRAGMA(pack(push,1))
 # define PACK_END PRAGMA(pack(pop))
 #else
@@ -16,7 +16,12 @@
 # define PACK_END
 #endif
 
-#define PACK_ATTRIBUTE @PACK_ATTRIBUTE@
+#cmakedefine 
+#ifdef HAVE_PACKING_GNUC_ATTRIBUTE
+#define PACK_ATTRIBUTE __attribute__((__packed__))
+#else
+#define PACK_ATTRIBUTE
+#endif
 
 #cmakedefine WITH_LIBPNG_SOURCE
 #cmakedefine PNG_FOUND
@@ -24,60 +29,61 @@
 # define HAVE_LIBPNG
 #endif
 
+#cmakedefine HAVE_SYS_TYPES_H
 #cmakedefine HAVE_OFF_T
-#cmakedefine HAVE_SIZE_T
-#cmakedefine HAVE_SIZE_T_BASETSD
-#if !defined(HAVE_SIZE_T) && defined(HAVE_SIZE_T_BASETSD)
-# include <BaseTsd.h>
-  typedef SIZE_T size_t;
-#endif
 #cmakedefine HAVE_SSIZE_T
 #cmakedefine HAVE_SSIZE_T_BASETSD
 #if !defined(HAVE_SSIZE_T) && defined(HAVE_SSIZE_T_BASETSD)
-# include <BaseTsd.h>
-  typedef SSIZE_T ssize_t;
+# include <basetsd.h>
+typedef SSIZE_T ssize_t;
 #endif
-#cmakedefine HAVE_SYS_TYPES_H
-#cmakedefine HAVE_STDINT_H
-#cmakedefine HAVE_STDDEF_H
-#cmakedefine HAVE_LIBGEN_H
-#cmakedefine HAVE_SYS_STAT_H
-#cmakedefine HAVE_SYS_MMAN_H
 #cmakedefine HAVE_UNISTD_H
 #ifndef HAVE_UNISTD_H
 # define YY_NO_UNISTD_H
 #endif
-#cmakedefine HAVE__SPLITPATH
-#cmakedefine HAVE_MEMPCPY
 #cmakedefine HAVE_MMAP
-#cmakedefine HAVE_MUNMAP
-#cmakedefine HAVE_FEOF
+#cmakedefine HAVE_FSTAT
+#cmakedefine HAVE_SCANDIR
 #cmakedefine HAVE_FILENO
-#cmakedefine HAVE_FREAD
-#cmakedefine HAVE_FWRITE
-#cmakedefine HAVE_GETC
-#cmakedefine HAVE_PUTC
 
-#ifdef _MSC_VER
-# ifdef HAVE_FEOF
-#  define feof_unlocked feof
-# endif
-# ifdef HAVE_FILENO
-#  define fileno_unlocked fileno
-# endif
-# ifdef HAVE_FREAD
-#  define fread_unlocked fread
-# endif
-# ifdef HAVE_FWRITE
-#  define fwrite_unlocked fwrite
-# endif
-# ifdef HAVE_GETC
+#cmakedefine HAVE_GETC_UNLOCKED
+#cmakedefine HAVE_FREAD_UNLOCKED
+#cmakedefine HAVE_FEOF_UNLOCKED
+#cmakedefine HAVE__GETC_NOLOCK
+#cmakedefine HAVE__FREAD_NOLOCK
+#ifndef HAVE_GETC_UNLOCKED
+# ifdef HAVE__GETC_NOLOCK
+#  define getc_unlocked _getc_nolock
+#  define putc_unlocked _putc_nolock
+# else
 #  define getc_unlocked getc
-# endif
-# ifdef HAVE_PUTC
 #  define putc_unlocked putc
 # endif
+#endif
+#ifndef HAVE_FREAD_UNLOCKED
+# ifdef HAVE__FREAD_NOLOCK
+#  define fread_unlocked _fread_nolock
+#  define fwrite_unlocked _fwrite_nolock
+# else
+#  define fread_unlocked fread
+#  define fwrite_unlocked fwrite
+# endif
+#endif
+/* feof and fileno don't lock in VCRT, and thus they don't have _nolock versions. */
+#ifndef HAVE_FEOF_UNLOCKED
+# define feof_unlocked feof
+# if defined(HAVE_FILENO)
+#  define fileno_unlocked fileno
+# endif
+#endif
+/* Our code shouldn't need to check these */
+#undef HAVE_GETC_UNLOCKED
+#undef HAVE_FREAD_UNLOCKED
+#undef HAVE_FEOF_UNLOCKED
+#undef HAVE__GETC_NOLOCK
+#undef HAVE__FREAD_NOLOCK
 
+#ifdef _WIN32
 # define API_SYMBOL __declspec(dllexport)
 
 # include <io.h>
