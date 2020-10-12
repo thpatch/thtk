@@ -105,6 +105,7 @@ static const id_format_pair_t formats_v1[] = {
     { 8, "Cff" },
     { 9, "SSCff" },
     { 10, "SSfffffffff" },
+    { 11, "SSfffffffff" },
     { 12, "S" },
     { 13, "S" },
     { 14, "SS" },
@@ -889,9 +890,9 @@ main(
     case 7:
     case 8:
     case 9:
-    case 95:
         option_version = 0;
         break;
+    case 95:
     case 10:
     case 103:
     case 11:
