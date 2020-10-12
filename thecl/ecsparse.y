@@ -515,6 +515,8 @@ Statement:
       } else {
           yyerror(state, "unknown directive: %s", $1);
       }
+      free($1);
+      free($3);
     }
     ;
 
