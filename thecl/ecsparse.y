@@ -458,7 +458,7 @@ Statement:
         list_prepend_new(&state->global_definitions, def);
         free($2);
       }
-    | "insdef" IDENTIFIER[name] "(" Types[types] ")" "=" INTEGER[id] ";" {
+    | "insdef" DeclareKeyword[type] IDENTIFIER[name] "(" Types[types] ")" "=" INTEGER[id] ";" {
         seqmap_entry_t sig_ent = {$id, $types};
         seqmap_set(g_eclmap->ins_signatures, &sig_ent);
         free($types); /* seqmap_set does a strdup */
@@ -466,6 +466,16 @@ Statement:
         seqmap_entry_t name_ent = {$id, $name};
         seqmap_set(g_eclmap->ins_names, &name_ent);
         free($name); /* seqmap_set does a strdup */
+
+        if ($type == '?') {
+            yyerror(state, "insdef: instruction can't be defined as 'var'");
+        } else if ($type != 0) {
+            char type_string[2];
+            type_string[0] = $type;
+            type_string[1] = '\0';
+            seqmap_entry_t ent = { $id, type_string };
+            seqmap_set(g_eclmap->ins_rets, &ent);
+        }
 
         eclmap_rebuild(g_eclmap);
       }
