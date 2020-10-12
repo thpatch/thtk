@@ -343,6 +343,7 @@ static const char sub_param_fi[] = {'f', 'i'};
 %type <integer> VarDeclaration
 
 %type <cstring> Cast_Target2
+%type <string> Types
 %type <string> Type_List
 %type <string> Type_Char
 
@@ -360,7 +361,7 @@ static const char sub_param_fi[] = {'f', 'i'};
 %precedence SIN COS SQRT
 %precedence DEC
 
-%expect 18
+%expect 17
 %%
 
 Statements:
@@ -445,11 +446,15 @@ Statement:
         list_prepend_new(&state->global_definitions, def);
         free($2);
       }
-    | "insdef" IDENTIFIER "(" Type_List ")" "=" INTEGER ";" {
-        seqmap_entry_t sig_ent = {$7, $4};
+    | "insdef" IDENTIFIER[name] "(" Types[types] ")" "=" INTEGER[id] ";" {
+        seqmap_entry_t sig_ent = {$id, $types};
         seqmap_set(g_eclmap->ins_signatures, &sig_ent);
-        seqmap_entry_t name_ent = {$7, $2};
+        free($types); /* seqmap_set does a strdup */
+
+        seqmap_entry_t name_ent = {$id, $name};
         seqmap_set(g_eclmap->ins_names, &name_ent);
+        free($name); /* seqmap_set does a strdup */
+
         eclmap_rebuild(g_eclmap);
       }
     | DIRECTIVE TEXT {
@@ -515,44 +520,67 @@ Statement:
 
 Type_Char:
       "..." {
-          $$ = malloc(256);
+          $$ = malloc(3);
           $$[0] = 0;
           strcat($$, "*D");
       }
     | "int" {
-          $$ = malloc(256);
+          $$ = malloc(2);
           $$[0] = 'S';
+          $$[1] = '\0';
       }
     | "float" {
-          $$ = malloc(256);
+          $$ = malloc(2);
           $$[0] = 'f';
+          $$[1] = '\0';
       }
     | IDENTIFIER {
-        $$ = malloc(256);
+        $$ = malloc(2);
         if(0 == strcmp("string", $1)) {
             $$[0] = 'm';
+            $$[1] = '\0';
         } else {
+            $$[0] = '\0';
             yyerror(state, "Unknown insdef type: %s", $1);
         }
+        free($1);
       }
+    ;
+
+Types: 
+    %empty {
+        $$ = malloc(1);
+        $$[0] = '\0';
+    }
+    | Type_List
+;
 
 Type_List:
-      %empty {
-          $$ = malloc(256);
-          $$[0] = 0;
-      }
-    | Type_Char {
+      Type_Char {
         $$ = $1;
       }
     | Type_Char IDENTIFIER {
         $$ = $1;
+        free($2);
       }
-    | Type_List "," Type_List {
-        $$ = $1;
+    | Type_List "," Type_Char {
+        $$ = malloc(strlen($$) + strlen($3) + 1);
+        $$[0] = '\0';
+        strcat($$, $1);
         strcat($$, $3);
+        free($1);
         free($3);
       }
-      ;
+    | Type_List "," Type_Char IDENTIFIER {
+        $$ = malloc(strlen($$) + strlen($3) + 1);
+        $$[0] = '\0';
+        strcat($$, $1);
+        strcat($$, $3);
+        free($1);
+        free($3);
+        free($4);
+      }
+    ;
 
 Subroutine_Body:
       "{" Instructions "}" {
