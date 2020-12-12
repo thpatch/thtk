@@ -343,10 +343,10 @@ th08_close(
     buffer_ptr = buffer;
     for (i = 0; i < thdat->entry_count; ++i) {
         thdat_entry_t* entry = &thdat->entries[i];
-        buffer_ptr = mempcpy(buffer_ptr, entry->name, strlen(entry->name) + 1);
-        buffer_ptr = mempcpy(buffer_ptr, &entry->offset, sizeof(uint32_t));
-        buffer_ptr = mempcpy(buffer_ptr, &entry->size, sizeof(uint32_t));
-        buffer_ptr = mempcpy(buffer_ptr, &zero, sizeof(uint32_t));
+        buffer_ptr = MEMPCPY(buffer_ptr, entry->name, strlen(entry->name) + 1);
+        buffer_ptr = MEMPCPY(buffer_ptr, &entry->offset, sizeof(uint32_t));
+        buffer_ptr = MEMPCPY(buffer_ptr, &entry->size, sizeof(uint32_t));
+        buffer_ptr = MEMPCPY(buffer_ptr, &zero, sizeof(uint32_t));
     }
 
     memcpy(buffer_ptr, &zero, sizeof(uint32_t));

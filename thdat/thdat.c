@@ -398,32 +398,34 @@ main(
             print_usage();
             exit(1);
         }
-        thtk_io_t* file;
-        if (!(file = thtk_io_open_file(argv[0], "rb", &error))) {
-            print_error(error);
-            thtk_error_free(&error);
-            exit(1);
-        }
+        for (int i = 0; i < argc; i++) {
+            thtk_io_t* file;
+            if (!(file = thtk_io_open_file(argv[i], "rb", &error))) {
+                print_error(error);
+                thtk_error_free(&error);
+                exit(1);
+            }
 
-        uint32_t out[4];
-        unsigned int heur;
+            uint32_t out[4];
+            unsigned int heur;
 
-        printf("Detecting '%s'... ",argv[0]);
-        if (-1 == thdat_detect(argv[0], file, out, &heur, &error)) {
-            printf("\n");
+            printf("Detecting '%s'... ",argv[i]);
+            if (-1 == thdat_detect(argv[i], file, out, &heur, &error)) {
+                printf("\n");
+                thtk_io_close(file);
+                print_error(error);
+                thtk_error_free(&error);
+                continue;
+            }
+
+            const thdat_detect_entry_t* ent;
+            printf("%d | possible versions: ", heur);
+            while((ent = thdat_detect_iter(out))) {
+                printf("%d,",ent->alias);
+            }
+            printf(" | filename: %d\n", thdat_detect_filename(argv[i]));
             thtk_io_close(file);
-            print_error(error);
-            thtk_error_free(&error);
-            exit(1);
         }
-
-        const thdat_detect_entry_t* ent;
-        printf("%d | possible versions: ", heur);
-        while((ent = thdat_detect_iter(out))) {
-            printf("%d,",ent->alias);
-        }
-        printf(" | filename: %d\n", thdat_detect_filename(argv[0]));
-        thtk_io_close(file);
         exit(0);
     }
     case 'l': {

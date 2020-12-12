@@ -34,6 +34,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 #include "expr.h"
 #include "path.h"
 #include "file.h"
@@ -102,7 +103,7 @@ static expression_t* expression_call_new(const parser_state_t* state, list_t* pa
 
 static void expression_output(parser_state_t* state, expression_t* expr, int has_no_parents);
 static void expression_free(expression_t* expr);
-static void expression_optimize(parser_state_t* state, expression_t* expr);
+static void expression_optimize(const parser_state_t* state, expression_t* expr);
 #define EXPR_22(a, b, A, B) \
     expression_operation_new(state, (int[]){ a, b, 0 }, (expression_t*[]){ A, B, NULL })
 #define EXPR_12(a, A, B) \
@@ -155,6 +156,8 @@ static int var_exists(parser_state_t* state, thecl_sub_t* sub, const char* name)
 static void var_shorthand_assign(parser_state_t* state, thecl_param_t* param, expression_t* expr, int EXPRI, int EXPRF);
 /* Stores a new label in the current subroutine pointing to the current offset. */
 static void label_create(parser_state_t* state, char* label);
+/* Change offset of all labels in the given list that have at least offset min_offset by subtracting the given value. */
+static void labels_adjust(list_t* labels, uint32_t min_offset, uint32_t adjust);
 
 /* Update the current time label. */
 void set_time(parser_state_t* state, int new_time);
@@ -163,6 +166,12 @@ void set_time(parser_state_t* state, int new_time);
 static int directive_include(parser_state_t* state, char* include_path);
 /* Opens and loads an eclmap. */
 static void directive_eclmap(parser_state_t* state, char* name);
+
+/* Returned by Cast_Target2. */ 
+static const char sub_param_ii[] = {'i', 'i'};
+static const char sub_param_if[] = {'i', 'f'};
+static const char sub_param_ff[] = {'f', 'f'};
+static const char sub_param_fi[] = {'f', 'i'};
 
 %}
 
@@ -175,6 +184,7 @@ static void directive_eclmap(parser_state_t* state, char* name);
     int integer;
     float floating;
     char* string;
+    const char* cstring;
     struct {
         unsigned int length;
         unsigned char* data;
@@ -191,7 +201,6 @@ static void directive_eclmap(parser_state_t* state, char* name);
 %token <string> MNEMONIC "mnemonic"
 %token <string> TEXT "text"
 %token <integer> INTEGER "integer"
-%token <integer> PLUS_INTEGER "+integer"
 %token <floating> FLOATING "floating"
 %token <string> RANK "rank"
 %token <string> DIRECTIVE "directive"
@@ -218,6 +227,9 @@ static void directive_eclmap(parser_state_t* state, char* name);
 %token INLINE "inline"
 %token RETURN "return"
 %token AT "@"
+%token DOT "."
+%token VARARGS "..."
+%token INSDEF "insdef"
 %token BRACE_OPEN "{"
 %token BRACE_CLOSE "}"
 %token PARENTHESIS_OPEN "("
@@ -311,6 +323,7 @@ static void directive_eclmap(parser_state_t* state, char* name);
 %type <expression> ExpressionLoadType
 %type <expression> ExpressionCall
 %type <expression> ExpressionSubset
+%type <expression> ExpressionSubsetUnary
 %type <expression> Expression_Safe
 
 %type <param> Instruction_Parameter
@@ -325,9 +338,13 @@ static void directive_eclmap(parser_state_t* state, char* name);
 %type <param> Cast_Type
 
 %type <integer> Cast_Target
-%type <integer> Cast_Target2
 %type <integer> DeclareKeyword
 %type <integer> VarDeclaration
+
+%type <cstring> Cast_Target2
+%type <string> Types
+%type <string> Type_List
+%type <string> Type_Char
 
 %left QUESTION
 %left OR
@@ -425,8 +442,19 @@ Statement:
         global_definition_t *def = malloc(sizeof(global_definition_t));
         strncpy(def->name, $2, 256);
         def->param = $4;
-        list_append_new(&state->global_definitions, def);
+        list_prepend_new(&state->global_definitions, def);
         free($2);
+      }
+    | "insdef" IDENTIFIER[name] "(" Types[types] ")" "=" INTEGER[id] ";" {
+        seqmap_entry_t sig_ent = {$id, $types};
+        seqmap_set(g_eclmap->ins_signatures, &sig_ent);
+        free($types); /* seqmap_set does a strdup */
+
+        seqmap_entry_t name_ent = {$id, $name};
+        seqmap_set(g_eclmap->ins_names, &name_ent);
+        free($name); /* seqmap_set does a strdup */
+
+        eclmap_rebuild(g_eclmap);
       }
     | DIRECTIVE TEXT {
         char buf[256];
@@ -479,6 +507,80 @@ Statement:
         free($1);
         free($2);
     }
+  | DIRECTIVE INTEGER TEXT {
+      if(strcmp($1, "line") == 0) {
+          yylloc.last_line = yylloc.first_line = $2-2;
+          current_input = strdup($3);
+      } else {
+          yyerror(state, "unknown directive: %s", $1);
+      }
+      free($1);
+      free($3);
+    }
+    ;
+
+Type_Char:
+      "..." {
+          $$ = malloc(3);
+          $$[0] = 0;
+          strcat($$, "*D");
+      }
+    | "int" {
+          $$ = malloc(2);
+          $$[0] = 'S';
+          $$[1] = '\0';
+      }
+    | "float" {
+          $$ = malloc(2);
+          $$[0] = 'f';
+          $$[1] = '\0';
+      }
+    | IDENTIFIER {
+        $$ = malloc(2);
+        if(0 == strcmp("string", $1)) {
+            $$[0] = 'm';
+            $$[1] = '\0';
+        } else {
+            $$[0] = '\0';
+            yyerror(state, "Unknown insdef type: %s", $1);
+        }
+        free($1);
+      }
+    ;
+
+Types: 
+    %empty {
+        $$ = malloc(1);
+        $$[0] = '\0';
+    }
+    | Type_List
+;
+
+Type_List:
+      Type_Char {
+        $$ = $1;
+      }
+    | Type_Char IDENTIFIER {
+        $$ = $1;
+        free($2);
+      }
+    | Type_List "," Type_Char {
+        $$ = malloc(strlen($$) + strlen($3) + 1);
+        $$[0] = '\0';
+        strcat($$, $1);
+        strcat($$, $3);
+        free($1);
+        free($3);
+      }
+    | Type_List "," Type_Char IDENTIFIER {
+        $$ = malloc(strlen($$) + strlen($3) + 1);
+        $$[0] = '\0';
+        strcat($$, $1);
+        strcat($$, $3);
+        free($1);
+        free($3);
+        free($4);
+      }
     ;
 
 Subroutine_Body:
@@ -491,9 +593,12 @@ Subroutine_Body:
     ;
 
 Global_Def:
-      Address
-    | Integer
-    | Floating
+    Instruction_Parameter[param] {
+        if ($param->is_expression_param) {
+            yyerror(state, "expressions that can't ve evaluated compile-time are not allowed for global definitions");
+        }
+        $$ = $param;
+    }
 ;
 
 Text_Semicolon_List:
@@ -553,7 +658,7 @@ ArgumentDeclaration:
 Instructions:
     %empty
     | Instructions INTEGER ":" { set_time(state, $2); }
-    | Instructions PLUS_INTEGER ":" { set_time(state, state->instr_time + $2); }
+    | Instructions "+" INTEGER ":" { set_time(state, state->instr_time + $3); }
     | Instructions IDENTIFIER ":" { label_create(state, $2); free($2); }
     | Instructions Instruction ";"
     | Instructions Block
@@ -786,7 +891,6 @@ SwitchBlock:
           list_prepend_new(&state->block_stack, NULL); /* The NULL acts as a sentinel of switch cases. */
           snprintf(name, 256, "switch_%i_%i", yylloc.first_line, yylloc.first_column);
           list_prepend_new(&state->block_stack, strdup(name));
-          expression_create_goto(state, GOTO, name);
           
           /* The expression value needs to be stored in a variable, in case some kind of RAND variable was passed. */
           thecl_variable_t* var = var_create(state, state->current_sub, name, $cond->result_type);
@@ -802,6 +906,8 @@ SwitchBlock:
           instr_add(state->current_sub, instr_new(state, tmp->id, "p", param));
           list_prepend_new(&state->block_stack, var); /* We will need it later. */
           expression_free($cond);
+
+          expression_create_goto(state, GOTO, name); /* Jump to the case checks. */
     } "{" {
           scope_begin(state);
     } CaseList "}" {
@@ -1123,10 +1229,10 @@ Instruction_Parameters_List:
     ;
 
 Cast_Target2:
-      CAST_II { $$ = 0x6969; }
-    | CAST_IF { $$ = 0x6966; }
-    | CAST_FF { $$ = 0x6666; }
-    | CAST_FI { $$ = 0x6669; }
+      CAST_II { $$ = sub_param_ii; }
+    | CAST_IF { $$ = sub_param_if; }
+    | CAST_FF { $$ = sub_param_ff; }
+    | CAST_FI { $$ = sub_param_fi; }
     ;
 
 Cast_Target:
@@ -1155,32 +1261,40 @@ Cast_Type:
 Instruction_Parameter:
       Load_Type
     | Text
-    | Cast_Target2 Cast_Type {
+    | Cast_Target2[types] Cast_Type[param] {
         $$ = param_new('D');
-        $$->stack = $2->stack;
-        $$->is_expression_param = $2->is_expression_param;
+        $$->stack = $param->stack;
+        $$->is_expression_param = $param->is_expression_param;
         $$->value.type = 'm';
-        $$->value.val.m.length = 2 * sizeof(int32_t);
-        $$->value.val.m.data = malloc(2 * sizeof(int32_t));
-        int32_t* D = (int32_t*)$$->value.val.m.data;
-        D[0] = $1;
-        if ($2->type == 'f') {
-            memcpy(&D[1], &$2->value.val.f, sizeof(float));
+        $$->value.val.m.length = sizeof(thecl_sub_param_t);
+        $$->value.val.m.data = malloc(sizeof(thecl_sub_param_t));
+        thecl_sub_param_t* D = (thecl_sub_param_t*)$$->value.val.m.data;
+        D->zero = 0;
+        D->from = $types[1];
+        D->to = $types[0];
+        if ($param->type == 'f') {
+            D->val.f = $param->value.val.f;
         } else {
-            D[1] = $2->value.val.S;
+            D->val.S = $param->value.val.S;
         }
-        param_free($2);
+        param_free($param);
       }
       | ExpressionSubsetInstParam {
-          list_prepend_new(&state->expressions, $1);
+          if ($1->type == EXPRESSION_VAL && $1->result_type == $1->value->type) {
+              $$ = $1->value;
+              expression_free($1);
+          }
+          else {
+              list_prepend_new(&state->expressions, $1);
 
-          $$ = param_new($1->result_type);
-          $$->stack = 1;
-          $$->is_expression_param = $1->result_type;
-          if ($1->result_type == 'S') {
-              $$->value.val.S = -1;
-          } else {
-              $$->value.val.f = -1.0f;
+              $$ = param_new($1->result_type);
+              $$->stack = 1;
+              $$->is_expression_param = $1->result_type;
+              if ($1->result_type == 'S') {
+                  $$->value.val.S = -1;
+              } else {
+                  $$->value.val.f = -1.0f;
+              }
           }
       }
     ;
@@ -1219,6 +1333,9 @@ ExpressionLoadType:
 
 ExpressionCall:
       IDENTIFIER "(" Instruction_Parameters ")"          { $$ = expression_call_new(state, $3, $1); }
+    | "sin"  "(" Expression ")"         { $$ = EXPR_11(SIN,                  $3); }
+    | "cos"  "(" Expression ")"         { $$ = EXPR_11(COS,                  $3); }
+    | "sqrt" "(" Expression ")"         { $$ = EXPR_11(SQRT,                 $3); }
     ;
 
 /* This is the lowest common denominator between expression-instructions and expression-parameters */
@@ -1236,34 +1353,40 @@ ExpressionSubset:
     | Expression "<="  Expression { $$ = EXPR_22(LTEQI,     LTEQF,     $1, $3); }
     | Expression ">"   Expression { $$ = EXPR_22(GTI,       GTF,       $1, $3); }
     | Expression ">="  Expression { $$ = EXPR_22(GTEQI,     GTEQF,     $1, $3); }
-    | "!" Expression              { $$ = EXPR_11(NOT,                  $2); }
     | Expression "||"  Expression { $$ = EXPR_12(OR,                   $1, $3); }
     | Expression "&&"  Expression { $$ = EXPR_12(AND,                  $1, $3); }
     | Expression "^"   Expression { $$ = EXPR_12(XOR,                  $1, $3); }
     | Expression "|" Expression   { $$ = EXPR_12(B_OR,                 $1, $3); }
     | Expression "&" Expression   { $$ = EXPR_12(B_AND,                $1, $3); }
-    | Address "--"                { 
-                                    $$ = EXPR_1A(DEC, $1);
-                                    if ($1->value.val.S >= 0) /* Stack variables only. This is also verrfied to be int by expression creation. */
-                                        state->current_sub->vars[$1->value.val.S / 4]->is_written = true;
-                                  }
-    | "-" Expression  %prec NEG   {
-                                      if (is_post_th13(state->version)) {
-                                          $$ = EXPR_21(NEGI, NEGF, $2);
-                                      } else {
-                                          /* $$ = EXPR_11(NEGI, $2); */
-                                          yyerror(state, "neg expression is not supported pre-th13");
-                                          exit(1);
-                                      }
-                                  }
-    | "sin" Expression            { $$ = EXPR_11(SIN,                  $2); }
-    | "cos" Expression            { $$ = EXPR_11(COS,                  $2); }
-    | "sqrt" Expression           { $$ = EXPR_11(SQRT,                 $2); }
+    
+    | ExpressionSubsetUnary
 
     /* Custom expressions. */
     | Rank_Switch_List            { $$ = expression_rank_switch_new(state, $1); }
     | Expression "?" Expression_Safe ":" Expression_Safe  %prec QUESTION
                                   { $$ = expression_ternary_new(state, $1, $3, $5); }
+    ;
+
+ExpressionSubsetUnary:
+      "!" Expression_Safe               { $$ = EXPR_11(NOT,                  $2); }
+    | "+" Expression_Safe               { $$ = $2; }
+    | Address "--"                      { 
+                                            $$ = EXPR_1A(DEC, $1);
+                                            if ($1->value.val.S >= 0) /* Stack variables only. This is also verrfied to be int by expression creation. */
+                                            state->current_sub->vars[$1->value.val.S / 4]->is_written = true;
+                                        }
+    | "-" Expression_Safe  %prec NEG    {
+                                            if (is_post_th13(state->version)) {
+                                                $$ = EXPR_21(NEGI, NEGF, $2);
+                                            } else {
+                                                thecl_param_t* p = param_new($2->result_type);
+                                                if (p->value.type == 'f')
+                                                    p->value.val.f = 0;
+                                                else 
+                                                    p->value.val.S = 0;
+                                                $$ = EXPR_22(SUBTRACTI, SUBTRACTF, expression_load_new(state, p), $2);
+                                            }
+                                        }
     ;
 
 /* 
@@ -1274,11 +1397,15 @@ ExpressionSubset:
    the rank switch expression.
    Of course, this still allows any expression to be put in - it just requires it to
    be in brackets (unless it's a literal), which prevents any bad things from happening.
+   Unary operators and calls are here too, in order to allow things like
+   `case: -1` or `1 ? callFunc1() : callFunc2()`.
 */
 Expression_Safe:
       Load_Type                      { $$ = expression_load_new(state, $1); }
     |             "(" Expression ")" { $$ = $2; }
     | Cast_Target "(" Expression ")" { $$ = $3; $$->result_type = $1; }
+    | ExpressionSubsetUnary
+    | ExpressionCall
     ;
 
 Address:
@@ -1298,7 +1425,7 @@ Address:
         $$->value.val.f = var_stack(state, state->current_sub, $2);
         free($2);
       }
-    | IDENTIFIER  %expect 1 {
+    | IDENTIFIER  /*%expect 2*/ {
         if (var_exists(state, state->current_sub, $1)) {
             int type = var_type(state, state->current_sub, $1);
             if (type == '?') {
@@ -1335,14 +1462,18 @@ Address:
 Address_Type:
       Integer
     | Floating
+    | "-" Integer { 
+        $2->value.val.S = -$2->value.val.S;
+        $$ = $2;
+    }
+    | "-" Floating {
+        $2->value.val.f = -$2->value.val.f;
+        $$ = $2;
+    }
     ;
 
 Integer:
-    INTEGER  %expect 1 {
-        $$ = param_new('S');
-        $$->value.val.S = $1;
-      }
-    | PLUS_INTEGER  %expect 1 {
+    INTEGER  /*%expect 1*/ {
         $$ = param_new('S');
         $$->value.val.S = $1;
       }
@@ -1419,8 +1550,11 @@ instr_set_types(
     thecl_instr_t* instr)
 {
     const char* format = state->instr_format(state->version, instr->id, state->is_timeline_sub);
+    if (format == NULL) /* Error message for this is shown somewhere else. */
+        return;
 
     thecl_param_t* param;
+    int param_n = 1;
     list_for_each(&instr->params, param) {
         int new_type;
         /* XXX: How to check for errors?
@@ -1436,16 +1570,28 @@ instr_set_types(
             !(param->type == 'z' && (new_type == 'm' || new_type == 'x' || new_type == 'N' || new_type == 'n')) &&
             !(param->type == 'S' && (new_type == 's' || new_type == 'U' || new_type == 't'))
         ) {
-
+            seqmap_entry_t* ent = seqmap_get(g_eclmap->ins_names, instr->id);
+            char buf[128];
+            if (ent == NULL)
+                snprintf(buf, sizeof(buf), "%d", instr->id);
+            else
+                snprintf(buf, sizeof(buf), "%d (%s)", instr->id, ent->value);
             yyerror(state, "instr_set_types: in sub %s: wrong argument "
-                     "type for opcode %d (expected: %c, got: %c)",
-                     state->current_sub->name, instr->id, new_type, param->type);
+                     "type for parameter %d for opcode %s (expected: %c, got: %c)",
+                     state->current_sub->name, param_n, buf, new_type, param->type);
         }
 
         param->type = new_type;
 
         if (*format != '*')
             ++format;
+
+        /* Do not read past the end of the format string.
+         * "Too many parameters" error will be thrown somewhere else anyway. */ 
+        if (*format == '\0')
+            break;
+
+        ++param_n;
     }
 
     return;
@@ -1505,12 +1651,11 @@ instr_new_list(
                 } else if(param->value.type == 'f') {
                     param->value.val.f = param_id;
                 } else if(param->type == 'D') {
-                    int32_t* D = (int32_t*) param->value.val.m.data;
+                    thecl_sub_param_t* D = (thecl_sub_param_t*) param->value.val.m.data;
                     if (param->is_expression_param == 'S') {
-                        D[1] = param_id;
+                        D->val.S = param_id;
                     } else {
-                        float as_float = param_id;
-                        memcpy(&D[1], &as_float, sizeof(float));
+                        D->val.f = (float)param_id;
                     }
                 }
                 param_id--;
@@ -1563,7 +1708,11 @@ static thecl_instr_t*
 instr_copy(thecl_instr_t* instr) {
     thecl_instr_t* new_instr = malloc(sizeof(thecl_instr_t));
     memcpy(new_instr, instr, sizeof(thecl_instr_t));
-    new_instr->string = strdup(instr->string);
+    if (instr->string != NULL)
+        new_instr->string = strdup(instr->string);
+    else
+        new_instr->string = NULL;
+    
     list_init(&new_instr->params);
     thecl_param_t* param;
     list_for_each(&instr->params, param) {
@@ -1687,7 +1836,6 @@ static void instr_create_inline_call(
                 /* Check if the passed expression can be simplified to a literal value. */
                 list_node_t* node = state->expressions.tail;
                 expression_t* expr = (expression_t*)node->data;
-                expression_optimize(state, expr);
                 if (expr->type == EXPRESSION_VAL && expr->result_type == expr->value->value.type) {
                     /* Static value, otherwise it wouldn't be an uncasted expression param. */
                     param_replace[i] = param_copy(expr->value);
@@ -1744,27 +1892,41 @@ static void instr_create_inline_call(
         stack_replace[i - sub->arity] = var_new;
     }
 
-    /* Create labels that the inline sub uses (with changed offsets) */
+    /* Temprary label list that modifications will be apply to when needed.
+     * Content of this list will be later copied into the sub that created the inline call. */
+    list_t tmp_labels;
+    list_init(&tmp_labels);
     thecl_label_t* label;
     list_for_each(&sub->labels, label) {
         snprintf(buf, 256, "%s%s", name, label->name);
-        thecl_label_t* new_label = malloc(sizeof(thecl_label_t) + strlen(buf) + 1);
-        new_label->offset = label->offset + state->current_sub->offset;
-        new_label->time = label->time + state->instr_time;
+        thecl_label_t* new_label = (thecl_label_t*)malloc(sizeof(thecl_label_t) + strlen(buf) + 1);
+        new_label->offset = label->offset;
+        new_label->time = label->time;
         strcpy(new_label->name, buf);
-        list_append_new(&state->current_sub->labels, new_label);
+        list_append_new(&tmp_labels, new_label);
     }
+
+    /* Save these for later, as labels will have to be adjusted by these values. */
+    uint32_t org_off = state->current_sub->offset;
+    uint32_t org_time = state->instr_time;
 
     /* And finally, copy the instructions. */
 
     int rank_empty = parse_rank(state, "-");
+    uint32_t offset_diff = 0;
     thecl_instr_t* instr;
     list_for_each(&sub->instrs, instr) {
         /* Don't push the return value if nothing is going to pop it. */
-        if (!needs_ret && (instr->flags & FLAG_RETURN_VAL))
+        if (!needs_ret && (instr->flags & FLAG_RETURN_VAL)) {
+            labels_adjust(&tmp_labels, instr->offset - offset_diff, instr->size);
+            offset_diff += instr->size;
             continue;
+        }
 
         thecl_instr_t* new_instr = instr_copy(instr);
+
+        /* Remove this flag as it does NOT indicate the return val of this sub. */
+        new_instr->flags &= ~FLAG_RETURN_VAL;
 
         /* Set all of these to correct values. */
         new_instr->time += state->instr_time;
@@ -1775,6 +1937,8 @@ static void instr_create_inline_call(
             /* No reason to compile instructions that won't execute on any difficulty. */
             /* The reason why we don't call thecl_instr_free is that the param pointers are still the same
              * as in the original ins, and we do not want to free them. */
+            labels_adjust(&tmp_labels, instr->offset - offset_diff, instr->size);
+            offset_diff += instr->size;
             free(new_instr);
             continue;
         }
@@ -1784,7 +1948,26 @@ static void instr_create_inline_call(
             /* Still reusing the same param variable as earlier. */
             param = (thecl_param_t*)param_node->data;
             if (param->stack) {
-                if (param->value.type == 'S' || param->value.type == 'm') {
+                if (param->type == 'D') {
+                    thecl_sub_param_t* D = (thecl_sub_param_t*)param->value.val.m.data;
+                    if (D->from == 'i') {
+                        if (D->val.S < sub->arity*4 && D->val.S >= 0) {
+                            /* Parameter. */
+                            param->stack = param_replace[D->val.S / 4]->stack;
+                            D->val.S = param_replace[D->val.S / 4]->value.val.S;
+                        } else if (D->val.S > 0) {
+                            /* Regular stack variable, needs adjusting the offset. */
+                            D->val.S = stack_replace[D->val.S / 4 - sub->arity]->stack;
+                        }
+                    } else {
+                        if (D->val.f < (float)(sub->arity*4 )&& D->val.f >= 0.0f) {
+                            param->stack = param_replace[(int)D->val.f / 4]->stack;
+                            D->val.f = param_replace[(int)D->val.f / 4]->value.val.f;
+                        } else if (D->val.f > 0.0f) {
+                            D->val.f = (float)stack_replace[(int)D->val.f / 4 - sub->arity]->stack;
+                        }
+                    }
+                } else if (param->value.type == 'S') {
                     if (param->value.val.S < sub->arity*4 && param->value.val.S >= 0) {
                         /* Parameter. */
                         param_node->data = param_copy(param_replace[param->value.val.S / 4]);
@@ -1819,6 +2002,14 @@ static void instr_create_inline_call(
         }
         instr_add(state->current_sub, new_instr);
     }
+
+    /* Apply final adjustments to the label list and copy them into the caller sub. */
+    list_for_each(&tmp_labels, label) {
+        label->offset += org_off;
+        label->time += org_time;
+        list_append_new(&state->current_sub->labels, label);
+    }
+    list_free_nodes(&tmp_labels);
 
     /* Time of the current sub has to be adjusted. */
     if (sub->time != 0)
@@ -1895,7 +2086,6 @@ instr_create_call(
                 list_append_new(param_list, param);
                 if (param->is_expression_param) {
                     ++expr_params;
-                    expression_optimize(state, state->expressions.tail->data);
                 }
                 continue;
             }
@@ -1904,9 +2094,10 @@ instr_create_call(
             param->stack = iter_param->stack;
             param->is_expression_param = iter_param->is_expression_param;
             param->value.type = 'm';
-            param->value.val.m.length = 2 * sizeof(int32_t);
-            param->value.val.m.data = malloc(2 * sizeof(int32_t));
-            int32_t *D = (int32_t *)param->value.val.m.data;
+            param->value.val.m.length = sizeof(thecl_sub_param_t);
+            param->value.val.m.data = malloc(sizeof(thecl_sub_param_t));
+            thecl_sub_param_t* D = (thecl_sub_param_t*)param->value.val.m.data;
+            D->zero = 0;
             bool is_load_expression = false;
             bool is_load_var = false;
             if (param->is_expression_param) {
@@ -1916,8 +2107,6 @@ instr_create_call(
                 list_node_t* last_node = node_expr;
                 node_expr = node_expr->prev;
 
-                if (current_expr->type == EXPRESSION_OP)
-                    expression_optimize(state, current_expr);
                 if (current_expr->type == EXPRESSION_VAL) {
                     const expr_t* expr = expr_get_by_id(state->version, current_expr->id);
                     is_load_expression = (expr->symbol == LOADI || expr->symbol == LOADF);
@@ -1930,50 +2119,24 @@ instr_create_call(
                     }
                 }
             }
-            switch (iter_param->value.type) {
-            case 'S':
+
+            if (iter_param->value.type == 'S' || iter_param->value.type == 'f') {
+                D->to = iter_param->value.type == 'S' ? 'i' : 'f';
                 if (is_load_expression) {
-                    if (current_expr->value->type == 'f') {
-                        D[0] = 0x6966;
-                        memcpy(&D[1], &current_expr->value->value.val.f, sizeof(float));
-                    } else {
-                        D[0] = 0x6969;
-                        D[1] = current_expr->value->value.val.S;
-                    }
+                    D->from = current_expr->value->type == 'S' ? 'i' : 'f';
+                    if (D->from == 'S')
+                        D->val.S = current_expr->value->value.val.S;
+                    else
+                        D->val.f = current_expr->value->value.val.f;
                 } else {
-                    if (param->is_expression_param && current_expr->result_type == 'f') {
-                        D[0] = 0x6966;
-                        float tmp = (int)iter_param->value.val.S;
-                        memcpy(&D[1], &tmp, sizeof(float));
-                        param->is_expression_param = 'f'; /* This is needed to make instr_create_list handle all stack offsets properly. */
-                    } else {
-                        D[0] = 0x6969;
-                        D[1] = iter_param->value.val.S;
-                    }
+                    D->from = D->to;
+                    if (D->from == 'S')
+                        D->val.S = iter_param->value.val.S;
+                    else
+                        D->val.f = iter_param->value.val.f;
                 }
-                break;
-            case 'f':
-                if (is_load_expression) {
-                    if (current_expr->value->type == 'f') {
-                        D[0] = 0x6666;
-                        memcpy(&D[1], &current_expr->value->value.val.f, sizeof(float));
-                    } else {
-                        D[0] = 0x6669;
-                        D[1] = current_expr->value->value.val.S;
-                    }
-                } else {
-                    if (param->is_expression_param && current_expr->result_type == 'S') {
-                        D[0] = 0x6669;
-                        D[1] = (uint32_t)iter_param->value.val.f;
-                        param->is_expression_param = 'S';
-                    } else {
-                        D[0] = 0x6666;
-                        memcpy(&D[1], &iter_param->value.val.f, sizeof(float));
-                    }
-                }
-                break;
-            default:
-                yyerror(state, "invalid sub parameter");
+            } else {
+                yyerror(state, "invalid sub parameter type '%c': only float/int are acceptable.", iter_param->value.type);
                 g_was_error = true;
             }
 
@@ -1988,19 +2151,18 @@ instr_create_call(
     /* Output expressions from parameters.
      * DO NOT output all expressions, only the ones used. */
     expression_t* expr;
+    list_node_t* node = state->expressions.head;
     while(expr_params--) {
-        expr = list_tail(&state->expressions);
+        expr = (expression_t*)node->data;
+
+        /* Remove expr from the list before outputting it, so that
+         * it doesn't use itself when being outputted.. */
+        list_node_t* node_prev = node;
+        node = node->next;
+        list_del(&state->expressions, node_prev);
+
         expression_output(state, expr, 0);
         expression_free(expr);
-
-        /* "pop" expression from the list. */
-        list_node_t* last_node = state->expressions.tail;
-        state->expressions.tail = last_node->prev;
-        if (last_node->prev)
-            last_node->prev->next = NULL;
-        else
-            state->expressions.head = NULL;
-        free(last_node);
     }
 
     instr_add(state->current_sub, instr_new_list(state, type, param_list));
@@ -2094,6 +2256,33 @@ parse_rank(
     }
 }
 
+/* Print expression creation error. Either operands or value has to be non-NULL. */
+static void
+expression_error(
+    const parser_state_t* state,
+    const int* symbols,
+    expression_t** operands,
+    thecl_param_t* value
+) {
+    char errbuf[512];
+    errbuf[0] = '\0';
+    const expr_t *expr = expr_get_by_symbol(state->version, *symbols);
+    if (expr) {
+        snprintf(errbuf, sizeof(errbuf) - 1, "%s: ", expr->display_format);
+    }
+    strncat(errbuf, "no expression found for type(s): ", sizeof(errbuf) - 1 - strlen(errbuf));
+    if (operands != NULL) {
+        for (size_t s = 0; operands[s]; ++s) {
+            if (s != 0)
+                strncat(errbuf, " and ", sizeof(errbuf) - 1 - strlen(errbuf));
+            strncat(errbuf, (char *)&operands[s]->result_type, 1);
+        }
+    } else {
+        strncat(errbuf, (char*)&value->type, sizeof(errbuf) - 1 - strlen(errbuf));
+    }
+    yyerror((parser_state_t *)state, errbuf);
+}
+
 static expression_t*
 expression_load_new(
     const parser_state_t* state,
@@ -2101,6 +2290,11 @@ expression_load_new(
 {
     expression_t* ret = malloc(sizeof(expression_t));
     const expr_t* expr = expr_get_by_symbol(state->version, value->type == 'S' ? LOADI : LOADF);
+    if (expr == NULL) {
+        static const int tmp_symbols[] = {LOADI, LOADF};
+        expression_error(state, tmp_symbols, NULL, value);
+        exit(2);
+    }
     ret->type = EXPRESSION_VAL;
     ret->id = expr->id;
     ret->value = value;
@@ -2116,6 +2310,8 @@ expression_address_operation_new(
 {
     for (; *symbols; ++symbols) {
         const expr_t* expr = expr_get_by_symbol(state->version, *symbols);
+        if (expr == NULL)
+            continue;
 
         if (value->type != expr->param_format[0])
             continue;
@@ -2129,7 +2325,8 @@ expression_address_operation_new(
         return ret;
     }
 
-    return NULL;
+    expression_error(state, symbols, NULL, value);
+    exit(2);
 }
 
 static expression_t*
@@ -2140,6 +2337,8 @@ expression_operation_new(
 {
     for (; *symbols; ++symbols) {
         const expr_t* expr = expr_get_by_symbol(state->version, *symbols);
+        if (expr == NULL)
+            goto continue_outer;
 
         for (size_t s = 0; s < expr->stack_arity; ++s)
             if (operands[s]->result_type != expr->stack_formats[s])
@@ -2155,27 +2354,14 @@ expression_operation_new(
         }
         ret->result_type = expr->return_type;
 
+        if (!g_ecl_simplecreate)
+            expression_optimize(state, ret);
         return ret;
 
         continue_outer: ;
     }
 
-    /* Create error */
-    char errbuf[512];
-    errbuf[0] = 0;
-    const expr_t *expr = expr_get_by_symbol(state->version, *symbols);
-    if (expr) {
-      snprintf(errbuf, 511, "%s: ", expr->display_format);
-    }
-    strncat(errbuf, "no expression found for type(s): ", 511 - strlen(errbuf));
-    for (size_t s = 0; operands[s]; ++s) {
-      if (s != 0)
-        strncat(errbuf, " and ", 511 - strlen(errbuf));
-      strncat(errbuf, (char *)&operands[s]->result_type, 1);
-    }
-    yyerror((parser_state_t *)state, errbuf);
-
-    /* We cannot continue after this; the program would crash */
+    expression_error(state, symbols, operands, NULL);
     exit(2);
 }
 
@@ -2345,6 +2531,12 @@ expression_output(
         /* Since expression_optimize is already done recursively for children, it shouldn't be called for child expressions. */
         expression_optimize(state, expr);
 
+    if (expr->id < 0) {
+        /* Expression not outputtable - check expr.c for explanation in comments. */
+        yyerror(state, "expression not outputtable in current version");
+        return;
+    }
+
     if (expr->type == EXPRESSION_VAL) {
         instr_add(state->current_sub, instr_new(state, expr->id, "p", expr->value));
     } else if (expr->type == EXPRESSION_OP) {
@@ -2420,14 +2612,14 @@ expression_output(
 
 static void
 expression_optimize(
-    parser_state_t* state,
+    const parser_state_t* state,
     expression_t* expression)
 {
     if (expression->type != EXPRESSION_OP) return;
 
     int child_cnt = 0;
-    expression_t* child_expr_1;
-    expression_t* child_expr_2;
+    expression_t* child_expr_1 = NULL;
+    expression_t* child_expr_2 = NULL;
     expression_t* child_expr;
     list_for_each(&expression->children, child_expr) {
         if (child_expr->type == EXPRESSION_OP) {
@@ -2442,112 +2634,142 @@ expression_optimize(
         ++child_cnt;
     }
 
-    /* TODO: handle some single-child expressions, such as sin or cos */
-    if (child_cnt != 2) return;
-
+    #define EXPR_RAW(x) (x->type == EXPRESSION_VAL && !x->value->stack)
     if (
-           child_expr_1->type != EXPRESSION_VAL
-        || child_expr_2->type != EXPRESSION_VAL
-        || child_expr_1->value->stack /* Variables are not acceptable, obviously. */
-        || child_expr_2->value->stack
+        child_cnt < 1 || child_cnt > 2 ||
+        !EXPR_RAW(child_expr_1) ||
+        (child_expr_2 != NULL && !EXPR_RAW(child_expr_2))
     ) return;
+    #undef EXPR_RAW
 
     const expr_t* tmp_expr = expr_get_by_id(state->version, expression->id);
-    
+
     /* Need to get the type from tmp_expr->return_type, since expression->result_type could have been modified by typecasts. */
     thecl_param_t* param = param_new(tmp_expr->return_type);
 
     int res1 = child_expr_1->value->type;
-    int res2 = child_expr_2->value->type;
-    
     int val1S = res1 == 'S' ? child_expr_1->value->value.val.S : (int)(child_expr_1->value->value.val.f);
     float val1f = res1 == 'f' ? child_expr_1->value->value.val.f : (float)(child_expr_1->value->value.val.S);
-    int val2S = res2 == 'S' ? child_expr_2->value->value.val.S : (int)(child_expr_2->value->value.val.f);
-    float val2f = res2 == 'f' ? child_expr_2->value->value.val.f : (float)(child_expr_2->value->value.val.S);
 
-    switch(tmp_expr->symbol) {
-        case ADDI:
-            param->value.val.S = val1S + val2S;
-        break;
-        case ADDF:
-            param->value.val.f = val1f + val2f;
-        break;
-        case SUBTRACTI:
-            param->value.val.S = val1S - val2S;
-        break;
-        case SUBTRACTF:
-            param->value.val.f = val1f - val2f;
-        break;
-        case MULTIPLYI:
-            param->value.val.S = val1S * val2S;
-        break;
-        case MULTIPLYF:
-            param->value.val.f = val1f * val2f;
-        break;
-        case DIVIDEI:
-            param->value.val.S = val1S / val2S;
-        break;
-        case DIVIDEF:
-            param->value.val.f = val1f / val2f;
-        break;
-        case MODULO:
-            param->value.val.S = val1S % val2S;
-        break;
-        case EQUALI:
-            param->value.val.S = val1S == val2S;
-        break;
-        case EQUALF:
-            param->value.val.S = val1f == val2f;
-        break;
-        case INEQUALI:
-            param->value.val.S = val1S != val2S;
-        break;
-        case INEQUALF:
-            param->value.val.S = val1f != val2f;
-        break;
-        case LTI:
-            param->value.val.S = val1S < val2S;
-        break;
-        case LTF:
-            param->value.val.S = val1f < val2f;
-        break;
-        case LTEQI:
-            param->value.val.S = val1S <= val2S;
-        break;
-        case LTEQF:
-            param->value.val.S = val1f <= val2f;
-        break;
-        case GTI:
-            param->value.val.S = val1S > val2S;
-        break;
-        case GTF:
-            param->value.val.S = val1f > val2f;
-        break;
-        case GTEQI:
-            param->value.val.S = val1S >= val2S;
-        break;
-        case GTEQF:
-            param->value.val.S = val1f >= val2f;
-        break;
-        case OR:
-            param->value.val.S = val1S || val2S;
-        break;
-        case AND:
-            param->value.val.S = val1S && val2S;
-        break;
-        case XOR:
-            param->value.val.S = val1S ^ val2S;
-        break;
-        case B_OR:
-            param->value.val.S = val1S | val2S;
-        break;
-        case B_AND:
-            param->value.val.S = val1S & val2S;
-        break;
-        default:
-            /* Since the cases above cover all existing 2-parameter expressions there is no possibility of this ever hapenning.
-               Just putting this error message in case someone adds new expressions and forgets about handling them here... */
-            yyerror(state, "Math preprocessing error! Try using simple creation mode.");
+    if (child_cnt == 1) {
+        switch(tmp_expr->symbol) {
+            case NEGI:
+                param->value.val.S = -val1S;
+                break;
+            case NEGF:
+                param->value.val.f = -val1f;
+                break;
+            case NOT:
+                param->value.val.S = !val1S;
+                break;
+            case SIN:
+                param->value.val.f = sinf(val1f);
+                break;
+            case COS:
+                param->value.val.f = cosf(val1f);
+                break;
+            case SQRT:
+                param->value.val.f = sqrtf(val1f);
+                break;
+            case DEC:
+                /* This happens if the user tries to use the decrement operator on a non-variable. */
+                yyerror(state, "decrement operator can't be used on literals");
+                break;
+            default:
+                /* All unary expressions are covered here, so this default case should never execute.
+                 * But who knows, maybe in the future someone will add more. */
+                yyerror(state, "Math preprocessing error! Try using simple creation mode.");
+        }
+    } else if (child_cnt == 2) {
+
+        int res2 = child_expr_2->value->type;
+        int val2S = res2 == 'S' ? child_expr_2->value->value.val.S : (int)(child_expr_2->value->value.val.f);
+        float val2f = res2 == 'f' ? child_expr_2->value->value.val.f : (float)(child_expr_2->value->value.val.S);
+
+        switch(tmp_expr->symbol) {
+            case ADDI:
+                param->value.val.S = val1S + val2S;
+                break;
+            case ADDF:
+                param->value.val.f = val1f + val2f;
+                break;
+            case SUBTRACTI:
+                param->value.val.S = val1S - val2S;
+                break;
+            case SUBTRACTF:
+                param->value.val.f = val1f - val2f;
+                break;
+            case MULTIPLYI:
+                param->value.val.S = val1S * val2S;
+                break;
+            case MULTIPLYF:
+                param->value.val.f = val1f * val2f;
+                break;
+            case DIVIDEI:
+                param->value.val.S = val1S / val2S;
+                break;
+            case DIVIDEF:
+                param->value.val.f = val1f / val2f;
+                break;
+            case MODULO:
+                param->value.val.S = val1S % val2S;
+                break;
+            case EQUALI:
+                param->value.val.S = val1S == val2S;
+                break;
+            case EQUALF:
+                param->value.val.S = val1f == val2f;
+                break;
+            case INEQUALI:
+                param->value.val.S = val1S != val2S;
+                break;
+            case INEQUALF:
+                param->value.val.S = val1f != val2f;
+                break;
+            case LTI:
+                param->value.val.S = val1S < val2S;
+                break;
+            case LTF:
+                param->value.val.S = val1f < val2f;
+                break;
+            case LTEQI:
+                param->value.val.S = val1S <= val2S;
+                break;
+            case LTEQF:
+                param->value.val.S = val1f <= val2f;
+                break;
+            case GTI:
+                param->value.val.S = val1S > val2S;
+                break;
+            case GTF:
+                param->value.val.S = val1f > val2f;
+                break;
+            case GTEQI:
+                param->value.val.S = val1S >= val2S;
+                break;
+            case GTEQF:
+                param->value.val.S = val1f >= val2f;
+                break;
+            case OR:
+                param->value.val.S = val1S || val2S;
+                break;
+            case AND:
+                param->value.val.S = val1S && val2S;
+                break;
+            case XOR:
+                param->value.val.S = val1S ^ val2S;
+                break;
+            case B_OR:
+                param->value.val.S = val1S | val2S;
+                break;
+            case B_AND:
+                param->value.val.S = val1S & val2S;
+                break;
+            default:
+                /* Since the cases above cover all existing 2-parameter expressions there is no possibility of this ever hapenning.
+                   Just putting this error message in case someone adds new expressions and forgets about handling them here... */
+                yyerror(state, "Math preprocessing error! Try using simple creation mode.");
+        }
     }
 
     expression->value = param;
@@ -2556,9 +2778,11 @@ expression_optimize(
     expression->id = tmp_expr->id;
 
     param_free(child_expr_1->value);
-    param_free(child_expr_2->value);
     expression_free(child_expr_1);
-    expression_free(child_expr_2);
+    if (child_expr_2 != NULL) {
+        param_free(child_expr_2->value);
+        expression_free(child_expr_2);
+    }
     list_free_nodes(&expression->children);
 }
 
@@ -2667,6 +2891,19 @@ sub_finish(
     state->current_sub = NULL;
 
     scope_finish(state);
+}
+
+static void
+labels_adjust(
+    list_t* labels,
+    uint32_t min_offset,
+    uint32_t adjust
+) {
+    thecl_label_t* label;
+    list_for_each(labels, label) {
+        if (label->offset >= min_offset)
+            label->offset -= adjust;
+    }
 }
 
 static void

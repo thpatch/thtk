@@ -392,7 +392,7 @@ main(int argc, char* argv[])
         }
 
         if (mode == 'c') {
-#ifdef WIN32
+#ifdef _WIN32
             (void)_setmode(fileno(stdout), _O_BINARY);
 #endif
             thecl_t* ecl = module->parse(in, argv[0], version);
@@ -407,7 +407,7 @@ main(int argc, char* argv[])
             module->create_header(ecl, out);
             thecl_free(ecl);
         } else if (mode == 'd') {
-#ifdef WIN32
+#ifdef _WIN32
             (void)_setmode(fileno(stdin), _O_BINARY);
 #endif
             thecl_t* ecl = module->open(in, version);

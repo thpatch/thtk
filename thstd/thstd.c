@@ -197,10 +197,10 @@ std_read_file(
         list_append_new(&std->instrs, instr);
 
         if (option_version == 0)
-            instr = (std_instr_t*)((int64_t)instr + instr->size +
+            instr = (std_instr_t*)((char*)instr + instr->size +
                                    sizeof(uint32_t)*2);
         else
-            instr = (std_instr_t*)((int64_t)instr + instr->size);
+            instr = (std_instr_t*)((char*)instr + instr->size);
     }
 
     return std;
@@ -303,9 +303,9 @@ std_dump(
 
         value_t* values;
         if (option_version == 0)
-            values = value_list_from_data(value_from_data, (unsigned char*)((uint64_t)instr + sizeof(std_instr_t)), sizeof(uint32_t) * 3, format);
+            values = value_list_from_data(value_from_data, (unsigned char*)((char*)instr + sizeof(std_instr_t)), sizeof(uint32_t) * 3, format);
         else
-            values = value_list_from_data(value_from_data, (unsigned char*)((uint64_t)instr + sizeof(std_instr_t)), instr->size - sizeof(std_instr_t), format);
+            values = value_list_from_data(value_from_data, (unsigned char*)((char*)instr + sizeof(std_instr_t)), instr->size - sizeof(std_instr_t), format);
         if (!values)
             abort();
 

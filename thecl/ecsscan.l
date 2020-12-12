@@ -36,6 +36,7 @@
     #include "thecl.h"
     #include "ecsparse.h"
     #include "util.h"
+    extern char *current_input;
     void yyerror(parser_state_t*, const char*);
     /* yylloc.first_column is initialized to 1. */
     #define YY_USER_INIT yylloc.first_column = 0
@@ -83,6 +84,9 @@
 "inline"   return INLINE;
 "return"   return RETURN;
 "@"        return AT;
+"..."      return VARARGS;
+"."        return DOT;
+"insdef"   return INSDEF;
 
 "goto"     return GOTO;
 "unless"   return UNLESS;
@@ -137,34 +141,28 @@ _Sf return CAST_IF;
 _ff return CAST_FF;
 _fS return CAST_FI;
 
-(-|\+)?[0-9]+(\.([0-9]*f|[0-9]+)|f) {
+[0-9]+(\.([0-9]*f|[0-9]+)|f) {
     yylval.floating = strtof(yytext, NULL);
     return FLOATING;
 }
-rad\((-|\+)?[0-9]+(\.([0-9]*f|[0-9]+)|f)?\) {
+rad\([-\+]?[0-9]+(\.([0-9]*f|[0-9]+)|f)?\) {
     yylval.floating = strtof(yytext+4, NULL) / 180.0f * 3.14159265359f;
     return FLOATING;
 }
 ins_[0-9]+ {
-    yylval.integer = strtol(yytext + 4, NULL, 10);
+    yylval.integer = strtol(yytext+4, NULL, 10);
     return INSTRUCTION;
 }
--?[0-9]+ {
-    yylval.integer = strtol(yytext, NULL, 10);
+[0-9]+ {
+    yylval.integer = strtoul(yytext, NULL, 10);
     return INTEGER;
 }
-\+[0-9]+ {
-    yylval.integer = strtol(yytext, NULL, 10);
-    return PLUS_INTEGER;
-}
-(-|\+)?0x[0-9a-fA-F]+ {
-    yylval.integer = strtol(yytext, NULL, 16);
+0[xX][0-9a-fA-F]+ {
+    yylval.integer = strtoul(yytext, NULL, 16);
     return INTEGER;
 }
-(-|\+)?0b[0-1]+ {
-    bool hasSign = yytext[0] == '-' || yytext[0] == '+';
-    yylval.integer = strtol(yytext + (hasSign ? 3 : 2), NULL, 2);
-    if (yytext[0] == '-') yylval.integer = -yylval.integer;
+0[bB][0-1]+ {
+    yylval.integer = strtoul(yytext+2, NULL, 2);
     return INTEGER;
 }
 "false" {
@@ -212,12 +210,31 @@ ins_[0-9]+ {
     BEGIN(INITIAL);
     return TEXT;
 }
-<ESCAPE_CHAR>[\"\\] {
-    yylval.string = realloc(yylval.string, strlen(yylval.string) + yyleng + 1);
-    strcat(yylval.string, yytext);
+<ESCAPE_CHAR>[\"\\nr0] {
+    char c;
+    switch(yytext[0]) {
+        case 'n':
+            c = '\n';
+            break;
+        case 'r':
+            c = '\r';
+            break;
+        case '0':
+            c = '\0';
+            break;
+        default:
+            c = yylval.string[0];
+    }
+    size_t len = strlen(yylval.string);
+    yylval.string = realloc(yylval.string, len + yyleng + 1);
+    /* Length of the yytext string must be 1, since only single character strings
+     * match the regex. So we can safely just write one character followed by null
+     * terminator in place of it. */
+    yylval.string[len] = c;
+    yylval.string[len + 1] = '\0';
     BEGIN(STRING);
 }
-<ESCAPE_CHAR>[^\"\\] {
+<ESCAPE_CHAR>[^\"\\nr0] {
     char buf[256];
     snprintf(buf, 256, "invalid character escape: %s", yytext);
     yyerror(NULL, buf);

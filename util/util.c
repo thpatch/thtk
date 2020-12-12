@@ -32,13 +32,13 @@
 #include <string.h>
 #include <inttypes.h>
 #include <errno.h>
-#ifdef HAVE_SYS_STAT_H
-#include <sys/stat.h>
-#endif
-#ifdef WIN32
+#if defined(_WIN32)
 #include <windows.h>
-#else
+#elif defined(HAVE_FSTAT) && defined(HAVE_SCANDIR)
+#include <sys/stat.h>
 #include <dirent.h>
+#else
+#error "port util_scan_files"
 #endif
 #include "program.h"
 #include "util.h"
@@ -94,7 +94,7 @@ util_makepath(
             break;
         *filename = '\0';
 
-#ifdef WIN32
+#ifdef _WIN32
         if (CreateDirectory(name, NULL) == 0 && GetLastError() != ERROR_ALREADY_EXISTS) {
             fprintf(stderr, "%s: couldn't create directory %s\n",
                 argv0, name);
@@ -119,7 +119,7 @@ util_makepath(
     free(name);
 }
 
-#ifdef WIN32
+#ifdef _WIN32
 int
 util_scan_files(
     const char* dir,
@@ -276,7 +276,7 @@ util_scan_files(
     *result = filelist;
     return size;
 }
-#endif // WIN32
+#endif // _WIN32
 
 void
 util_xor(

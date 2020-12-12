@@ -29,7 +29,7 @@ copy_doc() {
     shift
   done
 }
-copy_doc COPYING.{bison,flex,libpng,zlib} COPYING README NEWS
+copy_doc COPYING.{libpng,zlib} COPYING README NEWS
 
 zip -r -9 $releasepath.zip $releasepath
 zip -r -9 $releasepath-pdbs.zip $releasepath-pdbs

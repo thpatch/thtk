@@ -327,7 +327,7 @@ th95_close(
     for (i = 0; i < thdat->entry_count; ++i) {
         const thdat_entry_t* entry = &thdat->entries[i];
         const size_t namelen = strlen(entry->name);
-        buffer_ptr = mempcpy(buffer_ptr, entry->name,
+        buffer_ptr = MEMPCPY(buffer_ptr, entry->name,
             namelen + (4 - namelen % 4));
         *buffer_ptr++ = entry->offset;
         *buffer_ptr++ = entry->size;

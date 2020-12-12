@@ -97,7 +97,7 @@ th10_value_from_data(
 {
     switch (type) {
     case 'D':
-        return value_from_data(data, 2 * sizeof(uint32_t), 'm', value);
+        return value_from_data(data, sizeof(thecl_sub_param_t), 'm', value);
     case 'o':
     case 't':
         return value_from_data(data, data_length, 'S', value);
@@ -668,9 +668,13 @@ static const id_format_pair_t th13_fmts[] = {
     { 15, "m*D" },
     { 16, "mS*D" },
     { 17, "S" },
+    { 18, "S" },
+    { 19, "S" },
+    { 20, "SS" },
     { 21, "" },
     { 22, "Sm" },
     { 23, "S" },
+    { 24, "f" },
     { 30, "m*D" },
     { 40, "S" },
     { 42, "S" },
@@ -1226,17 +1230,25 @@ th10_open(
 
             uint32_t param_mask = instr->param_mask;
             const char* format = th10_find_format(version, instr->id, 0);
-            /* TODO: Handle format == NULL. */
+            
             size_t param_size_total = instr->size - sizeof(th10_instr_t);
             if (format == NULL) {
                 fprintf(stderr, "%s: (total parameter size is %zu)\n",
                     argv0, param_size_total);
+                /* Use default format (dump all params as integers) in order to not crash. */
+                format = "*S";
             }
 
             if (param_size_total > 0) {
                 value_t* values = value_list_from_data(th10_value_from_data, instr->data, instr->size - sizeof(th10_instr_t), format);
-                if (!values)
+                if (!values) {
+                    const seqmap_entry_t* ent = seqmap_get(g_eclmap->ins_names, instr->id);
+                    if (ent)
+                        fprintf(stderr, "%s: error when dumping opcode %d (%s)\n", argv0, instr->id, ent->value);
+                    else
+                        fprintf(stderr, "%s: error when dumping opcode %d\n", argv0, instr->id);
                     return NULL;
+                }
                 value_t* value_iter = values;
 
                 size_t p = 0;
@@ -1456,22 +1468,31 @@ th10_stringify_param(
     }
     case 'D': {
         value_t new_value;
-        int32_t* D = (int*)param->value.val.m.data;
-        memcpy(&new_value.val.S, &D[1], sizeof(int32_t));
-        if (D[0] == 0x6666 /* ff */) {
+        thecl_sub_param_t* D = (thecl_sub_param_t*)param->value.val.m.data;
+
+        if (D->zero != 0) {
+            fprintf(stderr, "%s: bad ECL file - 'D' param padding is nonzero\n", argv0);
+            abort();
+        }
+
+        if (D->from == 'f' && D->to == 'f') {
+            new_value.val.f = D->val.f;
             sprintf(temp, "_ff");
             new_value.type = 'f';
-        } else if (D[0] == 0x6669 /* fi */) {
+        } else if (D->from == 'i' && D->to == 'f') {
+            new_value.val.f = D->val.f;
             sprintf(temp, "_fS");
             new_value.type = 'S';
-        } else if (D[0] == 0x6966 /* if */) {
+        } else if (D->from == 'f' && D->to == 'i') {
+            new_value.val.S = D->val.S;
             sprintf(temp, "_Sf");
             new_value.type = 'f';
-        } else if (D[0] == 0x6969 /* ii */) {
+        } else if (D->from == 'i' && D->to == 'i') {
+            new_value.val.S = D->val.S;
             sprintf(temp, "_SS");
             new_value.type = 'S';
         } else {
-            fprintf(stderr, "%s: ...\n", argv0);
+            fprintf(stderr, "%s: bad ECL file - invalid types in 'D' param\n", argv0);
             abort();
         }
 
@@ -1595,22 +1616,35 @@ th10_stringify_instr(
                  async_id_str = th10_stringify_param(version, sub, node, 0, param, &removed, 1);
              } else {
                 value_t new_value;
-                int32_t* D = (int*)param->value.val.m.data;
-                memcpy(&new_value.val.S, &D[1], sizeof(int32_t));
-                if (D[0] == 0x6666 /* ff */) {
+                thecl_sub_param_t* D = (thecl_sub_param_t*)param->value.val.m.data;
+
+                if (D->zero != 0) {
+                    fprintf(stderr, "%s: bad ECL file - 'D' param padding is nonzero\n", argv0);
+                    abort();
+                }
+
+                if (D->from == 'f' && D->to == 'f') {
+                    new_value.val.f = D->val.f;
                     strcpy(temp, "%s");
                     new_value.type = 'f';
-                } else if (D[0] == 0x6669 /* fi */) {
+                }
+                else if (D->from == 'i' && D->to == 'f') {
+                    new_value.val.f = D->val.f;
                     strcpy(temp, "_f(%s)");
                     new_value.type = 'S';
-                } else if (D[0] == 0x6966 /* if */) {
+                }
+                else if (D->from == 'f' && D->to == 'i') {
+                    new_value.val.S = D->val.S;
                     strcpy(temp, "_S(%s)");
                     new_value.type = 'f';
-                } else if (D[0] == 0x6969 /* ii */) {
+                }
+                else if (D->from == 'i' && D->to == 'i') {
+                    new_value.val.S = D->val.S;
                     strcpy(temp, "%s");
                     new_value.type = 'S';
-                } else {
-                    fprintf(stderr, "%s: bad ECL file - invalid parameter for sub-calling ins\n", argv0);
+                }
+                else {
+                    fprintf(stderr, "%s: bad ECL file - invalid types in 'D' param\n", argv0);
                     abort();
                 }
 
@@ -1955,17 +1989,26 @@ th10_instr_serialize(
     unsigned char* param_data = ret->data;
     int param_count = 0;
 
+    seqmap_entry_t* ent = seqmap_get(g_eclmap->ins_names, instr->id);
+    char buf[128];
+    if (ent == NULL)
+        snprintf(buf, sizeof(buf), "%d", instr->id);
+    else
+        snprintf(buf, sizeof(buf), "%d (%s)", instr->id, ent->value);
+
     const char* expected_format = th10_find_format(version, instr->id, 0);
     if (expected_format == NULL)
-        fprintf(stderr, "%s:th10_instr_serialize: in sub %s: instruction with id %d is not known to exist in version %d\n", argv0, sub->name, instr->id, version);
+        fprintf(stderr, "%s:th10_instr_serialize: in sub %s: instruction with id %s is not known to exist in version %d\n", argv0, sub->name, buf, version);
     else {
         list_for_each(&instr->params, param) {
-            if (expected_format[0] == 0)
-                fprintf(stderr, "%s:th10_instr_serialize: in sub %s: too many arguments for opcode %d\n", argv0, sub->name, instr->id);
+            if (expected_format[0] == 0) {
+                fprintf(stderr, "%s:th10_instr_serialize: in sub %s: too many arguments for opcode %s\n", argv0, sub->name, buf);
+                break;
+            }
             if (expected_format[0] != '*') expected_format++;
         }
         if (expected_format[0] != '*' && expected_format[0] != 0)
-            fprintf(stderr, "%s:th10_instr_serialize: in sub %s: too few arguments for opcode %d\n", argv0, sub->name, instr->id);
+            fprintf(stderr, "%s:th10_instr_serialize: in sub %s: too few arguments for opcode %s\n", argv0, sub->name, buf);
     }
 
     if (!g_ecl_simplecreate && (instr->id == TH10_INS_CALL || instr->id == TH10_INS_CALL_ASYNC || instr->id == TH10_INS_CALL_ASYNC_ID)) {
@@ -1989,18 +2032,18 @@ th10_instr_serialize(
                 }
 
                 thecl_param_t* param = node->data;
-                int32_t* D = (int32_t*)param->value.val.m.data;
+                thecl_sub_param_t* D = (thecl_sub_param_t*)param->value.val.m.data;
                 if (format[v] == '\0') {
                     fprintf(stderr, "%s:th10_instr_serialize: in sub %s: too many parameters when calling sub \"%s\"\n",
                             argv0, sub->name, sub_name);
                     break;
                  } else if (
                     format[v] != '?' &&
-                    (((D[0] == 0x6969 || D[0] == 0x6966) && format[v] == 'f') ||
-                    ((D[0] == 0x6669 || D[0] == 0x6666) && format[v] == 'S'))
+                    ((D->to == 'i' && format[v] == 'f') ||
+                    (D->to == 'f' && format[v] == 'S'))
                 ) {
                     fprintf(stderr, "%s:th10_instr_serialize: in sub %s: wrong type for parameter %i when calling sub \"%s\", expected type: %c\n",
-                            argv0, sub->name, v + 1, sub_name, format[v]);
+                            argv0, sub->name, (int)(v + 1), sub_name, format[v]);
                 }
                 ++v;
             }
@@ -2049,14 +2092,7 @@ th10_instr_serialize(
             } else if (param->type == 'S' && param->value.val.S == -(ret->zero + 1)) {
                 ++ret->zero;
             } else if (param->type == 'D') {
-                struct {
-                    char from;
-                    char to;
-                    union {
-                        int32_t S;
-                        float f;
-                    } val;
-                } *temp = (void*)param->value.val.m.data;
+                thecl_sub_param_t *temp = (thecl_sub_param_t*)param->value.val.m.data;
 
                 if (temp->from == 'f' && temp->val.f == -(ret->zero + 1.0f))
                     ++ret->zero;

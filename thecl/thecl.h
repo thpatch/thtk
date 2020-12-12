@@ -72,6 +72,18 @@ typedef enum {
 #define TH10_VAR_I3 -9982
 #define TH10_VAR_F3 -9978.0f
 
+typedef struct thecl_sub_param_t {
+PACK_BEGIN
+    char from;
+    char to;
+    uint16_t zero; /* Padding, must be set to 0 */
+    union {
+        int32_t S;
+        float f;
+    } val;
+PACK_END
+} PACK_ATTRIBUTE thecl_sub_param_t;
+
 typedef struct thecl_param_t {
     int type;
     value_t value;
