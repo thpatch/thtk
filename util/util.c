@@ -150,6 +150,22 @@ util_vec_ensure(
 }
 
 #ifdef _WIN32
+/* Returns zero if the directory is a "." or ".." filesystem link and nonzero otherwise */
+static int
+util_is_real_dir(
+    const char *path)
+{
+    if (path == NULL || path[0] == '\0') {
+        return 0;
+    } else if (path[0] == '.') {
+        if (path[1] == '\0')
+            return 0;
+        else if (path[1] == '.' && path[2] == '\0')
+            return 0;
+    }
+    return 1;
+}
+
 int
 util_scan_files(
     const char* dir,
@@ -186,6 +202,10 @@ util_scan_files(
         strcat(fullpath, name);
         if (wfd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
             char** subdirs;
+            if (!util_is_real_dir(wfd.cFileName)) {
+                bResult = FindNextFile(h, &wfd);
+                continue;
+            }
             t = name[strlen(name)-1];
             if (t != '/' || t != '\\') strcat(fullpath, "/");
             int new_cnt = util_scan_files(fullpath, &subdirs);
