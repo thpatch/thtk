@@ -31,6 +31,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <inttypes.h>
+#include <limits.h>
 #include <errno.h>
 #if defined(_WIN32)
 #include <windows.h>
@@ -119,6 +120,35 @@ util_makepath(
     free(name);
 }
 
+/* Typical amortized O(1) dynamic array resize function */
+static int
+util_vec_ensure(
+    void *data, /* It's actually void **. This is done to avoid casts. */
+    size_t *cap,
+    size_t size,
+    size_t element_size)
+{
+    if (size <= *cap)
+        return 0;
+
+    size_t ncap = *cap ? *cap : 1;
+    while (ncap < size) {
+        ncap <<= 1;
+        if (ncap < *cap) /* overflow check */
+            ncap = size;
+    }
+    if (element_size > SIZE_MAX/ncap) /* overflow check */
+        return -1;
+
+    void *ndata = realloc(*(void **)data, ncap*element_size);
+    if (!ndata)
+        return -1;
+
+    *(void **)data = ndata;
+    *cap = ncap;
+    return 0;
+}
+
 #ifdef _WIN32
 int
 util_scan_files(
@@ -141,9 +171,10 @@ util_scan_files(
     }
     search_query[strlen(search_query)-1] = 0;
 
-    char** filelist;
-    int size = 0, capacity = 8;
-    filelist = malloc(capacity * sizeof(char*));
+    char** filelist = NULL;
+    size_t size = 0, capacity = 0;
+    if (util_vec_ensure(&filelist, &capacity, 8, sizeof(char*)))
+        return -1;
 
     BOOL bResult = TRUE;
     while (bResult) {
@@ -163,28 +194,18 @@ util_scan_files(
                 strcpy(filelist[size++], subdirs[j]);
                 free(subdirs[j]);
 
-                if (size >= capacity) {
-                    capacity<<=1;
-                    char** newfiles = realloc(filelist, capacity*sizeof(char*));
-                    if (!newfiles) {
-                        free(filelist);
-                        return -1;
-                    }
-                    filelist = newfiles;
+                if (util_vec_ensure(&filelist, &capacity, size+1, sizeof(char*))) {
+                    free(filelist);
+                    return -1;
                 }
             }
             free(subdirs);
             continue;
         }
         filelist[size++] = fullpath;
-        if (size >= capacity) {
-            capacity<<=1;
-            char** newfiles = realloc(filelist, capacity*sizeof(char*));
-            if (!newfiles) {
-                free(filelist);
-                return -1;
-            }
-            filelist = newfiles;
+        if (util_vec_ensure(&filelist, &capacity, size+1, sizeof(char*))) {
+            free(filelist);
+            return -1;
         }
 
         bResult = FindNextFile(h, &wfd);
@@ -223,9 +244,10 @@ util_scan_files(
     if (n < 0)
         return -1;
 
-    char** filelist;
-    int size = 0, capacity = 8;
-    filelist = malloc(capacity * sizeof(char*));
+    char** filelist = NULL;
+    size_t size = 0, capacity = 0;
+    if (util_vec_ensure(&filelist, &capacity, 8, sizeof(char*)))
+        return -1;
     for (int i = 0; i < n; ++i) {
         const char* name = files[i]->d_name;
         char* fullpath = malloc(strlen(dir)+strlen(name)+3);
@@ -246,14 +268,9 @@ util_scan_files(
                 strcpy(filelist[size++], subdirs[j]);
                 free(subdirs[j]);
 
-                if (size >= capacity) {
-                    capacity<<=1;
-                    char** newfiles = realloc(filelist, capacity*sizeof(char*));
-                    if (!newfiles) {
-                        free(filelist);
-                        return -1;
-                    }
-                    filelist = newfiles;
+                if (util_vec_ensure(&filelist, &capacity, size+1, sizeof(char*))) {
+                    free(filelist);
+                    return -1;
                 }
             }
             free(subdirs);
@@ -262,14 +279,9 @@ util_scan_files(
             continue;
         }
         filelist[size++] = fullpath;
-        if (size >= capacity) {
-            capacity<<=1;
-            char** newfiles = realloc(filelist, capacity*sizeof(char*));
-            if (!newfiles) {
-                free(filelist);
-                return -1;
-            }
-            filelist = newfiles;
+        if (util_vec_ensure(&filelist, &capacity, size+1, sizeof(char*))) {
+            free(filelist);
+            return -1;
         }
         free(files[i]);
     }
