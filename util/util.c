@@ -194,19 +194,15 @@ util_scan_files(
                 strcpy(filelist[size++], subdirs[j]);
                 free(subdirs[j]);
 
-                if (util_vec_ensure(&filelist, &capacity, size+1, sizeof(char*))) {
-                    free(filelist);
-                    return -1;
-                }
+                if (util_vec_ensure(&filelist, &capacity, size+1, sizeof(char*)))
+                    goto err;
             }
             free(subdirs);
             continue;
         }
         filelist[size++] = fullpath;
-        if (util_vec_ensure(&filelist, &capacity, size+1, sizeof(char*))) {
-            free(filelist);
-            return -1;
-        }
+        if (util_vec_ensure(&filelist, &capacity, size+1, sizeof(char*)))
+            goto err;
 
         bResult = FindNextFile(h, &wfd);
     }
@@ -214,6 +210,13 @@ util_scan_files(
 
     *result = filelist;
     return size;
+err:
+    if (filelist) {
+        while (size--)
+            free(filelist[size]);
+        free(filelist);
+    }
+    return -1;
 }
 #else
 static int
@@ -268,10 +271,8 @@ util_scan_files(
                 strcpy(filelist[size++], subdirs[j]);
                 free(subdirs[j]);
 
-                if (util_vec_ensure(&filelist, &capacity, size+1, sizeof(char*))) {
-                    free(filelist);
-                    return -1;
-                }
+                if (util_vec_ensure(&filelist, &capacity, size+1, sizeof(char*)))
+                    goto err;
             }
             free(subdirs);
             free(files[i]);
@@ -279,14 +280,19 @@ util_scan_files(
             continue;
         }
         filelist[size++] = fullpath;
-        if (util_vec_ensure(&filelist, &capacity, size+1, sizeof(char*))) {
-            free(filelist);
-            return -1;
-        }
+        if (util_vec_ensure(&filelist, &capacity, size+1, sizeof(char*)))
+            goto err;
         free(files[i]);
     }
     *result = filelist;
     return size;
+err:
+    if (filelist) {
+        while (size--)
+            free(filelist[size]);
+        free(filelist);
+    }
+    return -1;
 }
 #endif // _WIN32
 
