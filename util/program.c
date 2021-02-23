@@ -125,6 +125,9 @@ unsigned int parse_version(char *str) {
         {15, "lolk"},
         {155, "aocf"},
         {16, "hsifs"},
+        {165, "vd"},
+        {17, "wbawc"},
+        /* NEWHU: */
         {0}
     }, *vp = vers;
 
