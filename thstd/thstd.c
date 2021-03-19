@@ -783,7 +783,7 @@ print_usage(void)
            "  -c                    create STD file\n"
            "  -d                    dump STD file\n"
            "VERSION can be:\n"
-           "  6, 7, 8, 9, 95, 10, 103 (for Uwabami Breakers), 11, 12, 125, 128, 13, 14, 143, 15, 16, 165 or 17\n"
+           "  6, 7, 8, 9, 95, 10, 103 (for Uwabami Breakers), 11, 12, 125, 128, 13, 14, 143, 15, 16, 165, 17 or 18\n"
            /* NEWHU: */
            "Report bugs to <" PACKAGE_BUGREPORT ">.\n");
 }
@@ -847,6 +847,7 @@ main(
     case 16:
     case 165:
     case 17:
+    case 18:
     /* NEWHU: */
         option_version = 2;
         break;

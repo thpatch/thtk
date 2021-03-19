@@ -1019,6 +1019,7 @@ th10_find_format(
     switch (version) {
     /* Intentional fallthroughs, obviously */
     /* NEWHU: */
+    case 18:
     case 17:
         if (!ret) ret = find_format(th17_fmts, id);
     case 165:
@@ -1230,7 +1231,7 @@ th10_open(
 
             uint32_t param_mask = instr->param_mask;
             const char* format = th10_find_format(version, instr->id, 0);
-            
+
             size_t param_size_total = instr->size - sizeof(th10_instr_t);
             if (format == NULL) {
                 fprintf(stderr, "%s: (total parameter size is %zu)\n",
@@ -1886,7 +1887,7 @@ th10_instr_size(
     bool is_timeline)
 {
     if (is_timeline) return 0;
-    
+
     size_t ret = sizeof(th10_instr_t);
     thecl_param_t* param;
 
@@ -2047,7 +2048,7 @@ th10_instr_serialize(
                 }
                 ++v;
             }
-            if (format[v] != '\0') 
+            if (format[v] != '\0')
                 fprintf(stderr, "%s:th10_instr_serialize: in sub %s: not enough parameters when calling sub %s\n",
                         argv0, sub->name, sub_name);
         }

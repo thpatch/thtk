@@ -221,6 +221,7 @@ th06_find_format(unsigned int version, int id)
         case 15:
         case 16:
         case 17:
+        case 18:
         /* NEWHU: */
             return find_format(th10_msg_ed_fmts, id);
         default:
@@ -230,6 +231,7 @@ th06_find_format(unsigned int version, int id)
     } else {
         switch (version) {
         /* NEWHU: */
+        case 18:
         case 17:
         case 165:
         case 16:

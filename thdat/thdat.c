@@ -46,7 +46,7 @@ print_usage(
            "  -x  extract an archive\n"
            "  -V  display version information and exit\n"
            "VERSION can be:\n"
-           "  1, 2, 3, 4, 5, 6, 7, 8, 9, 95, 10, 103 (for Uwabami Breakers), 105, 11, 12, 123, 125, 128, 13, 14, 143, 15, 16, 165 or 17\n"
+           "  1, 2, 3, 4, 5, 6, 7, 8, 9, 95, 10, 103 (for Uwabami Breakers), 105, 11, 12, 123, 125, 128, 13, 14, 143, 15, 16, 165, 17 or 18\n"
            /* NEWHU: */
        "Specify 'd' as VERSION to automatically detect archive format. (-l and -x only)\n\n"
            "Report bugs to <" PACKAGE_BUGREPORT ">.\n", argv0);
@@ -99,7 +99,7 @@ thdat_open_file(
         return NULL;
     }
 
-    if (!(state->thdat = thdat_open(version, state->stream, error))) { 
+    if (!(state->thdat = thdat_open(version, state->stream, error))) {
         thdat_state_free(state);
         return NULL;
     }
@@ -232,7 +232,7 @@ thdat_create_wrapper(
         real_entry_count += n;
     }
 
-    if (!(state->thdat = thdat_create(version, state->stream, real_entry_count, error))) { 
+    if (!(state->thdat = thdat_create(version, state->stream, real_entry_count, error))) {
         thdat_state_free(state);
         exit(1);
     }

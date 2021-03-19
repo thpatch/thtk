@@ -67,10 +67,11 @@
     x(20, 14,16, "th16.dat") \
     x(21, 14,165, "th165.dat") \
     x(22, 14,17, "th17.dat") \
+    x(23, 14,18, "th18.dat") \
     /* NEWHU: */ \
     /* thdat105 */ \
-    x(23, 105,105, NULL) \
-    x(24, 123,123, NULL)
+    x(24, 105,105, NULL) \
+    x(25, 123,123, NULL)
 
 static const thdat_detect_entry_t detect_table[] = {
 #define x(idx, var, alias, filename) {var,alias,filename},
@@ -310,7 +311,7 @@ thdat_detect_08_95(
                         case 95: case 10: case 11: case 12:
                         case 125: case 128: case 13: case 14:
                         case 143: case 15: case 16: case 165:
-                        case 17: /* NEWHU: */
+                        case 17: case 18: /* NEWHU: */
                             if (is95)
                                 return n;
                             break;
@@ -319,7 +320,7 @@ thdat_detect_08_95(
                 // finding any ver file means we can stop looking, even if we don't recognize it.
                 return 0;
             }
-            
+
             // alcostg doesn't have a ver file
             static const char albgmfmt[] = "albgm.fmt";
             if (is95 && len == sizeof(albgmfmt)-1 && !strcmp(name, albgmfmt)) {
@@ -474,6 +475,7 @@ notth03:
             SET_OUT(16);
             SET_OUT(165);
             SET_OUT(17);
+            SET_OUT(18);
             /* NEWHU: */
         } else if (ver > 0) {
             SET_OUT(ver);
