@@ -36,6 +36,44 @@
 #include "reg.h"
 #include "list.h"
 
+/* v0 has no variables, and as such no operators. */
+
+static const operation_t ops_v2_v3[] = {
+                                   /* IDS_S       IDS_f */
+   /* SYMBOL     TYPE                 norm  short norm  short*/
+    { ASSIGN,    OP_ASSIGN,           37,   -1,   38,   -1  },
+    { ADD,       OP_BINARY_COMMUT,    49,   39,   50,   40  },
+    { SUBTRACT,  OP_BINARY_NONCOMMUT, 51,   41,   52,   42  },
+    { MULTIPLY,  OP_BINARY_COMMUT,    53,   43,   54,   44  },
+    { DIVIDE,    OP_BINARY_NONCOMMUT, 55,   45,   56,   46  },
+    { MODULO,    OP_BINARY_NONCOMMUT, 57,   47,   58,   48  },
+    { RAND,      OP_UNARY,            59,   -1,   60,   -1  },
+    { SIN,       OP_UNARY,            -1,   -1,   61,   -1  },
+    { COS,       OP_UNARY,            -1,   -1,   62,   -1  },
+    { TAN,       OP_UNARY,            -1,   -1,   63,   -1  },
+    { ACOS,      OP_UNARY,            -1,   -1,   64,   -1  },
+    { ATAN,      OP_UNARY,            -1,   -1,   65,   -1  },
+    { 0, 0, 0, 0, 0, 0}
+};
+
+static const operation_t ops_v4_v7[] = {
+                                   /* IDS_S       IDS_f */
+   /* SYMBOL     TYPE                 norm  short norm  short*/
+    { ASSIGN,    OP_ASSIGN,           6,    -1,   7,    -1  },
+    { ADD,       OP_BINARY_COMMUT,    18,   8,    19,   9   },
+    { SUBTRACT,  OP_BINARY_NONCOMMUT, 20,   10,   21,   11  },
+    { MULTIPLY,  OP_BINARY_COMMUT,    22,   12,   23,   13  },
+    { DIVIDE,    OP_BINARY_NONCOMMUT, 24,   14,   25,   15  },
+    { MODULO,    OP_BINARY_NONCOMMUT, 26,   16,   27,   17  },
+    { RAND,      OP_UNARY,            40,   -1,   41,   -1  },
+    { SIN,       OP_UNARY,            -1,   -1,   42,   -1  },
+    { COS,       OP_UNARY,            -1,   -1,   43,   -1  },
+    { TAN,       OP_UNARY,            -1,   -1,   44,   -1  },
+    { ACOS,      OP_UNARY,            -1,   -1,   45,   -1  },
+    { ATAN,      OP_UNARY,            -1,   -1,   46,   -1  },
+    { 0, 0, 0, 0, 0, 0}
+};
+
 static const operation_t ops_v8[] = {
                                    /* IDS_S       IDS_f */
    /* SYMBOL     TYPE                 norm  short norm  short*/
@@ -52,21 +90,24 @@ static const operation_t ops_v8[] = {
     { ACOS,      OP_UNARY,            -1,    -1,  128,  -1  },
     { ATAN,      OP_UNARY,            -1,    -1,  129,  -1  },
     { 0, 0, 0, 0, 0, 0}
-
-    /* TODO: add operations for other versions. */
 };
 
 static const operation_t*
 op_get_table(
     int ver
 ) {
-    const operation_t* table = NULL;
     switch(ver) {
+        case 2:
+        case 3:
+            return ops_v2_v3;
+        case 4:
+        case 7:
+            return ops_v4_v7;
         case 8:
-            table = ops_v8;
-            break;
+            return ops_v8;
+        default:
+            return NULL;
     }
-    return table;
 }
 
 const operation_t*

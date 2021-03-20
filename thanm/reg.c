@@ -32,8 +32,10 @@
 #include "thanm.h"
 #include "reg.h"
 
+/* The general-purpose registers are the same for all versions
+ * that have variables. */
 static reg_t
-regs_v8[] = {
+regs_v2_v3_v4_v7_v8[] = {
    /* ID     TYPE       LOCK          PURPOSE */
    { 10000,   'S',      LOCK_UNLOCK,  PURPOSE_EXPR },
    { 10001,   'S',      LOCK_UNLOCK,  PURPOSE_EXPR },
@@ -46,9 +48,6 @@ regs_v8[] = {
    { 10005,   'f',      LOCK_UNLOCK,  PURPOSE_EXPR },
    { 10006,   'f',      LOCK_UNLOCK,  PURPOSE_EXPR },
    { 10007,   'f',      LOCK_UNLOCK,  PURPOSE_EXPR },
-   /* TODO: research more registers and add them if they're general purpose.
-    * (and also add registers for other versions) */
-
    /* Sentinel */
    { 0, 0, 0, 0 }
 };
@@ -83,13 +82,16 @@ static reg_t*
 reg_get_table(
     int ver
 ) {
-    reg_t* ret = NULL;
     switch (ver) {
+    case 2:
+    case 3:
+    case 4:
+    case 7:
     case 8:
-        ret = regs_v8;
-        break;
+        return regs_v2_v3_v4_v7_v8;
+    default:
+        return NULL;
     }
-    return ret;
 }
 
 void
