@@ -33,7 +33,6 @@
 #include <thtk/thtk.h>
 #include "thdat.h"
 #include "thrle.h"
-#include "program.h"
 
 extern const thdat_module_t archive_th02;
 extern const thdat_module_t archive_th06;
