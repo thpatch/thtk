@@ -1589,11 +1589,29 @@ anm_serialize_script(
     list_free_nodes(&script->labels);
 }
 
+static int anm_is_old_format(
+    FILE* file
+) {
+    char line[128];
+    fgets(line, sizeof(line), file);
+    fseek(file, 0, SEEK_SET);
+    return util_strcmp_ref(line, stringref("ENTRY ")) == 0;
+}
+
 static anm_archive_t*
 anm_create(
     const char* spec,
     FILE* symbolfp
 ) {
+    FILE* in = fopen(spec, "r");
+    if (anm_is_old_format(in)) {
+        fprintf(stderr, "%s: %s: the spec file was made using an old version\n"
+                        "of thanm and uses the old format, which is no longer supported.\n"
+                        "Please use the old version of thanm to create the ANM file, and\n"
+                        "re-dump it using this version.\n", argv0, spec);
+        return NULL;
+    }
+
     parser_state_t state;
     state.was_error = 0;
     state.time = 0;
@@ -1613,7 +1631,6 @@ anm_create(
 
     path_init(&state.path_state, spec, argv0);
 
-    FILE* in = fopen(spec, "r");
     yyin = in;
     if (yyparse(&state) || state.was_error)
         return NULL;
