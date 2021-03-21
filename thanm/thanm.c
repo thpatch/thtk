@@ -528,6 +528,7 @@ static const id_format_pair_t formats_v8[] = {
     { 611, "ffS" },
     { 612, "ff" },
     { 613, "ff" },
+    { 614, "ff" },
     { 0xffff, "" },
     { 0, NULL }
 };
