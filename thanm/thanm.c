@@ -683,7 +683,8 @@ thanm_make_params(
     while(i < raw_instr->length - sizeof(anm_instr_t)) {
         value_t* value = (value_t*)malloc(sizeof(value_t));
         ssize_t read;
-        switch(format[v]) {
+        char c = format ? format[v] : 'S';
+        switch(c) {
             case 'o':
             case 't':
             case 'n':
@@ -693,7 +694,7 @@ thanm_make_params(
                 break;
             default:
                 read = value_from_data((const unsigned char*)&raw_instr->data[i],
-                    raw_instr->length - sizeof(anm_instr_t) - i, format[v], value);
+                    raw_instr->length - sizeof(anm_instr_t) - i, c, value);
                 break;
         }
 
@@ -703,7 +704,7 @@ thanm_make_params(
         }
 
         i += read;
-        thanm_param_t* param = thanm_param_new(format[v]);
+        thanm_param_t* param = thanm_param_new(c);
         if (raw_instr->param_mask & 1 << v) {
             param->is_var = 1;
         }
@@ -1071,6 +1072,10 @@ anm_read_file(
                     }
 
                     const char* format = find_format(formats, instr->type);
+                    if (!format) {
+                        fprintf(stderr, "id %d was not found in the format table (total parameter size was %d)\n",
+                            instr->type, (int)(instr->length - sizeof(anm_instr_t)));
+                    }
                     thanm_instr_t* thanm_instr = thanm_instr_new_raw(instr, format);
                     thanm_instr->offset = (uint32_t)((ptrdiff_t)instr_ptr - (ptrdiff_t)(map + script->offset->offset));
                     list_append_new(&script->instrs, thanm_instr);
