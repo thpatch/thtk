@@ -1119,89 +1119,6 @@ anm_read_file(
 }
 
 static void
-anm_dump_old(
-    FILE* stream,
-    const anm_archive_t* anm)
-{
-    unsigned int entry_num = 0;
-    anm_entry_t* entry;
-
-    list_for_each(&anm->entries, entry) {
-        const id_format_pair_t* formats = anm_get_formats(entry->header->version);
-
-        fprintf(stream, "ENTRY #%u, VERSION %u\n", entry_num++, entry->header->version);
-        fprintf(stream, "Name: %s\n", entry->name);
-        if (entry->name2)
-            fprintf(stream, "Name2: %s\n", entry->name2);
-        fprintf(stream, "Format: %u\n", entry->header->format);
-        fprintf(stream, "Width: %u\n", entry->header->w);
-        fprintf(stream, "Height: %u\n", entry->header->h);
-        if (entry->header->x != 0)
-            fprintf(stream, "X-Offset: %u\n", entry->header->x);
-        if (!entry->name2 && entry->header->y != 0)
-            fprintf(stream, "Y-Offset: %u\n", entry->header->y);
-        if (entry->header->version < 7) {
-            fprintf(stream, "ColorKey: %08x\n", entry->header->colorkey);
-        }
-        if (entry->header->zero3 != 0)
-            fprintf(stream, "Zero3: %u\n", entry->header->zero3);
-        if (entry->header->version >= 1)
-            fprintf(stream, "MemoryPriority: %u\n", entry->header->memorypriority);
-        if (entry->header->version >= 8)
-            fprintf(stream, "LowResScale: %u\n", entry->header->lowresscale);
-        if (entry->header->hasdata) {
-            fprintf(stream, "HasData: %u\n", entry->header->hasdata);
-            fprintf(stream, "THTX-Size: %u\n", entry->thtx->size);
-            fprintf(stream, "THTX-Format: %u\n", entry->thtx->format);
-            fprintf(stream, "THTX-Width: %u\n", entry->thtx->w);
-            fprintf(stream, "THTX-Height: %u\n", entry->thtx->h);
-            fprintf(stream, "THTX-Zero: %u\n", entry->thtx->zero);
-        }
-
-        fprintf(stream, "\n");
-
-        sprite_t* sprite;
-        list_for_each(&entry->sprites, sprite) {
-            fprintf(stream, "Sprite: %u %.f*%.f+%.f+%.f\n",
-                sprite->id,
-                sprite->w, sprite->h,
-                sprite->x, sprite->y);
-        }
-
-        fprintf(stream, "\n");
-
-        anm_script_t* script;
-        list_for_each(&entry->scripts, script) {
-
-            fprintf(stream, "Script: %d\n", script->offset->id);
-
-            unsigned int instr_num = 0;
-            thanm_instr_t* instr;
-            list_for_each(&script->instrs, instr) {
-                if (instr->type != THANM_INSTR_INSTR)
-                    continue;
-                
-                fprintf(stream, "Instruction #%u: %hd %hu %hu",
-                    instr_num++, instr->time, instr->param_mask, instr->id);
-
-                thanm_param_t* param;
-                list_for_each(&instr->params, param) {
-                    char* disp = value_to_text(param->val);
-                    fprintf(stream, " %s", disp);
-                    free(disp);
-                }
-
-                fprintf(stream, "\n");
-            }
-
-            fprintf(stream, "\n");
-        }
-
-        fprintf(stream, "\n");
-    }
-}
-
-static void
 anm_stringify_instr(
     FILE* stream,
     thanm_instr_t* instr,
@@ -1538,184 +1455,6 @@ filename_cut(
 
     end[len == 0 ? 0 : 1] = '\0';
     return start;
-}
-
-static anm_archive_t*
-anm_create_old(
-    const char* spec)
-{
-    FILE* f;
-    char line[4096];
-    anm_archive_t* anm;
-    anm_entry_t* entry = NULL;
-    anm_script_t* script = NULL;
-    anm_instr_t* instr = NULL;
-    unsigned int linenum = 1;
-
-    f = fopen(spec, "r");
-    if (!f) {
-        fprintf(stderr, "%s: couldn't open %s for reading: %s\n",
-            argv0, spec, strerror(errno));
-        exit(1);
-    }
-
-#define ERROR(text, ...) fprintf(stderr, \
-    "%s: %s:%d: " text "\n", argv0, spec, linenum, ##__VA_ARGS__)
-
-#define SCAN_DEPRECATED(fieldstr, format, field) \
-    if (sscanf(line, fieldstr ": " format, &entry->header->field) > 0) { \
-        ERROR("warning: " fieldstr " is an old field written by thanm <= 10; re-dump the spec after ANM creation to remove this warning"); \
-    };
-
-    anm = malloc(sizeof(anm_archive_t));
-    anm->map = NULL;
-    anm->map_size = 0;
-    list_init(&anm->names);
-    list_init(&anm->entries);
-
-    while (fgets(line, sizeof(line), f)) {
-        if (util_strcmp_ref(line, stringref("ENTRY ")) == 0) {
-            entry = malloc(sizeof(*entry));
-            entry->header = calloc(1, sizeof(*entry->header));
-            entry->thtx = calloc(1, sizeof(*entry->thtx));
-            entry->thtx->magic[0] = 'T';
-            entry->thtx->magic[1] = 'H';
-            entry->thtx->magic[2] = 'T';
-            entry->thtx->magic[3] = 'X';
-            entry->name = NULL;
-            entry->name2 = NULL;
-            list_init(&entry->sprites);
-            list_init(&entry->scripts);
-            entry->data = NULL;
-            list_append_new(&anm->entries, entry);
-
-            if(sscanf(line, "ENTRY %u", &entry->header->version) > 0) {
-                ERROR("warning: No entry number detected. This spec was written by thanm <= 10; re-dump it after ANM creation to remove this warning");
-            } else {
-                unsigned int temp;
-                sscanf(line, "ENTRY #%u, VERSION %u", &temp, &entry->header->version);
-            }
-        } else {
-            if (entry == NULL) {
-                ERROR("missing ENTRY\n");
-                exit(1);
-            }
-            if (util_strcmp_ref(line, stringref("Name: ")) == 0) {
-                size_t offset = stringref("Name: ").len;
-                char *name = filename_cut(line + offset, sizeof(line) - offset);
-                entry->name = anm_get_name(anm, name);
-            } else if (util_strcmp_ref(line, stringref("Name2: ")) == 0) {
-                size_t offset = stringref("Name2: ").len;
-                char *name = filename_cut(line + offset, sizeof(line) - offset);
-                entry->name2 = strdup(name);
-            } else if (util_strcmp_ref(line, stringref("Sprite: ")) == 0) {
-                sprite_t* sprite = malloc(sizeof(*sprite));
-                list_append_new(&entry->sprites, sprite);
-
-                if (5 != sscanf(line, "Sprite: %u %f*%f+%f+%f",
-                             &sprite->id, &sprite->w, &sprite->h,
-                             &sprite->x, &sprite->y)) {
-                    ERROR("Sprite parsing failed for %s", line);
-                    exit(1);
-                }
-            } else if (util_strcmp_ref(line, stringref("Script: ")) == 0) {
-                script = malloc(sizeof(*script));
-                script->offset = malloc(sizeof(*script->offset));
-                list_init(&script->instrs);
-                list_init(&script->raw_instrs);
-                list_append_new(&entry->scripts, script);
-                if (1 != sscanf(line, "Script: %d", &script->offset->id)) {
-                    ERROR("Script parsing failed for %s", line);
-                    exit(1);
-                }
-            } else if (util_strcmp_ref(line, stringref("Instruction")) == 0) {
-                char* tmp = line + stringref("Instruction").len;
-                char* before;
-                char* after = NULL;
-
-                tmp = strchr(tmp, ':');
-                if (!tmp) {
-                    ERROR("Instruction parsing failed for %s", line);
-                    exit(1);
-                }
-                tmp++;
-
-                instr = malloc(sizeof(*instr));
-
-                instr->length = 0;
-                instr->time = (int16_t)strtol(tmp, &tmp, 10);
-                instr->param_mask = strtol(tmp, &tmp, 10);
-                instr->type = strtol(tmp, &tmp, 10);
-
-                before = tmp;
-
-                for (;;) {
-                    int32_t i;
-                    float f;
-
-                    i = strtol(before, &after, 10);
-                    if (after == before) {
-                        break;
-                    } else {
-                        instr->length += sizeof(int32_t);
-                        instr = realloc(instr, sizeof(anm_instr_t) + instr->length);
-                        if (*after == 'f' || *after == '.') {
-                            f = strtof(before, &after);
-                            memcpy(instr->data + instr->length - sizeof(float),
-                                &f, sizeof(float));
-                            /* Skip 'f'. */
-                            ++after;
-                        } else {
-                            memcpy(instr->data + instr->length - sizeof(int32_t),
-                                &i, sizeof(int32_t));
-                        }
-                    }
-
-                    before = after;
-                }
-
-                list_append_new(&script->raw_instrs, instr);
-            } else {
-                sscanf(line, "Format: %u", &entry->header->format);
-                sscanf(line, "Width: %u", &entry->header->w);
-                sscanf(line, "Height: %u", &entry->header->h);
-                sscanf(line, "X-Offset: %u", &entry->header->x);
-                sscanf(line, "Y-Offset: %u", &entry->header->y);
-
-                SCAN_DEPRECATED("Zero2", "%u", colorkey);
-                if (sscanf(line, "ColorKey: %08x", &entry->header->colorkey) > 0
-                    && entry->header->version >= 7)
-                    ERROR("ColorKey is no longer supported in ANM versions >= 7");
-
-                sscanf(line, "Zero3: %u", &entry->header->zero3);
-
-                SCAN_DEPRECATED("Unknown1", "%u", memorypriority);
-                if (sscanf(line, "MemoryPriority: %u", &entry->header->memorypriority)
-                    && entry->header->version == 0)
-                    ERROR("MemoryPriority is ignored in ANM version 0");
-
-                SCAN_DEPRECATED("Unknown2", "%hu", lowresscale);
-                if(sscanf(line, "LowResScale: %hu", &entry->header->lowresscale)
-                    && entry->header->version < 8)
-                    ERROR("LowResScale is ignored in ANM versions < 8");
-
-                sscanf(line, "HasData: %hu", &entry->header->hasdata);
-                sscanf(line, "THTX-Size: %u", &entry->thtx->size);
-                sscanf(line, "THTX-Format: %hu", &entry->thtx->format);
-                sscanf(line, "THTX-Width: %hu", &entry->thtx->w);
-                sscanf(line, "THTX-Height: %hu", &entry->thtx->h);
-                sscanf(line, "THTX-Zero: %hu", &entry->thtx->zero);
-            }
-        }
-        linenum++;
-    }
-
-#undef SCAN_DEPRECATED
-#undef ERROR
-
-    fclose(f);
-
-    return anm;
 }
 
 label_t*
@@ -2193,7 +1932,7 @@ print_usage(void)
 #else
 #define USAGE_LIBPNGFLAGS ""
 #endif
-    printf("Usage: %s [-Vf] [-l" USAGE_LIBPNGFLAGS "] [-o] [-m ANMMAP] [-s SYMBOLS] ARCHIVE ...\n"
+    printf("Usage: %s [-Vf] [-l" USAGE_LIBPNGFLAGS "] [-m ANMMAP] [-s SYMBOLS] ARCHIVE ...\n"
            "Options:\n"
            "  -l ARCHIVE            list archive\n", argv0);
 #ifdef HAVE_LIBPNG
@@ -2202,8 +1941,7 @@ print_usage(void)
            "  -c ARCHIVE SPEC       create archive\n"
            "  -s                    save symbol ids to the given file as globaldefs\n");
 #endif
-    printf("  -o                    use old spec format\n"
-           "  -m                    use map file for translating mnemonics\n"
+    printf("  -m                    use map file for translating mnemonics\n"
            "  -V                    display version information and exit\n"
            "  -f                    ignore errors when possible\n"
            "Report bugs to <" PACKAGE_BUGREPORT ">.\n");
@@ -2244,7 +1982,6 @@ main(
     argv0 = util_shortname(argv[0]);
     int opt;
     int ind = 0;
-    int option_old = 0;
     while(argv[util_optind]) {
         switch(opt = util_getopt(argc,argv,commands)) {
         case 'l':
@@ -2257,9 +1994,6 @@ main(
                 exit(1);
             }
             command = opt;
-            break;
-        case 'o':
-            option_old = 1;
             break;
         case 'm': {
             FILE* map_file = NULL;
@@ -2305,10 +2039,7 @@ main(
         }
         anm = anm_read_file(in);
         fclose(in);
-        if (option_old)
-            anm_dump_old(stdout, anm);
-        else
-            anm_dump(stdout, anm);
+        anm_dump(stdout, anm);
 
         anm_free(anm);
         exit(0);
@@ -2415,10 +2146,7 @@ replace_done:
             exit(1);
         }
         current_input = argv[1];
-        if (option_old)
-            anm = anm_create_old(argv[1]);
-        else
-            anm = anm_create(argv[1], symbolfp);
+        anm = anm_create(argv[1], symbolfp);
 
         if (symbolfp)
             fclose(symbolfp);
