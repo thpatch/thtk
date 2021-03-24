@@ -150,6 +150,12 @@ static const id_format_pair_t th143_msg_fmts[] = {
 
 static const id_format_pair_t th16_msg_fmts[] = {
     { 34, "SS" },
+    { 35, "" },
+    { 0, NULL }
+};
+
+static const id_format_pair_t th18_msg_fmts[] = {
+    { 36, "" },
     { 0, NULL }
 };
 
@@ -232,6 +238,7 @@ th06_find_format(unsigned int version, int id)
         switch (version) {
         /* NEWHU: */
         case 18:
+            if (!ret) ret = find_format(th18_msg_fmts, id);
         case 17:
         case 165:
         case 16:
@@ -300,6 +307,7 @@ th06_read(FILE* in, FILE* out, unsigned int version)
 
     for (;;) {
         const ptrdiff_t offset = (unsigned char*)msg - (unsigned char*)map;
+        const char* format;
 
         if (offset >= file_size)
             break;
@@ -331,17 +339,18 @@ th06_read(FILE* in, FILE* out, unsigned int version)
 
         fprintf(out, "\t%d", msg->type);
 
+        /* Must be here for the missing format error to be properly displayed,
+         * even if msg->length is 0. */
+        format = th06_find_format(version, (int)msg->type);
+        if (!format) {
+            fprintf(stderr, "%s: id %d was not found in the format table\n", argv0, msg->type);
+            file_munmap(map, file_size);
+            return 0;
+        }
+
         if (msg->length) {
-            const char* format;
             value_t* values;
             int i;
-
-            format = th06_find_format(version, (int)msg->type);
-            if (!format) {
-                fprintf(stderr, "%s: id %d was not found in the format table\n", argv0, msg->type);
-                file_munmap(map, file_size);
-                return 0;
-            }
 
             values = value_list_from_data(value_from_data, msg->data, msg->length, format);
 
