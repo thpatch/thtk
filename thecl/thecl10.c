@@ -1001,6 +1001,7 @@ static const id_format_pair_t th17_fmts[] = {
 };
 
 static const id_format_pair_t th18_fmts[] = {
+    { 94, "ffffff" },
     { 573, "SS" },
     { 574, "S" },
     { -1, NULL }
