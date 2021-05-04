@@ -503,7 +503,7 @@ static const id_format_pair_t formats_v8[] = {
     { 436, "ff" },
     { 437, "S" },
     { 438, "S" },
-    { 439, "S" },
+    { 439, "Sff" },
     { 500, "N" },
     { 501, "N" },
     { 502, "N" },
@@ -700,7 +700,12 @@ thanm_make_params(
         }
 
         if (read == -1) {
-            fprintf(stderr, "%s: value read error\n", argv0);
+            fprintf(stderr,
+                "%s: value read error in ins_%d:\n"
+                "data length = %d, "
+                "offset = %d, "
+                "format = %s\n",
+                argv0, raw_instr->type, raw_instr->length - sizeof(anm_instr_t), (int)i, format);
             abort();
         }
 

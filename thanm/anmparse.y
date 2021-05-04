@@ -942,7 +942,7 @@ instr_check_types(
         ++i;
     }
     if (format[i] != '\0') {
-        state->was_error = 1;
+        // state->was_error = 1; - it compiles fine, needed for VD photo.anm "support" (ins_439 format in th165 and th18 differs)
         yyerror(state, "not enough parameters for opcode %s", opcode_msg);
     }
 }
