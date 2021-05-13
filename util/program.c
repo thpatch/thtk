@@ -129,7 +129,7 @@ unsigned int parse_version(char *str) {
         {16, "hsifs"},
         {165, "vd"},
         {17, "wbawc"},
-        {17, "um"},
+        {18, "um"},
         /* NEWHU: */
         {0}
     }, *vp = vers;
