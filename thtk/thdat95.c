@@ -44,6 +44,37 @@ th95_get_crypt_param_index(
     return index & 7;
 }
 
+static const crypt_params_t *
+th95_get_crypt_param(
+    unsigned int version,
+    const char *name)
+{
+    const unsigned int i = th95_get_crypt_param_index(name);
+    switch (version) {
+        case 95:
+        case 10:
+        case 103:
+        case 11:
+            return &th95_crypt_params[i];
+        case 12:
+        case 125:
+        case 128:
+            return &th12_crypt_params[i];
+        case 13:
+            return &th13_crypt_params[i];
+        case 14:
+        case 143:
+        case 15:
+        case 16:
+        case 165:
+        case 17:
+        case 18:
+        /* NEWHU: */
+        default:
+            return &th14_crypt_params[i];
+    }
+}
+
 static int
 th95_open(
     thdat_t* thdat,
@@ -125,28 +156,6 @@ th95_open(
     return 1;
 }
 
-static void
-th95_decrypt_data(
-    thdat_t* archive,
-    thdat_entry_t* entry,
-    unsigned char* data)
-{
-    const unsigned int i = th95_get_crypt_param_index(entry->name);
-    const crypt_params_t* crypt_params;
-    if (archive->version == 95 || archive->version == 10 || archive->version == 103 || archive->version == 11) {
-        crypt_params = th95_crypt_params;
-    } else if (archive->version == 12 || archive->version == 125 || archive->version == 128) {
-        crypt_params = th12_crypt_params;
-    } else if (archive->version == 13) {
-        crypt_params = th13_crypt_params;
-    } else {
-        crypt_params = th14_crypt_params;
-    }
-
-    th_decrypt(data, entry->zsize, crypt_params[i].key, crypt_params[i].step,
-        crypt_params[i].block, crypt_params[i].limit);
-}
-
 static ssize_t
 th95_read(
     thdat_t* thdat,
@@ -168,7 +177,9 @@ th95_read(
     if (failed)
         return -1;
 
-    th95_decrypt_data(thdat, entry, zdata);
+    const crypt_params_t* crypt_params = th95_get_crypt_param(thdat->version, entry->name);
+    th_decrypt(zdata, entry->zsize, crypt_params->key, crypt_params->step,
+        crypt_params->block, crypt_params->limit);
 
     if (entry->zsize == entry->size) {
         data = zdata;
@@ -208,33 +219,6 @@ th95_create(
     if (thtk_io_seek(thdat->stream, thdat->offset, SEEK_SET, error) == -1)
         return 0;
     return 1;
-}
-
-static void
-th95_encrypt_data(
-    thdat_t* archive,
-    thdat_entry_t* entry,
-    unsigned char* data)
-{
-    const unsigned int i = th95_get_crypt_param_index(entry->name);
-    const crypt_params_t* crypt_params;
-    if (archive->version == 95 ||
-        archive->version == 10 ||
-        archive->version == 103 ||
-        archive->version == 11) {
-        crypt_params = th95_crypt_params;
-    } else if (archive->version == 12 ||
-               archive->version == 125 ||
-               archive->version == 128) {
-        crypt_params = th12_crypt_params;
-    } else if (archive->version == 13) {
-        crypt_params = th13_crypt_params;
-    } else {
-        crypt_params = th14_crypt_params;
-    }
-
-    th_encrypt(data, entry->zsize, crypt_params[i].key, crypt_params[i].step,
-        crypt_params[i].block, crypt_params[i].limit);
 }
 
 static ssize_t
@@ -279,7 +263,9 @@ th95_write(
         thtk_io_close(data_stream);
     }
 
-    th95_encrypt_data(thdat, entry, data);
+    const crypt_params_t* crypt_params = th95_get_crypt_param(thdat->version, entry->name);
+    th_encrypt(data, entry->zsize, crypt_params->key, crypt_params->step,
+        crypt_params->block, crypt_params->limit);
 
     int failed = 0;
 #pragma omp critical
