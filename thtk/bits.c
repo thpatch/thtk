@@ -27,6 +27,7 @@
  * DAMAGE.
  */
 #include <config.h>
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -44,35 +45,26 @@ bitstream_init(
     b->stream = stream;
 }
 
-unsigned int
-bitstream_read1(
-    struct bitstream* b)
-{
-    unsigned int ret = 0;
-
-    if (!b->bits) {
-        unsigned char c;
-        thtk_io_read(b->stream, &c, 1, NULL);
-        b->byte = c;
-        b->byte_count++;
-        b->bits = 8;
-    }
-
-    ret = (b->byte & 0x80) >> 7;
-    b->byte <<= 1;
-    b->bits--;
-    return ret & 1;
-}
-
 uint32_t
 bitstream_read(
     struct bitstream* b,
     unsigned int bits)
 {
-    uint32_t ret = 0;
-    for (; bits; --bits)
-        ret |= bitstream_read1(b) << (bits - 1);
-    return ret;
+    if (bits > 25) {
+        assert(bits <= 32);
+        uint32_t r = bitstream_read(b, 24);
+        bits -= 24;
+        return r<<bits | bitstream_read(b, bits);
+    }
+    while (bits > b->bits) {
+        unsigned char c = 0;
+        thtk_io_read(b->stream, &c, 1, NULL);
+        b->byte = b->byte<<8 | c;
+        b->bits += 8;
+        b->byte_count++;
+    }
+    b->bits -= bits;
+    return b->byte>>b->bits & (1<<bits)-1;
 }
 
 void

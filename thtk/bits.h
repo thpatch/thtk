@@ -44,8 +44,6 @@ void bitstream_init(
     struct bitstream* b,
     thtk_io_t* stream);
 
-unsigned int bitstream_read1(
-    struct bitstream* b);
 uint32_t bitstream_read(
     struct bitstream* b,
     unsigned int bits);

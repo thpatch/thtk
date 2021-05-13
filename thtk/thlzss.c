@@ -260,7 +260,7 @@ th_unlzss(
     memset(dict, 0, sizeof(dict));
 
     while (bytes_written < output_size) {
-        if (bitstream_read1(&bs)) {
+        if (bitstream_read(&bs, 1)) {
             unsigned char c = bitstream_read(&bs, 8);
             if (thtk_io_write(output, &c, 1, error) != 1)
                 return -1;
