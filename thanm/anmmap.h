@@ -27,18 +27,20 @@
  * DAMAGE.
  */
 
-#ifndef PATH_H_
-#define PATH_H_
+#ifndef ANMMAP_H_
+#define ANMMAP_H_
 
 #include <config.h>
-#include "thecl.h"
+#include "seqmap.h"
 
+typedef struct anmmap_t {
+    seqmap_t* ins_names;
+    seqmap_t* gvar_names;
+    seqmap_t* gvar_types;
+} anmmap_t;
 
-/* Returns a new string containing the given path the with last entry of the path stack prepended to it. */
-char* path_get_full(parser_state_t* state, char* path);
-/* Given a path to a file, pushes directory that file is in to the path stack. */
-void path_add(parser_state_t* state, char* path);
-/* Pops the last entry on the path stack and frees it. */
-void path_remove(parser_state_t* state);
+anmmap_t* anmmap_new();
+void anmmap_free(anmmap_t* map);
+void anmmap_load(anmmap_t* map, FILE* file, const char* fn);
 
 #endif

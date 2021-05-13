@@ -1,7 +1,12 @@
-include_directories(${PNG_INCLUDE_DIRS})
+find_package(BISON REQUIRED)
+find_package(FLEX REQUIRED)
+bison_target(AnmParse anmparse.y ${CMAKE_CURRENT_BINARY_DIR}/anmparse.c COMPILE_FLAGS ${BISON_FLAGS})
+flex_target(AnmScan anmscan.l ${CMAKE_CURRENT_BINARY_DIR}/anmscan.c)
+include_directories(${PNG_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR})
 add_executable(thanm
-  thanm.c image.c
-  thanm.h image.h
+  ${BISON_AnmParse_OUTPUT_SOURCE} ${FLEX_AnmScan_OUTPUTS}
+  thanm.c image.c anmmap.c reg.c expr.c
+  thanm.h image.h anmmap.h reg.h expr.h
 )
 target_link_libraries(thanm util ${PNG_LIBRARY})
 link_setargv(thanm)
