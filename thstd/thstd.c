@@ -45,10 +45,10 @@ unsigned int option_version;
 /* Some of the S's here are actually colors. */
 static const id_format_pair_t formats_v0[] = {
     { 0, "Sff" },
-    { 1, "Sff" },
+    { 1, "Cff" },
     { 2, "Sff" },
     { 3, "Sff" },
-    { 4, "Sff" },
+    { 4, "SSS" },
     { 5, "Sff" },
     { 6, "SSf" },
     { 7, "fff" },
@@ -58,6 +58,27 @@ static const id_format_pair_t formats_v0[] = {
     { 11, "fff" },
     { 12, "Sff" },
     { 13, "Sff" },
+    { 14, "Sff" },
+    { 15, "Sff" },
+    { 16, "Sff" },
+    { 17, "Sff" },
+    { 18, "Sff" },
+    { 19, "Sff" },
+    { 20, "Sff" },
+    { 21, "Sff" },
+    { 22, "Sff" },
+    { 23, "SSS" },
+    { 24, "SSS" },
+    { 25, "SSS" },
+    { 26, "SSS" },
+    { 27, "SSS" },
+    { 28, "SSS" },
+    { 29, "SSS" },
+    { 30, "SSS" },
+    { 31, "SSS" },
+    { 32, "SSS" },
+    { 33, "SSS" },
+    { 34, "SSS" },
     { 0, NULL }
 };
 
@@ -161,13 +182,12 @@ std_read_file(
 
         for(;;) {
             quad_type = (unsigned int*)map;
-            if (*quad_type == 0x0004FFFF) {
+            if (*quad_type == 0x4FFFF) {
                 break;
             }
 
             list_append_new(&entry->quads, (std_object_t*)map);
-
-            map = map + sizeof(std_object_t);
+            map = map + ((std_object_t*)map)->size;
         }
     }
 
@@ -262,6 +282,10 @@ std_dump(
             fprintf(stream, "        Padding: %i\n", object->_padding);
             fprintf(stream, "        Width: %g\n", object->width);
             fprintf(stream, "        Height: %g\n", object->height);
+            if(object->size == 36) {
+                fprintf(stream, "        Unknown_ex1: %g\n", object->unknown_ex1);
+                fprintf(stream, "        Unknown_ex2: %g\n", object->unknown_ex2);
+            }
         }
         fprintf(stream, "\n");
 
@@ -519,6 +543,7 @@ std_create(
         } else if (util_strcmp_ref(line, stringref("QUAD:")) == 0) {
             std->header->nb_faces++;
             quad = malloc(sizeof(*quad));
+            quad->size = 0x1c;
             list_append_new(&entry->quads, quad);
             set_object = 0;
         } else if (util_strcmp_ref(line, stringref("FACE: ")) == 0) {
@@ -613,6 +638,12 @@ std_create(
                     sscanf(line, "Padding: %hu", &quad->_padding);
                     sscanf(line, "Width: %g", &quad->width);
                     sscanf(line, "Height: %g", &quad->height);
+                    if(1 == sscanf(line, "Unknown_ex1: %g", &quad->unknown_ex1)) {
+                        quad->size = 36;
+                    }
+                    if(1 == sscanf(line, "Unknown_ex2: %g", &quad->unknown_ex2)) {
+                        quad->size = 36;
+                    }
                 }
             }
             sscanf(line, "%u", &instr_time);
@@ -620,18 +651,24 @@ std_create(
     }
     fclose(f);
 
+    size_t total_entry_size = 0;
+    list_for_each(&std->entries, entry) {
+      list_for_each(&entry->quads, quad) {
+        total_entry_size += quad->size;
+      }
+    }
     if (option_version == 0)
         std->header_06->faces_offset = (sizeof(std_header_06_t) +
                                         sizeof(int32_t) * std->header->nb_objects +
                                         sizeof(std_entry_header_t) * std->header->nb_objects +
                                         sizeof(int32_t) * std->header->nb_objects +
-                                        sizeof(std_object_t) * std->header->nb_faces);
+                                        total_entry_size);
     else
         std->header_10->faces_offset = (sizeof(std_header_10_t) +
                                         sizeof(int32_t) * std->header->nb_objects +
                                         sizeof(std_entry_header_t) * std->header->nb_objects +
                                         sizeof(int32_t) * std->header->nb_objects +
-                                        sizeof(std_object_t) * std->header->nb_faces);
+                                        total_entry_size);
 
     int inst_test = 0;
     list_for_each(&std->instances, instance) {
@@ -694,9 +731,8 @@ std_write(
         entry_offset += sizeof(std_entry_header_t);
 
         list_for_each(&entry->quads, quad) {
-            quad->size = 0x1c;
-            file_write(stream, quad, sizeof(std_object_t));
-            entry_offset += sizeof(std_object_t);
+            file_write(stream, quad, quad->size);
+            entry_offset += quad->size;
         }
 
         endcode = 0x0004FFFF;
