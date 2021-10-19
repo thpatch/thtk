@@ -138,7 +138,7 @@ validate_ident(
     const char *value)
 {
     const char *ptr = value;
-    if (ptr[0] >= '0' && ptr[0] <= '9') { /* first character must not be digit */
+    if (ptr[0] >= '0' && ptr[0] <= '9' || ptr[0] == '\0') { /* first character must not be digit */
         fprintf(stderr, "%s:%s:%u: '%s' isn't valid identifier\n", argv0, state->fn, linenum, value);
         return 1;
     }
