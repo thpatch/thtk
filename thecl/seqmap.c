@@ -163,13 +163,14 @@ seqmap_load(
 
         /* parse value */
         ptr = strtok(NULL, " \t\r\n");
-        if (!ptr) {
-            fprintf(stderr, "%s:%s:%u: not enough tokens\n",argv0,fn,linecount);
-            continue;
+        if (!ptr) { /* empty value */
+            ptr = buffer;
+            ptr[0] = '\0';
         }
 
-        /* validate value */
+        /* TODO: remove this later */
         if (ptr[0] == '_' && ptr[1] == '\0') {
+            fprintf(stderr, "%s:%s:%u: using '_' for an empty value is deprecated\n",argv0,fn,linecount);
             ptr[0] = '\0'; /* allow empty strings to be specified with "_" */
         }
         ent.value = ptr;
