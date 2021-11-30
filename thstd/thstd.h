@@ -107,7 +107,10 @@ PACK_BEGIN
     float z;
     float width;
     float height;
-PACK_END
+
+    float unknown_ex1;
+    float unknown_ex2;
+    PACK_END
 } std_object_t;
 
 typedef struct {
