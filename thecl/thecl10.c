@@ -2244,7 +2244,7 @@ th10_create_header(
             else if (var->type == 'f') fprintf(out, "float ");
             else fprintf(out, "var ");
 
-            fputs(out, var->name);
+            fputs(var->name, out);
         }
         fprintf(out, ");\n");
     }
