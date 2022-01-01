@@ -2583,9 +2583,11 @@ expression_output(
     } else if (expr->type == EXPRESSION_TERNARY) {
         char labelstr_unless[256];
         char labelstr_end[256];
+        static int ternary_uid = 0;
 
-        snprintf(labelstr_unless, 256, "ternary_unless_%d_%d", yylloc.first_line, yylloc.first_column);
-        snprintf(labelstr_end, 256, "ternary_end_%d_%d", yylloc.first_line, yylloc.first_column);
+        snprintf(labelstr_unless, 256, "ternary_unless_%d", ternary_uid);
+        snprintf(labelstr_end, 256, "ternary_end_%d", ternary_uid);
+        ternary_uid++;
 
         int i = 0;
         expression_t* child_expr;
