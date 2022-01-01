@@ -359,15 +359,12 @@ thtk_io_memory_map(
 }
 
 static void
-thtk_io_memory_unmap(
+thtk_io_noop_unmap(
     thtk_io_t* io,
     unsigned char* map)
 {
-    thtk_io_memory_t* private = io->private;
-    if (private->memory == map)
-        return;
-
-    return;
+    (void)io;
+    (void)map;
 }
 
 static int
@@ -387,7 +384,7 @@ thtk_io_memory_template = {
     thtk_io_memory_write,
     thtk_io_memory_seek,
     thtk_io_memory_map,
-    thtk_io_memory_unmap,
+    thtk_io_noop_unmap,
     thtk_io_memory_close,
 };
 
@@ -513,18 +510,6 @@ thtk_io_growing_memory_map(
     return (unsigned char*)private->memory + offset;
 }
 
-static void
-thtk_io_growing_memory_unmap(
-    thtk_io_t* io,
-    unsigned char* map)
-{
-    thtk_io_growing_memory_t* private = io->private;
-    if (private->memory == map)
-        return;
-
-    return;
-}
-
 static int
 thtk_io_growing_memory_close(
     thtk_io_t* io)
@@ -542,7 +527,7 @@ thtk_io_growing_memory_template = {
     thtk_io_growing_memory_write,
     thtk_io_growing_memory_seek,
     thtk_io_growing_memory_map,
-    thtk_io_growing_memory_unmap,
+    thtk_io_noop_unmap,
     thtk_io_growing_memory_close,
 };
 
