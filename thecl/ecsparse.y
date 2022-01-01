@@ -328,7 +328,7 @@ static const char sub_param_fi[] = {'f', 'i'};
 
 %type <param> Instruction_Parameter
 %type <param> Address
-%type <param> Address_Type
+%type <param> SignedNumericConstant
 %type <param> Global_Def
 %type <param> Integer
 %type <param> Floating
@@ -1241,8 +1241,7 @@ Cast_Target:
 
 Cast_Type:
       Address
-    | Integer
-    | Floating
+    | SignedNumericConstant
     | "(" Expression ")" {
         list_prepend_new(&state->expressions, $2);
 
@@ -1408,7 +1407,7 @@ Expression_Safe:
     ;
 
 Address:
-      "[" Address_Type "]" {
+      "[" SignedNumericConstant "]" {
         $$ = $2;
         $$->stack = 1;
       }
@@ -1458,7 +1457,7 @@ Address:
     }
     ;
 
-Address_Type:
+SignedNumericConstant:
       Integer
     | Floating
     | "-" Integer {
