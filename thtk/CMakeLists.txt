@@ -16,6 +16,7 @@ add_library(thtk SHARED
   detect.h
 
   util.h thtk.h)
+target_compile_options(thtk PRIVATE ${THTK_WARNING_FLAGS})
 find_package(OpenMP)
 if (OPENMP_FOUND)
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")

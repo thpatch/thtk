@@ -7,6 +7,7 @@ add_executable(thecl
   ${BISON_EcsParse_OUTPUT_SOURCE} ${FLEX_EcsScan_OUTPUTS}
   expr.c thecl.c seqmap.c eclmap.c path.c thecl06.c thecl10.c
   expr.h thecl.h seqmap.h eclmap.h path.h)
+target_compile_options(thecl PRIVATE ${THTK_WARNING_FLAGS})
 if(WIN32)
     set(ADDITIONAL_LIBRARIES "")
 else()

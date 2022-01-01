@@ -3,6 +3,7 @@ add_executable(thanm
   thanm.c image.c
   thanm.h image.h
 )
+target_compile_options(thanm PRIVATE ${THTK_WARNING_FLAGS})
 target_link_libraries(thanm util ${PNG_LIBRARY})
 link_setargv(thanm)
 install(TARGETS thanm DESTINATION bin)

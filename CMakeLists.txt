@@ -92,6 +92,12 @@ if(MSVC)
   set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} /MTd")
 endif()
 
+if(MSVC)
+  set(THTK_WARNING_FLAGS /W3)
+else()
+  set(THTK_WARNING_FLAGS -Wall -Wextra -Wno-parentheses)
+endif()
+
 set(BISON_FLAGS "" CACHE STRING "Flags used by the BISON parser generator during all build types.")
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
