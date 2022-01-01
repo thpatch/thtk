@@ -1024,36 +1024,35 @@ th10_find_format(
     const char* ret = NULL;
 
     switch (version) {
-    /* Intentional fallthroughs, obviously */
     /* NEWHU: */
     case 18:
-        if (!ret) ret = find_format(th18_fmts, id);
+        if ((ret = find_format(th18_fmts, id))) break; /* fallthrough */
     case 17:
-        if (!ret) ret = find_format(th17_fmts, id);
+        if ((ret = find_format(th17_fmts, id))) break; /* fallthrough */
     case 165:
-        if (!ret) ret = find_format(th165_fmts, id);
+        if ((ret = find_format(th165_fmts, id))) break; /* fallthrough */
     case 16:
-        if (!ret) ret = find_format(th16_fmts, id);
+        if ((ret = find_format(th16_fmts, id))) break; /* fallthrough */
     case 15:
-        if (!ret) ret = find_format(th15_fmts, id);
+        if ((ret = find_format(th15_fmts, id))) break; /* fallthrough */
     case 143:
-        if (!ret) ret = find_format(th143_fmts, id);
+        if ((ret = find_format(th143_fmts, id))) break; /* fallthrough */
     case 14:
-        if (!ret) ret = find_format(th14_fmts, id);
+        if ((ret = find_format(th14_fmts, id))) break; /* fallthrough */
     case 13:
-        if (!ret) ret = find_format(th13_fmts, id);
+        if ((ret = find_format(th13_fmts, id))) break; /* fallthrough */
     case 128:
-        if (!ret) ret = find_format(th128_fmts, id);
+        if ((ret = find_format(th128_fmts, id))) break; /* fallthrough */
     case 125:
-        if (!ret) ret = find_format(th125_fmts, id);
+        if ((ret = find_format(th125_fmts, id))) break; /* fallthrough */
     case 12:
-        if (!ret) ret = find_format(th12_fmts, id);
+        if ((ret = find_format(th12_fmts, id))) break; /* fallthrough */
     case 11:
-        if (!ret) ret = find_format(th11_fmts, id);
+        if ((ret = find_format(th11_fmts, id))) break; /* fallthrough */
     case 103:
-        if (!ret) ret = find_format(alcostg_fmts, id);
+        if ((ret = find_format(alcostg_fmts, id))) break; /* fallthrough */
     case 10:
-        if (!ret) ret = find_format(th10_fmts, id);
+        ret = find_format(th10_fmts, id);
         break;
     default:
         fprintf(stderr, "%s: unsupported version: %u\n", argv0, version);

@@ -241,34 +241,34 @@ th06_find_format(unsigned int version, int id)
         switch (version) {
         /* NEWHU: */
         case 18:
-            if (!ret) ret = find_format(th18_msg_fmts, id);
+            if ((ret = find_format(th18_msg_fmts, id))) break; /* fallthrough */
         case 17:
         case 165:
         case 16:
-            if(!ret) ret = find_format(th16_msg_fmts, id);
+            if ((ret = find_format(th16_msg_fmts, id))) break; /* fallthrough */
         case 15:
         case 143:
-            if (!ret) ret = find_format(th143_msg_fmts, id);
+            if ((ret = find_format(th143_msg_fmts, id))) break; /* fallthrough */
         case 14:
-            if (!ret) ret = find_format(th14_msg_fmts, id);
+            if ((ret = find_format(th14_msg_fmts, id))) break; /* fallthrough */
         case 13:
-            if (!ret) ret = find_format(th13_msg_fmts, id);
+            if ((ret = find_format(th13_msg_fmts, id))) break; /* fallthrough */
         case 128:
-            if (!ret) ret = find_format(th128_msg_fmts, id);
+            if ((ret = find_format(th128_msg_fmts, id))) break; /* fallthrough */
         case 125:
         case 12:
-            if (!ret) ret = find_format(th12_msg_fmts, id);
+            if ((ret = find_format(th12_msg_fmts, id))) break; /* fallthrough */
         case 11:
-            if (!ret) ret = find_format(th11_msg_fmts, id);
+            if ((ret = find_format(th11_msg_fmts, id))) break; /* fallthrough */
         case 10:
-            if (!ret) ret = find_format(th10_msg_fmts, id);
+            if ((ret = find_format(th10_msg_fmts, id))) break; /* fallthrough */
         case 9:
-            if (!ret) ret = find_format(th09_msg_fmts, id);
+            if ((ret = find_format(th09_msg_fmts, id))) break; /* fallthrough */
         case 8:
-            if (!ret) ret = find_format(th08_msg_fmts, id);
+            if ((ret = find_format(th08_msg_fmts, id))) break; /* fallthrough */
         case 7:
         case 6:
-            if (!ret) ret = find_format(th06_msg_fmts, id);
+            ret = find_format(th06_msg_fmts, id);
             break;
         default:
             fprintf(stderr, "%s: unsupported version: %u\n", argv0, version);

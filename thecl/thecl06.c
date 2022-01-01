@@ -199,7 +199,7 @@ th06_stringify_param(
                 if (param->value.type == 'S') val = param->value.val.S;
                 else if (param->value.type == 'f') val = floor(param->value.val.f);
                 else val = param->value.val.s;
-                
+
                 seqmap_entry_t* ent = seqmap_get(g_eclmap->gvar_names, val);
                 if (ent) {
                     snprintf(temp, 256, "%c%s", param->value.type == 'f' ? '%' : '$', ent->value);
@@ -275,14 +275,14 @@ th06_find_timeline_format(
     switch(version) {
         case 95:
         case 9:
-            if (!ret) ret = find_format(th09_timeline_fmts, id);
+            if ((ret = find_format(th09_timeline_fmts, id))) break; /* fallthrough */
         case 8:
-            if (!ret) ret = find_format(th08_timeline_fmts, id);
+            ret = find_format(th08_timeline_fmts, id);
             break;
         case 7:
-            if (!ret) ret = find_format(th07_timeline_fmts, id);
+            if ((ret = find_format(th07_timeline_fmts, id))) break; /* fallthrough */
         case 6:
-            if (!ret) ret = find_format(th06_timeline_fmts, id);
+            ret = find_format(th06_timeline_fmts, id);
             break;
         default:
             fprintf(stderr, "%s: unsupported version: %u\n", argv0, version);
@@ -829,19 +829,19 @@ th06_find_format(
 
     switch (version) {
     case 95:
-        if (!ret) ret = find_format(th95_fmts, id);
-        if (!ret) ret = find_format(th08_fmts, id);
+        if ((ret = find_format(th95_fmts, id))) break;
+        ret = find_format(th08_fmts, id);
         break;
     case 9:
-        if (!ret) ret = find_format(th09_fmts, id);
+        if ((ret = find_format(th09_fmts, id))) break; /* fallthrough */
     case 8:
-        if (!ret) ret = find_format(th08_fmts, id);
+        ret = find_format(th08_fmts, id);
         break;
     case 7:
-        if (!ret) ret = find_format(th07_fmts, id);
+        ret = find_format(th07_fmts, id);
         break;
     case 6:
-        if (!ret) ret = find_format(th06_fmts, id);
+        ret = find_format(th06_fmts, id);
         break;
     default:
         fprintf(stderr, "%s: unsupported version: %u\n", argv0, version);
@@ -859,9 +859,9 @@ th06_check_timeline_sentinel(
     unsigned int version,
     th06_timeline_instr_t* raw_instr)
 {
-    if (version < 8) 
+    if (version < 8)
         return raw_instr->time == 0xffff && raw_instr->arg0 == 4;
-    else 
+    else
         return raw_instr->time == 0xffff && (uint16_t)raw_instr->arg0 == 0xffff && raw_instr->size == 0x00;
 }
 
@@ -892,7 +892,7 @@ th06_insert_labels(
                         thecl_instr_t* instr_find = node->data;
 
                         if (instr_find->offset + instr_find->size == instr->offset + param->value.val.S) {
-                            
+
                             thecl_instr_t* instr_next = node->next ? (thecl_instr_t*)node->next->data : NULL;
                             if (instr_next == NULL || (instr_next != NULL && instr_next->type != THECL_INSTR_LABEL)) {
                                 thecl_instr_t* label = thecl_instr_label(instr_find->offset + instr_find->size);
@@ -1351,7 +1351,7 @@ th06_parse(
     state.ecl->version = version;
     state.instr_format = th06_find_format;
     state.instr_size = th06_instr_size;
-    
+
     state.path_cnt = 0;
     state.path_stack = NULL;
     path_add(&state, filename);
@@ -1488,7 +1488,7 @@ th06_timeline_instr_serialize(
         if (first) {
             if (param->type == 'n')
                 ret->arg0 = th06_find_sub(ecl, param->value.val.z);
-            else 
+            else
                 ret->arg0 = param->value.val.s;
             first = 0;
         } else {
