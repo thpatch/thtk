@@ -359,7 +359,7 @@ static const char sub_param_fi[] = {'f', 'i'};
 %precedence NOT NEG
 %precedence DEC
 
-%expect 5
+%expect 3
 %%
 
 Statements:
@@ -695,13 +695,14 @@ Block:
     | SwitchBlock
     ;
 
-CodeBlock:
+CodeBlock: CodeBlockNoGoto | GotoInstruction ";" ;
+CodeBlockNoGoto:
       "{" {
           scope_begin(state);
       } Instructions "}" {
           scope_finish(state);
       }
-    | Instruction ";"
+    | InstructionNoGoto ";"
     ;
 
 BreakStatement:
@@ -727,28 +728,28 @@ BreakStatement:
       ;
 
 IfBlock:
-    "unless" "(" Expression[cond] ")"  %expect 1 {
+    "unless" "(" Expression[cond] ")" {
           char labelstr[256];
           snprintf(labelstr, 256, "unless_%i_%i", yylloc.first_line, yylloc.first_column);
           list_prepend_new(&state->block_stack, strdup(labelstr));
           expression_output(state, $cond, 1);
           expression_free($cond);
           expression_create_goto(state, IF, labelstr);
-      } CodeBlock ElseBlock {
+      } CodeBlockNoGoto ElseBlock {
           list_node_t *head = state->block_stack.head;
           label_create(state, head->data);
           state->block_stack.head = head->next;
           free(head->data);
           list_del(&state->block_stack, head);
         }
-    | "if" "(" Expression[cond] ")"  %expect 1 {
+    | "if" "(" Expression[cond] ")" {
           char labelstr[256];
           snprintf(labelstr, 256, "if_%i_%i", yylloc.first_line, yylloc.first_column);
           list_prepend_new(&state->block_stack, strdup(labelstr));
           expression_output(state, $cond, 1);
           expression_free($cond);
           expression_create_goto(state, UNLESS, labelstr);
-      } CodeBlock ElseBlock {
+      } CodeBlockNoGoto ElseBlock {
           list_node_t *head = state->block_stack.head;
           label_create(state, head->data);
           free(head->data);
@@ -1009,7 +1010,18 @@ Case:
      }
     ;
 
-Instruction:
+Instruction: InstructionNoGoto | GotoInstruction ;
+GotoInstruction:
+      "goto" Label "@" Integer {
+        const expr_t* expr = expr_get_by_symbol(state->version, GOTO);
+        instr_add(state->current_sub, instr_new(state, expr->id, "pp", $2, $4));
+    }
+    | "goto" IDENTIFIER {
+        /* Timeless goto automatically sets time to the time of the target label. */
+        expression_create_goto(state, GOTO, $2);
+    }
+    ;
+InstructionNoGoto:
       "@" IDENTIFIER "(" Instruction_Parameters ")" {
           /* Force creating a sub call, even if it wasn't defined in the file earlier - useful for calling subs from default.ecl */
           instr_create_call(state, TH10_INS_CALL, $2, $4, false);
@@ -1129,14 +1141,6 @@ Instruction:
             free($3);
         }
       }
-    | "goto" Label "@" Integer {
-        const expr_t* expr = expr_get_by_symbol(state->version, GOTO);
-        instr_add(state->current_sub, instr_new(state, expr->id, "pp", $2, $4));
-    }
-    | "goto" IDENTIFIER {
-        /* Timeless goto automatically sets time to the time of the target label. */
-        expression_create_goto(state, GOTO, $2);
-    }
     | Assignment
     | ExpressionSubsetInstruction {
         expression_output(state, $1, 1);
