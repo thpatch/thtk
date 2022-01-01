@@ -204,6 +204,7 @@ thtk_io_file_unmap(
     thtk_io_t* io,
     unsigned char* map)
 {
+    (void)io;
     free(map);
 }
 
@@ -278,6 +279,7 @@ thtk_io_memory_read(
     size_t count,
     thtk_error_t** error)
 {
+    (void)error;
     thtk_io_memory_t* private = io->private;
     if (private->offset + (ssize_t)count >= private->size)
         count = private->size - private->offset;
@@ -293,6 +295,7 @@ thtk_io_memory_write(
     size_t count,
     thtk_error_t** error)
 {
+    (void)error;
     thtk_io_memory_t* private = io->private;
     if (private->offset + (ssize_t)count >= private->size)
         count = private->size - private->offset;
@@ -349,6 +352,8 @@ thtk_io_memory_map(
     size_t count,
     thtk_error_t** error)
 {
+    (void)count;
+    (void)error;
     thtk_io_memory_t* private = io->private;
     return (unsigned char*)private->memory + offset;
 }
@@ -361,7 +366,7 @@ thtk_io_memory_unmap(
     thtk_io_memory_t* private = io->private;
     if (private->memory == map)
         return;
-    
+
     return;
 }
 
@@ -392,6 +397,7 @@ thtk_io_open_memory(
     size_t size,
     thtk_error_t** error)
 {
+    (void)error;
     thtk_io_t* io = malloc(sizeof(*io));
     *io = thtk_io_memory_template;
     thtk_io_memory_t* private = malloc(sizeof(*private));
@@ -417,6 +423,7 @@ thtk_io_growing_memory_read(
     size_t count,
     thtk_error_t** error)
 {
+    (void)error;
     thtk_io_growing_memory_t* private = io->private;
     if (private->offset + (ssize_t)count >= private->size)
         count = private->size - private->offset;
@@ -432,6 +439,7 @@ thtk_io_growing_memory_write(
     size_t count,
     thtk_error_t** error)
 {
+    (void)error;
     thtk_io_growing_memory_t* private = io->private;
     if (private->offset + (ssize_t)count >= private->size) {
         private->size = private->offset + (ssize_t)count;
@@ -499,6 +507,8 @@ thtk_io_growing_memory_map(
     size_t count,
     thtk_error_t** error)
 {
+    (void)count;
+    (void)error;
     thtk_io_growing_memory_t* private = io->private;
     return (unsigned char*)private->memory + offset;
 }
@@ -511,7 +521,7 @@ thtk_io_growing_memory_unmap(
     thtk_io_growing_memory_t* private = io->private;
     if (private->memory == map)
         return;
-    
+
     return;
 }
 
@@ -540,6 +550,7 @@ thtk_io_t*
 thtk_io_open_growing_memory(
     thtk_error_t** error)
 {
+    (void)error;
     thtk_io_t* io = malloc(sizeof(*io));
     *io = thtk_io_growing_memory_template;
     thtk_io_growing_memory_t* private = malloc(sizeof(*private));

@@ -181,6 +181,7 @@ validate_signature(
     int linenum,
     const char *value)
 {
+    (void)value;
     static int warned = 0;
     if (!warned && ++warned)
         fprintf(stderr, "%s:%s:%u: warning: signature validation is not yet implemented\n", argv0, state->fn, linenum);
@@ -214,6 +215,7 @@ eclmap_load(
     FILE* f,
     const char* fn)
 {
+    (void)version;
     state_t state;
     state.emap = emap;
     state.fn = fn;

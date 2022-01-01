@@ -82,7 +82,7 @@ void list_free_nodes(list_t* list);
 /* Iterates through the data in the list. */
 #define list_for_each(list, var) \
     for (list_node_t* node = (list)->head; \
-         ((var) = node ? node->data : NULL), node; \
+         (void)((var) = node ? node->data : NULL), node; \
          node = node->next)
 
 /* Iterates through the nodes in the list. */

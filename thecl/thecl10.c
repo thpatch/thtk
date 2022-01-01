@@ -1893,6 +1893,7 @@ th10_instr_size(
     const thecl_instr_t* instr,
     bool is_timeline)
 {
+    (void)version;
     if (is_timeline) return 0;
 
     size_t ret = sizeof(th10_instr_t);

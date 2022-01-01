@@ -2447,7 +2447,6 @@ expression_call_new(
         }
     }
 
-    char buf[256];
     if (ret_type == -1) {
         yyerror(state, "sub must be declared before being used in an expression: %s", sub_name);
         ret_type = 'S'; /* Default to something to continue parsing despite the error */
@@ -2942,6 +2941,7 @@ var_stack_used(
     thecl_sub_t* sub,
     int stack
 ) {
+    (void)state;
     for (size_t v=0; v<sub->var_count; ++v) {
         if (sub->vars[v]->stack == stack && !sub->vars[v]->is_unused)
             return true;
@@ -3240,6 +3240,7 @@ yyerror(
     const char* format,
     ...)
 {
+    (void)state;
     /* TODO: Research standard row and column range formats. */
     if (yylloc.first_line == yylloc.last_line) {
         if (yylloc.first_column == yylloc.last_column) {

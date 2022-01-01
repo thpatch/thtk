@@ -391,7 +391,7 @@ thdat_detect_base(
         if (!maybe_th02 && !strcmp(head2[i].name, "\xac\xab\xbe\xb8\xba\xc0\xd1\xb2"))
             maybe_th02 = 1;
     }
-    if(memcmp(&head2[entry_count-1],&emptyhead2, sizeof(emptyhead2))) {
+    if (memcmp(&head2[entry_count-1], &emptyhead2, sizeof(emptyhead2))) {
         goto notth02;
     }
     if (maybe_th01 || !maybe_th02)
@@ -423,7 +423,7 @@ notth02:
             goto notth03;
         }
     }
-    if(head3[ahead.count-1].magic != 0) {
+    if (memcmp(&head3[entry_count-1], &emptyhead3, sizeof(emptyhead3))) {
         goto notth03;
     }
     SET_OUT(3);

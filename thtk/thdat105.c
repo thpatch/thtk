@@ -93,6 +93,7 @@ th105_decrypt_data(
     thdat_entry_t* entry,
     unsigned char* data)
 {
+    (void)archive;
     th_crypt105_file(data, entry->size, entry->offset);
 }
 
@@ -199,11 +200,10 @@ th105_close(
     thtk_error_t** error)
 {
     unsigned char* buffer;
-    unsigned int i;
     uint16_t entry_count = thdat->entry_count;
     uint32_t header_size = 0;
 
-    for (int i = 0; i < entry_count; ++i) {
+    for (unsigned i = 0; i < entry_count; ++i) {
         const size_t namelen = strlen(thdat->entries[i].name);
         header_size += 9 + namelen;
     }
@@ -216,7 +216,7 @@ th105_close(
     buffer = malloc(header_size);
 
     unsigned char* buffer_ptr = buffer;
-    for (int i = 0; i < entry_count; i++) {
+    for (unsigned i = 0; i < entry_count; i++) {
         uint32_t* buffer_ptr_32 = (uint32_t*) buffer_ptr;
         const thdat_entry_t* entry = thdat->entries + i;
         const uint8_t namelen = strlen(entry->name);

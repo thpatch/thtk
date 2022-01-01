@@ -1152,7 +1152,6 @@ th06_dump(
         thecl_instr_t* instr;
         unsigned int time_last = 0;
         list_for_each(&sub->instrs, instr) {
-            char temp[512];
             switch (instr->type) {
             case THECL_INSTR_TIME:
                 fprintf(out, "+%u: //%u\n", instr->time - time_last, instr->time);
@@ -1273,6 +1272,7 @@ th06_timeline_instr_size(
     unsigned int version,
     const thecl_instr_t* instr)
 {
+    (void)version;
     size_t ret = sizeof(th06_timeline_instr_t);
     thecl_param_t* param;
     int first = 1;
