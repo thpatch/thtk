@@ -167,7 +167,7 @@ static int directive_include(parser_state_t* state, char* include_path);
 /* Opens and loads an eclmap. */
 static void directive_eclmap(parser_state_t* state, char* name);
 
-/* Returned by Cast_Target2. */ 
+/* Returned by Cast_Target2. */
 static const char sub_param_ii[] = {'i', 'i'};
 static const char sub_param_if[] = {'i', 'f'};
 static const char sub_param_ff[] = {'f', 'f'};
@@ -481,7 +481,7 @@ Statement:
                 }
                 buf[s] = '\0';
                 int id = strtol(buf, NULL, 10);
-                
+
                 arg += s;
                 s = 0;
                 size_t spaces = 0;
@@ -548,7 +548,7 @@ Type_Char:
       }
     ;
 
-Types: 
+Types:
     %empty {
         $$ = malloc(1);
         $$[0] = '\0';
@@ -662,7 +662,7 @@ Instructions:
     | Instructions IDENTIFIER ":" { label_create(state, $2); free($2); }
     | Instructions Instruction ";"
     | Instructions Block
-    | Instructions RANK { state->instr_rank = parse_rank(state, $2); } 
+    | Instructions RANK { state->instr_rank = parse_rank(state, $2); }
     | Instructions RANK ":" { state->instr_rank = parse_rank(state, $2); } Instruction { state->instr_rank = parse_rank(state, "*"); } ";"
     ;
 
@@ -856,7 +856,7 @@ TimesBlock:
           snprintf(labelstr_end, 256, "%s_end", (char*)loop_name);
 
           label_create(state, labelstr_st);
-          
+
           thecl_param_t* param = param_new('S');
           param->stack = 1;
           param->value.val.S = var->stack;
@@ -873,13 +873,13 @@ TimesBlock:
           list_node_t *head = state->block_stack.head;
           snprintf(labelstr_st, 256, "%s_st", (char*)head->data);
           snprintf(labelstr_end, 256, "%s_end", (char*)head->data);
-          
+
           thecl_variable_t* var = var_get(state, state->current_sub, (char*)head->data);
           var->is_unused = true; /* Allow next created var to reuse the stack offset of this one. */
 
           expression_create_goto(state, GOTO, labelstr_st);
           label_create(state, labelstr_end);
-          
+
           free(head->data);
           list_del(&state->block_stack, head);
     }
@@ -891,7 +891,7 @@ SwitchBlock:
           list_prepend_new(&state->block_stack, NULL); /* The NULL acts as a sentinel of switch cases. */
           snprintf(name, 256, "switch_%i_%i", yylloc.first_line, yylloc.first_column);
           list_prepend_new(&state->block_stack, strdup(name));
-          
+
           /* The expression value needs to be stored in a variable, in case some kind of RAND variable was passed. */
           thecl_variable_t* var = var_create(state, state->current_sub, name, $cond->result_type);
           expression_output(state, $cond, 1);
@@ -901,7 +901,7 @@ SwitchBlock:
               param->value.val.S = var->stack;
           else
               param->value.val.f = (float)var->stack;
-          
+
           const expr_t* tmp = expr_get_by_symbol(state->version, $cond->result_type == 'S' ? ASSIGNI : ASSIGNF);
           instr_add(state->current_sub, instr_new(state, tmp->id, "p", param));
           list_prepend_new(&state->block_stack, var); /* We will need it later. */
@@ -987,7 +987,7 @@ Case:
           snprintf(switch_case->labelstr, 250, "case_%i_%i", yylloc.first_line, yylloc.first_column);
 
           label_create(state, switch_case->labelstr);
-          
+
           /* Every case has to be prepended to the sentinel. */
           while(node->data) /* Sentinel has data=NULL */
               node = node->next;
@@ -1007,7 +1007,7 @@ Case:
               node = node->next;
 
           list_prepend_to(&state->block_stack, switch_case, node);
-     } 
+     }
     ;
 
 Instruction:
@@ -1172,7 +1172,7 @@ Instruction:
                 param->value.val.S = TH10_VAR_I3;
             else
                 param->value.val.f = TH10_VAR_F3;
-        
+
             instr_add(state->current_sub, instr_new(state, $2->result_type == 'S' ? TH10_INS_SETI : TH10_INS_SETF, "p", param));
             instr_add(state->current_sub, instr_new(state, TH10_INS_RET_NORMAL, ""));
         }
@@ -1183,7 +1183,7 @@ Instruction:
 
         if (state->current_sub->is_inline)
             expression_create_goto(state, GOTO, "inline_end");
-        else 
+        else
             instr_add(state->current_sub, instr_new(state, TH10_INS_RET_NORMAL, ""));
     }
     ;
@@ -1358,7 +1358,7 @@ ExpressionSubset:
     | Expression "^"   Expression { $$ = EXPR_12(XOR,                  $1, $3); }
     | Expression "|" Expression   { $$ = EXPR_12(B_OR,                 $1, $3); }
     | Expression "&" Expression   { $$ = EXPR_12(B_AND,                $1, $3); }
-    
+
     | ExpressionSubsetUnary
 
     /* Custom expressions. */
@@ -1370,7 +1370,7 @@ ExpressionSubset:
 ExpressionSubsetUnary:
       "!" Expression_Safe               { $$ = EXPR_11(NOT,                  $2); }
     | "+" Expression_Safe               { $$ = $2; }
-    | Address "--"                      { 
+    | Address "--"                      {
                                             $$ = EXPR_1A(DEC, $1);
                                             if ($1->value.val.S >= 0) /* Stack variables only. This is also verrfied to be int by expression creation. */
                                             state->current_sub->vars[$1->value.val.S / 4]->is_written = true;
@@ -1382,14 +1382,14 @@ ExpressionSubsetUnary:
                                                 thecl_param_t* p = param_new($2->result_type);
                                                 if (p->value.type == 'f')
                                                     p->value.val.f = 0;
-                                                else 
+                                                else
                                                     p->value.val.S = 0;
                                                 $$ = EXPR_22(SUBTRACTI, SUBTRACTF, expression_load_new(state, p), $2);
                                             }
                                         }
     ;
 
-/* 
+/*
    The purpose of this is to be used in places that contain certain tokens
    that could be a part of an expression too, to prevent such tokens from
    mistakenly being parsed as expressions.
@@ -1462,7 +1462,7 @@ Address:
 Address_Type:
       Integer
     | Floating
-    | "-" Integer { 
+    | "-" Integer {
         $2->value.val.S = -$2->value.val.S;
         $$ = $2;
     }
@@ -1587,7 +1587,7 @@ instr_set_types(
             ++format;
 
         /* Do not read past the end of the format string.
-         * "Too many parameters" error will be thrown somewhere else anyway. */ 
+         * "Too many parameters" error will be thrown somewhere else anyway. */
         if (*format == '\0')
             break;
 
@@ -1712,7 +1712,7 @@ instr_copy(thecl_instr_t* instr) {
         new_instr->string = strdup(instr->string);
     else
         new_instr->string = NULL;
-    
+
     list_init(&new_instr->params);
     thecl_param_t* param;
     list_for_each(&instr->params, param) {
@@ -1753,7 +1753,7 @@ static void instr_create_inline_call(
      * and then, when called, all insructions from the inline sub get copied into the caller,
      * with some instr parameters being replaced by the values provided as inline sub parameters,
      * stack variables being recreated, labels being adjusted etc.
-     * 
+     *
      * So, how do parameters actually get passed? This part is a bit tricky, since it depends from
      * what the parameter actually is, and what the inline sub does with the parameter inside:
      * - For example, if we pass the RAND variable as a parameter, it needs to be copied into
@@ -1767,12 +1767,12 @@ static void instr_create_inline_call(
      * - But, there still is another thing to keep in mind - the parameter could be written to
      * inside of the inline sub! In this case, creating a variable to store the parameter in
      * is absolutely necessary.
-     * 
+     *
      * Return values are also a thing that's handled differently than in normal sub calls.
      * While they could be just saved in I3/F3 and then read from, this would be inefficient.
      * That's why they are handled in a different way - the return value simply gets pushed
      * to the stack, and then the caller can do whatever with it.
-     * But what if the caller doesn't do anything with the return value? In this case, 
+     * But what if the caller doesn't do anything with the return value? In this case,
      * it shouldn't be pushed. Instructions responsible for creating and pushing the
      * return value have a special flag set, so we can just not copy them into the
      * caller if the caller doesn't do anything with the return value. Whether the caller
@@ -1854,7 +1854,7 @@ static void instr_create_inline_call(
             new_param->stack = 1;
             if (new_param->type == 'S')
                 new_param->value.val.S = var->stack;
-            else 
+            else
                 new_param->value.val.f = (float)var->stack;
 
 
@@ -2074,7 +2074,7 @@ instr_create_call(
     if (params != NULL) {
         expression_t* current_expr = NULL;
 
-        list_node_t* node_expr = state->expressions.tail; 
+        list_node_t* node_expr = state->expressions.tail;
         thecl_param_t *iter_param;
         list_node_t* iter_node;
         list_for_each_node(params, iter_node) {
@@ -2102,7 +2102,7 @@ instr_create_call(
             bool is_load_var = false;
             if (param->is_expression_param) {
                 ++expr_params;
-                
+
                 current_expr = (expression_t*)node_expr->data;
                 list_node_t* last_node = node_expr;
                 node_expr = node_expr->prev;
@@ -2365,7 +2365,7 @@ expression_operation_new(
     exit(2);
 }
 
-static expression_t* 
+static expression_t*
 expression_rank_switch_new(
     const parser_state_t* state, list_t* exprs
 ) {
@@ -2434,9 +2434,9 @@ expression_call_new(
 
     /* This requires called sub to already be on the list at this point.
      * Otherwise, getting expressions and everything else to work correctly
-     * would require a lot of weird workarounds with how thecl works now. 
-     * The core issue is that all sub declarations aren't being parsed and stored 
-     * before the actual code of the subs is parsed, and this is what should be changed 
+     * would require a lot of weird workarounds with how thecl works now.
+     * The core issue is that all sub declarations aren't being parsed and stored
+     * before the actual code of the subs is parsed, and this is what should be changed
      * in the future. */
     thecl_sub_t* iter_sub;
     int ret_type = -1;
@@ -2858,7 +2858,7 @@ sub_finish(
     parser_state_t* state)
 {
     if (is_post_th10(state->ecl->version) && !g_ecl_simplecreate && !state->current_sub->is_inline) {
-        
+
         thecl_instr_t* var_ins = instr_new(state, TH10_INS_STACK_ALLOC, "S", state->current_sub->stack);
         var_ins->time = 0;
         var_ins->rank = parse_rank(state, "*");
@@ -3096,7 +3096,7 @@ var_type(
         if (ent)
             return ent->value[0] == '$' ? 'S' : 'f';
     }
-    
+
     thecl_variable_t* var = var_get(state, sub, name);
     if (var != NULL)
         return var->type;
@@ -3182,7 +3182,7 @@ directive_include(
     FILE* include_file = fopen(path, "rb");
 
     if (include_file != NULL) {
-                
+
         FILE* in_org = yyin;
         YYLTYPE loc_org = yylloc;
         const char* input_org = current_input;
@@ -3220,7 +3220,7 @@ directive_include(
 static void
 directive_eclmap(
 parser_state_t* state,
-char* name) 
+char* name)
 {
     char* path = path_get_full(state, name);
     FILE* map_file = fopen(path, "r");
