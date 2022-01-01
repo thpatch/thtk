@@ -346,7 +346,7 @@ static const char sub_param_fi[] = {'f', 'i'};
 %type <string> Type_List
 %type <string> Type_Char
 
-%left QUESTION
+%right QUESTION
 %left OR
 %left AND
 %left B_OR
@@ -1363,7 +1363,7 @@ ExpressionSubset:
 
     /* Custom expressions. */
     | Rank_Switch_List            { $$ = expression_rank_switch_new(state, $1); }
-    | Expression "?" Expression_Safe ":" Expression_Safe  %prec QUESTION
+    | Expression "?" Expression_Safe ":" Expression  %prec QUESTION
                                   { $$ = expression_ternary_new(state, $1, $3, $5); }
     ;
 
