@@ -232,9 +232,10 @@ th06_find_format(unsigned int version, int id)
         case 17:
         case 18:
         /* NEWHU: */
-            return find_format(th10_msg_ed_fmts, id);
+            ret = find_format(th10_msg_ed_fmts, id);
+            break;
         default:
-            fprintf(stderr, "%s: id %d was not found in the format table\n", argv0, id);
+            fprintf(stderr, "%s: unsupported version: %u\n", argv0, version);
             return NULL;
         }
     } else {
