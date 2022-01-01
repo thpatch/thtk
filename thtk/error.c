@@ -45,14 +45,22 @@ thtk_error_func_new(
     ...)
 {
     va_list ap;
+    int funlen, msglen;
+    char *buf;
     if (error) {
-        char temp[1024];
-        *error = malloc(sizeof(**error));
-        (*error)->message = malloc(1024);
+        funlen = strlen(function);
         va_start(ap, message);
-        vsnprintf(temp, 1024, message, ap);
-        snprintf((*error)->message, 1024, "%s: %s", function, temp);
+        msglen = vsnprintf(NULL, 0, message, ap);
         va_end(ap);
+
+        buf = malloc(funlen + 2 + msglen + 1);
+        sprintf(buf, "%s: ", function);
+        va_start(ap, message);
+        vsnprintf(buf + funlen + 2, msglen + 1, message, ap);
+        va_end(ap);
+
+        *error = malloc(sizeof(**error));
+        (*error)->message = buf;
     }
 }
 
