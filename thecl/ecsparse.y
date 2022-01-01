@@ -446,11 +446,11 @@ Statement:
         free($2);
       }
     | "insdef" IDENTIFIER[name] "(" Types[types] ")" "=" INTEGER[id] ";" {
-        seqmap_entry_t sig_ent = {$id, $types};
+        seqmap_entry_t sig_ent = {$id, $types, 0};
         seqmap_set(g_eclmap->ins_signatures, &sig_ent);
         free($types); /* seqmap_set does a strdup */
 
-        seqmap_entry_t name_ent = {$id, $name};
+        seqmap_entry_t name_ent = {$id, $name, 0};
         seqmap_set(g_eclmap->ins_names, &name_ent);
         free($name); /* seqmap_set does a strdup */
 
@@ -495,7 +495,7 @@ Statement:
                     ++s;
                 }
                 buf[s] = '\0';
-                seqmap_entry_t ent = { id, buf };
+                seqmap_entry_t ent = { id, buf, 0 };
                 seqmap_set(is_timeline ? g_eclmap->timeline_ins_signatures : g_eclmap->ins_signatures, &ent);
             } else {
                 yyerror(state, "#ins: specified format is too long");

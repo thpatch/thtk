@@ -76,7 +76,7 @@
 static const thdat_detect_entry_t detect_table[] = {
 #define x(idx, var, alias, filename) {var,alias,filename},
         DETECT_DEF(x)
-        {0,0},
+        {0, 0, NULL},
 #undef x
 };
 #define DETECT_ENTRIES (sizeof(detect_table)/sizeof(detect_table[0]) - 1)

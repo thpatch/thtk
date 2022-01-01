@@ -2201,7 +2201,7 @@ th10_compile(
 
         list_for_each(&sub->instrs, instr) {
             if (instr->id > max_opcode) {
-                fprintf(stderr, "%s: warning: opcode: id %hu was higher than the maximum %hu\n", argv0, instr->id, max_opcode);
+                fprintf(stderr, "%s: warning: opcode: id %u was higher than the maximum %hu\n", argv0, instr->id, max_opcode);
             }
             unsigned char* data = th10_instr_serialize(ecl->version, sub, instr, &ecl->subs, ecl->no_warn);
             if (!file_write(out, data, instr->size))
