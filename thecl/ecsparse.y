@@ -357,7 +357,6 @@ static const char sub_param_fi[] = {'f', 'i'};
 %left ADD SUBTRACT
 %left MULTIPLY DIVIDE MODULO
 %precedence NOT NEG
-%precedence SIN COS SQRT
 %precedence DEC
 
 %expect 5
@@ -1369,7 +1368,7 @@ ExpressionSubset:
 
 ExpressionSubsetUnary:
       "!" Expression_Safe               { $$ = EXPR_11(NOT,                  $2); }
-    | "+" Expression_Safe               { $$ = $2; }
+    | "+" Expression_Safe  %prec NEG    { $$ = $2; }
     | Address "--"                      {
                                             $$ = EXPR_1A(DEC, $1);
                                             if ($1->value.val.S >= 0) /* Stack variables only. This is also verrfied to be int by expression creation. */
