@@ -1399,7 +1399,7 @@ ExpressionSubsetUnary:
    `case: -1` or `1 ? callFunc1() : callFunc2()`.
 */
 Expression_Safe:
-      Load_Type                      { $$ = expression_load_new(state, $1); }
+      ExpressionLoadType
     |             "(" Expression ")" { $$ = $2; }
     | Cast_Target "(" Expression ")" { $$ = $3; $$->result_type = $1; }
     | ExpressionSubsetUnary
