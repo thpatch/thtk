@@ -153,10 +153,11 @@ thdat_detect_filename_fn(
         ent++;
     }
     /* SJIS filenames */
-    struct {
+    struct multi_filenames {
         unsigned int alias;
         const unsigned char filename[8+3+2];
-    } static const multi[] = {
+    };
+    static const struct multi_filenames multi[] = {
         {1, {0x93,0x8c,0x95,0xfb,0xe8,0xcb,0x88,0xd9,'.',0x93,0x60,0}},
         {2, {0x93,0x8c,0x95,0xfb,0x95,0x95,0x96,0x82,'.',0x98,0x5e,0}},
         {3, {0x96,0xb2,0x8e,0x9e,0x8b,0xf3,'1','.','D','A','T',0}},
@@ -172,7 +173,8 @@ thdat_detect_filename_fn(
         {6, {0x8d,0x67,0x96,0x82,0x8b,0xbd,'S','T','.','D','A','T',0}},
         {6, {0x8d,0x67,0x96,0x82,0x8b,0xbd,'T','L','.','D','A','T',0}},
         {0},
-    }, *mp = multi;
+    };
+    const struct multi_filenames *mp = multi;
     while(mp->alias) {
         if(!fnsucmp(filename, (char *)mp->filename) || !fnsacmp(filename, (char *)mp->filename)) {
             return mp->alias;
@@ -180,10 +182,11 @@ thdat_detect_filename_fn(
         mp++;
     }
     /* Unicode filenames */
-    struct {
+    struct multi_filenames2 {
         unsigned int alias;
         const fnchar *filename;
-    } static const multi2[] = {
+    };
+    static const struct multi_filenames2 multi2[] = {
         /* SJIS translated to Unicode */
         {1, FN("東方靈異.伝")},
         {2, FN("東方封魔.録")},
@@ -223,7 +226,8 @@ thdat_detect_filename_fn(
         {6, FN("th06e_ST.DAT")},
         {6, FN("th06e_TL.DAT")},
         {0},
-    }, *mp2 = multi2;
+    };
+    static const struct multi_filenames2 *mp2 = multi2;
     while(mp2->alias) {
         if(!fnscmp(filename,mp2->filename)) {
             return mp2->alias;
@@ -291,11 +295,11 @@ thdat_detect_08_95(
     thtk_io_t* input,
     int is95)
 {
-    // Encryption for file entries is the asme across all thdat08/95 based games.
+    // Encryption for file entries is the same across all thdat08/95 based games.
     thdat_t *thdat = thdat_open(is95 ? 95 : 8, input, NULL);
     if (thdat) {
         // We go in reverse order, because that's where the files we look for usually are.
-        for (size_t i = thdat->entry_count-1; i >= 0; i--) {
+        for (size_t i = thdat->entry_count-1; i+1 != 0; i--) {
             const char *name = thdat->entries[i].name;
             size_t len = strlen(name);
 
@@ -553,7 +557,7 @@ thdat_detect_iter(
         uint32_t v = out[i];
         int j=0;
         for(;!(v&1);v>>=1, j++);
-        out[i] &= -1 << (j+1);
+        out[i] &= -1u << (j+1);
         int entry_num = i*32 + j;
         if(entry_num >= DETECT_ENTRIES) { /* non-existent entry */
             out[0]=out[1]=out[2]=out[3] = 0;

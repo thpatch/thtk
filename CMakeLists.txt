@@ -95,7 +95,7 @@ endif()
 if(MSVC)
   set(THTK_WARNING_FLAGS /W3)
 else()
-  set(THTK_WARNING_FLAGS -Wall -Wextra -Wno-parentheses)
+  set(THTK_WARNING_FLAGS -Wall -Wextra -Wno-parentheses $<$<C_COMPILER_ID:Clang>:-Wno-pragma-pack> -Wno-sign-compare)
 endif()
 
 set(BISON_FLAGS "" CACHE STRING "Flags used by the BISON parser generator during all build types.")

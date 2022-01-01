@@ -96,10 +96,11 @@ util_getopt_default(
 }
 
 unsigned int parse_version(char *str) {
-    struct {
+    struct version_abbr {
         unsigned int version;
         char name[6];
-    } static const vers[] = {
+    };
+    static const struct version_abbr vers[] = {
         {1, "hrtp"},
         {2, "soew"},
         {3, "podd"},
@@ -132,7 +133,8 @@ unsigned int parse_version(char *str) {
         {18, "um"},
         /* NEWHU: */
         {0}
-    }, *vp = vers;
+    };
+    const struct version_abbr *vp = vers;
 
     if(!str) return 0;
     unsigned int version = strtoul(str, NULL, 10);
