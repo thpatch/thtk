@@ -1089,7 +1089,7 @@ next:
                     );
 
                 for (size_t d = 0; d < raw_instr->size - sizeof(th06_timeline_instr_t); d += 4) {
-                    fprintf(stderr, " %08x (%d, %f, %s)",
+                    fprintf(stderr, " %08x (%d, %f)",
                         *(uint32_t*)(raw_instr->data + d),
                         *(int32_t*)(raw_instr->data + d),
                         *(float*)(raw_instr->data + d)

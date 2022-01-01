@@ -125,7 +125,7 @@ static int detect_ver_to_idx(int ver) {
     typedef wchar_t fnchar;
 #   define FN(x) L##x
 #   define fnscmp wcscmp
-    static int fnsucmp(const fnchar* a,const unsigned char* b) {
+    static int fnsucmp(const fnchar* a, const char* b) {
         int diff;
         while(!(diff=*a-*b) && *a++ && *b++);
         return diff;
@@ -174,7 +174,7 @@ thdat_detect_filename_fn(
         {0},
     }, *mp = multi;
     while(mp->alias) {
-        if(!fnsucmp(filename,mp->filename) || !fnsacmp(filename,mp->filename)) {
+        if(!fnsucmp(filename, (char *)mp->filename) || !fnsacmp(filename, (char *)mp->filename)) {
             return mp->alias;
         }
         mp++;
@@ -385,10 +385,10 @@ thdat_detect_base(
 
         head2[i].name[5] &= 0xf0;
         // for th01 look for STAGEx.DAT
-        if (!maybe_th01 && !strcmp(head2[i].name, "\xac\xab\xbe\xb8\xba\xc0\xd1\xbb\xbe\xab"))
+        if (!maybe_th01 && !strcmp((char *)head2[i].name, "\xac\xab\xbe\xb8\xba\xc0\xd1\xbb\xbe\xab"))
             maybe_th01 = 1;
         // for th02 look for STAGEx.M
-        if (!maybe_th02 && !strcmp(head2[i].name, "\xac\xab\xbe\xb8\xba\xc0\xd1\xb2"))
+        if (!maybe_th02 && !strcmp((char *)head2[i].name, "\xac\xab\xbe\xb8\xba\xc0\xd1\xb2"))
             maybe_th02 = 1;
     }
     if (memcmp(&head2[entry_count-1], &emptyhead2, sizeof(emptyhead2))) {

@@ -783,8 +783,8 @@ ElseBlock:
 
 WhileBlock:
       "while" "(" Expression[cond] ")" {
-          char labelstr[256];
-          snprintf(labelstr, 256, "while_%i_%i", yylloc.first_line, yylloc.first_column);
+          char labelstr[250];
+          snprintf(labelstr, 250, "while_%i_%i", yylloc.first_line, yylloc.first_column);
           char labelstr_st[256];
           char labelstr_end[256];
           snprintf(labelstr_st, 256, "%s_st", (char*)labelstr);
@@ -809,8 +809,8 @@ WhileBlock:
           list_del(&state->block_stack, head);
       }
     | "do"  {
-          char labelstr[256];
-          snprintf(labelstr, 256, "while_%i_%i", yylloc.first_line, yylloc.first_column);
+          char labelstr[250];
+          snprintf(labelstr, 250, "while_%i_%i", yylloc.first_line, yylloc.first_column);
           char labelstr_st[256];
           char labelstr_end[256];
           snprintf(labelstr_st, 256, "%s_st", (char*)labelstr);
@@ -846,8 +846,8 @@ TimesBlock:
               exit(2);
           }
 
-          char loop_name[256];
-          snprintf(loop_name, 256, "times_%i_%i", yylloc.first_line, yylloc.first_column);
+          char loop_name[250];
+          snprintf(loop_name, 250, "times_%i_%i", yylloc.first_line, yylloc.first_column);
           thecl_variable_t* var = var_create_assign(state, state->current_sub, loop_name, 'S', $count);
 
           char labelstr_st[256];

@@ -113,7 +113,7 @@ value_list_from_data(
     for (; i < format_length; ++i) {
         char f = format[i];
         int repeat = 0;
-        
+
         if (f == '*') {
             repeat = 1;
             f = format[i + 1];
@@ -198,10 +198,9 @@ value_from_text(
         break;
     case 'C':
         if (sscanf(text, "#%02hhx%02hhx%02hhx%02hhx", &value->val.C[0], &value->val.C[1], &value->val.C[2], &value->val.C[3]) != 4) {
-                fprintf(stderr, "%s:value_from_text: couldn't parse '%c' from  \"%s\"\n", argv0, value->type, text);
-                return 0;
+            fprintf(stderr, "%s:value_from_text: couldn't parse '%c' from  \"%s\"\n", argv0, value->type, text);
+            return 0;
         }
-        READ(u, value->val.C);
         break;
     case 'z':
         value->val.z = strdup(text);

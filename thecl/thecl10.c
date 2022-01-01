@@ -1603,7 +1603,7 @@ th10_stringify_instr(
             for (p = sub->arity * 4; p < sub->stack; p += 4) {
                 if (p != sub->arity * 4)
                     strcat(string, ",");
-                sprintf(temp, " %c", 'A' + p / 4);
+                sprintf(temp, " %c", (int)('A' + p / 4));
                 strcat(string, temp);
             }
         }
@@ -1962,7 +1962,7 @@ th10_parse(
     return state.ecl;
 }
 
-static const unsigned char*
+static const char*
 th10_find_sub_format(
     char* sub_name,
     const list_t* subs)
