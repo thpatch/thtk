@@ -317,14 +317,14 @@ static const char sub_param_fi[] = {'f', 'i'};
 %type <list> Instruction_Parameters
 %type <list> Rank_Switch_List
 
+%type <expression> ExpressionAny
 %type <expression> Expression
 %type <expression> ExpressionSubsetInstParam
 %type <expression> ExpressionSubsetInstruction
+%type <expression> ExpressionRankSwitch
 %type <expression> ExpressionLoadType
 %type <expression> ExpressionCall
 %type <expression> ExpressionSubset
-%type <expression> ExpressionSubsetUnary
-%type <expression> Expression_Safe
 
 %type <param> Instruction_Parameter
 %type <param> Address
@@ -625,7 +625,7 @@ VarDeclaration:
           var_create(state, state->current_sub, $2, $1);
           free($2);
       }
-    | DeclareKeyword IDENTIFIER "=" Expression {
+    | DeclareKeyword IDENTIFIER "=" ExpressionAny {
           $$ = $1;
           var_create_assign(state, state->current_sub, $2, $1, $4);
           free($2);
@@ -635,7 +635,7 @@ VarDeclaration:
           var_create(state, state->current_sub, $3, $1);
           free($3);
       }
-    | VarDeclaration "," IDENTIFIER "=" Expression {
+    | VarDeclaration "," IDENTIFIER "=" ExpressionAny {
           $$ = $1;
           var_create_assign(state, state->current_sub, $3, $1, $5);
           free($3);
@@ -667,24 +667,24 @@ Instructions:
 
 Block:
       /* Moving the old if ... gotos to Block, because if else would break with them being in Instruction. */
-      "if" "(" Expression[cond] ")" "goto" Label[label] "@" Integer[time] ";" {
+      "if" "(" ExpressionAny[cond] ")" "goto" Label[label] "@" Integer[time] ";" {
         const expr_t* expr = expr_get_by_symbol(state->version, IF);
         expression_output(state, $cond, 1);
         expression_free($cond);
         instr_add(state->current_sub, instr_new(state, expr->id, "pp", $label, $time));
       }
-    | "unless" "(" Expression[cond] ")" "goto" Label[label] "@" Integer[time] ";" {
+    | "unless" "(" ExpressionAny[cond] ")" "goto" Label[label] "@" Integer[time] ";" {
         const expr_t* expr = expr_get_by_symbol(state->version, UNLESS);
         expression_output(state, $cond, 1);
         expression_free($cond);
         instr_add(state->current_sub, instr_new(state, expr->id, "pp", $label, $time));
       }
-    | "if" "(" Expression[cond] ")" "goto" IDENTIFIER[label] ";" {
+    | "if" "(" ExpressionAny[cond] ")" "goto" IDENTIFIER[label] ";" {
         expression_output(state, $cond, 1);
         expression_free($cond);
         expression_create_goto(state, IF, $label);
       }
-    | "unless" "(" Expression[cond] ")" "goto" IDENTIFIER[label] ";" {
+    | "unless" "(" ExpressionAny[cond] ")" "goto" IDENTIFIER[label] ";" {
         expression_output(state, $cond, 1);
         expression_free($cond);
         expression_create_goto(state, UNLESS, $label);
@@ -728,7 +728,7 @@ BreakStatement:
       ;
 
 IfBlock:
-    "unless" "(" Expression[cond] ")" {
+    "unless" "(" ExpressionAny[cond] ")" {
           char labelstr[256];
           snprintf(labelstr, 256, "unless_%i_%i", yylloc.first_line, yylloc.first_column);
           list_prepend_new(&state->block_stack, strdup(labelstr));
@@ -742,7 +742,7 @@ IfBlock:
           free(head->data);
           list_del(&state->block_stack, head);
         }
-    | "if" "(" Expression[cond] ")" {
+    | "if" "(" ExpressionAny[cond] ")" {
           char labelstr[256];
           snprintf(labelstr, 256, "if_%i_%i", yylloc.first_line, yylloc.first_column);
           list_prepend_new(&state->block_stack, strdup(labelstr));
@@ -782,7 +782,7 @@ ElseBlock:
       ;
 
 WhileBlock:
-      "while" "(" Expression[cond] ")" {
+      "while" "(" ExpressionAny[cond] ")" {
           char labelstr[250];
           snprintf(labelstr, 250, "while_%i_%i", yylloc.first_line, yylloc.first_column);
           char labelstr_st[256];
@@ -818,7 +818,7 @@ WhileBlock:
 
           list_prepend_new(&state->block_stack, strdup(labelstr));
           label_create(state, labelstr_st);
-    } CodeBlock "while" "(" Expression[cond] ")" {
+    } CodeBlock "while" "(" ExpressionAny[cond] ")" {
           char labelstr_st[256];
           char labelstr_end[256];
           list_node_t *head = state->block_stack.head;
@@ -836,7 +836,7 @@ WhileBlock:
     ;
 
 TimesBlock:
-      "times" "(" Expression[count] ")" {
+      "times" "(" ExpressionAny[count] ")" {
           if (g_ecl_simplecreate) {
               yyerror(state, "times loops are not allowed in simple creation mode");
               exit(2);
@@ -886,7 +886,7 @@ TimesBlock:
     ;
 
 SwitchBlock:
-    "switch" "(" Expression[cond] ")" {
+    "switch" "(" ExpressionAny[cond] ")" {
           char name[256];
           list_prepend_new(&state->block_stack, NULL); /* The NULL acts as a sentinel of switch cases. */
           snprintf(name, 256, "switch_%i_%i", yylloc.first_line, yylloc.first_column);
@@ -976,7 +976,7 @@ CaseList:
     ;
 
 Case:
-     "case" Expression_Safe ":" {
+     "case" Expression ":" {
           switch_case_t *switch_case = malloc(sizeof(switch_case_t));
           switch_case->expr = $2;
 
@@ -1151,7 +1151,7 @@ InstructionNoGoto:
             instr_add(state->current_sub, instr_new(state, TH10_INS_STACK_ALLOC, "S", state->current_sub->stack));
      }
     | BreakStatement
-    | "return" Expression {
+    | "return" ExpressionAny {
         if (!is_post_th10(state->version))
             yyerror(state, "return statement is not supported pre-th10");
 
@@ -1192,7 +1192,7 @@ InstructionNoGoto:
     ;
 
 Assignment:
-      Address "=" Expression {
+      Address "=" ExpressionAny {
         const expr_t* expr = expr_get_by_symbol(state->version, $1->type == 'S' ? ASSIGNI : ASSIGNF);
         expression_output(state, $3, 1);
         expression_free($3);
@@ -1205,14 +1205,14 @@ Assignment:
         }
         if (var != NULL) var->is_written = true;
       }
-    | Address "+=" Expression { var_shorthand_assign(state, $1, $3, ADDI, ADDF); }
-    | Address "-=" Expression { var_shorthand_assign(state, $1, $3, SUBTRACTI, SUBTRACTF); }
-    | Address "*=" Expression { var_shorthand_assign(state, $1, $3, MULTIPLYI, MULTIPLYF); }
-    | Address "/=" Expression { var_shorthand_assign(state, $1, $3, DIVIDEI, DIVIDEF); }
-    | Address "%=" Expression { var_shorthand_assign(state, $1, $3, MODULO, 0); }
-    | Address "^=" Expression { var_shorthand_assign(state, $1, $3, XOR, 0); }
-    | Address "|=" Expression { var_shorthand_assign(state, $1, $3, B_OR, 0); }
-    | Address "&=" Expression { var_shorthand_assign(state, $1, $3, B_AND, 0); }
+    | Address "+=" ExpressionAny { var_shorthand_assign(state, $1, $3, ADDI, ADDF); }
+    | Address "-=" ExpressionAny { var_shorthand_assign(state, $1, $3, SUBTRACTI, SUBTRACTF); }
+    | Address "*=" ExpressionAny { var_shorthand_assign(state, $1, $3, MULTIPLYI, MULTIPLYF); }
+    | Address "/=" ExpressionAny { var_shorthand_assign(state, $1, $3, DIVIDEI, DIVIDEF); }
+    | Address "%=" ExpressionAny { var_shorthand_assign(state, $1, $3, MODULO, 0); }
+    | Address "^=" ExpressionAny { var_shorthand_assign(state, $1, $3, XOR, 0); }
+    | Address "|=" ExpressionAny { var_shorthand_assign(state, $1, $3, B_OR, 0); }
+    | Address "&=" ExpressionAny { var_shorthand_assign(state, $1, $3, B_AND, 0); }
 ;
 
 Instruction_Parameters:
@@ -1246,7 +1246,7 @@ Cast_Target:
 Cast_Type:
       Address
     | SignedNumericConstant
-    | "(" Expression ")" {
+    | "(" ExpressionAny ")" {
         list_prepend_new(&state->expressions, $2);
 
         $$ = param_new($2->result_type);
@@ -1302,15 +1302,34 @@ Instruction_Parameter:
     ;
 
 Rank_Switch_List:
-      Expression_Safe ":" Expression_Safe {
+      Expression ":" Expression {
         $$ = list_new();
         list_append_new($$, $1);
         list_append_new($$, $3);
       }
-    | Rank_Switch_List ":" Expression_Safe {
+    | Rank_Switch_List ":" Expression {
         $$ = $1;
         list_append_new($$, $3);
       }
+    ;
+
+/* Why are there so many expression productions?
+ * ExpressionSubsetInstruction: Instruction handles sub calls differently.
+ * ExpressionSubsetInstParam:   Instruction_Parameter handles loads differently.
+ * Expression:
+ *   1) Case labels can't have rank switch expressions in them.
+ *   2) Rank switches have a level of indirection in them (expr -> list -> expr), which means
+ *   we have to do the precedence manually.
+ * ExpressionAny: Union of all of the above.
+ *
+ * As a rule of thumb, use Expression when you're within an Expression, otherwise use ExpressionAny.
+ */
+
+ExpressionAny:
+      ExpressionLoadType
+    | ExpressionCall
+    | ExpressionRankSwitch
+    | ExpressionSubset
     ;
 
 Expression:
@@ -1321,29 +1340,34 @@ Expression:
 
 ExpressionSubsetInstParam:
       ExpressionCall
+    | ExpressionRankSwitch
     | ExpressionSubset
     ;
 
 ExpressionSubsetInstruction:
       ExpressionLoadType
+    | ExpressionRankSwitch
     | ExpressionSubset
     ;
 
+ExpressionRankSwitch:
+      Rank_Switch_List             { $$ = expression_rank_switch_new(state, $1); }
+    ;
+
 ExpressionLoadType:
-      Load_Type                      { $$ = expression_load_new(state, $1); }
+      Load_Type                    { $$ = expression_load_new(state, $1); }
     ;
 
 ExpressionCall:
       IDENTIFIER "(" Instruction_Parameters ")"          { $$ = expression_call_new(state, $3, $1); }
-    | "sin"  "(" Expression ")"         { $$ = EXPR_11(SIN,                  $3); }
-    | "cos"  "(" Expression ")"         { $$ = EXPR_11(COS,                  $3); }
-    | "sqrt" "(" Expression ")"         { $$ = EXPR_11(SQRT,                 $3); }
+    | "sin"  "(" ExpressionAny ")" { $$ = EXPR_11(SIN,                  $3); }
+    | "cos"  "(" ExpressionAny ")" { $$ = EXPR_11(COS,                  $3); }
+    | "sqrt" "(" ExpressionAny ")" { $$ = EXPR_11(SQRT,                 $3); }
     ;
 
-/* This is the lowest common denominator between expression-instructions and expression-parameters */
 ExpressionSubset:
-                  "(" Expression ")" { $$ = $2; }
-    | Cast_Target "(" Expression ")" { $$ = $3; $$->result_type = $1; }
+                  "(" ExpressionAny ")" { $$ = $2; }
+    | Cast_Target "(" ExpressionAny ")" { $$ = $3; $$->result_type = $1; }
     | Expression "+"   Expression { $$ = EXPR_22(ADDI,      ADDF,      $1, $3); }
     | Expression "-"   Expression { $$ = EXPR_22(SUBTRACTI, SUBTRACTF, $1, $3); }
     | Expression "*"   Expression { $$ = EXPR_22(MULTIPLYI, MULTIPLYF, $1, $3); }
@@ -1360,24 +1384,16 @@ ExpressionSubset:
     | Expression "^"   Expression { $$ = EXPR_12(XOR,                  $1, $3); }
     | Expression "|" Expression   { $$ = EXPR_12(B_OR,                 $1, $3); }
     | Expression "&" Expression   { $$ = EXPR_12(B_AND,                $1, $3); }
-
-    | ExpressionSubsetUnary
-
-    /* Custom expressions. */
-    | Rank_Switch_List            { $$ = expression_rank_switch_new(state, $1); }
-    | Expression "?" Expression_Safe ":" Expression  %prec QUESTION
+    | Expression "?" Expression ":" Expression  %prec QUESTION
                                   { $$ = expression_ternary_new(state, $1, $3, $5); }
-    ;
-
-ExpressionSubsetUnary:
-      "!" Expression_Safe               { $$ = EXPR_11(NOT,                  $2); }
-    | "+" Expression_Safe  %prec NEG    { $$ = $2; }
+    | "!" Expression              { $$ = EXPR_11(NOT,                  $2); }
+    | "+" Expression  %prec NEG   { $$ = $2; }
     | Address "--"                      {
                                             $$ = EXPR_1A(DEC, $1);
                                             if ($1->value.val.S >= 0) /* Stack variables only. This is also verrfied to be int by expression creation. */
                                             state->current_sub->vars[$1->value.val.S / 4]->is_written = true;
                                         }
-    | "-" Expression_Safe  %prec NEG    {
+    | "-" Expression  %prec NEG         {
                                             if (is_post_th13(state->version)) {
                                                 $$ = EXPR_21(NEGI, NEGF, $2);
                                             } else {
@@ -1389,25 +1405,6 @@ ExpressionSubsetUnary:
                                                 $$ = EXPR_22(SUBTRACTI, SUBTRACTF, expression_load_new(state, p), $2);
                                             }
                                         }
-    ;
-
-/*
-   The purpose of this is to be used in places that contain certain tokens
-   that could be a part of an expression too, to prevent such tokens from
-   mistakenly being parsed as expressions.
-   An example of such situation is the ':' from "case 1:" being parsed as a part of
-   the rank switch expression.
-   Of course, this still allows any expression to be put in - it just requires it to
-   be in brackets (unless it's a literal), which prevents any bad things from happening.
-   Unary operators and calls are here too, in order to allow things like
-   `case: -1` or `1 ? callFunc1() : callFunc2()`.
-*/
-Expression_Safe:
-      ExpressionLoadType
-    |             "(" Expression ")" { $$ = $2; }
-    | Cast_Target "(" Expression ")" { $$ = $3; $$->result_type = $1; }
-    | ExpressionSubsetUnary
-    | ExpressionCall
     ;
 
 Address:
