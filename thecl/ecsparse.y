@@ -204,113 +204,55 @@ static const char sub_param_fi[] = {'f', 'i'};
 %token <floating> FLOATING "floating"
 %token <string> RANK "rank"
 %token <string> DIRECTIVE "directive"
-%token COMMA ","
-%token QUESTION "?"
-%token COLON ":"
-%token SEMICOLON ";"
-%token SQUARE_OPEN "["
-%token SQUARE_CLOSE "]"
-%token CAST_INTEGER "_S"
-%token CAST_FLOATING "_f"
-%token CAST_II "_SS"
-%token CAST_IF "_Sf"
-%token CAST_FF "_ff"
-%token CAST_FI "_fS"
-%token ANIM "anim"
-%token ECLI "ecli"
-%token SUB "sub"
-%token TIMELINE "timeline"
-%token VAR "var"
-%token INT "int"
-%token FLOAT "float"
-%token VOID "void"
-%token INLINE "inline"
-%token RETURN "return"
-%token AT "@"
-%token DOT "."
-%token VARARGS "..."
-%token INSDEF "insdef"
-%token BRACE_OPEN "{"
-%token BRACE_CLOSE "}"
-%token PARENTHESIS_OPEN "("
-%token PARENTHESIS_CLOSE ")"
-%token ILLEGAL_TOKEN "illegal token"
-%token END_OF_FILE 0 "end of file"
-
-%token GOTO "goto"
-%token UNLESS "unless"
-%token IF "if"
-%token ELSE "else"
-%token DO "do"
-%token WHILE "while"
-%token TIMES "times"
-%token SWITCH "switch"
-%token CASE "case"
-%token DEFAULT "default"
-%token BREAK "break"
-%token ASYNC "async"
-%token KILL
-%token GLOBAL "global"
-%token LOAD
-%token LOADI
-%token LOADF
-%token ASSIGN "="
-%token ASSIGNI
-%token ASSIGNF
-%token ASSIGNADD "+="
-%token ASSIGNSUB "-="
-%token ASSIGNMUL "*="
-%token ASSIGNDIV "/="
-%token ASSIGNMOD "%="
-%token ASSIGNXOR "^="
-%token ASSIGNBOR "|="
-%token ASSIGNBAND "&="
-%token ADD "+"
-%token ADDI
-%token ADDF
-%token SUBTRACT "-"
-%token SUBTRACTI
-%token SUBTRACTF
-%token MULTIPLY "*"
-%token MULTIPLYI
-%token MULTIPLYF
-%token DIVIDE "/"
-%token DIVIDEI
-%token DIVIDEF
-%token MODULO "%"
-%token EQUAL "=="
-%token EQUALI
-%token EQUALF
-%token INEQUAL "!="
-%token INEQUALI
-%token INEQUALF
-%token LT "<"
-%token LTI
-%token LTF
-%token LTEQ "<="
-%token LTEQI
-%token LTEQF
-%token GT ">"
-%token GTI
-%token GTF
-%token GTEQ ">="
-%token GTEQI
-%token GTEQF
-%token NOT "!"
-%token AND "&&"
-%token OR "||"
-%token XOR "^"
-%token B_OR "|"
-%token B_AND "&"
-%token DEC "--"
-%token NEG
-%token NEGI
-%token NEGF
-%token SIN "sin"
-%token COS "cos"
-%token SQRT "sqrt"
-
-%token DOLLAR "$"
+%token T_CAST_INTEGER "_S"
+%token T_CAST_FLOATING "_f"
+%token T_CAST_II "_SS"
+%token T_CAST_IF "_Sf"
+%token T_CAST_FF "_ff"
+%token T_CAST_FI "_fS"
+%token T_ANIM "anim"
+%token T_ECLI "ecli"
+%token T_SUB "sub"
+%token T_TIMELINE "timeline"
+%token T_VAR "var"
+%token T_INT "int"
+%token T_FLOAT "float"
+%token T_VOID "void"
+%token T_INLINE "inline"
+%token T_RETURN "return"
+%token T_VARARGS "..."
+%token T_INSDEF "insdef"
+%token T_GOTO "goto"
+%token T_UNLESS "unless"
+%token T_IF "if"
+%token T_ELSE "else"
+%token T_DO "do"
+%token T_WHILE "while"
+%token T_TIMES "times"
+%token T_SWITCH "switch"
+%token T_CASE "case"
+%token T_DEFAULT "default"
+%token T_BREAK "break"
+%token T_ASYNC "async"
+%token T_GLOBAL "global"
+%token T_ASSIGNADD "+="
+%token T_ASSIGNSUB "-="
+%token T_ASSIGNMUL "*="
+%token T_ASSIGNDIV "/="
+%token T_ASSIGNMOD "%="
+%token T_ASSIGNXOR "^="
+%token T_ASSIGNBOR "|="
+%token T_ASSIGNBAND "&="
+%token T_EQUAL "=="
+%token T_INEQUAL "!="
+%token T_LTEQ "<="
+%token T_GTEQ ">="
+%token T_AND "&&"
+%token T_OR "||"
+%token T_DEC "--"
+%token T_SIN "sin"
+%token T_COS "cos"
+%token T_SQRT "sqrt"
 
 %type <list> Text_Semicolon_List
 %type <list> Instruction_Parameters_List
@@ -346,18 +288,18 @@ static const char sub_param_fi[] = {'f', 'i'};
 %type <string> Type_List
 %type <string> Type_Char
 
-%right QUESTION
-%left OR
-%left AND
-%left B_OR
-%left XOR
-%left B_AND
-%left EQUAL INEQUAL
-%left LT LTEQ GT GTEQ
-%left ADD SUBTRACT
-%left MULTIPLY DIVIDE MODULO
-%precedence NOT NEG
-%precedence DEC
+%right '?'
+%left "||"
+%left "&&"
+%left '|'
+%left '^'
+%left '&'
+%left "==" "!="
+%left '<' "<=" '>' ">="
+%left '+' '-'
+%left '*' '/' '%'
+%precedence '!' T_NEG
+%precedence "--"
 
 %expect 3
 %%
@@ -373,7 +315,7 @@ Statement:
         state->current_sub->is_inline = false;
         free($2);
       }
-      "(" ArgumentDeclaration ")" {
+      '(' ArgumentDeclaration ')' {
             ssize_t arity = state->current_sub->stack / 4;
             state->current_sub->arity = arity;
             char* format = malloc(arity + 1);
@@ -397,7 +339,7 @@ Statement:
         state->current_sub->is_inline = true;
         free($3);
       }
-      "(" ArgumentDeclaration ")" {
+      '(' ArgumentDeclaration ')' {
             ssize_t arity = state->current_sub->stack / 4;
             state->current_sub->arity = arity;
             char* format = malloc(arity + 1);
@@ -411,7 +353,7 @@ Statement:
       Subroutine_Body {
         sub_finish(state);
       }
-    | "timeline" IDENTIFIER "(" ")" {
+    | "timeline" IDENTIFIER '(' ')' {
         sub_begin(state, $2, 1, 0);
         state->current_sub->is_inline = false;
         free($2);
@@ -419,7 +361,7 @@ Statement:
       Subroutine_Body {
         sub_finish(state);
       }
-    | "anim" "{" Text_Semicolon_List "}" {
+    | "anim" '{' Text_Semicolon_List '}' {
         string_t* str;
         list_for_each($3, str) {
             state->ecl->anim_count++;
@@ -428,7 +370,7 @@ Statement:
         }
         string_list_free($3);
       }
-    | "ecli" "{" Text_Semicolon_List "}" {
+    | "ecli" '{' Text_Semicolon_List '}' {
         string_t* str;
         list_for_each($3, str) {
             state->ecl->ecli_count++;
@@ -437,14 +379,14 @@ Statement:
         }
         string_list_free($3);
       }
-    | "global" IDENTIFIER "=" Global_Def ";" {
+    | "global" IDENTIFIER '=' Global_Def ';' {
         global_definition_t *def = malloc(sizeof(global_definition_t));
         strncpy(def->name, $2, 256);
         def->param = $4;
         list_prepend_new(&state->global_definitions, def);
         free($2);
       }
-    | "insdef" IDENTIFIER[name] "(" Types[types] ")" "=" INTEGER[id] ";" {
+    | "insdef" IDENTIFIER[name] '(' Types[types] ')' '=' INTEGER[id] ';' {
         seqmap_entry_t sig_ent = {$id, $types, 0};
         seqmap_set(g_eclmap->ins_signatures, &sig_ent);
         free($types); /* seqmap_set does a strdup */
@@ -563,7 +505,7 @@ Type_List:
         $$ = $1;
         free($2);
       }
-    | Type_List "," Type_Char {
+    | Type_List ',' Type_Char {
         $$ = malloc(strlen($$) + strlen($3) + 1);
         $$[0] = '\0';
         strcat($$, $1);
@@ -571,7 +513,7 @@ Type_List:
         free($1);
         free($3);
       }
-    | Type_List "," Type_Char IDENTIFIER {
+    | Type_List ',' Type_Char IDENTIFIER {
         $$ = malloc(strlen($$) + strlen($3) + 1);
         $$[0] = '\0';
         strcat($$, $1);
@@ -583,10 +525,10 @@ Type_List:
     ;
 
 Subroutine_Body:
-      "{" Instructions "}" {
+      '{' Instructions '}' {
           state->current_sub->forward_declaration = false;
       }
-    | ";" {
+    | ';' {
           state->current_sub->forward_declaration = true;
       }
     ;
@@ -601,11 +543,11 @@ Global_Def:
 ;
 
 Text_Semicolon_List:
-      TEXT ";" {
+      TEXT ';' {
         $$ = list_new();
         string_list_add($$, $1);
       }
-    | Text_Semicolon_List TEXT ";" {
+    | Text_Semicolon_List TEXT ';' {
         $$ = string_list_add($1, $2);
       }
     ;
@@ -625,17 +567,17 @@ VarDeclaration:
           var_create(state, state->current_sub, $2, $1);
           free($2);
       }
-    | DeclareKeyword IDENTIFIER "=" ExpressionAny {
+    | DeclareKeyword IDENTIFIER '=' ExpressionAny {
           $$ = $1;
           var_create_assign(state, state->current_sub, $2, $1, $4);
           free($2);
       }
-    | VarDeclaration "," IDENTIFIER {
+    | VarDeclaration ',' IDENTIFIER {
           $$ = $1;
           var_create(state, state->current_sub, $3, $1);
           free($3);
       }
-    | VarDeclaration "," IDENTIFIER "=" ExpressionAny {
+    | VarDeclaration ',' IDENTIFIER '=' ExpressionAny {
           $$ = $1;
           var_create_assign(state, state->current_sub, $3, $1, $5);
           free($3);
@@ -648,7 +590,7 @@ ArgumentDeclaration:
           var_create(state, state->current_sub, $2, $1);
           free($2);
       }
-    | ArgumentDeclaration "," DeclareKeyword IDENTIFIER {
+    | ArgumentDeclaration ',' DeclareKeyword IDENTIFIER {
           var_create(state, state->current_sub, $4, $3);
           free($4);
       }
@@ -656,35 +598,35 @@ ArgumentDeclaration:
 
 Instructions:
     %empty
-    | Instructions INTEGER ":" { set_time(state, $2); }
-    | Instructions "+" INTEGER ":" { set_time(state, state->instr_time + $3); }
-    | Instructions IDENTIFIER ":" { label_create(state, $2); free($2); }
-    | Instructions Instruction ";"
+    | Instructions INTEGER ':' { set_time(state, $2); }
+    | Instructions '+' INTEGER ':' { set_time(state, state->instr_time + $3); }
+    | Instructions IDENTIFIER ':' { label_create(state, $2); free($2); }
+    | Instructions Instruction ';'
     | Instructions Block
     | Instructions RANK { state->instr_rank = parse_rank(state, $2); }
-    | Instructions RANK ":" { state->instr_rank = parse_rank(state, $2); } Instruction { state->instr_rank = parse_rank(state, "*"); } ";"
+    | Instructions RANK ':' { state->instr_rank = parse_rank(state, $2); } Instruction { state->instr_rank = parse_rank(state, "*"); } ';'
     ;
 
 Block:
       /* Moving the old if ... gotos to Block, because if else would break with them being in Instruction. */
-      "if" "(" ExpressionAny[cond] ")" "goto" Label[label] "@" Integer[time] ";" {
+      "if" '(' ExpressionAny[cond] ')' "goto" Label[label] '@' Integer[time] ';' {
         const expr_t* expr = expr_get_by_symbol(state->version, IF);
         expression_output(state, $cond, 1);
         expression_free($cond);
         instr_add(state->current_sub, instr_new(state, expr->id, "pp", $label, $time));
       }
-    | "unless" "(" ExpressionAny[cond] ")" "goto" Label[label] "@" Integer[time] ";" {
+    | "unless" '(' ExpressionAny[cond] ')' "goto" Label[label] '@' Integer[time] ';' {
         const expr_t* expr = expr_get_by_symbol(state->version, UNLESS);
         expression_output(state, $cond, 1);
         expression_free($cond);
         instr_add(state->current_sub, instr_new(state, expr->id, "pp", $label, $time));
       }
-    | "if" "(" ExpressionAny[cond] ")" "goto" IDENTIFIER[label] ";" {
+    | "if" '(' ExpressionAny[cond] ')' "goto" IDENTIFIER[label] ';' {
         expression_output(state, $cond, 1);
         expression_free($cond);
         expression_create_goto(state, IF, $label);
       }
-    | "unless" "(" ExpressionAny[cond] ")" "goto" IDENTIFIER[label] ";" {
+    | "unless" '(' ExpressionAny[cond] ')' "goto" IDENTIFIER[label] ';' {
         expression_output(state, $cond, 1);
         expression_free($cond);
         expression_create_goto(state, UNLESS, $label);
@@ -695,14 +637,14 @@ Block:
     | SwitchBlock
     ;
 
-CodeBlock: CodeBlockNoGoto | GotoInstruction ";" ;
+CodeBlock: CodeBlockNoGoto | GotoInstruction ';' ;
 CodeBlockNoGoto:
-      "{" {
+      '{' {
           scope_begin(state);
-      } Instructions "}" {
+      } Instructions '}' {
           scope_finish(state);
       }
-    | InstructionNoGoto ";"
+    | InstructionNoGoto ';'
     ;
 
 BreakStatement:
@@ -728,7 +670,7 @@ BreakStatement:
       ;
 
 IfBlock:
-    "unless" "(" ExpressionAny[cond] ")" {
+    "unless" '(' ExpressionAny[cond] ')' {
           char labelstr[256];
           snprintf(labelstr, 256, "unless_%i_%i", yylloc.first_line, yylloc.first_column);
           list_prepend_new(&state->block_stack, strdup(labelstr));
@@ -742,7 +684,7 @@ IfBlock:
           free(head->data);
           list_del(&state->block_stack, head);
         }
-    | "if" "(" ExpressionAny[cond] ")" {
+    | "if" '(' ExpressionAny[cond] ')' {
           char labelstr[256];
           snprintf(labelstr, 256, "if_%i_%i", yylloc.first_line, yylloc.first_column);
           list_prepend_new(&state->block_stack, strdup(labelstr));
@@ -782,7 +724,7 @@ ElseBlock:
       ;
 
 WhileBlock:
-      "while" "(" ExpressionAny[cond] ")" {
+      "while" '(' ExpressionAny[cond] ')' {
           char labelstr[250];
           snprintf(labelstr, 250, "while_%i_%i", yylloc.first_line, yylloc.first_column);
           char labelstr_st[256];
@@ -818,7 +760,7 @@ WhileBlock:
 
           list_prepend_new(&state->block_stack, strdup(labelstr));
           label_create(state, labelstr_st);
-    } CodeBlock "while" "(" ExpressionAny[cond] ")" {
+    } CodeBlock "while" '(' ExpressionAny[cond] ')' {
           char labelstr_st[256];
           char labelstr_end[256];
           list_node_t *head = state->block_stack.head;
@@ -832,11 +774,11 @@ WhileBlock:
 
           free(head->data);
           list_del(&state->block_stack, head);
-    } ";"
+    } ';'
     ;
 
 TimesBlock:
-      "times" "(" ExpressionAny[count] ")" {
+      "times" '(' ExpressionAny[count] ')' {
           if (g_ecl_simplecreate) {
               yyerror(state, "times loops are not allowed in simple creation mode");
               exit(2);
@@ -886,7 +828,7 @@ TimesBlock:
     ;
 
 SwitchBlock:
-    "switch" "(" ExpressionAny[cond] ")" {
+    "switch" '(' ExpressionAny[cond] ')' {
           char name[256];
           list_prepend_new(&state->block_stack, NULL); /* The NULL acts as a sentinel of switch cases. */
           snprintf(name, 256, "switch_%i_%i", yylloc.first_line, yylloc.first_column);
@@ -908,9 +850,9 @@ SwitchBlock:
           expression_free($cond);
 
           expression_create_goto(state, GOTO, name); /* Jump to the case checks. */
-    } "{" {
+    } '{' {
           scope_begin(state);
-    } CaseList "}" {
+    } CaseList '}' {
           scope_finish(state);
 
           list_node_t* head = state->block_stack.head;
@@ -976,7 +918,7 @@ CaseList:
     ;
 
 Case:
-     "case" Expression ":" {
+     "case" Expression ':' {
           switch_case_t *switch_case = malloc(sizeof(switch_case_t));
           switch_case->expr = $2;
 
@@ -995,7 +937,7 @@ Case:
           list_prepend_to(&state->block_stack, switch_case, node); /* Prepends to the sentinel. */
       }
     |
-     "default" ":" {
+     "default" ':' {
           switch_case_t *switch_case = malloc(sizeof(switch_case_t));
           switch_case->expr = NULL;
 
@@ -1012,7 +954,7 @@ Case:
 
 Instruction: InstructionNoGoto | GotoInstruction ;
 GotoInstruction:
-      "goto" Label "@" Integer {
+      "goto" Label '@' Integer {
         const expr_t* expr = expr_get_by_symbol(state->version, GOTO);
         instr_add(state->current_sub, instr_new(state, expr->id, "pp", $2, $4));
     }
@@ -1022,7 +964,7 @@ GotoInstruction:
     }
     ;
 InstructionNoGoto:
-      "@" IDENTIFIER "(" Instruction_Parameters ")" {
+      '@' IDENTIFIER '(' Instruction_Parameters ')' {
           /* Force creating a sub call, even if it wasn't defined in the file earlier - useful for calling subs from default.ecl */
           instr_create_call(state, TH10_INS_CALL, $2, $4, false);
           if ($4 != NULL) {
@@ -1030,7 +972,7 @@ InstructionNoGoto:
               free($4);
           }
       }
-      | "@" IDENTIFIER "(" Instruction_Parameters ")" "async" {
+      | '@' IDENTIFIER '(' Instruction_Parameters ')' "async" {
           /* Same as above, except use ins_15 (callAsync) instead of ins_11 (call) */
           instr_create_call(state, TH10_INS_CALL_ASYNC, $2, $4, false);
           if ($4 != NULL) {
@@ -1038,7 +980,7 @@ InstructionNoGoto:
               free($4);
           }
       }
-      | "@" IDENTIFIER "(" Instruction_Parameters ")" "async" Expression {
+      | '@' IDENTIFIER '(' Instruction_Parameters ')' "async" Expression {
           /* Can't have the parameter generated by Cast_Type
            * since it would cause expressions to be output
            * in the wrong order. */
@@ -1065,7 +1007,7 @@ InstructionNoGoto:
           if ($7->type == EXPRESSION_VAL)
             expression_free($7);
       }
-      | IDENTIFIER "(" Instruction_Parameters ")" "async" {
+      | IDENTIFIER '(' Instruction_Parameters ')' "async" {
           /* Since sub existence for call ins is checked after parsing, there is no need to check here anymore. */
           instr_create_call(state, TH10_INS_CALL_ASYNC, $1, $3, false);
           if ($3 != NULL) {
@@ -1073,7 +1015,7 @@ InstructionNoGoto:
               free($3);
           }
       }
-      | IDENTIFIER "(" Instruction_Parameters ")" "async" Expression {
+      | IDENTIFIER '(' Instruction_Parameters ')' "async" Expression {
           /* Can't have the parameter generated by Cast_Type
            * since it would cause expressions to be output
            * in the wrong order. */
@@ -1100,14 +1042,14 @@ InstructionNoGoto:
           if ($6->type == EXPRESSION_VAL)
             expression_free($6);
       }
-      | IDENTIFIER "(" Instruction_Parameters ")" {
+      | IDENTIFIER '(' Instruction_Parameters ')' {
         instr_create_call(state, TH10_INS_CALL, $1, $3, false);
         if ($3 != NULL) {
             list_free_nodes($3);
             free($3);
         }
       }
-      | MNEMONIC "(" Instruction_Parameters ")" {
+      | MNEMONIC '(' Instruction_Parameters ')' {
         seqmap_entry_t* ent = seqmap_find(state->is_timeline_sub ? g_eclmap->timeline_ins_names : g_eclmap->ins_names, $1);
         if (!ent) {
             /* Default to creating a sub call */
@@ -1126,7 +1068,7 @@ InstructionNoGoto:
             free($3);
         }
       }
-    | INSTRUCTION "(" Instruction_Parameters ")" {
+    | INSTRUCTION '(' Instruction_Parameters ')' {
         expression_t* expr;
         list_for_each(&state->expressions, expr) {
             expression_output(state, expr, 1);
@@ -1192,7 +1134,7 @@ InstructionNoGoto:
     ;
 
 Assignment:
-      Address "=" ExpressionAny {
+      Address '=' ExpressionAny {
         const expr_t* expr = expr_get_by_symbol(state->version, $1->type == 'S' ? ASSIGNI : ASSIGNF);
         expression_output(state, $3, 1);
         expression_free($3);
@@ -1225,28 +1167,28 @@ Instruction_Parameters_List:
         $$ = list_new();
         list_append_new($$, $1);
       }
-    | Instruction_Parameters_List "," Instruction_Parameter {
+    | Instruction_Parameters_List ',' Instruction_Parameter {
         $$ = $1;
         list_append_new($$, $3);
       }
     ;
 
 Cast_Target2:
-      CAST_II { $$ = sub_param_ii; }
-    | CAST_IF { $$ = sub_param_if; }
-    | CAST_FF { $$ = sub_param_ff; }
-    | CAST_FI { $$ = sub_param_fi; }
+      "_SS" { $$ = sub_param_ii; }
+    | "_Sf" { $$ = sub_param_if; }
+    | "_ff" { $$ = sub_param_ff; }
+    | "_fS" { $$ = sub_param_fi; }
     ;
 
 Cast_Target:
-      CAST_INTEGER  { $$ = 'S'; }
-    | CAST_FLOATING { $$ = 'f'; }
+      "_S" { $$ = 'S'; }
+    | "_f" { $$ = 'f'; }
     ;
 
 Cast_Type:
       Address
     | SignedNumericConstant
-    | "(" ExpressionAny ")" {
+    | '(' ExpressionAny ')' {
         list_prepend_new(&state->expressions, $2);
 
         $$ = param_new($2->result_type);
@@ -1302,12 +1244,12 @@ Instruction_Parameter:
     ;
 
 Rank_Switch_List:
-      Expression ":" Expression {
+      Expression ':' Expression {
         $$ = list_new();
         list_append_new($$, $1);
         list_append_new($$, $3);
       }
-    | Rank_Switch_List ":" Expression {
+    | Rank_Switch_List ':' Expression {
         $$ = $1;
         list_append_new($$, $3);
       }
@@ -1359,41 +1301,41 @@ ExpressionLoadType:
     ;
 
 ExpressionCall:
-      IDENTIFIER "(" Instruction_Parameters ")"          { $$ = expression_call_new(state, $3, $1); }
-    | "sin"  "(" ExpressionAny ")" { $$ = EXPR_11(SIN,                  $3); }
-    | "cos"  "(" ExpressionAny ")" { $$ = EXPR_11(COS,                  $3); }
-    | "sqrt" "(" ExpressionAny ")" { $$ = EXPR_11(SQRT,                 $3); }
+      IDENTIFIER '(' Instruction_Parameters ')'          { $$ = expression_call_new(state, $3, $1); }
+    | "sin"  '(' ExpressionAny ')' { $$ = EXPR_11(SIN,                  $3); }
+    | "cos"  '(' ExpressionAny ')' { $$ = EXPR_11(COS,                  $3); }
+    | "sqrt" '(' ExpressionAny ')' { $$ = EXPR_11(SQRT,                 $3); }
     ;
 
 ExpressionSubset:
-                  "(" ExpressionAny ")" { $$ = $2; }
-    | Cast_Target "(" ExpressionAny ")" { $$ = $3; $$->result_type = $1; }
-    | Expression "+"   Expression { $$ = EXPR_22(ADDI,      ADDF,      $1, $3); }
-    | Expression "-"   Expression { $$ = EXPR_22(SUBTRACTI, SUBTRACTF, $1, $3); }
-    | Expression "*"   Expression { $$ = EXPR_22(MULTIPLYI, MULTIPLYF, $1, $3); }
-    | Expression "/"   Expression { $$ = EXPR_22(DIVIDEI,   DIVIDEF,   $1, $3); }
-    | Expression "%"   Expression { $$ = EXPR_12(MODULO,               $1, $3); }
+                  '(' ExpressionAny ')' { $$ = $2; }
+    | Cast_Target '(' ExpressionAny ')' { $$ = $3; $$->result_type = $1; }
+    | Expression '+'   Expression { $$ = EXPR_22(ADDI,      ADDF,      $1, $3); }
+    | Expression '-'   Expression { $$ = EXPR_22(SUBTRACTI, SUBTRACTF, $1, $3); }
+    | Expression '*'   Expression { $$ = EXPR_22(MULTIPLYI, MULTIPLYF, $1, $3); }
+    | Expression '/'   Expression { $$ = EXPR_22(DIVIDEI,   DIVIDEF,   $1, $3); }
+    | Expression '%'   Expression { $$ = EXPR_12(MODULO,               $1, $3); }
     | Expression "=="  Expression { $$ = EXPR_22(EQUALI,    EQUALF,    $1, $3); }
     | Expression "!="  Expression { $$ = EXPR_22(INEQUALI,  INEQUALF,  $1, $3); }
-    | Expression "<"   Expression { $$ = EXPR_22(LTI,       LTF,       $1, $3); }
+    | Expression '<'   Expression { $$ = EXPR_22(LTI,       LTF,       $1, $3); }
     | Expression "<="  Expression { $$ = EXPR_22(LTEQI,     LTEQF,     $1, $3); }
-    | Expression ">"   Expression { $$ = EXPR_22(GTI,       GTF,       $1, $3); }
+    | Expression '>'   Expression { $$ = EXPR_22(GTI,       GTF,       $1, $3); }
     | Expression ">="  Expression { $$ = EXPR_22(GTEQI,     GTEQF,     $1, $3); }
     | Expression "||"  Expression { $$ = EXPR_12(OR,                   $1, $3); }
     | Expression "&&"  Expression { $$ = EXPR_12(AND,                  $1, $3); }
-    | Expression "^"   Expression { $$ = EXPR_12(XOR,                  $1, $3); }
-    | Expression "|" Expression   { $$ = EXPR_12(B_OR,                 $1, $3); }
-    | Expression "&" Expression   { $$ = EXPR_12(B_AND,                $1, $3); }
-    | Expression "?" Expression ":" Expression  %prec QUESTION
+    | Expression '^'   Expression { $$ = EXPR_12(XOR,                  $1, $3); }
+    | Expression '|'   Expression { $$ = EXPR_12(B_OR,                 $1, $3); }
+    | Expression '&'   Expression { $$ = EXPR_12(B_AND,                $1, $3); }
+    | Expression '?' Expression ':' Expression  %prec '?'
                                   { $$ = expression_ternary_new(state, $1, $3, $5); }
-    | "!" Expression              { $$ = EXPR_11(NOT,                  $2); }
-    | "+" Expression  %prec NEG   { $$ = $2; }
+    | '!' Expression              { $$ = EXPR_11(NOT,                  $2); }
+    | '+' Expression  %prec T_NEG { $$ = $2; }
     | Address "--"                      {
                                             $$ = EXPR_1A(DEC, $1);
                                             if ($1->value.val.S >= 0) /* Stack variables only. This is also verrfied to be int by expression creation. */
                                             state->current_sub->vars[$1->value.val.S / 4]->is_written = true;
                                         }
-    | "-" Expression  %prec NEG         {
+    | '-' Expression  %prec T_NEG       {
                                             if (is_post_th13(state->version)) {
                                                 $$ = EXPR_21(NEGI, NEGF, $2);
                                             } else {
@@ -1408,17 +1350,17 @@ ExpressionSubset:
     ;
 
 Address:
-      "[" SignedNumericConstant "]" {
+      '[' SignedNumericConstant ']' {
         $$ = $2;
         $$->stack = 1;
       }
-    | "$" IDENTIFIER {
+    | '$' IDENTIFIER {
         $$ = param_new('S');
         $$->stack = 1;
         $$->value.val.S = var_stack(state, state->current_sub, $2);
         free($2);
       }
-    | "%" IDENTIFIER {
+    | '%' IDENTIFIER {
         $$ = param_new('f');
         $$->stack = 1;
         $$->value.val.f = var_stack(state, state->current_sub, $2);
@@ -1461,11 +1403,11 @@ Address:
 SignedNumericConstant:
       Integer
     | Floating
-    | "-" Integer {
+    | '-' Integer {
         $2->value.val.S = -$2->value.val.S;
         $$ = $2;
     }
-    | "-" Floating {
+    | '-' Floating {
         $2->value.val.f = -$2->value.val.f;
         $$ = $2;
     }
