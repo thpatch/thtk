@@ -95,9 +95,8 @@ static int parse_rank(const parser_state_t* state, const char* value);
 static expression_t* expression_load_new(const parser_state_t* state, thecl_param_t* value);
 static expression_t* expression_operation_new(const parser_state_t* state, const int* symbols, expression_t** operands);
 static expression_t* expression_address_operation_new(const parser_state_t* state, const int* symbols, thecl_param_t* value);
-static expression_t* expression_rank_switch_new(
-    const parser_state_t* state, list_t* exprs
-);
+static expression_t* expression_rank_switch_new(const parser_state_t* state, expression_t *expr);
+static expression_t* expression_rank_switch_append(const parser_state_t* state, expression_t *expr_main, expression_t *expr);
 static expression_t* expression_ternary_new(const parser_state_t* state, expression_t* condition, expression_t* val1, expression_t* val2);
 static expression_t* expression_call_new(const parser_state_t* state, list_t* param_list, char* sub_name);
 
@@ -257,7 +256,6 @@ static const char sub_param_fi[] = {'f', 'i'};
 %type <list> Text_Semicolon_List
 %type <list> Instruction_Parameters_List
 %type <list> Instruction_Parameters
-%type <list> Rank_Switch_List
 
 %type <expression> ExpressionAny
 %type <expression> Expression
@@ -1243,25 +1241,10 @@ Instruction_Parameter:
       }
     ;
 
-Rank_Switch_List:
-      Expression ':' Expression {
-        $$ = list_new();
-        list_append_new($$, $1);
-        list_append_new($$, $3);
-      }
-    | Rank_Switch_List ':' Expression {
-        $$ = $1;
-        list_append_new($$, $3);
-      }
-    ;
-
 /* Why are there so many expression productions?
  * ExpressionSubsetInstruction: Instruction handles sub calls differently.
  * ExpressionSubsetInstParam:   Instruction_Parameter handles loads differently.
- * Expression:
- *   1) Case labels can't have rank switch expressions in them.
- *   2) Rank switches have a level of indirection in them (expr -> list -> expr), which means
- *   we have to do the precedence manually.
+ * Expression:    Case labels can't have rank switch expressions in them.
  * ExpressionAny: Union of all of the above.
  *
  * As a rule of thumb, use Expression when you're within an Expression, otherwise use ExpressionAny.
@@ -1293,7 +1276,8 @@ ExpressionSubsetInstruction:
     ;
 
 ExpressionRankSwitch:
-      Rank_Switch_List             { $$ = expression_rank_switch_new(state, $1); }
+      Expression ':' Expression           { $$ = expression_rank_switch_append(state, expression_rank_switch_new(state, $1), $3); }
+    | ExpressionRankSwitch ':' Expression { $$ = expression_rank_switch_append(state, $$, $3); }
     ;
 
 ExpressionLoadType:
@@ -2308,29 +2292,34 @@ expression_operation_new(
 
 static expression_t*
 expression_rank_switch_new(
-    const parser_state_t* state, list_t* exprs
+    const parser_state_t* state,
+    expression_t *expr
 ) {
     if (is_post_th10(state->version)) {
         expression_t* expr_main = malloc(sizeof(expression_t));
         expr_main->type = EXPRESSION_RANK_SWITCH;
-
-        expression_t* expr = list_head(exprs);
         expr_main->result_type = expr->result_type;
-
-        list_for_each(exprs, expr) {
-            if (expr->result_type != expr_main->result_type) {
-                yyerror(state, "inconsistent parameter types for difficulty switch");
-                exit(2);
-            }
-        }
-
-        expr_main->children = *exprs;
-        free(exprs);
+        list_init(&expr_main->children);
+        list_append_new(&expr_main->children, expr);
         return expr_main;
     }
     yyerror(state, "difficulty switch expression is not available in pre-th10 ECL");
 
     exit(2);
+}
+
+static expression_t*
+expression_rank_switch_append(
+    const parser_state_t* state,
+    expression_t *expr_main,
+    expression_t *expr
+) {
+    if (expr->result_type != expr_main->result_type) {
+        yyerror(state, "inconsistent parameter types for difficulty switch");
+        exit(2);
+    }
+    list_append_new(&expr_main->children, expr);
+    return expr_main;
 }
 
 static expression_t*
