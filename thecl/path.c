@@ -32,6 +32,7 @@
 #include <stdlib.h>
 #include "thecl.h"
 #include "path.h"
+#include "program.h"
 
 char*
 path_get_full(
@@ -60,22 +61,15 @@ path_add(
     char* path)
 {
     char* dir_path;
-    char* tmp = strrchr(path, '\\');
-    char* tmp2 = strrchr(path, '/');
-    if (tmp != NULL || tmp2 != NULL) {
-        /* Since these can be mixed, we need to get the later one.
-           They are pointing somewhere in the same string (or one of them is NULL),
-           so it's best to just compare them */
-        if (tmp2 > tmp) tmp = tmp2;
-
-        size_t len = strlen(path) - strlen(tmp);
+    const char* tmp = path ? util_shortname(path) : NULL; /* NULL check is needed for stdin */
+    if (path != tmp) {
+        size_t len = tmp-1 - path;
         dir_path = malloc(len + 1);
         memcpy(dir_path, path, len);
         dir_path[len] = '\0';
-    }
-    else {
-        dir_path = malloc(sizeof(""));
-        strcpy(dir_path, "");
+    } else {
+        dir_path = malloc(1);
+        dir_path[0] = '\0';
     }
 
     ++state->path_cnt;
