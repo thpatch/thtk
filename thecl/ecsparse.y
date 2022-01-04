@@ -262,9 +262,11 @@ static const char sub_param_fi[] = {'f', 'i'};
 %type <expression> ExpressionSubsetInstParam
 %type <expression> ExpressionSubsetInstruction
 %type <expression> ExpressionRankSwitch
+%type <expression> ExpressionRankSwitchRestricted
 %type <expression> ExpressionLoadType
 %type <expression> ExpressionCall
 %type <expression> ExpressionSubset
+%type <expression> ExpressionSubsetNoUnaryPlus
 
 %type <param> Instruction_Parameter
 %type <param> Address
@@ -297,9 +299,9 @@ static const char sub_param_fi[] = {'f', 'i'};
 %left '+' '-'
 %left '*' '/' '%'
 %precedence '!' T_NEG
-%precedence "--"
+/* %precedence "--" */ /* not needed */
 
-%expect 3
+%expect 0
 %%
 
 Statements:
@@ -1242,7 +1244,10 @@ Instruction_Parameter:
     ;
 
 /* Why are there so many expression productions?
- * ExpressionSubsetInstruction: Instruction handles sub calls differently.
+ * ExpressionSubsetInstruction:
+ * - Instruction handles sub calls differently.
+ * - Additionally Instruction has "int:" "+int:" and "id:" forms which conflict
+ *   with rank switch
  * ExpressionSubsetInstParam:   Instruction_Parameter handles loads differently.
  * Expression:    Case labels can't have rank switch expressions in them.
  * ExpressionAny: Union of all of the above.
@@ -1271,13 +1276,19 @@ ExpressionSubsetInstParam:
 
 ExpressionSubsetInstruction:
       ExpressionLoadType
-    | ExpressionRankSwitch
+    | ExpressionRankSwitchRestricted
     | ExpressionSubset
     ;
 
 ExpressionRankSwitch:
-      Expression ':' Expression           { $$ = expression_rank_switch_append(state, expression_rank_switch_new(state, $1), $3); }
+      Expression           ':' Expression { $$ = expression_rank_switch_append(state, expression_rank_switch_new(state, $1), $3); }
     | ExpressionRankSwitch ':' Expression { $$ = expression_rank_switch_append(state, $$, $3); }
+    ;
+
+ExpressionRankSwitchRestricted:
+      ExpressionCall                  ':' Expression { $$ = expression_rank_switch_append(state, expression_rank_switch_new(state, $1), $3); }
+    | ExpressionSubsetNoUnaryPlus     ':' Expression { $$ = expression_rank_switch_append(state, expression_rank_switch_new(state, $1), $3); }
+    | ExpressionRankSwitchRestricted  ':' Expression { $$ = expression_rank_switch_append(state, $$, $3); }
     ;
 
 ExpressionLoadType:
@@ -1292,6 +1303,11 @@ ExpressionCall:
     ;
 
 ExpressionSubset:
+      ExpressionSubsetNoUnaryPlus
+    | '+' Expression  %prec T_NEG { $$ = $2; }
+    ;
+
+ExpressionSubsetNoUnaryPlus:
                   '(' ExpressionAny ')' { $$ = $2; }
     | Cast_Target '(' ExpressionAny ')' { $$ = $3; $$->result_type = $1; }
     | Expression '+'   Expression { $$ = EXPR_22(ADDI,      ADDF,      $1, $3); }
@@ -1313,7 +1329,6 @@ ExpressionSubset:
     | Expression '?' Expression ':' Expression  %prec '?'
                                   { $$ = expression_ternary_new(state, $1, $3, $5); }
     | '!' Expression              { $$ = EXPR_11(NOT,                  $2); }
-    | '+' Expression  %prec T_NEG { $$ = $2; }
     | Address "--"                      {
                                             $$ = EXPR_1A(DEC, $1);
                                             if ($1->value.val.S >= 0) /* Stack variables only. This is also verrfied to be int by expression creation. */
@@ -1350,7 +1365,7 @@ Address:
         $$->value.val.f = var_stack(state, state->current_sub, $2);
         free($2);
       }
-    | IDENTIFIER  /*%expect 2*/ {
+    | IDENTIFIER {
         if (var_exists(state, state->current_sub, $1)) {
             int type = var_type(state, state->current_sub, $1);
             if (type == '?') {
@@ -1398,7 +1413,7 @@ SignedNumericConstant:
     ;
 
 Integer:
-    INTEGER  /*%expect 1*/ {
+    INTEGER {
         $$ = param_new('S');
         $$->value.val.S = $1;
       }
