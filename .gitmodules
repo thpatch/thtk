@@ -1,6 +1,6 @@
 [submodule "thanm/libpng"]
 	path = extlib/libpng
-	url = https://git.code.sf.net/p/libpng/code
+	url = https://github.com/glennrp/libpng.git
 [submodule "thanm/zlib-ng"]
 	path = extlib/zlib-ng
 	url = https://github.com/Dead2/zlib-ng.git
