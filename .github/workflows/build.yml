@@ -1,0 +1,70 @@
+name: Build
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+env:
+  BUILD_TYPE: RelWithDebInfo
+  FLEXBISON_VER: 2.5.25
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+      with:
+        submodules: recursive
+    - name: Configure CMake
+      run: cmake -B build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
+    - name: Build
+      run: cmake --build build --config ${{env.BUILD_TYPE}}
+
+  build-win32:
+    runs-on: windows-2022
+    strategy:
+      matrix:
+        arch: [x64, x86]
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+      with:
+        submodules: recursive
+    - name: Cahe winflexbison
+      id: cache-winflexbison
+      uses: actions/cache@v2
+      with:
+        path: win_flex_bison-${{env.FLEXBISON_VER}}.zip
+        key: winflexbison-${{env.FLEXBISON_VER}}
+    - name: Download winflexbison
+      if: steps.cache-winflexbison.outputs.cache-hit != 'true'
+      run: curl -OL https://github.com/lexxmark/winflexbison/releases/download/v${{env.FLEXBISON_VER}}/win_flex_bison-${{env.FLEXBISON_VER}}.zip
+    - name: Extract winflexbison
+      run: |
+        mkdir bison
+        cd bison
+        7z x ../win_flex_bison-${{env.FLEXBISON_VER}}.zip
+    - name: Configure CMake
+      run: cmake -B build -A ${{matrix.arch == 'x86' && 'Win32' || matrix.arch}} -DBISON_EXECUTABLE=${{github.workspace}}/bison/win_bison.exe -DFLEX_EXECUTABLE=${{github.workspace}}/bison/win_flex.exe -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
+    - name: Build
+      run: cmake --build build --config ${{env.BUILD_TYPE}}
+    - name: Prepare Dist
+      shell: cmd
+      run: |
+        call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" ${{matrix.arch}}
+        set THTK_ARCH=${{matrix.arch}}
+        call C:\shells\msys2bash.cmd -c "pacman -S --noconfirm --needed --noprogressbar groff dos2unix zip"
+        call C:\shells\msys2bash.cmd -c "./make-release.sh ci"
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: thtk-win32-${{matrix.arch}}
+        path: thtk-bin-ci/**/*
+    - name: Upload Artifact PDBs
+      uses: actions/upload-artifact@v3
+      with:
+        name: thtk-win32-${{matrix.arch}}-pdbs
+        path: thtk-bin-ci-pdbs/**/*
