@@ -93,7 +93,7 @@ if(MSVC)
 endif()
 
 if(MSVC)
-  set(THTK_WARNING_FLAGS /W3)
+  set(THTK_WARNING_FLAGS /W3 /wd4267 /wd4244)
 else()
   set(THTK_WARNING_FLAGS -Wall -Wextra -Wno-parentheses $<$<C_COMPILER_ID:Clang>:-Wno-pragma-pack> -Wno-sign-compare)
 endif()
