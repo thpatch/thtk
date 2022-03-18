@@ -31,7 +31,15 @@
 
 #include <config.h>
 
-void th_encrypt(
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#ifndef API_SYMBOL
+#define API_SYMBOL /* */
+#endif
+
+API_SYMBOL void th_encrypt(
     unsigned char* data,
     unsigned int size,
     unsigned char key,
@@ -39,12 +47,16 @@ void th_encrypt(
     unsigned int block,
     unsigned int limit);
 
-void th_decrypt(
+API_SYMBOL void th_decrypt(
     unsigned char* data,
     unsigned int size,
     unsigned char key,
     const unsigned char step,
     unsigned int block,
     unsigned int limit);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

@@ -35,16 +35,24 @@
 #endif
 #include <thtk/thtk.h>
 
-ssize_t th_lzss(
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+API_SYMBOL ssize_t th_lzss(
     thtk_io_t* input,
     size_t input_size,
     thtk_io_t* output,
     thtk_error_t** error);
 
-ssize_t th_unlzss(
+API_SYMBOL ssize_t th_unlzss(
     thtk_io_t* input,
     thtk_io_t* output,
     size_t output_size,
     thtk_error_t** error);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
