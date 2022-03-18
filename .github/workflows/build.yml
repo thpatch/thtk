@@ -13,12 +13,18 @@ env:
 jobs:
   build-linux:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        compiler: [gcc, clang]
     steps:
     - name: Checkout
       uses: actions/checkout@v2
       with:
         submodules: recursive
     - name: Configure CMake
+      env:
+        CC: ${{matrix.compiler}}
+        CXX: ${{matrix.compiler == 'gcc' && 'g++' || 'clang++'}}
       run: cmake -B build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
     - name: Build
       run: cmake --build build --config ${{env.BUILD_TYPE}}
