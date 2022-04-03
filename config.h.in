@@ -16,7 +16,7 @@
 # define PACK_END
 #endif
 
-#cmakedefine 
+#cmakedefine HAVE_PACKING_GNUC_ATTRIBUTE
 #ifdef HAVE_PACKING_GNUC_ATTRIBUTE
 #define PACK_ATTRIBUTE __attribute__((__packed__))
 #else
