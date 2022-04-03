@@ -151,14 +151,8 @@ th08_read(
         return -1;
     unsigned char* zdata = malloc(entry->zsize);
 
-    int failed = 0;
-#pragma omp critical
-    {
-        failed = (thtk_io_seek(thdat->stream, entry->offset, SEEK_SET, error) == -1) ||
-                 (thtk_io_read(thdat->stream, zdata, entry->zsize, error) != entry->zsize);
-    }
-
-    if (failed)
+    if ((thtk_io_seek(thdat->stream, entry->offset, SEEK_SET, error) == -1) ||
+            (thtk_io_read(thdat->stream, zdata, entry->zsize, error) != entry->zsize))
         return -1;
 
     thtk_io_t* zdata_stream = thtk_io_open_memory(zdata, entry->zsize, error);
@@ -303,13 +297,10 @@ th08_write(
     if (!zdata)
         return -1;
 
-#pragma omp critical
-    {
-        /* TODO: Handle error. */
-        thtk_io_write(thdat->stream, zdata, entry->zsize, error);
-        entry->offset = thdat->offset;
-        thdat->offset += entry->zsize;
-    }
+    /* TODO: Handle error. */
+    thtk_io_write(thdat->stream, zdata, entry->zsize, error);
+    entry->offset = thdat->offset;
+    thdat->offset += entry->zsize;
 
     thtk_io_unmap(zdata_stream, zdata);
     thtk_io_close(zdata_stream);

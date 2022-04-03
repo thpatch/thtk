@@ -167,14 +167,8 @@ th95_read(
     unsigned char* data;
     unsigned char* zdata = malloc(entry->zsize);
 
-    int failed = 0;
-#pragma omp critical
-    {
-        failed = (thtk_io_seek(thdat->stream, entry->offset, SEEK_SET, error) == -1) ||
-                 (thtk_io_read(thdat->stream, zdata, entry->zsize, error) != entry->zsize);
-    }
-
-    if (failed)
+    if ((thtk_io_seek(thdat->stream, entry->offset, SEEK_SET, error) == -1) ||
+            (thtk_io_read(thdat->stream, zdata, entry->zsize, error) != entry->zsize))
         return -1;
 
     const crypt_params_t* crypt_params = th95_get_crypt_param(thdat->version, entry->name);
@@ -267,22 +261,15 @@ th95_write(
     th_encrypt(data, entry->zsize, crypt_params->key, crypt_params->step,
         crypt_params->block, crypt_params->limit);
 
-    int failed = 0;
-#pragma omp critical
-    {
-        failed = (thtk_io_write(thdat->stream, data, entry->zsize, error) != entry->zsize);
-        if (!failed) {
-            entry->offset = thdat->offset;
-            thdat->offset += entry->zsize;
-        }
-    }
-
-    free(data);
-
-    if (failed)
+    if (!(thtk_io_write(thdat->stream, data, entry->zsize, error) != entry->zsize)) {
+        entry->offset = thdat->offset;
+        thdat->offset += entry->zsize;
+        free(data);
+        return entry->zsize;
+    } else {
+        free(data);
         return -1;
-
-    return entry->zsize;
+    }
 }
 
 static int

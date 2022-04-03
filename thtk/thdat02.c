@@ -124,11 +124,8 @@ th02_read(
     thdat_entry_t* entry = &thdat->entries[entry_index];
     unsigned char* data;
     ssize_t ret;
-#pragma omp critical
-    {
-        data = thtk_io_map(thdat->stream, entry->offset, entry->zsize, error);
-    }
-    if (!data)
+
+    if (!(data = thtk_io_map(thdat->stream, entry->offset, entry->zsize, error)))
         return -1;
 
     for (ssize_t i = 0; i < entry->zsize; ++i)
@@ -208,16 +205,13 @@ th02_write(
 
     ssize_t ret = -1;
 
-#pragma omp critical
-    {
-        entry->offset = thtk_io_seek(thdat->stream, 0, SEEK_CUR, error);
+    entry->offset = thtk_io_seek(thdat->stream, 0, SEEK_CUR, error);
 
-        if (entry->offset != -1)
-            ret = thtk_io_write(thdat->stream, data, entry->zsize, error);
+    if (entry->offset != -1)
+        ret = thtk_io_write(thdat->stream, data, entry->zsize, error);
 
-        if (ret != -1)
-            thdat->offset += ret;
-    }
+    if (ret != -1)
+        thdat->offset += ret;
 
     thtk_io_unmap(output, data);
 

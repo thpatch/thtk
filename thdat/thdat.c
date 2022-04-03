@@ -163,24 +163,19 @@ thdat_list(
 
     entries = malloc(entry_count * sizeof(*entries));
 
-#pragma omp parallel /* reduction(max:name_width) */
-    {
-#pragma omp for
-        for (e = 0; e < entry_count; ++e) {
-            thtk_error_t* error = NULL;
-            entries[e].name = thdat_entry_get_name(state->thdat, e, &error);
-            entries[e].size = thdat_entry_get_size(state->thdat, e, &error);
-            entries[e].zsize = thdat_entry_get_zsize(state->thdat, e, &error);
-            if (!entries[e].name || entries[e].size == -1 || entries[e].zsize == -1) {
-                print_error(error);
-                thtk_error_free(&error);
-                continue;
-            }
-            int entry_name_width = strlen(entries[e].name);
-#pragma omp critical
-            if (entry_name_width > name_width)
-                name_width = entry_name_width;
+    for (e = 0; e < entry_count; ++e) {
+        thtk_error_t* error = NULL;
+        entries[e].name = thdat_entry_get_name(state->thdat, e, &error);
+        entries[e].size = thdat_entry_get_size(state->thdat, e, &error);
+        entries[e].zsize = thdat_entry_get_zsize(state->thdat, e, &error);
+        if (!entries[e].name || entries[e].size == -1 || entries[e].zsize == -1) {
+            print_error(error);
+            thtk_error_free(&error);
+            continue;
         }
+        int entry_name_width = strlen(entries[e].name);
+        if (entry_name_width > name_width)
+            name_width = entry_name_width;
     }
 
     // th105: Stored = Size
@@ -270,7 +265,6 @@ thdat_create_wrapper(
     k = 0;
     /* TODO: Properly indicate when insertion fails. */
     ssize_t i;
-#pragma omp parallel for schedule(dynamic)
     for (i = 0; i < real_entry_count; ++i) {
         thtk_error_t* error = NULL;
         thtk_io_t* entry_stream;
@@ -471,7 +465,6 @@ main(
 
         if (argc > 1) {
             ssize_t a;
-#pragma omp parallel for schedule(dynamic)
             for (a = 1; a < argc; ++a) {
                 thtk_error_t* error = NULL;
                 int entry_index;
@@ -497,7 +490,6 @@ main(
             }
 
             ssize_t entry_index;
-#pragma omp parallel for schedule(dynamic)
             for (entry_index = 0; entry_index < entry_count; ++entry_index) {
                 thtk_error_t* error = NULL;
                 if (!thdat_extract_file(state, entry_index, &error)) {

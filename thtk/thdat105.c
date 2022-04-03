@@ -107,14 +107,8 @@ th105_read(
     thdat_entry_t* entry = thdat->entries + entry_index;
     unsigned char* data = malloc(entry->size);
 
-    int failed = 0;
-#pragma omp critical
-    {
-        failed = (thtk_io_seek(thdat->stream, entry->offset, SEEK_SET, error) == -1) ||
-                 (thtk_io_read(thdat->stream, data, entry->size, error) != entry->size);
-    }
-
-    if (failed)
+    if ((thtk_io_seek(thdat->stream, entry->offset, SEEK_SET, error) == -1) ||
+            (thtk_io_read(thdat->stream, data, entry->size, error) != entry->size))
         return -1;
 
     th105_decrypt_data(thdat, entry, data);
@@ -176,22 +170,15 @@ th105_write(
 
     th105_encrypt_data(thdat, entry, data);
 
-    int failed = 0;
-#pragma omp critical
-    {
-        failed = (thtk_io_write(thdat->stream, data, entry->size, error) != entry->size);
-        if (!failed) {
-            entry->offset = thdat->offset;
-            thdat->offset += entry->size;
-        }
-    }
-
-    free(data);
-
-    if (failed)
+    if (!(thtk_io_write(thdat->stream, data, entry->size, error) != entry->size)) {
+        entry->offset = thdat->offset;
+        thdat->offset += entry->size;
+        free(data);
+        return entry->size;
+    } else {
+        free(data);
         return -1;
-
-    return entry->size;
+    }
 }
 
 static int
