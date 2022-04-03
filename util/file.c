@@ -76,8 +76,8 @@ file_read(
     void* buffer,
     size_t size)
 {
-    if (fread_unlocked(buffer, size, 1, stream) != 1 && size != 0) {
-        if (feof_unlocked(stream)) {
+    if (fread(buffer, size, 1, stream) != 1 && size != 0) {
+        if (feof(stream)) {
             fprintf(stderr,
                 "%s: failed reading %lu bytes: unexpected end of file\n",
                 argv0, (long unsigned int)size);
@@ -96,7 +96,7 @@ file_write(
     const void* buffer,
     size_t size)
 {
-    if (fwrite_unlocked(buffer, size, 1, stream) != 1 && size != 0) {
+    if (fwrite(buffer, size, 1, stream) != 1 && size != 0) {
         fprintf(stderr, "%s: failed writing %lu bytes: %s\n",
             argv0, (long unsigned int)size, strerror(errno));
         return 0;
@@ -116,7 +116,7 @@ file_read_asciiz(
         if (i == size - 1) {
             return -1;
         }
-        c = getc_unlocked(stream);
+        c = getc(stream);
         if (c == EOF) {
             return -1;
         }
@@ -135,7 +135,7 @@ file_fsize(
 {
 #if defined(HAVE_FILENO) && defined(HAVE_FSTAT)
     struct stat sb;
-    int fd = fileno_unlocked(stream);
+    int fd = fileno(stream);
 
     if (fd == -1) {
         fprintf(stderr, "%s: invalid stream: %s\n", argv0, strerror(errno));
@@ -176,7 +176,7 @@ file_mmap(
     size_t length)
 {
 #ifdef HAVE_MMAP
-    void* map = mmap(NULL, length, PROT_READ, MAP_PRIVATE, fileno_unlocked(stream), 0);
+    void* map = mmap(NULL, length, PROT_READ, MAP_PRIVATE, fileno(stream), 0);
     if (map == MAP_FAILED) {
         fprintf(stderr, "%s: mmap failed: %s\n", argv0, strerror(errno));
         return NULL;
