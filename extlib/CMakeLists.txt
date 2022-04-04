@@ -1,39 +1,53 @@
 if (WITH_LIBPNG_SOURCE)
   # CUSTOM ZLIB-NG BUILD
-  file(COPY zlib-ng/zconf.h.in zlib-ng/zlib.h
+  file(COPY zlib-ng/zconf.h.in zlib-ng/zconf-ng.h.in zlib-ng/zlib.h zlib-ng/zlib-ng.h
        DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/zlib-ng)
   file(RENAME ${CMAKE_CURRENT_BINARY_DIR}/zlib-ng/zconf.h.in
               ${CMAKE_CURRENT_BINARY_DIR}/zlib-ng/zconf.h)
+  file(RENAME ${CMAKE_CURRENT_BINARY_DIR}/zlib-ng/zconf-ng.h.in
+              ${CMAKE_CURRENT_BINARY_DIR}/zlib-ng/zconf-ng.h)
   include_directories(${CMAKE_CURRENT_BINARY_DIR}/zlib-ng)
-  file(GLOB ZLIB_SRC "zlib-ng/*.c" zlib-ng/zlib.h)
 
   add_library(z STATIC
   zlib-ng/adler32.c
+  zlib-ng/adler32_p.h
+  zlib-ng/chunkset.c
+  zlib-ng/chunkset_tpl.h
+  zlib-ng/compare258.c
   zlib-ng/compress.c
   zlib-ng/crc32.c
-  zlib-ng/crc32.h
+  zlib-ng/crc32_comb.c
+  zlib-ng/crc32_comb_tbl.h
+  zlib-ng/crc32_p.h
+  zlib-ng/crc32_tbl.h
   zlib-ng/deflate.c
   zlib-ng/deflate.h
   zlib-ng/deflate_fast.c
   zlib-ng/deflate_medium.c
   zlib-ng/deflate_p.h
+  zlib-ng/deflate_quick.c
   zlib-ng/deflate_slow.c
   zlib-ng/functable.c
   zlib-ng/functable.h
   zlib-ng/infback.c
   zlib-ng/inffast.c
   zlib-ng/inffast.h
-  zlib-ng/inffixed.h
+  zlib-ng/inffixed_tbl.h
   zlib-ng/inflate.c
   zlib-ng/inflate.h
+  zlib-ng/inflate_p.h
   zlib-ng/inftrees.c
   zlib-ng/inftrees.h
-  zlib-ng/match.c
-  zlib-ng/match.h
-  zlib-ng/memcopy.h
+  zlib-ng/insert_string.c
+  zlib-ng/insert_string_tpl.h
+  zlib-ng/match_tpl.h
   zlib-ng/trees.c
   zlib-ng/trees.h
+  zlib-ng/trees_emit.h
+  zlib-ng/trees_tbl.h
   zlib-ng/uncompr.c
+  zlib-ng/zbuild.h
+  zlib-ng/zendian.h
   zlib-ng/zutil.c
   zlib-ng/zutil.h
 
@@ -41,6 +55,7 @@ if (WITH_LIBPNG_SOURCE)
   if (HAVE_UNISTD_H)
     set(Z_HAVE_UNISTD_H "Z_HAVE_UNISTD_H")
   endif()
+  target_compile_definitions(z PRIVATE ZLIB_COMPAT)
   target_compile_definitions(z
     PUBLIC ${Z_HAVE_UNISTD_H})
 
