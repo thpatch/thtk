@@ -60,6 +60,7 @@ set(CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_PREFIX}/lib)
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
 option(WITH_LIBPNG_SOURCE "Compile libpng from source" ON)
+option(WITH_OPENMP "Compile with OpenMP" ON)
 if(UNIX)
   option(CONTRIB_UTHDAT "Build midnight commander plugin" OFF)
 endif()
