@@ -259,5 +259,5 @@ ins_[0-9]+ {
     char buf[256];
     snprintf(buf, 256, "illegal token: %s", yytext);
     yyerror(NULL, buf);
-    return ILLEGAL_TOKEN;
+    return YYUNDEF;
 }

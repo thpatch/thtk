@@ -252,7 +252,6 @@ static const char sub_param_fi[] = {'f', 'i'};
 %token T_SIN "sin"
 %token T_COS "cos"
 %token T_SQRT "sqrt"
-%token ILLEGAL_TOKEN "illegal token"
 
 %type <list> Text_Semicolon_List
 %type <list> Instruction_Parameters_List
