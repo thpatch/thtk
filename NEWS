@@ -1,3 +1,53 @@
+What's new in thtk master
+=====================
+
+#### thtk
+- Improvements to the CMake build process.
+- thlzss.h and thcrypt.h are now part of the API.
+- We've set up GitHub Actions for automatic builds.
+
+#### thanm
+- Support for TH18 has been added.
+
+#### thecl
+- Fix and/or add the following instruction formats:
+    th06 71-74, 90
+    th08 14, 19, 72, 84-86, 118, 119, 152
+    th13 18. 19, 20, 24
+- The eclmap format has been changed. It's documented in the thecl manual.
+  A converter is available in contrib/eclmapcvt.awk.
+- Allow multiple mnemonics for the same instruction.
+- Allow eclmap signatures for timeline instructions.
+- The parser grammar has been reworked to be completely unambiguous.
+- Control statements now require parenthesis around expressions.
+  E.g. if (x) goto y; instead of if x goto y;
+- More escape sequences are supported: \r \n \0.
+- Unary plus operator added.
+- Expressions are compile-time evaluated, and constant expressions are allowed
+  in more places.
+- Added #line directive.
+- Added insdef statement for defining new instructions.
+- Support for TH18 has been added.
+- Numerous bug-fixes.
+
+#### thdat
+- Automatic version detection now supports th165, th17 and th18.
+- Detection works better with renamed files.
+- Support for TH18 has been added.
+- Improve extraction speed.
+
+#### thmsg
+- Support for TH18 has been added.
+
+#### thstd
+- Support for TH18 has been added.
+
+Please submit an issue at GitHub (https://github.com/thpatch/thtk/issues) if
+you find a bug.
+
+
+-------------------------------------------------------------------------------
+
 What's new in thtk 12
 =====================
 
