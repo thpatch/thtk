@@ -35,8 +35,8 @@
 #include <thtk/error.h>
 #include <thtk/io.h>
 
-#ifndef API_SYMBOL
-#define API_SYMBOL /* */
+#ifndef THTK_EXPORT
+#define THTK_EXPORT /* */
 #endif
 
 #ifdef __cplusplus
@@ -53,7 +53,7 @@ typedef struct thdat_t thdat_t;
  * thdat_entry_read_data.
  *
  * A new thdat_t object is returned on success, NULL indicates an error. */
-API_SYMBOL thdat_t* thdat_open(
+THTK_EXPORT thdat_t* thdat_open(
     unsigned int version,
     thtk_io_t* input,
     thtk_error_t** error);
@@ -62,7 +62,7 @@ API_SYMBOL thdat_t* thdat_open(
  *
  * The stream has its reading position reset to zero before writing starts.
  * NULL indicates an error. */
-API_SYMBOL thdat_t* thdat_create(
+THTK_EXPORT thdat_t* thdat_create(
     unsigned int version,
     thtk_io_t* output,
     size_t entry_count,
@@ -74,53 +74,53 @@ API_SYMBOL thdat_t* thdat_create(
  * after filling out entry names.
  *
  * 0 indicates an error. */
-API_SYMBOL int thdat_init(
+THTK_EXPORT int thdat_init(
     thdat_t* thdat,
     thtk_error_t** error);
 
 /* Writes out the final pieces of data for a created archive.  The stream is
  * not closed.  0 indicates an error. */
-API_SYMBOL int thdat_close(
+THTK_EXPORT int thdat_close(
     thdat_t* thdat,
     thtk_error_t** error);
 
 /* Frees the memory associated with the archive, but doesn't close the stream. */
-API_SYMBOL void thdat_free(
+THTK_EXPORT void thdat_free(
     thdat_t* thdat);
 
 /* Returns the number of entries in in the archive.  -1 indicates an error. */
-API_SYMBOL ssize_t thdat_entry_count(
+THTK_EXPORT ssize_t thdat_entry_count(
     thdat_t* thdat,
     thtk_error_t** error);
 
 /* Returns the index of the named entry.  -1 indicates an error. */
-API_SYMBOL ssize_t thdat_entry_by_name(
+THTK_EXPORT ssize_t thdat_entry_by_name(
     thdat_t* thdat,
     const char* name,
     thtk_error_t** error);
 
 /* Sets the name of an entry, names are limited to 256 characters at most, and
  * less for certain formats.  0 indicates an error. */
-API_SYMBOL int thdat_entry_set_name(
+THTK_EXPORT int thdat_entry_set_name(
     thdat_t* thdat,
     int entry_index,
     const char* name,
     thtk_error_t** error);
 
 /* Returns the entry's name.  NULL indicates an error. */
-API_SYMBOL const char* thdat_entry_get_name(
+THTK_EXPORT const char* thdat_entry_get_name(
     thdat_t* thdat,
     int entry_index,
     thtk_error_t** error);
 
 /* Returns the size of the entry's uncompressed data.  -1 indicates an error. */
-API_SYMBOL ssize_t thdat_entry_get_size(
+THTK_EXPORT ssize_t thdat_entry_get_size(
     thdat_t* thdat,
     int entry_index,
     thtk_error_t** error);
 
 /* Returns the size of the entry's compressed data.  -1 indicates an error. */
-API_SYMBOL ssize_t thdat_entry_get_zsize(
+THTK_EXPORT ssize_t thdat_entry_get_zsize(
     thdat_t* thdat,
     int entry_index,
     thtk_error_t** error);
@@ -130,7 +130,7 @@ API_SYMBOL ssize_t thdat_entry_get_zsize(
  * as needed, and writes it to the archive's current offset using the specified
  * index.  The number of bytes read from the input stream is returned.  -1
  * indicates an error. */
-API_SYMBOL ssize_t thdat_entry_write_data(
+THTK_EXPORT ssize_t thdat_entry_write_data(
     thdat_t* thdat,
     int entry_index,
     thtk_io_t* input,
@@ -140,7 +140,7 @@ API_SYMBOL ssize_t thdat_entry_write_data(
 /* Reads all the data for the specified entry, converts it to its uncompressed
  * form, and writes all of it to output.  The number of bytes written to the
  * output stream is returned.  -1 indicates an error. */
-API_SYMBOL ssize_t thdat_entry_read_data(
+THTK_EXPORT ssize_t thdat_entry_read_data(
     thdat_t* thdat,
     int entry_index,
     thtk_io_t* output,

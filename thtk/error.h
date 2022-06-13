@@ -33,8 +33,8 @@
 extern "C" {
 #endif
 
-#ifndef API_SYMBOL
-#define API_SYMBOL /* */
+#ifndef THTK_EXPORT
+#define THTK_EXPORT /* */
 #endif
 
 typedef struct thtk_error_t thtk_error_t;
@@ -43,18 +43,18 @@ typedef struct thtk_error_t thtk_error_t;
 #define thtk_error_new(error, ...) thtk_error_func_new(error, __func__, __VA_ARGS__)
 
 /* Stores a pointer to an error structure if error is not NULL. */
-API_SYMBOL void thtk_error_func_new(
+THTK_EXPORT void thtk_error_func_new(
     thtk_error_t** error,
     const char* function,
     const char* message,
     ...);
 
 /* Extracts the message from an error structure. */
-API_SYMBOL const char* thtk_error_message(
+THTK_EXPORT const char* thtk_error_message(
     thtk_error_t* error);
 
 /* Frees the error structure and clears the pointer. */
-API_SYMBOL void thtk_error_free(
+THTK_EXPORT void thtk_error_free(
     thtk_error_t** error);
 
 #ifdef __cplusplus

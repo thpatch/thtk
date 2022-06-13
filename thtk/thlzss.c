@@ -34,6 +34,7 @@
 #include <thtk/thtk.h>
 
 #include "bits.h"
+#include "thlzss.h"
 
 /* Compression specification:
  *

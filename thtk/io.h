@@ -43,29 +43,29 @@ typedef struct thtk_io_t thtk_io_t;
 
 /* See the documentation for read(2).  Returns the number of bytes read, or -1
  * on error. */
-API_SYMBOL ssize_t thtk_io_read(thtk_io_t* io, void* buf, size_t count, thtk_error_t** error);
+THTK_EXPORT ssize_t thtk_io_read(thtk_io_t* io, void* buf, size_t count, thtk_error_t** error);
 /* See the documentation for write(2).  Returns the number of bytes written, or
  * -1 on error. */
-API_SYMBOL ssize_t thtk_io_write(thtk_io_t* io, const void* buf, size_t count, thtk_error_t** error);
+THTK_EXPORT ssize_t thtk_io_write(thtk_io_t* io, const void* buf, size_t count, thtk_error_t** error);
 /* See the documentation for lseek(2).  Returns the new offset, or -1 on error. */
-API_SYMBOL off_t thtk_io_seek(thtk_io_t* io, off_t offset, int whence, thtk_error_t** error);
+THTK_EXPORT off_t thtk_io_seek(thtk_io_t* io, off_t offset, int whence, thtk_error_t** error);
 /* Returns a memory location which maps to the content of the IO object at the specified offset.
  * What happens to the underlying object when the data is changed is not yet defined. */
-API_SYMBOL unsigned char* thtk_io_map(thtk_io_t* io, off_t offset, size_t count, thtk_error_t** error);
+THTK_EXPORT unsigned char* thtk_io_map(thtk_io_t* io, off_t offset, size_t count, thtk_error_t** error);
 /* Frees a mapping. */
-API_SYMBOL void thtk_io_unmap(thtk_io_t* io, unsigned char* map);
+THTK_EXPORT void thtk_io_unmap(thtk_io_t* io, unsigned char* map);
 /* Closes and frees the IO object.  Returns 0 on error, otherwise 1. */
-API_SYMBOL int thtk_io_close(thtk_io_t* io);
+THTK_EXPORT int thtk_io_close(thtk_io_t* io);
 
 /* Opens a file in the mode specified, the mode works as it does for fopen. */
-API_SYMBOL thtk_io_t* thtk_io_open_file(const char* path, const char* mode, thtk_error_t** error);
+THTK_EXPORT thtk_io_t* thtk_io_open_file(const char* path, const char* mode, thtk_error_t** error);
 #ifdef _WIN32
-API_SYMBOL thtk_io_t* thtk_io_open_file_w(const wchar_t* path, const wchar_t* mode, thtk_error_t** error);
+THTK_EXPORT thtk_io_t* thtk_io_open_file_w(const wchar_t* path, const wchar_t* mode, thtk_error_t** error);
 #endif
 /* Opens a memory buffer for IO. */
-API_SYMBOL thtk_io_t* thtk_io_open_memory(void* buf, size_t size, thtk_error_t** error);
+THTK_EXPORT thtk_io_t* thtk_io_open_memory(void* buf, size_t size, thtk_error_t** error);
 /* Creates a new memory buffer that automatically expands. */
-API_SYMBOL thtk_io_t* thtk_io_open_growing_memory(thtk_error_t** error);
+THTK_EXPORT thtk_io_t* thtk_io_open_growing_memory(thtk_error_t** error);
 
 #ifdef __cplusplus
 }

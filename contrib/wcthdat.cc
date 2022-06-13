@@ -176,44 +176,44 @@ extern "C" {
         return TRUE;
     }
     // ANSI functions
-    HANDLE API_SYMBOL __stdcall OpenArchive(tOpenArchiveData *ArchiveData) {
+    HANDLE THTK_EXPORT __stdcall OpenArchive(tOpenArchiveData *ArchiveData) {
         return OpenArchiveTemplate<char, tOpenArchiveData>(ArchiveData);
     }
-    int API_SYMBOL __stdcall ReadHeader(HANDLE hArcData, tHeaderData *HeaderData) {
+    int THTK_EXPORT __stdcall ReadHeader(HANDLE hArcData, tHeaderData *HeaderData) {
         return ReadHeaderTemplate<char, tHeaderData>(hArcData, HeaderData);
     }
-    int API_SYMBOL __stdcall ProcessFile(HANDLE hArcData, int Operation, char *DestPath, char *DestName) {
+    int THTK_EXPORT __stdcall ProcessFile(HANDLE hArcData, int Operation, char *DestPath, char *DestName) {
         return ProcessFileTemplate<char>(hArcData, Operation, DestPath, DestName);
     }
-    void API_SYMBOL __stdcall SetChangeVolProc(HANDLE hArcData, tChangeVolProc pChangeVolProc1) {
+    void THTK_EXPORT __stdcall SetChangeVolProc(HANDLE hArcData, tChangeVolProc pChangeVolProc1) {
     }
-    void API_SYMBOL __stdcall SetProcessDataProc(HANDLE hArcData, tProcessDataProc pProcessDataProc) {
+    void THTK_EXPORT __stdcall SetProcessDataProc(HANDLE hArcData, tProcessDataProc pProcessDataProc) {
     }
-    BOOL API_SYMBOL __stdcall CanYouHandleThisFile(char* filename) {
+    BOOL THTK_EXPORT __stdcall CanYouHandleThisFile(char* filename) {
         return CanYouHandleThisFileTemplate<char>(filename);
     }
     // Unicode functions
-    HANDLE API_SYMBOL __stdcall OpenArchiveW(tOpenArchiveDataW *ArchiveData) {
+    HANDLE THTK_EXPORT __stdcall OpenArchiveW(tOpenArchiveDataW *ArchiveData) {
         return OpenArchiveTemplate<wchar_t, tOpenArchiveDataW>(ArchiveData);
     }
-    int API_SYMBOL __stdcall ReadHeaderExW(HANDLE hArcData, tHeaderDataExW *HeaderData) {
+    int THTK_EXPORT __stdcall ReadHeaderExW(HANDLE hArcData, tHeaderDataExW *HeaderData) {
         return ReadHeaderTemplate<wchar_t, tHeaderDataExW>(hArcData, HeaderData);
     }
-    int API_SYMBOL __stdcall ProcessFileW(HANDLE hArcData, int Operation, wchar_t *DestPath, wchar_t *DestName) {
+    int THTK_EXPORT __stdcall ProcessFileW(HANDLE hArcData, int Operation, wchar_t *DestPath, wchar_t *DestName) {
         return ProcessFileTemplate<wchar_t>(hArcData, Operation, DestPath, DestName);
     }
-    void API_SYMBOL __stdcall SetChangeVolProcW(HANDLE hArcData, tChangeVolProcW pChangeVolProc1) {
+    void THTK_EXPORT __stdcall SetChangeVolProcW(HANDLE hArcData, tChangeVolProcW pChangeVolProc1) {
     }
-    void API_SYMBOL __stdcall SetProcessDataProcW(HANDLE hArcData, tProcessDataProcW pProcessDataProc) {
+    void THTK_EXPORT __stdcall SetProcessDataProcW(HANDLE hArcData, tProcessDataProcW pProcessDataProc) {
     }
-    BOOL API_SYMBOL __stdcall CanYouHandleThisFileW(wchar_t* filename) {
+    BOOL THTK_EXPORT __stdcall CanYouHandleThisFileW(wchar_t* filename) {
         return CanYouHandleThisFileTemplate<wchar_t>(filename);
     }
     // Misc
-    int API_SYMBOL __stdcall GetPackerCaps() {
+    int THTK_EXPORT __stdcall GetPackerCaps() {
         return PK_CAPS_BY_CONTENT;
     }
-    int API_SYMBOL __stdcall CloseArchive(HANDLE hArcData) {
+    int THTK_EXPORT __stdcall CloseArchive(HANDLE hArcData) {
         DeletableBase* ctx = (DeletableBase*)hArcData;
         delete ctx;
         return 0;

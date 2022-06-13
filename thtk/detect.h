@@ -29,8 +29,8 @@
 #ifndef THTK_DETECT_H_
 #define THTK_DETECT_H_
 
-#ifndef API_SYMBOL
-#define API_SYMBOL /* */
+#ifndef THTK_EXPORT
+#define THTK_EXPORT /* */
 #endif
 
 #include <inttypes.h>
@@ -50,11 +50,11 @@ typedef struct {
 /* Detects version of archive, based on its filename
  *
  * Returns -1 if unconclusive. */
-API_SYMBOL int thdat_detect_filename(
+THTK_EXPORT int thdat_detect_filename(
     const char* filename);
 
 #ifdef _WIN32
-API_SYMBOL int thdat_detect_filename_w(
+THTK_EXPORT int thdat_detect_filename_w(
     const wchar_t* filename);
 #endif
 
@@ -73,7 +73,7 @@ API_SYMBOL int thdat_detect_filename_w(
  * - All entries specified in out have the same variant
  *   (in that case heur is set to variant number)
  * Otherwise it is set to -1, and the detection shall be considered unconclusive */
-API_SYMBOL int thdat_detect(
+THTK_EXPORT int thdat_detect(
     const char* filename,
     thtk_io_t* input,
     uint32_t out[4],
@@ -81,7 +81,7 @@ API_SYMBOL int thdat_detect(
     thtk_error_t** error);
 
 #ifdef _WIN32
-API_SYMBOL int thdat_detect_w(
+THTK_EXPORT int thdat_detect_w(
     const wchar_t* filename,
     thtk_io_t* input,
     uint32_t out[4],
@@ -96,7 +96,7 @@ API_SYMBOL int thdat_detect_w(
  * Note that it will modify the out array.
  *
  * Usage: while((ent = thdat_detect_iter(out))) ...; */
-API_SYMBOL const thdat_detect_entry_t* thdat_detect_iter(
+THTK_EXPORT const thdat_detect_entry_t* thdat_detect_iter(
     uint32_t out[4]);
 #ifdef __cplusplus
 }

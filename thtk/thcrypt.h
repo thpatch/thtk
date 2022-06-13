@@ -33,11 +33,11 @@
 extern "C" {
 #endif
 
-#ifndef API_SYMBOL
-#define API_SYMBOL /* */
+#ifndef THTK_EXPORT
+#define THTK_EXPORT /* */
 #endif
 
-API_SYMBOL void th_encrypt(
+THTK_EXPORT void th_encrypt(
     unsigned char* data,
     unsigned int size,
     unsigned char key,
@@ -45,7 +45,7 @@ API_SYMBOL void th_encrypt(
     unsigned int block,
     unsigned int limit);
 
-API_SYMBOL void th_decrypt(
+THTK_EXPORT void th_decrypt(
     unsigned char* data,
     unsigned int size,
     unsigned char key,

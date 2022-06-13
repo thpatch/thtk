@@ -84,11 +84,11 @@ typedef SSIZE_T ssize_t;
 #undef HAVE__FREAD_NOLOCK
 
 #ifdef _WIN32
-# define API_SYMBOL __declspec(dllexport)
-
 # include <io.h>
 # include <fcntl.h>
 #endif
+
+#include <thtk_export.h>
 
 #define PACKAGE_NAME "@PROJECT_NAME@"
 #define PACKAGE_VERSION "@PROJECT_VERSION@"

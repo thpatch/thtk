@@ -31,10 +31,10 @@
 #include <stdlib.h>
 #include "rng_mt.h"
 
-const int32_t N = 624;
-const int32_t M = 397;
-const uint32_t UPPER_MASK = 0x80000000UL;
-const uint32_t LOWER_MASK = 0x7FFFFFFFUL;
+static const int32_t N = 624;
+static const int32_t M = 397;
+static const uint32_t UPPER_MASK = 0x80000000UL;
+static const uint32_t LOWER_MASK = 0x7FFFFFFFUL;
 
 void
 rng_mt_internal_init(
@@ -42,7 +42,7 @@ rng_mt_internal_init(
     uint32_t seed)
 {
     uint32_t* mt = rng->mt;
-    
+
     mt[0] = seed;
     for (int32_t i = 1; i < N; ++i) {
         mt[i] = (0x6c078965UL * (mt[i-1] ^ (mt[i-1] >> 30)) + i);
@@ -68,7 +68,7 @@ rng_mt_free(
     free(rng);
     return 1;
 }
-    
+
 uint32_t
 rng_mt_nextint(
     rng_mt* rng)
@@ -81,7 +81,7 @@ rng_mt_nextint(
         uint32_t t;
         if (rng->mti == N+1)
             rng_mt_init(5489);
-        
+
         for (i = 0; i < N-M; ++i) {
             t = (mt[i]&UPPER_MASK) | (mt[i+1]&LOWER_MASK);
             mt[i] = mt[i+M] ^ (t>>1) ^ mag01[t&1];
@@ -92,16 +92,16 @@ rng_mt_nextint(
         }
         t = (mt[N-1]&UPPER_MASK) | (mt[0]&LOWER_MASK);
         mt[N-1] = mt[M-1] ^ (t>>1) ^ mag01[t&1];
-        
+
         rng->mti = 0;
     }
-    
+
     ret = mt[rng->mti++];
-    
+
     ret ^= (ret>>11);
     ret ^= (ret<<7) & 0x9d2c5680UL;
     ret ^= (ret<<15) & 0xefc60000UL;
     ret ^= (ret>>18);
-    
+
     return ret;
 }

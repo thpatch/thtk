@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 3.12)
 set(CMP0048 NEW)
 
 project("Touhou Toolkit"
@@ -11,6 +11,7 @@ include(CheckTypeSize)
 include(CheckIncludeFile)
 include(CheckSymbolExists)
 include(CMakePushCheckState)
+include(GenerateExportHeader)
 
 check_packing_gnuc_attribute()
 if(NOT ${HAVE_PACKING_GNUC_ATTRIBUTE})
@@ -114,3 +115,4 @@ add_subdirectory(thtk)
 add_subdirectory(contrib)
 
 configure_file(config.h.in config.h)
+generate_export_header(thtk)
