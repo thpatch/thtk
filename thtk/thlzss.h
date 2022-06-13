@@ -29,7 +29,6 @@
 #ifndef THLZSS_H_
 #define THLZSS_H_
 
-#include <config.h>
 #ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
 #endif

@@ -29,8 +29,6 @@
 #ifndef THCRYPT_H_
 #define THCRYPT_H_
 
-#include <config.h>
-
 #ifdef __cplusplus
 extern "C" {
 #endif
