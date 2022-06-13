@@ -73,7 +73,7 @@ thdat_version_to_module(
     case 165:
     case 17:
     case 18:
-    /* NEWHU: */
+    /* NEWHU: 18 */
         return &archive_th95;
     case 105:
     case 123:

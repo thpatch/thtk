@@ -68,7 +68,7 @@
     x(21, 14,165, "th165.dat") \
     x(22, 14,17, "th17.dat") \
     x(23, 14,18, "th18.dat") \
-    /* NEWHU: */ \
+    /* NEWHU: 18 */ \
     /* thdat105 */ \
     x(24, 105,105, NULL) \
     x(25, 123,123, NULL)
@@ -315,7 +315,7 @@ thdat_detect_08_95(
                         case 95: case 10: case 11: case 12:
                         case 125: case 128: case 13: case 14:
                         case 143: case 15: case 16: case 165:
-                        case 17: case 18: /* NEWHU: */
+                        case 17: case 18: /* NEWHU: 18 */
                             if (is95)
                                 return n;
                             break;
@@ -480,7 +480,7 @@ notth03:
             SET_OUT(165);
             SET_OUT(17);
             SET_OUT(18);
-            /* NEWHU: */
+            /* NEWHU: 18 */
         } else if (ver > 0) {
             SET_OUT(ver);
         }

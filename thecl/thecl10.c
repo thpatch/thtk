@@ -1007,7 +1007,7 @@ static const id_format_pair_t th18_fmts[] = {
     { -1, NULL }
 };
 
-/* NEWHU: */
+/* NEWHU: 18 */
 
 static const char*
 th10_find_format(
@@ -1024,7 +1024,7 @@ th10_find_format(
     const char* ret = NULL;
 
     switch (version) {
-    /* NEWHU: */
+    /* NEWHU: 18 */
     case 18:
         if ((ret = find_format(th18_fmts, id))) break; /* fallthrough */
     case 17:

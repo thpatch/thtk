@@ -69,7 +69,7 @@ th95_get_crypt_param(
         case 165:
         case 17:
         case 18:
-        /* NEWHU: */
+        /* NEWHU: 18 */
         default:
             return &th14_crypt_params[i];
     }
