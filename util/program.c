@@ -131,7 +131,7 @@ unsigned int parse_version(char *str) {
         {165, "vd"},
         {17, "wbawc"},
         {18, "um"},
-        /* NEWHU: 18 */
+        {185, "bm"},
         {0}
     };
     const struct version_abbr *vp = vers;
