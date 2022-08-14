@@ -149,6 +149,7 @@ static const id_format_pair_t th143_msg_fmts[] = {
 };
 
 static const id_format_pair_t th16_msg_fmts[] = {
+    { 19, "S" },
     { 34, "SS" },
     { 35, "" },
     { 0, NULL }
@@ -162,7 +163,12 @@ static const id_format_pair_t th18_msg_fmts[] = {
     { 0, NULL }
 };
 
-/* NEWHU: 18 */
+static const id_format_pair_t th185_msg_fmts[] = {
+    { 37, "" },
+    { 38, "" },
+    { 39, "" },
+    { 0, NULL }
+};
 
 static const id_format_pair_t th10_msg_ed_fmts[] = {
     { 0, "" },
@@ -231,7 +237,7 @@ th06_find_format(unsigned int version, int id)
         case 16:
         case 17:
         case 18:
-        /* NEWHU: 18 */
+        case 185:
             ret = find_format(th10_msg_ed_fmts, id);
             break;
         default:
@@ -240,7 +246,8 @@ th06_find_format(unsigned int version, int id)
         }
     } else {
         switch (version) {
-        /* NEWHU: 18 */
+        case 185:
+            if ((ret = find_format(th185_msg_fmts, id))) break; /* fallthrough */
         case 18:
             if ((ret = find_format(th18_msg_fmts, id))) break; /* fallthrough */
         case 17:
