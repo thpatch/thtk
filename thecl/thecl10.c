@@ -981,11 +981,11 @@ static const id_format_pair_t th165_fmts[] = {
     { 1000, "" },
     { 1001, "" },
     { 1002, "f" },
-    { 1005, "S" },
+    { 1005, "" },
     { 1006, "f" },
     { 1007, "S" },
-    { 1008, "S" },
-    { 1009, "S" },
+    { 1008, "" },
+    { 1009, "" },
     { 1010, "f" },
     { 1011, "S" },
     { 1012, "S" },
@@ -1009,22 +1009,26 @@ static const id_format_pair_t th18_fmts[] = {
 
 static const id_format_pair_t th185_fmts[] = {
 	{ 535, "SSSSSSSSS" },
+    { 536, "fffffffff" },
     { 1001, "S" },
 	{ 1002, "" },
     { 1003, "" },
 	{ 1004, "S" },
     { 1006, "m" },
+    { 1010, ""},
     { 1011, "SS" },
     { 1013, "SSSSSSSSS" },
     { 1015, "SS" },
     { 1017, "" },
     { 1018, "S" },
     { 1019, "" },
+    { 1020, "S" },
     { 1021, "SS" },
     { 1022, "S" },
     { 1023, "S" },
     { 1024, "S" },
     { 1025, "" },
+    { 1026, "S" },
     { -1, NULL }
 };
 
@@ -1260,6 +1264,7 @@ th10_open(
             const char* format = th10_find_format(version, instr->id, 0);
 
             size_t param_size_total = instr->size - sizeof(th10_instr_t);
+
             if (format == NULL) {
                 fprintf(stderr, "%s: (total parameter size is %zu)\n",
                     argv0, param_size_total);
