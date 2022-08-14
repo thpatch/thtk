@@ -390,6 +390,14 @@ static const id_format_pair_t formats_v8[] = {
     { 0, NULL }
 };
 
+static const id_format_pair_t th18_patch[] = {
+    { 310, "S"},
+    { 439, "SSS"},
+    { 0xffff, "" },
+    { 0, NULL }
+};
+
+
 /* The order and sizes of fields changed for TH11. */
 static void
 convert_header_to_old(
@@ -607,7 +615,7 @@ anm_read_file(
 static void
 anm_dump(
     FILE* stream,
-    const anm_archive_t* anm)
+    const anm_archive_t* anm, const int version)
 {
     unsigned int entry_num = 0;
     anm_entry_t* entry;
@@ -681,8 +689,16 @@ anm_dump(
             unsigned int instr_num = 0;
             anm_instr_t* instr;
             list_for_each(&script->instrs, instr) {
-                const char* format = find_format(formats, instr->type);
-
+                char* format = NULL;
+                switch (version)
+                {
+                case 18:
+                case 185:
+                    if ((format = find_format(th18_patch, instr->type))) break;
+                default:
+                    format = find_format(formats, instr->type);
+                    break;
+                }
                 if (!format) {
                     fprintf(stderr, "%s: id %d was not found in the format table\n", argv0, instr->type);
                     abort();
@@ -1282,7 +1298,7 @@ print_usage(void)
 #else
 #define USAGE_LIBPNGFLAGS ""
 #endif
-    printf("Usage: %s [-Vf] [-l" USAGE_LIBPNGFLAGS "] ARCHIVE ...\n"
+    printf("Usage: %s [-Vf] [-l" USAGE_LIBPNGFLAGS "] {version} ARCHIVE ...\n"
            "Options:\n"
            "  -l ARCHIVE            list archive\n", argv0);
 #ifdef HAVE_LIBPNG
@@ -1292,6 +1308,7 @@ print_usage(void)
 #endif
     printf("  -V                    display version information and exit\n"
            "  -f                    ignore errors when possible\n"
+           "  {version} (e.g 18)    optional version selection, fixes bugs for 18 and 185\n"
            "Report bugs to <" PACKAGE_BUGREPORT ">.\n");
 }
 
@@ -1346,22 +1363,39 @@ main(
 
     switch (command) {
     case 'l':
-        if (argc != 1) {
+        if (argc != 1 && argc != 2) {
             print_usage();
             exit(1);
         }
-
-        current_input = argv[0];
-        in = fopen(argv[0], "rb");
-        if (!in) {
-            fprintf(stderr, "%s: couldn't open %s for reading\n", argv[0], current_input);
-            exit(1);
+        if (argc == 1) {
+            current_input = argv[0];
+            in = fopen(argv[0], "rb");
+            if (!in) {
+                fprintf(stderr, "%s: couldn't open %s for reading\n", argv[0], current_input);
+                exit(1);
+            }
+            anm = anm_read_file(in);
+            fclose(in);
+            anm_dump(stdout, anm, 0);
+            anm_free(anm);
+            exit(0);
         }
-        anm = anm_read_file(in);
-        fclose(in);
-        anm_dump(stdout, anm);
-        anm_free(anm);
-        exit(0);
+        else
+        {
+            int version = atoi(argv[0]);
+
+            current_input = argv[1];
+            in = fopen(argv[1], "rb");
+            if (!in) {
+                fprintf(stderr, "%s: couldn't open %s for reading\n", argv[1], current_input);
+                exit(1);
+            }
+            anm = anm_read_file(in);
+            fclose(in);
+            anm_dump(stdout, anm, version);
+            anm_free(anm);
+            exit(0);
+        }
 #ifdef HAVE_LIBPNG
     case 'x':
         if (argc < 1) {
