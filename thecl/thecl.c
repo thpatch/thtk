@@ -252,8 +252,7 @@ print_usage(void)
            "  -r  output raw ECL opcodes, applying minimal transformations\n"
            "  -s  use simple creation, which doesn't add any instructions automatically\n"
            "VERSION can be:\n"
-           "  6, 7, 8, 9, 95, 10, 103 (for Uwabami Breakers), 11, 12, 125, 128, 13, 14, 143, 15, 16, 165, 17 or 18\n"
-           /* NEWHU: 18 */
+           "  6, 7, 8, 9, 95, 10, 103 (for Uwabami Breakers), 11, 12, 125, 128, 13, 14, 143, 15, 16, 165, 17, 18 or 185\n"
            "Report bugs to <" PACKAGE_BUGREPORT ">.\n", argv0);
 }
 
@@ -337,7 +336,7 @@ main(int argc, char* argv[])
     case 165:
     case 17:
     case 18:
-    /* NEWHU: 18 */
+    case 185:
         module = &th10_ecl;
         break;
     default:
