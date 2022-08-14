@@ -1011,6 +1011,7 @@ static const id_format_pair_t th185_fmts[] = {
 	{ 535, "SSSSSSSSS" },
     { 1001, "S" },
 	{ 1002, "" },
+    { 1003, "" },
 	{ 1004, "S" },
     { 1006, "m" },
     { 1011, "SS" },
