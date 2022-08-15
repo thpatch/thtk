@@ -1274,6 +1274,7 @@ th10_open(
                 format = "*S";
             }
 
+            int was_param_size_mismatch_error = 0;
             if (param_size_total > 0) {
                 value_t* values = value_list_from_data(th10_value_from_data, instr->data, instr->size - sizeof(th10_instr_t), format);
                 if (!values) {
@@ -1303,7 +1304,18 @@ th10_open(
                     if (format[p] != '*')
                         ++p;
                 }
+
+                if (format[p] != '\0' && format[p] != '*') {
+                    was_param_size_mismatch_error = 1;
+                }
+
                 free(values);
+            } else if (format[0] != '\0') {
+                was_param_size_mismatch_error = 1;
+            }
+            if (was_param_size_mismatch_error) {
+                fprintf(stderr, "%s: error when dumping opcode %d: "
+                    "format specifies more parameters than the instruction has, recompiling will fail!\n", argv0, instr->id);
             }
         }
     }
