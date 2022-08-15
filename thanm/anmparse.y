@@ -172,12 +172,9 @@ static void instr_check_types(parser_state_t* state, int id, list_t* params);
 %type <expr> ExpressionParam
 %type <expr> ExpressionSubset
 
-%right ASSIGNADD ASSIGNSUB ASSIGNMUL ASSIGNDIV ASSIGNMOD
-%right ASSIGN
+%precedence ASSIGNADD ASSIGNSUB ASSIGNMUL ASSIGNDIV ASSIGNMOD ASSIGN
 %left ADD SUBTRACT
 %left MULTIPLY DIVIDE MODULO
-%precedence NOT NEG
-%precedence RAND SIN COS TAN ACOS ATAN
 
 %expect 0
 
