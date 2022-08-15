@@ -42,7 +42,7 @@ unsigned int
 format_Bpp(
     format_t format)
 {
-    switch ((int)format) {
+    switch (format) {
     case FORMAT_RGBA8888:
     case FORMAT_BGRA8888:
         return 4;

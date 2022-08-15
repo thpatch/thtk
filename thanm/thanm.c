@@ -363,14 +363,12 @@ static const id_format_pair_t formats_v8[] = {
     { 437, "S" },
     { 438, "S" },
     { 439, "S" },
-    { 440, "" },
     { 500, "S" },
     { 501, "S" },
     { 502, "S" },
     { 503, "S" },
     { 504, "S" },
     { 505, "Sff" },
-    { 506, "SSf" },
     { 507, "S" },
     { 508, "S" },
     { 509, "" },
@@ -385,18 +383,9 @@ static const id_format_pair_t formats_v8[] = {
     { 610, "S" },
     { 611, "ffS" },
     { 612, "ff" },
-    { 614, "ff" },
     { 0xffff, "" },
     { 0, NULL }
 };
-
-static const id_format_pair_t th18_patch[] = {
-    { 310, "S"},
-    { 439, "SSS"},
-    { 0xffff, "" },
-    { 0, NULL }
-};
-
 
 /* The order and sizes of fields changed for TH11. */
 static void
@@ -531,7 +520,7 @@ anm_read_file(
 
         list_init(&entry->scripts);
         if (header->scripts) {
-            anm_offset_t* script_offsets =
+            anm_offset_t* script_offsets = 
                 (anm_offset_t*)(map + sizeof(*header) + header->sprites * sizeof(uint32_t));
             for (uint32_t s = 0; s < header->scripts; ++s) {
                 anm_script_t* script = malloc(sizeof(*script));
@@ -615,7 +604,7 @@ anm_read_file(
 static void
 anm_dump(
     FILE* stream,
-    const anm_archive_t* anm, const int version)
+    const anm_archive_t* anm)
 {
     unsigned int entry_num = 0;
     anm_entry_t* entry;
@@ -636,11 +625,6 @@ anm_dump(
         } else {
             fprintf(stderr,
                 "%s:%s: could not find a format description for version %u\n",
-                argv0, current_input, entry->header->version);
-            abort();
-        }
-        if (entry->header->version != 8 && version != 0) {
-            fprintf(stderr, "%s:%s: unexpected header version %u\n",
                 argv0, current_input, entry->header->version);
             abort();
         }
@@ -694,16 +678,8 @@ anm_dump(
             unsigned int instr_num = 0;
             anm_instr_t* instr;
             list_for_each(&script->instrs, instr) {
-                const char* format = NULL;
-                switch (version) {
-                /* NEWHU: 185 */
-                case 185:
-                case 18:
-                    if ((format = find_format(th18_patch, instr->type))) break; /* fallthrough */
-                default:
-                    format = find_format(formats, instr->type);
-                    break;
-                }
+                const char* format = find_format(formats, instr->type);
+
                 if (!format) {
                     fprintf(stderr, "%s: id %d was not found in the format table\n", argv0, instr->type);
                     abort();
@@ -1305,7 +1281,7 @@ print_usage(void)
 #endif
     printf("Usage: %s [-Vf] [-l" USAGE_LIBPNGFLAGS "] ARCHIVE ...\n"
            "Options:\n"
-           "  -l [VERSION] ARCHIVE  list archive\n", argv0);
+           "  -l ARCHIVE            list archive\n", argv0);
 #ifdef HAVE_LIBPNG
     printf("  -x ARCHIVE [FILE...]  extract entries\n"
            "  -r ARCHIVE NAME FILE  replace entry in archive\n"
@@ -1313,10 +1289,6 @@ print_usage(void)
 #endif
     printf("  -V                    display version information and exit\n"
            "  -f                    ignore errors when possible\n"
-           "VERSION can be:\n"
-           "  18 or 185\n"
-           /* NEWHU: 185 */
-           "For older games, VERSION can be omitted.\n"
            "Report bugs to <" PACKAGE_BUGREPORT ">.\n");
 }
 
@@ -1371,39 +1343,20 @@ main(
 
     switch (command) {
     case 'l':
-        if (argc != 1 && argc != 2) {
+        if (argc != 1) {
             print_usage();
             exit(1);
         }
-        int version = 0;
-        if (argc == 2) {
-            version = parse_version(argv[0]);
-            switch (version) {
-            /* NEWHU: 185 */
-            case 185:
-            case 18:
-                break;
-            case 17: case 165: case 16: case 15:
-            case 143: case 14: case 13: case 128:
-            case 125: case 12: case 11: case 103:
-            case 10: case 95: case 9: case 8:
-            case 7: case 6:
-                version = 0;
-                break;
-            default:
-                fprintf(stderr, "%s: version %u is unsupported\n", argv0, version);
-                exit(1);
-            }
-        }
-        current_input = argv[argc-1];
-        in = fopen(current_input, "rb");
+
+        current_input = argv[0];
+        in = fopen(argv[0], "rb");
         if (!in) {
-            fprintf(stderr, "%s: couldn't open %s for reading\n", argv0, current_input);
+            fprintf(stderr, "%s: couldn't open %s for reading\n", argv[0], current_input);
             exit(1);
         }
         anm = anm_read_file(in);
         fclose(in);
-        anm_dump(stdout, anm, version);
+        anm_dump(stdout, anm);
         anm_free(anm);
         exit(0);
 #ifdef HAVE_LIBPNG
@@ -1416,7 +1369,7 @@ main(
         current_input = argv[0];
         in = fopen(argv[0], "rb");
         if (!in) {
-            fprintf(stderr, "%s: couldn't open %s for reading\n", argv0, current_input);
+            fprintf(stderr, "%s: couldn't open %s for reading\n", argv[0], current_input);
             exit(1);
         }
         anm = anm_read_file(in);
@@ -1459,7 +1412,7 @@ extract_next:
         current_input = argv[0];
         in = fopen(argv[0], "rb");
         if (!in) {
-            fprintf(stderr, "%s: couldn't open %s for reading\n", argv0, current_input);
+            fprintf(stderr, "%s: couldn't open %s for reading\n", argv[0], current_input);
             exit(1);
         }
         anm = anm_read_file(in);
