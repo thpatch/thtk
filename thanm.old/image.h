@@ -26,19 +26,46 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
  * DAMAGE.
  */
-
-#ifndef PATH_H_
-#define PATH_H_
+#ifndef IMAGE_H_
+#define IMAGE_H_
 
 #include <config.h>
-#include "thecl.h"
+#include <anm_types.h>
+#include <stdio.h>
 
+ /* Internal use only. */
+#define FORMAT_RGBA8888 ((format_t)-1)
 
-/* Returns a new string containing the given path the with last entry of the path stack prepended to it. */
-char* path_get_full(parser_state_t* state, char* path);
-/* Given a path to a file, pushes directory that file is in to the path stack. */
-void path_add(parser_state_t* state, char* path);
-/* Pops the last entry on the path stack and frees it. */
-void path_remove(parser_state_t* state);
+unsigned int
+format_Bpp(
+    format_t format);
+
+unsigned char*
+format_from_rgba(
+    const uint32_t* data,
+    unsigned int pixels,
+    format_t format);
+
+unsigned char*
+format_to_rgba(
+    const unsigned char* data,
+    unsigned int pixels,
+    format_t format);
+
+typedef struct {
+    unsigned char* data;
+    unsigned int width;
+    unsigned int height;
+    format_t format;
+} image_t;
+
+image_t*
+png_read(
+    const char* filename);
+
+void
+png_write(
+    const char* filename,
+    image_t* image);
 
 #endif

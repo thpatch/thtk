@@ -35,6 +35,7 @@
 #include "list.h"
 #include "value.h"
 #include "eclmap.h"
+#include "path.h"
 #include "util.h"
 
 typedef enum {
@@ -248,8 +249,7 @@ typedef struct {
     int scope_id;
     thecl_sub_t* current_sub;
     thecl_t* ecl;
-    int path_cnt;
-    char** path_stack;
+    path_state_t path_state;
     const char* (*instr_format)(unsigned int version, unsigned int id, bool is_timeline);
     size_t (*instr_size)(unsigned int version, const thecl_instr_t* instr, bool is_timeline);
 } parser_state_t;
