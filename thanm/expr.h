@@ -65,7 +65,7 @@ typedef enum expr_type_t {
     EXPR_ASSIGN
 } expr_type_t;
 
-typedef struct expr_t {
+struct expr_t {
     expr_type_t type;
     const operation_t* op;
     /* For EXPR_VAL: the value (as param) */
@@ -74,7 +74,7 @@ typedef struct expr_t {
     reg_t* reg;
     /* For EXPR_OP/ASSIGN: List of expr_t */
     list_t children;
-} expr_t;
+};
 
 expr_t* expr_new_val(thanm_param_t* param, int ver);
 expr_t* expr_new_val_reg(reg_t* reg);

@@ -45,12 +45,12 @@ typedef enum reg_purpose_t {
    PURPOSE_OTHER
 } reg_purpose_t;
 
-typedef struct reg_t {
+struct reg_t {
    int id;
    int type; /* 'S' or 'f' */
    reg_lock_t lock;
    reg_purpose_t purpose;
-} reg_t;
+};
 
 /* Creates a new register and adds it to the list. */
 reg_t* reg_new(int id, int type);

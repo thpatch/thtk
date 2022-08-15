@@ -125,7 +125,7 @@ static void instr_check_types(parser_state_t* state, int id, list_t* params);
 %token BRACE_CLOSE "}"
 %token PARENTHESIS_OPEN "("
 %token PARENTHESIS_CLOSE ")"
-%token ASSIGN "=" 
+%token ASSIGN "="
 %token ASSIGNADD "+="
 %token ASSIGNSUB "-="
 %token ASSIGNMUL "*="
@@ -142,7 +142,7 @@ static void instr_check_types(parser_state_t* state, int id, list_t* params);
 %token TAN "tan"
 /* For some reason, there is no asin instruction in the game. */
 %token ACOS "acos"
-%token ATAN "atan" 
+%token ATAN "atan"
 %token DOLLAR "$"
 %token ENTRY "entry"
 %token SCRIPT "script"
@@ -177,7 +177,7 @@ static void instr_check_types(parser_state_t* state, int id, list_t* params);
 %left ADD SUBTRACT
 %left MULTIPLY DIVIDE MODULO
 %precedence NOT NEG
-%precedence RAND SIN COS TAN ACOS ATAN 
+%precedence RAND SIN COS TAN ACOS ATAN
 
 %expect 0
 
@@ -196,13 +196,13 @@ Statement:
         expr_error_t err = expr_output(state, $expr, NULL);
         if (err)
             yyerror(state, "expression error in globaldef initialization: %s", expr_strerror(err));
-        
+
         if ($expr->type == EXPR_VAL) {
             global->name = $name;
             global->param = $expr->param;
             list_prepend_new(&state->globals, global);
         }
-        
+
         $expr->param = NULL;
         expr_free($expr);
     }
@@ -295,7 +295,7 @@ Entry:
 
             OPTIONAL("THTXWidth", 'S', $prop_list);
             entry->thtx->w = prop ? prop->value->val.S : DEFAULTVAL;
-        
+
             OPTIONAL("THTXHeight", 'S', $prop_list);
             entry->thtx->h = prop ? prop->value->val.S : DEFAULTVAL;
 
@@ -492,13 +492,13 @@ ScriptStatement:
 
         expr_t* expr;
         list_for_each($exprs, expr) {
-            expr_error_t err = expr_output(state, expr, NULL);    
+            expr_error_t err = expr_output(state, expr, NULL);
             if (err)
                 yyerror(state, "expression error in instr parameter: %s", expr_strerror(err));
-                
+
             if (expr->reg && expr->reg->lock == LOCK_EXPR)
                 list_append_new(&regs_to_free, expr->reg);
-                
+
             list_append_new(param_list, expr->param);
 
             expr->param = NULL;
@@ -731,7 +731,7 @@ Expression:
     }
 
 ExpressionParam:
-    ParameterSimple[param] { 
+    ParameterSimple[param] {
         $$ = expr_new_val($param, state->current_version);
     }
     | "(" ExpressionParam ")" {
@@ -855,9 +855,9 @@ Directive:
 
 %%
 
-static prop_list_entry_t* 
+static prop_list_entry_t*
 prop_list_find(
-    list_t* list, 
+    list_t* list,
     const char* key
 ) {
     prop_list_entry_t* entry;
@@ -934,7 +934,7 @@ instr_check_types(
             param->val->type = 's';
             param->val->val.s = (int16_t)param->val->val.S;
         }
-        
+
         if (param->type != c) {
             state->was_error = 1;
             yyerror(state, "wrong parameter %d type for opcode %s, expected: %c", i + 1, opcode_msg, c);
@@ -1038,7 +1038,7 @@ var_assign(
     expr_error_t err = expr_output(state, new_expr, NULL);
     if (err)
         yyerror(state, "expression error in variable initialization: %s", expr_strerror(err));
-    
+
     if (new_expr->reg && new_expr->reg->lock == LOCK_EXPR)
         reg_lock(reg, LOCK_UNLOCK);
     expr_free(new_expr);
@@ -1076,6 +1076,7 @@ yyerror(
     const char* format,
     ...)
 {
+    (void)state;
     if (yylloc.first_line == yylloc.last_line) {
         if (yylloc.first_column == yylloc.last_column) {
             fprintf(stderr,

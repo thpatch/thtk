@@ -703,7 +703,7 @@ thanm_make_params(
         if (read == -1) {
             fprintf(stderr,
                 "%s: value read error in ins_%d:\n"
-                "data length = %d, "
+                "data length = %zd, "
                 "offset = %d, "
                 "format = %s\n",
                 argv0, raw_instr->type, raw_instr->length - sizeof(anm_instr_t), (int)i, format);
@@ -759,6 +759,8 @@ anm_stringify_param(
     const anm_archive_t* anm,
     int32_t scriptn
 ) {
+    (void)instr;
+    (void)scriptn;
     char* disp = NULL;
     char* dest = NULL;
     char buf[256];
@@ -800,6 +802,8 @@ anm_stringify_param(
             val = param->val->val.S;
         else if (param->val->type == 's')
             val = param->val->val.s;
+        else
+            abort(); /* shouldn't happen */
 
         seqmap_entry_t* ent = seqmap_get(g_anmmap->gvar_names, val);
         if (ent) {
@@ -913,6 +917,7 @@ anm_insert_labels(
     anm_script_t* script,
     int32_t scriptn
 ) {
+    (void)scriptn;
     thanm_instr_t* instr;
     list_for_each(&script->instrs, instr) {
         if (instr->type != THANM_INSTR_INSTR)
@@ -1019,7 +1024,7 @@ anm_read_file(
             }
         }
 
-        id_format_pair_t* formats = anm_get_formats(header->version);
+        const id_format_pair_t* formats = anm_get_formats(header->version);
 
         list_init(&entry->scripts);
         if (header->scripts) {
@@ -1154,15 +1159,12 @@ anm_dump(
     FILE* stream,
     const anm_archive_t* anm)
 {
-    char buf[256];
     unsigned int entry_num = 0;
     anm_entry_t* entry;
 
     int prev_sprite_id = -1;
     int prev_script_id = -1;
     list_for_each(&anm->entries, entry) {
-        const id_format_pair_t* formats = anm_get_formats(entry->header->version);
-
         fprintf(stream, "entry entry%u {\n", entry_num++);
         fprintf(stream, "    version: %u,\n", entry->header->version);
         fprintf(stream, "    name: \"%s\",\n", entry->name);
@@ -1425,44 +1427,6 @@ anm_extract(
     free(image.data);
 }
 
-static char*
-filename_cut(
-    char *line,
-    size_t len)
-{
-    char *p = line;
-
-    assert(line);
-
-    if(len == 0) {
-        return line;
-    }
-
-    /* isspace(3) is only asking for trouble; we don't parse Unicode anyway. */
-#define is_space(c) (c == ' ' || c == '\t')
-
-    while(len > 0 && is_space(*p)) {
-        len--;
-        p++;
-    }
-
-    char *start = p;
-    char *end = p;
-
-    while(len > 0 && *p != '\n') {
-        if(!is_space(*p)) {
-            end = p;
-        }
-        len--;
-        p++;
-    }
-
-#undef is_space
-
-    end[len == 0 ? 0 : 1] = '\0';
-    return start;
-}
-
 label_t*
 label_find(
     anm_script_t* script,
@@ -1606,7 +1570,7 @@ static int anm_is_old_format(
 
 static anm_archive_t*
 anm_create(
-    const char* spec,
+    char* spec,
     FILE* symbolfp
 ) {
     FILE* in = fopen(spec, "r");
