@@ -114,7 +114,7 @@ static void expression_optimize(const parser_state_t* state, expression_t* expr)
 #define EXPR_21(a, b, A) \
     expression_operation_new(state, (int[]){ a, b, 0 }, (expression_t*[]){ A, NULL })
 
-static expression_t *expression_copy(expression_t *expr);
+/*static expression_t *expression_copy(expression_t *expr);*/
 static void expression_create_goto(parser_state_t *state, int type, char *labelstr);
 
 /* Bison things. */
@@ -2419,7 +2419,7 @@ expression_call_new(
     return expr;
 }
 
-
+#if 0
 static expression_t *
 expression_copy(
     expression_t *expr)
@@ -2448,6 +2448,7 @@ expression_copy(
     }
     return copy;
 }
+#endif
 
 static void
 expression_create_goto(
