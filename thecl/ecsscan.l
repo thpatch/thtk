@@ -174,7 +174,7 @@ ins_[0-9]+ {
     return INTEGER;
 }
 
-![-*ENHLWXYZO4567]+ {
+![-*ENHLWXYZO01234567]+ {
     yylval.string = strdup(yytext + 1);
     return RANK;
 }

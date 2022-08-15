@@ -239,6 +239,17 @@ is_post_th13(unsigned int version) {
     }
 }
 
+int32_t
+get_default_none_rank(unsigned int version) {
+    if (!is_post_th13(version)) {
+        return 0xF0;
+    } else if (version == 185) {
+        return 0x00;
+    } else {
+        return 0xC0;
+    }
+}
+
 static void
 print_usage(void)
 {

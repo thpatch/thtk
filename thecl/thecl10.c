@@ -1812,7 +1812,18 @@ th10_dump(
             case THECL_INSTR_RANK:
                 if(instr->rank == 0xFF)
                     instr->string = strdup("!*");
-                else if(instr->rank == (is_post_th13(ecl->version) ? 0xC0 : 0xF0))
+                else if (ecl->version == 185) {
+                    sprintf(temp, "!%s%s%s%s%s%s%s%s",
+                            (instr->rank) & RANK_ID_0   ? "0" : "",
+                            (instr->rank) & RANK_ID_1   ? "1" : "",
+                            (instr->rank) & RANK_ID_2   ? "2" : "",
+                            (instr->rank) & RANK_ID_3   ? "3" : "",
+                            (instr->rank) & RANK_ID_4   ? "4" : "",
+                            (instr->rank) & RANK_ID_5   ? "5" : "",
+                            (instr->rank) & RANK_ID_6   ? "6" : "",
+                            (instr->rank) & RANK_ID_7   ? "7" : "");
+                    instr->string = strdup(temp);
+                } else if(instr->rank == get_default_none_rank(ecl->version))
                     instr->string = strdup("!-");
                 else {
                     if (is_post_th13(ecl->version)) {
@@ -1970,6 +1981,7 @@ th10_parse(
     state.version = version;
     state.uses_numbered_subs = false;
     state.has_overdrive_difficulty = is_post_th13(version);
+    state.has_numeric_difficulties = version == 185;
     state.uses_stack_offsets = is_post_th13(version);
     list_init(&state.expressions);
     list_init(&state.block_stack);
