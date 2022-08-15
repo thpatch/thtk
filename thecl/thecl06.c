@@ -1352,9 +1352,7 @@ th06_parse(
     state.instr_format = th06_find_format;
     state.instr_size = th06_instr_size;
 
-    state.path_cnt = 0;
-    state.path_stack = NULL;
-    path_add(&state, filename);
+    path_init(&state.path_state, filename, argv0);
 
     yyin = in;
 

@@ -27,60 +27,20 @@
  * DAMAGE.
  */
 
+#ifndef ANMMAP_H_
+#define ANMMAP_H_
+
 #include <config.h>
-#include <string.h>
-#include <stdlib.h>
-#include "thecl.h"
-#include "path.h"
-#include "program.h"
+#include "seqmap.h"
 
-char*
-path_get_full(
-    parser_state_t* state,
-    char* path)
-{
-    char* current_dir = state->path_stack[state->path_cnt - 1];
-    char* ret;
+typedef struct anmmap_t {
+    seqmap_t* ins_names;
+    seqmap_t* gvar_names;
+    seqmap_t* gvar_types;
+} anmmap_t;
 
-    if (current_dir[0] != '\0') {
-        ret = malloc(strlen(current_dir) + strlen(path) + 2);
-        strcpy(ret, current_dir);
-        strcat(ret, "/");
-        strcat(ret, path);
-    } else {
-        ret = malloc(strlen(path) + 1);
-        strcpy(ret, path);
-    }
+anmmap_t* anmmap_new();
+void anmmap_free(anmmap_t* map);
+void anmmap_load(anmmap_t* map, FILE* file, const char* fn);
 
-    return ret;
-}
-
-void
-path_add(
-    parser_state_t* state,
-    char* path)
-{
-    char* dir_path;
-    const char* tmp = path ? util_shortname(path) : NULL; /* NULL check is needed for stdin */
-    if (path != tmp) {
-        size_t len = tmp-1 - path;
-        dir_path = malloc(len + 1);
-        memcpy(dir_path, path, len);
-        dir_path[len] = '\0';
-    } else {
-        dir_path = malloc(1);
-        dir_path[0] = '\0';
-    }
-
-    ++state->path_cnt;
-    state->path_stack = realloc(state->path_stack, sizeof(char*) * state->path_cnt);
-    state->path_stack[state->path_cnt - 1] = dir_path;
-}
-
-void
-path_remove(
-    parser_state_t* state)
-{
-    --state->path_cnt;
-    free(state->path_stack[state->path_cnt]);
-}
+#endif
