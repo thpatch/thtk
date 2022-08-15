@@ -8,6 +8,8 @@ What's new in thtk master
 
 #### thanm
 - Support for TH18, TH185 has been added.
+- You can now specify the version for the -l command.
+  This is required correct dumping of TH18, TH185.
 
 #### thecl
 - Fix and/or add the following instruction formats:
