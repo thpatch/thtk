@@ -504,6 +504,7 @@ static const id_format_pair_t formats_v8[] = {
     { 437, "S" },
     { 438, "S" },
     { 439, "Sff" },
+    { 440, "" },
     { 500, "N" },
     { 501, "N" },
     { 502, "N" },
@@ -1022,7 +1023,7 @@ anm_read_file(
 
         list_init(&entry->scripts);
         if (header->scripts) {
-            anm_offset_t* script_offsets = 
+            anm_offset_t* script_offsets =
                 (anm_offset_t*)(map + sizeof(*header) + header->sprites * sizeof(uint32_t));
             for (uint32_t s = 0; s < header->scripts; ++s) {
                 anm_script_t* script = anm_script_new();
@@ -1058,7 +1059,7 @@ anm_read_file(
                         instr->time = temp_instr->time;
                         instr->param_mask = 0;
                         memcpy(instr->data, temp_instr->data, temp_instr->length);
-                        
+
                         len = sizeof(anm_instr0_t) + temp_instr->length;
                     } else {
                         instr = (anm_instr_t*)instr_ptr;
