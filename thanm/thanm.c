@@ -1574,6 +1574,11 @@ anm_create(
     FILE* symbolfp
 ) {
     FILE* in = fopen(spec, "r");
+    if (!in) {
+        fprintf(stderr, "%s: couldn't open %s for reading: %s\n",
+            argv0, spec, strerror(errno));
+        exit(1);
+    }
     if (anm_is_old_format(in)) {
         fprintf(stderr, "%s: %s: the spec file was made using an old version\n"
                         "of thanm and uses the old format, which is no longer supported.\n"
