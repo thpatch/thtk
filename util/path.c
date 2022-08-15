@@ -90,10 +90,22 @@ void
 path_remove(
     path_state_t* state)
 {
-    list_node_t* node = state->path_list.tail; 
+    list_node_t* node = state->path_list.tail;
+    free(node->data);
     list_del(&state->path_list, node);
     if (state->path_list.head == NULL) {
         fprintf(stderr, "%s: removed last element from path\n", state->program_name);
-        exit(1); 
+        exit(1);
     }
+}
+
+void
+path_free(
+    path_state_t* state)
+{
+    char *path;
+    list_for_each(&state->path_list, path) {
+        free(path);
+    }
+    list_free_nodes(&state->path_list);
 }

@@ -198,9 +198,9 @@ Statement:
             global->name = $name;
             global->param = $expr->param;
             list_prepend_new(&state->globals, global);
+            $expr->param = NULL;
         }
 
-        $expr->param = NULL;
         expr_free($expr);
     }
 
@@ -336,6 +336,7 @@ Entry:
         #undef OPTIONAL
         #undef REQUIRE
 
+        prop_list_free_nodes($prop_list);
         free($prop_list);
         free($entry_name);
         list_append_new(&state->entries, entry);
@@ -880,8 +881,8 @@ prop_list_free_nodes(
         free(entry->value);
         free(entry->key);
         free(entry);
-        list_free_nodes(entry->value->val.l);
     }
+    list_free_nodes(list);
 }
 
 static void

@@ -1359,6 +1359,8 @@ th06_parse(
     if (yyparse(&state) != 0)
         return 0;
 
+    path_free(&state.path_state);
+
     global_definition_t* def;
     list_for_each(&state.global_definitions, def) {
         free(def->param);

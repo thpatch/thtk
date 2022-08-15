@@ -47,5 +47,7 @@ char* path_get_full(path_state_t* state, char* path);
 void path_add(path_state_t* state, char* path);
 /* Pops the last entry on the path stack and frees it. */
 void path_remove(path_state_t* state);
+/* Frees the path stack */
+void path_free(path_state_t* state);
 
 #endif

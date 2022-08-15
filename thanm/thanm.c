@@ -669,8 +669,10 @@ void
 thanm_param_free(
     thanm_param_t* param
 ) {
-    if (param->val)
+    if (param->val) {
         value_free(param->val);
+        free(param->val);
+    }
     free(param);
 }
 
@@ -908,6 +910,7 @@ thanm_instr_free(
     thanm_param_t* param;
     list_for_each(&instr->params, param)
         thanm_param_free(param);
+    list_free_nodes(&instr->params);
 
     free(instr);
 }
@@ -1610,6 +1613,8 @@ anm_create(
     if (yyparse(&state) || state.was_error)
         return NULL;
 
+    path_free(&state.path_state);
+
     anm_archive_t* anm = (anm_archive_t*)util_malloc(sizeof(anm_archive_t));
     anm->map = NULL;
     anm->map_size = 0;
@@ -1640,6 +1645,7 @@ anm_create(
             list_for_each(&script->vars, var) {
                 var_free(var);
             }
+            list_free_nodes(&script->vars);
         }
     }
 
@@ -1869,8 +1875,6 @@ anm_free(
 
     anm_entry_t* entry;
     list_for_each(&anm->entries, entry) {
-        list_free_nodes(&entry->sprites);
-
         anm_script_t* script;
         list_for_each(&entry->scripts, script) {
             if (!is_mapped)
@@ -1905,6 +1909,7 @@ anm_free(
         } else if (entry->header->version >= 7) {
             free(entry->header);
         }
+        list_free_nodes(&entry->sprites);
 
         free(entry);
     }
