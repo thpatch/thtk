@@ -872,7 +872,7 @@ main(
         current_input = argv[0];
         in = fopen(argv[0], "rb");
         if (!in) {
-            fprintf(stderr, "%s: couldn't open %s for reading\n", argv[0], current_input);
+            fprintf(stderr, "%s: couldn't open %s for reading\n", argv0, current_input);
             exit(1);
         }
 
