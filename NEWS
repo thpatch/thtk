@@ -7,7 +7,7 @@ What's new in thtk master
 - We've set up GitHub Actions for automatic builds.
 
 #### thanm
-- Support for TH18 has been added.
+- Support for TH18, TH185 has been added.
 
 #### thecl
 - Fix and/or add the following instruction formats:
@@ -27,20 +27,20 @@ What's new in thtk master
   in more places.
 - Added #line directive.
 - Added insdef statement for defining new instructions.
-- Support for TH18 has been added.
+- Support for TH18, TH185 has been added.
 - Numerous bug-fixes.
 
 #### thdat
-- Automatic version detection now supports th165, th17 and th18.
+- Automatic version detection now supports th165, th17, th18 and th185.
 - Detection works better with renamed files.
-- Support for TH18 has been added.
+- Support for TH18, TH185 has been added.
 - Improve extraction speed.
 
 #### thmsg
-- Support for TH18 has been added.
+- Support for TH18, TH185 has been added.
 
 #### thstd
-- Support for TH18 has been added.
+- Support for TH18, TH185 has been added.
 
 Please submit an issue at GitHub (https://github.com/thpatch/thtk/issues) if
 you find a bug.
