@@ -694,7 +694,7 @@ anm_dump(
             unsigned int instr_num = 0;
             anm_instr_t* instr;
             list_for_each(&script->instrs, instr) {
-                char* format = NULL;
+                const char* format = NULL;
                 switch (version) {
                 /* NEWHU: 185 */
                 case 185:
