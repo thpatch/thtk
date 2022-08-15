@@ -1,0 +1,19 @@
+digraph {
+    rankdir=LR
+    "other statements" [ label=<<I>other statements</I>> ]
+    "subexpressions" [ label=<<I>subexpressions</I>> ]
+    "labels" [ label=<'+' INTEGER ':'<BR/>INTEGER ':'<BR/>IDENTIFIER ':'> ]
+    "ins call" [ label="IDENTIFIER '(' ... ')'" ]
+    { rank=same ExpressionRankSwitch ExpressionSubset ExpressionCall ExpressionLoadType }
+
+    Instruction -> { ExpressionSubsetInstruction "labels" "ins call" }
+    Instruction_Parameter -> { ExpressionSubsetInstParam Load_Type }
+    { "subexpressions" Case } -> Expression
+    "other statements" -> ExpressionAny
+    ExpressionAny -> { ExpressionRankSwitch Expression }
+    Expression -> { ExpressionSubset ExpressionCall ExpressionLoadType }
+    ExpressionSubsetInstParam -> { ExpressionRankSwitch ExpressionSubset ExpressionCall }
+    ExpressionSubsetInstruction -> { ExpressionSubset ExpressionLoadType ExpressionRankSwitchRestricted }
+    ExpressionRankSwitchRestricted -> { ExpressionCall ExpressionSubsetNoUnaryPlus }
+    ExpressionSubset -> ExpressionSubsetNoUnaryPlus
+}
