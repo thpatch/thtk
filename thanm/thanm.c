@@ -531,7 +531,7 @@ anm_read_file(
 
         list_init(&entry->scripts);
         if (header->scripts) {
-            anm_offset_t* script_offsets = 
+            anm_offset_t* script_offsets =
                 (anm_offset_t*)(map + sizeof(*header) + header->sprites * sizeof(uint32_t));
             for (uint32_t s = 0; s < header->scripts; ++s) {
                 anm_script_t* script = malloc(sizeof(*script));
@@ -639,6 +639,11 @@ anm_dump(
                 argv0, current_input, entry->header->version);
             abort();
         }
+        if (entry->header->version != 8 && version != 0) {
+            fprintf(stderr, "%s:%s: unexpected header version %u\n",
+                argv0, current_input, entry->header->version);
+            abort();
+        }
 
         fprintf(stream, "ENTRY #%u, VERSION %u\n", entry_num++, entry->header->version);
         fprintf(stream, "Name: %s\n", entry->name);
@@ -690,11 +695,11 @@ anm_dump(
             anm_instr_t* instr;
             list_for_each(&script->instrs, instr) {
                 char* format = NULL;
-                switch (version)
-                {
-                case 18:
+                switch (version) {
+                /* NEWHU: 185 */
                 case 185:
-                    if ((format = find_format(th18_patch, instr->type))) break;
+                case 18:
+                    if ((format = find_format(th18_patch, instr->type))) break; /* fallthrough */
                 default:
                     format = find_format(formats, instr->type);
                     break;
@@ -1300,7 +1305,7 @@ print_usage(void)
 #endif
     printf("Usage: %s [-Vf] [-l" USAGE_LIBPNGFLAGS "] ARCHIVE ...\n"
            "Options:\n"
-           "  -l {version} ARCHIVE  list archive\n", argv0);
+           "  -l [VERSION] ARCHIVE  list archive\n", argv0);
 #ifdef HAVE_LIBPNG
     printf("  -x ARCHIVE [FILE...]  extract entries\n"
            "  -r ARCHIVE NAME FILE  replace entry in archive\n"
@@ -1308,7 +1313,10 @@ print_usage(void)
 #endif
     printf("  -V                    display version information and exit\n"
            "  -f                    ignore errors when possible\n"
-           "  {version} (e.g 18)    optional version selection, fixes bugs for 18 and 185\n"
+           "VERSION can be:\n"
+           "  18 or 185\n"
+           /* NEWHU: 185 */
+           "For older games, VERSION can be omitted.\n"
            "Report bugs to <" PACKAGE_BUGREPORT ">.\n");
 }
 
@@ -1367,35 +1375,37 @@ main(
             print_usage();
             exit(1);
         }
-        if (argc == 1) {
-            current_input = argv[0];
-            in = fopen(argv[0], "rb");
-            if (!in) {
-                fprintf(stderr, "%s: couldn't open %s for reading\n", argv[0], current_input);
+        int version = 0;
+        if (argc == 2) {
+            version = parse_version(argv[0]);
+            switch (version) {
+            /* NEWHU: 185 */
+            case 185:
+            case 18:
+                break;
+            case 17: case 165: case 16: case 15:
+            case 143: case 14: case 13: case 128:
+            case 125: case 12: case 11: case 103:
+            case 10: case 95: case 9: case 8:
+            case 7: case 6:
+                version = 0;
+                break;
+            default:
+                fprintf(stderr, "%s: version %u is unsupported\n", argv0, version);
                 exit(1);
             }
-            anm = anm_read_file(in);
-            fclose(in);
-            anm_dump(stdout, anm, 0);
-            anm_free(anm);
-            exit(0);
         }
-        else
-        {
-            int version = atoi(argv[0]);
-
-            current_input = argv[1];
-            in = fopen(argv[1], "rb");
-            if (!in) {
-                fprintf(stderr, "%s: couldn't open %s for reading\n", argv[1], current_input);
-                exit(1);
-            }
-            anm = anm_read_file(in);
-            fclose(in);
-            anm_dump(stdout, anm, version);
-            anm_free(anm);
-            exit(0);
+        current_input = argv[argc-1];
+        in = fopen(current_input, "rb");
+        if (!in) {
+            fprintf(stderr, "%s: couldn't open %s for reading\n", argv0, current_input);
+            exit(1);
         }
+        anm = anm_read_file(in);
+        fclose(in);
+        anm_dump(stdout, anm, version);
+        anm_free(anm);
+        exit(0);
 #ifdef HAVE_LIBPNG
     case 'x':
         if (argc < 1) {
@@ -1406,7 +1416,7 @@ main(
         current_input = argv[0];
         in = fopen(argv[0], "rb");
         if (!in) {
-            fprintf(stderr, "%s: couldn't open %s for reading\n", argv[0], current_input);
+            fprintf(stderr, "%s: couldn't open %s for reading\n", argv0, current_input);
             exit(1);
         }
         anm = anm_read_file(in);
@@ -1449,7 +1459,7 @@ extract_next:
         current_input = argv[0];
         in = fopen(argv[0], "rb");
         if (!in) {
-            fprintf(stderr, "%s: couldn't open %s for reading\n", argv[0], current_input);
+            fprintf(stderr, "%s: couldn't open %s for reading\n", argv0, current_input);
             exit(1);
         }
         anm = anm_read_file(in);
