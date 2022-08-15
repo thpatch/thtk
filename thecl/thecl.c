@@ -253,6 +253,7 @@ print_usage(void)
            "  -s  use simple creation, which doesn't add any instructions automatically\n"
            "VERSION can be:\n"
            "  6, 7, 8, 9, 95, 10, 103 (for Uwabami Breakers), 11, 12, 125, 128, 13, 14, 143, 15, 16, 165, 17, 18 or 185\n"
+           /* NEWHU: 185 */
            "Report bugs to <" PACKAGE_BUGREPORT ">.\n", argv0);
 }
 
@@ -337,6 +338,7 @@ main(int argc, char* argv[])
     case 17:
     case 18:
     case 185:
+    /* NEWHU: 185 */
         module = &th10_ecl;
         break;
     default:
