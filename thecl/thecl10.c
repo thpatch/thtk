@@ -1809,7 +1809,7 @@ th10_dump(
 
             switch (instr->type) {
             case THECL_INSTR_TIME:
-                sprintf(temp, "%x | +%u: //%u", instr->address, instr->time - time_last, instr->time);
+                sprintf(temp, "+%u: //%u", instr->time - time_last, instr->time);
                 time_last = instr->time;
                 instr->string = strdup(temp);
                 break;
