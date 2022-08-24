@@ -123,6 +123,9 @@ typedef struct thecl_instr_t {
 
     /* Used by ecsparse.y, not present anywhere in the compiled ECL files. */
     unsigned int flags;
+
+    /* Used in developer dump mode */
+    uint32_t address;
 } thecl_instr_t;
 
 thecl_instr_t* thecl_instr_new(
@@ -261,6 +264,7 @@ extern int yyparse(parser_state_t*);
 
 extern eclmap_t* g_eclmap;
 extern bool g_ecl_rawoutput;
+extern bool g_ecl_hexdebug;
 extern bool g_ecl_simplecreate;
 extern bool g_was_error;
 

@@ -42,6 +42,7 @@ extern const thecl_module_t th10_ecl;
 eclmap_t *g_eclmap = NULL;
 bool g_ecl_rawoutput = false;
 bool g_ecl_simplecreate = false;
+bool g_ecl_hexdebug = false;
 bool g_was_error = false;
 
 thecl_t*
@@ -251,6 +252,7 @@ print_usage(void)
            "  -m  use map file for translating mnemonics\n"
            "  -r  output raw ECL opcodes, applying minimal transformations\n"
            "  -s  use simple creation, which doesn't add any instructions automatically\n"
+           "  -x  add address information for ECL instructions\n"
            "VERSION can be:\n"
            "  6, 7, 8, 9, 95, 10, 103 (for Uwabami Breakers), 11, 12, 125, 128, 13, 14, 143, 15, 16, 165, 17, 18 or 185\n"
            /* NEWHU: 185 */
@@ -276,7 +278,7 @@ main(int argc, char* argv[])
     int opt;
     int ind=0;
     while(argv[util_optind]) {
-        switch(opt = util_getopt(argc, argv, ":c:h:d:Vm:rs")) {
+        switch(opt = util_getopt(argc, argv, ":c:h:d:Vm:rsx")) {
         case 'c':
         case 'd':
         case 'h':
@@ -305,6 +307,9 @@ main(int argc, char* argv[])
             break;
         case 's':
             g_ecl_simplecreate = true;
+            break;
+        case 'x':
+            g_ecl_hexdebug = true;
             break;
         default:
             util_getopt_default(&ind,argv,opt,print_usage);

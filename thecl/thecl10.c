@@ -1264,6 +1264,7 @@ th10_open(
             new_instr->id = instr->id;
             new_instr->param_count = instr->param_count;
             new_instr->offset = (ptrdiff_t)instr - (ptrdiff_t)raw_sub;
+            new_instr->address = (ptrdiff_t)new_instr->offset + sub_offsets[i];
             list_init(&new_instr->params);
 
             uint32_t param_mask = instr->param_mask;
@@ -1730,7 +1731,10 @@ th10_stringify_instr(
             sprintf(string, "%s(", ent->value);
         }
         else {
-            sprintf(string, "ins_%u(", instr->id);
+            if(g_ecl_hexdebug)
+                sprintf(string, "%x: ins_%u(",instr->address, instr->id);
+            else
+                sprintf(string, "ins_%u(", instr->address, instr->id);
         }
 
         size_t removed = 0;
@@ -1805,7 +1809,7 @@ th10_dump(
 
             switch (instr->type) {
             case THECL_INSTR_TIME:
-                sprintf(temp, "+%u: //%u", instr->time - time_last, instr->time);
+                sprintf(temp, "%x | +%u: //%u", instr->address, instr->time - time_last, instr->time);
                 time_last = instr->time;
                 instr->string = strdup(temp);
                 break;

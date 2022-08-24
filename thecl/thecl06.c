@@ -985,6 +985,7 @@ th06_open(
             instr->id = raw_instr->id;
             instr->size = raw_instr->size;
             instr->offset = (ptrdiff_t)raw_instr - (ptrdiff_t)raw_sub;
+            instr->address = instr->offset + header->offsets[timeline_count_max + s];
 
             const char* format;
 
@@ -999,7 +1000,7 @@ th06_open(
                     raw_instr->size,
                     raw_instr->rank_mask,
                     raw_instr->param_mask
-                    );
+                );
 
                 for (size_t d = 0; d < raw_instr->size - sizeof(th06_instr_t); d += 4) {
                     fprintf(stderr, " %08x (%d, %f)",
@@ -1181,7 +1182,11 @@ th06_dump(
                     fprintf(out, "    %s(", ent->value);
                 }
                 else {
-                    fprintf(out, "    ins_%u(", instr->id);
+                    if (g_ecl_hexdebug) {
+                        fprintf(out, "    %x:    ins_%u(", instr->address, instr->id);
+                    } else {
+                        fprintf(out, "    ins_%u(", instr->id);
+                    }
                 }
                 thecl_param_t* param;
                 int first = 1;
