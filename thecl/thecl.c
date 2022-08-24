@@ -367,6 +367,12 @@ main(int argc, char* argv[])
                 exit(1);
             }
         }
+        if (g_ecl_hexdebug) {
+            if (mode != 'd') {
+                fprintf(stderr, "%s: 'x' option cannot be used while compiling\n", argv0);
+                exit(1);
+            }
+        }
         if (g_ecl_simplecreate) {
             if (mode != 'c' && mode != 'h') {
                 fprintf(stderr, "%s: 's' option cannot be used while dumping\n", argv0);
