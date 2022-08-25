@@ -243,7 +243,7 @@ is_post_th13(unsigned int version) {
 static void
 print_usage(void)
 {
-    printf("Usage: %s [-Vrs] [[-c | -h | -d] VERSION] [-m ECLMAP]... [INPUT [OUTPUT]]\n"
+    printf("Usage: %s [-Vrsx] [[-c | -h | -d] VERSION] [-m ECLMAP]... [INPUT [OUTPUT]]\n"
            "Options:\n"
            "  -c  create ECL file\n"
            "  -h  create header file\n"

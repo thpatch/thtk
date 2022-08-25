@@ -24,7 +24,7 @@
 .\" OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 .\" SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
 .\" DAMAGE.
-.Dd October 19, 2021
+.Dd August 25, 2022
 .Dt THECL 1
 .Os thtk
 .Sh NAME
@@ -32,7 +32,7 @@
 .Nd Touhou enemy control language script tool
 .Sh SYNOPSIS
 .Nm
-.Op Fl Vr
+.Op Fl Vrsx
 .Op Oo Fl c | h | d Oc Ar version
 .Oo Fl m Ar eclmap Oc Ns Ar ...
 .Op Ar input Op Ar output
@@ -46,7 +46,7 @@ The following commands are available:
 Compiles an enemy script.
 .It Nm Fl h Ar version Oo Fl m Ar eclmap Oc Ns Ar ... Op Ar input Op Ar output
 Creates a header file with forward declarations of all subs in input.
-.It Nm Fl d Ar version Oo Fl r Oc Oo Fl m Ar eclmap Oc Ns Ar ... Op Ar input Op Ar output
+.It Nm Fl d Ar version Oo Fl rx Oc Oo Fl m Ar eclmap Oc Ns Ar ... Op Ar input Op Ar output
 Dumps an enemy script.
 .It Fl V
 Displays the program version.
@@ -58,7 +58,6 @@ These options are accepted:
 The
 .Fl m
 option can be used to map ins_* to human readable names.
-.\"TODO: Document eclmap format.
 .It Fl r
 The
 .Fl r
@@ -67,6 +66,10 @@ option suppresses code transformations like parameter detection, or expression d
 The
 .Fl s
 option enables simple creation mode, which doesn't add any instructions automatically.
+.It Fl x
+The
+.Fl x
+option outputs address information when dumping instructions.
 .El
 .Pp
 Replace the
@@ -146,7 +149,7 @@ to
 to
 .Ql 123 Ns
 \&.
-Note how the reverse mapping doesn't get overridden.
+Note how the first reverse mapping doesn't get removed.
 .\" TODO: .Sh EXAMPLES
 .Sh SEE ALSO
 .Lk https://github.com/thpatch/thtk "Project homepage"
