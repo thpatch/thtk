@@ -1178,7 +1178,7 @@ th06_dump(
                 break;
             case THECL_INSTR_INSTR: {
                 if (g_ecl_hexdebug) {
-                    fprintf(out, "    /* %5x: */ ", instr->address);
+                    fprintf(out, "    /* %5x (+%5x) */ ", instr->address, instr->offset);
                 } else {
                     fprintf(out, "    ");
                 }

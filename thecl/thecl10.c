@@ -1728,7 +1728,7 @@ th10_stringify_instr(
     } else {
         char *s = string;
         if (g_ecl_hexdebug) {
-            s += sprintf(s, "/* %5x: */ ", instr->address);
+            s += sprintf(s, "/* %5x (+%5x) */ ", instr->address, instr->offset);
             if (s < string)
                 abort();
         }
