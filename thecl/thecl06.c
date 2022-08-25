@@ -1177,16 +1177,16 @@ th06_dump(
                 fprintf(out, "%s_%u:\n", sub->name, instr->offset);
                 break;
             case THECL_INSTR_INSTR: {
+                if (g_ecl_hexdebug) {
+                    fprintf(out, "    /* %5x: */ ", instr->address);
+                } else {
+                    fprintf(out, "    ");
+                }
                 seqmap_entry_t *ent = seqmap_get(g_eclmap->ins_names, instr->id);
                 if (ent) {
-                    fprintf(out, "    %s(", ent->value);
-                }
-                else {
-                    if (g_ecl_hexdebug) {
-                        fprintf(out, "    %x:    ins_%u(", instr->address, instr->id);
-                    } else {
-                        fprintf(out, "    ins_%u(", instr->id);
-                    }
+                    fprintf(out, "%s(", ent->value);
+                } else {
+                    fprintf(out, "ins_%u(", instr->id);
                 }
                 thecl_param_t* param;
                 int first = 1;

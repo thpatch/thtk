@@ -1725,16 +1725,18 @@ th10_stringify_instr(
             strcat(string, async_id_str);
             free(async_id_str);
         }
-     } else {
+    } else {
+        char *s = string;
+        if (g_ecl_hexdebug) {
+            s += sprintf(s, "/* %5x: */ ", instr->address);
+            if (s < string)
+                abort();
+        }
         seqmap_entry_t *ent = seqmap_get(g_eclmap->ins_names, instr->id);
         if (ent) {
-            sprintf(string, "%s(", ent->value);
-        }
-        else {
-            if(g_ecl_hexdebug)
-                sprintf(string, "%x: ins_%u(",instr->address, instr->id);
-            else
-                sprintf(string, "ins_%u(", instr->address, instr->id);
+            sprintf(s, "%s(", ent->value);
+        } else {
+            sprintf(s, "ins_%u(", instr->id);
         }
 
         size_t removed = 0;
