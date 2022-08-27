@@ -39,12 +39,13 @@ static void
 print_usage(
     void)
 {
-    printf("Usage: %s [-V] [[-c | -l | -x] VERSION] [ARCHIVE [FILE...]]\n"
+    printf("Usage: %s [-Vg] [[-c | -l | -x] VERSION] [ARCHIVE [FILE...]]\n"
            "Options:\n"
            "  -c  create an archive\n"
            "  -l  list the contents of an archive\n"
            "  -x  extract an archive\n"
            "  -V  display version information and exit\n"
+           "  -g  enable glob matching for -x filenames\n"
            "VERSION can be:\n"
            "  1, 2, 3, 4, 5, 6, 7, 8, 9, 95, 10, 103 (for Uwabami Breakers), 105, 11, 12, 123, 125, 128, 13, 14, 143, 15, 16, 165, 17, 18 or 185\n"
            /* NEWHU: 185 */
@@ -330,12 +331,13 @@ main(
     thtk_error_t* error = NULL;
     unsigned int version = 0;
     int mode = -1;
+    int dat_use_glob = 0;
 
     argv0 = util_shortname(argv[0]);
     int opt;
     int ind=0;
     while(argv[util_optind]) {
-        switch(opt = util_getopt(argc, argv, ":c:l:x:Vd")) {
+        switch(opt = util_getopt(argc, argv, ":c:l:x:Vdg")) {
         case 'c':
         case 'l':
         case 'x':
@@ -350,6 +352,9 @@ main(
                 version = ~0;
             }
             else if(opt != 'd') version = parse_version(util_optarg);
+            break;
+        case 'g':
+            dat_use_glob = 1;
             break;
         default:
             util_getopt_default(&ind,argv,opt,print_usage);
@@ -474,18 +479,36 @@ main(
 #pragma omp parallel for schedule(dynamic)
             for (a = 1; a < argc; ++a) {
                 thtk_error_t* error = NULL;
-                int entry_index;
+                int e = -1;
 
-                if ((entry_index = thdat_entry_by_name(state->thdat, argv[a], &error)) == -1) {
-                    print_error(error);
-                    thtk_error_free(&error);
-                    continue;
-                }
-
-                if (!thdat_extract_file(state, entry_index, &error)) {
-                    print_error(error);
-                    thtk_error_free(&error);
-                    continue;
+                if (dat_use_glob) {
+                    for (;;) {
+                        if ((e = thdat_entry_by_glob(state->thdat, argv[a], e+1, &error)) == -1) {
+                            if (error) {
+                                print_error(error);
+                                thtk_error_free(&error);
+                            }
+                            break;
+                        }
+                        if (!thdat_extract_file(state, e, &error)) {
+                            print_error(error);
+                            thtk_error_free(&error);
+                        }
+                    }
+                } else {
+                    if ((e = thdat_entry_by_name(state->thdat, argv[a], &error)) == -1) {
+                        if (error) {
+                            print_error(error);
+                            thtk_error_free(&error);
+                        } else {
+                            fprintf(stderr, "%s:%s not found\n", argv0, argv[a]);
+                        }
+                        continue;
+                    }
+                    if (!thdat_extract_file(state, e, &error)) {
+                        print_error(error);
+                        thtk_error_free(&error);
+                    }
                 }
             }
         } else {

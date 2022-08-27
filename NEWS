@@ -44,6 +44,8 @@ What's new in thtk master
 - Detection works better with renamed files.
 - Support for TH18, TH185 has been added.
 - Improve extraction speed.
+- Add -g option to enable globing on extracted filenames.
+  Example: thdat -gx18 th18.dat "*.ecl"
 
 #### thmsg
 - Support for TH18, TH185 has been added.

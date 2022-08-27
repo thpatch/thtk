@@ -15,6 +15,8 @@ add_library(thtk SHARED
   detect.c
   detect.h
 
+  match.c
+
   util.h thtk.h)
 target_compile_options(thtk PRIVATE ${THTK_WARNING_FLAGS})
 if (WITH_OPENMP)

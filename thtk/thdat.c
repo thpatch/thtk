@@ -241,6 +241,25 @@ thdat_entry_by_name(
     return -1;
 }
 
+ssize_t
+thdat_entry_by_glob(
+    thdat_t* thdat,
+    const char* glob,
+    size_t first,
+    thtk_error_t** error)
+{
+    int glob_match(const char *p, const char *s); /* match.c */
+    if (!thdat || !glob) {
+        thtk_error_new(error, "invalid parameter passed");
+        return -1;
+    }
+    for (size_t e = first; e < thdat->entry_count; ++e) {
+        if (glob_match(glob, thdat->entries[e].name))
+            return e;
+    }
+    return -1;
+}
+
 int
 thdat_entry_set_name(
     thdat_t* thdat,

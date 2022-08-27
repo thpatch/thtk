@@ -99,6 +99,13 @@ THTK_EXPORT ssize_t thdat_entry_by_name(
     const char* name,
     thtk_error_t** error);
 
+/* Returns the index of the named entry using glob matching.  -1 indicates an error. */
+THTK_EXPORT ssize_t thdat_entry_by_glob(
+    thdat_t* thdat,
+    const char* glob,
+    size_t first,
+    thtk_error_t** error);
+
 /* Sets the name of an entry, names are limited to 256 characters at most, and
  * less for certain formats.  0 indicates an error. */
 THTK_EXPORT int thdat_entry_set_name(
