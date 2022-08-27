@@ -2,6 +2,7 @@ find_package(BISON REQUIRED)
 find_package(FLEX REQUIRED)
 bison_target(AnmParse anmparse.y ${CMAKE_CURRENT_BINARY_DIR}/anmparse.c COMPILE_FLAGS ${BISON_FLAGS})
 flex_target(AnmScan anmscan.l ${CMAKE_CURRENT_BINARY_DIR}/anmscan.c)
+add_flex_bison_dependency(AnmScan AnmParse)
 include_directories(${PNG_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR})
 add_executable(thanm
   ${BISON_AnmParse_OUTPUT_SOURCE} ${FLEX_AnmScan_OUTPUTS}
