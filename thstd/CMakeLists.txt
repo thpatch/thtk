@@ -2,7 +2,6 @@ add_executable(thstd
   thstd.c
   thstd.h
 )
-target_compile_options(thstd PRIVATE ${THTK_WARNING_FLAGS})
-target_link_libraries(thstd util setargv)
+target_link_libraries(thstd PRIVATE util setargv thtk_warning)
 install(TARGETS thstd DESTINATION bin)
 install(FILES thstd.1 DESTINATION share/man/man1)

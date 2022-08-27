@@ -18,14 +18,14 @@ add_library(thtk SHARED
   match.c
 
   util.h thtk.h)
-target_compile_options(thtk PRIVATE ${THTK_WARNING_FLAGS})
 if (WITH_OPENMP)
   find_package(OpenMP)
   if (OPENMP_FOUND)
     target_compile_options(thtk PRIVATE "${OpenMP_C_FLAGS}")
-    target_link_libraries(thtk "${OpenMP_C_LIBRARIES}")
+    target_link_libraries(thtk PRIVATE "${OpenMP_C_LIBRARIES}")
   endif()
 endif()
+target_link_libraries(thtk PRIVATE thtk_warning)
 
 find_package(PkgConfig)
 if (PKG_CONFIG_FOUND)

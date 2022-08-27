@@ -8,10 +8,9 @@ add_executable(thecl
   ${BISON_EcsParse_OUTPUT_SOURCE} ${FLEX_EcsScan_OUTPUTS}
   expr.c thecl.c eclmap.c thecl06.c thecl10.c
   expr.h thecl.h eclmap.h)
-target_compile_options(thecl PRIVATE ${THTK_WARNING_FLAGS})
-target_link_libraries(thecl util setargv)
+target_link_libraries(thecl PRIVATE util setargv thtk_warning)
 if(NOT WIN32)
-  target_link_libraries(thecl m)
+  target_link_libraries(thecl PRIVATE m)
 endif()
 install(TARGETS thecl DESTINATION bin)
 install(FILES thecl.1 DESTINATION share/man/man1)

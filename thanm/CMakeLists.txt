@@ -9,7 +9,6 @@ add_executable(thanm
   thanm.c image.c anmmap.c reg.c expr.c
   thanm.h image.h anmmap.h reg.h expr.h
 )
-target_compile_options(thanm PRIVATE ${THTK_WARNING_FLAGS})
-target_link_libraries(thanm util ${PNG_LIBRARY} setargv)
+target_link_libraries(thanm PRIVATE util ${PNG_LIBRARY} setargv thtk_warning)
 install(TARGETS thanm DESTINATION bin)
 install(FILES thanm.1 DESTINATION share/man/man1)

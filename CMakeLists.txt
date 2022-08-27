@@ -93,10 +93,15 @@ if(MSVC)
   set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} /MTd")
 endif()
 
+add_library(thtk_warning INTERFACE IMPORTED)
 if(MSVC)
-  set(THTK_WARNING_FLAGS /W3 /wd4267 /wd4244)
+  set_target_properties(thtk_warning PROPERTIES
+    INTERFACE_COMPILE_OPTIONS "/W3;/wd4267;/wd4244"
+  )
 else()
-  set(THTK_WARNING_FLAGS -Wall -Wextra -Wno-parentheses $<$<C_COMPILER_ID:Clang,AppleClang>:-Wno-pragma-pack> -Wno-sign-compare)
+  set_target_properties(thtk_warning PROPERTIES
+    INTERFACE_COMPILE_OPTIONS "-Wall;-Wextra;-Wno-parentheses;$<$<C_COMPILER_ID:Clang,AppleClang>:-Wno-pragma-pack>;-Wno-sign-compare"
+  )
 endif()
 
 set(BISON_FLAGS "" CACHE STRING "Flags used by the BISON parser generator during all build types.")
