@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.12)
+cmake_minimum_required(VERSION 3.13)
 set(CMP0048 NEW)
 
 project("Touhou Toolkit"
@@ -78,11 +78,10 @@ else()
   add_compile_options(-D_GNU_SOURCE -std=c99 -finput-charset=utf-8 -fexec-charset=utf-8)
 endif()
 
-function(link_setargv target)
-  if(MSVC)
-    set_target_properties(${target} PROPERTIES LINK_FLAGS "setargv.obj")
-  endif()
-endfunction()
+add_library(setargv INTERFACE IMPORTED)
+if(MSVC)
+  set_target_properties(setargv PROPERTIES INTERFACE_LINK_OPTIONS "setargv.obj")
+endif()
 
 if(MSVC)
   set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} /MT /GL /Ox /Ot")
