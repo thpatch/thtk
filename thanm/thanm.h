@@ -179,7 +179,7 @@ thanm_instr_t* instr_new(parser_state_t* state, uint16_t id, list_t* params);
 
 #define DEFAULTVAL 0xffff
 
-extern FILE* yyin;
-extern int yyparse(parser_state_t*);
+extern FILE* thanm_yyin;
+extern int thanm_yyparse(parser_state_t*);
 
 #endif

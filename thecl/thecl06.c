@@ -1359,9 +1359,9 @@ th06_parse(
 
     path_init(&state.path_state, filename, argv0);
 
-    yyin = in;
+    thecl_yyin = in;
 
-    if (yyparse(&state) != 0)
+    if (thecl_yyparse(&state) != 0)
         return 0;
 
     path_free(&state.path_state);

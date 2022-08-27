@@ -1,4 +1,4 @@
-%option noinput nounput noyywrap
+%option noinput nounput noyywrap prefix="thecl_yy"
 %top {
 /*
  * Redistribution and use in source and binary forms, with
@@ -29,6 +29,10 @@
  * DAMAGE.
  */
 #include <config.h>
+#define yylval thecl_yylval
+#define yylloc thecl_yylloc
+#define yyerror thecl_yyerror
+#define YYUNDEF THECL_YYUNDEF
 }
     #include <stdio.h>
     #include <stdlib.h>

@@ -259,8 +259,8 @@ typedef struct {
 
 /* TODO: Deletion and creation functions for parser state. */
 
-extern FILE* yyin;
-extern int yyparse(parser_state_t*);
+extern FILE* thecl_yyin;
+extern int thecl_yyparse(parser_state_t*);
 
 extern eclmap_t* g_eclmap;
 extern bool g_ecl_rawoutput;

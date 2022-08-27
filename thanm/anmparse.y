@@ -46,6 +46,7 @@
 /* Bison things. */
 void yyerror(const parser_state_t*, const char*, ...);
 int yylex(void);
+#define yyin thanm_yyin
 extern FILE* yyin;
 
 typedef struct prop_list_entry_value_t {
@@ -92,6 +93,7 @@ static void instr_check_types(parser_state_t* state, int id, list_t* params);
 
 %}
 
+%define api.prefix {thanm_yy}
 %define parse.error verbose
 %locations
 %parse-param {parser_state_t* state}

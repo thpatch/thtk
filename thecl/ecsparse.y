@@ -120,6 +120,7 @@ static void expression_create_goto(parser_state_t *state, int type, char *labels
 /* Bison things. */
 void yyerror(const parser_state_t*, const char*, ...);
 int yylex(void);
+#define yyin thecl_yyin
 extern FILE* yyin;
 
 /* Parser APIs. */
@@ -174,6 +175,7 @@ static const char sub_param_fi[] = {'f', 'i'};
 
 %}
 
+%define api.prefix {thecl_yy}
 %define parse.error verbose
 %locations
 %parse-param {parser_state_t* state}

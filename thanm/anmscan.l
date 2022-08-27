@@ -1,4 +1,4 @@
-%option noinput nounput noyywrap
+%option noinput nounput noyywrap prefix="thanm_yy"
 %top {
 /*
  * Redistribution and use in source and binary forms, with
@@ -30,6 +30,9 @@
  */
 #include <config.h>
 #include <stdint.h>
+#define yylval thanm_yylval
+#define yylloc thanm_yylloc
+#define yyerror thanm_yyerror
 }
     #include <stdio.h>
     #include <stdlib.h>

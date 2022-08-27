@@ -1609,8 +1609,8 @@ anm_create(
 
     path_init(&state.path_state, spec, argv0);
 
-    yyin = in;
-    if (yyparse(&state) || state.was_error)
+    thanm_yyin = in;
+    if (thanm_yyparse(&state) || state.was_error)
         return NULL;
 
     path_free(&state.path_state);
