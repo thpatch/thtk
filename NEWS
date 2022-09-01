@@ -38,6 +38,7 @@ What's new in thtk master
 - Support for TH18, TH185 has been added.
 - Numerous bug-fixes.
 - Add -x option for outputting address information for instructions.
+- Add -C option for changing the current directory after opening the archive.
 
 #### thdat
 - Automatic version detection now supports th165, th17, th18 and th185.

@@ -41,6 +41,14 @@
 #else
 #error "port util_scan_files"
 #endif
+#if defined(HAVE_CHDIR)
+#include <unistd.h>
+#define _chdir chdir
+#elif defined(HAVE__CHDIR)
+#include <direct.h>
+#else
+#error "port util_chdir"
+#endif
 #include "program.h"
 #include "util.h"
 
@@ -345,4 +353,11 @@ util_printfloat(
     /* XXX: What about errors? */
 
     return buf;
+}
+
+int
+util_chdir(
+    const char *path)
+{
+    return _chdir(path);
 }

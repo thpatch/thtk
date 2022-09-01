@@ -27,6 +27,7 @@
  * DAMAGE.
  */
 #include <config.h>
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -35,17 +36,20 @@
 #include "util.h"
 #include "mygetopt.h"
 
+static const char *dat_chdir = NULL;
+
 static void
 print_usage(
     void)
 {
-    printf("Usage: %s [-Vg] [[-c | -l | -x] VERSION] [ARCHIVE [FILE...]]\n"
+    printf("Usage: %s [-Vg] [-C DIR] [[-c | -l | -x] VERSION] [ARCHIVE [FILE...]]\n"
            "Options:\n"
            "  -c  create an archive\n"
            "  -l  list the contents of an archive\n"
            "  -x  extract an archive\n"
            "  -V  display version information and exit\n"
            "  -g  enable glob matching for -x filenames\n"
+           "  -C  change directory after opening the archive\n"
            "VERSION can be:\n"
            "  1, 2, 3, 4, 5, 6, 7, 8, 9, 95, 10, 103 (for Uwabami Breakers), 105, 11, 12, 123, 125, 128, 13, 14, 143, 15, 16, 165, 17, 18 or 185\n"
            /* NEWHU: 185 */
@@ -221,6 +225,13 @@ thdat_create_wrapper(
         exit(1);
     }
 
+    if (dat_chdir && util_chdir(dat_chdir) == -1) {
+        fprintf(stderr, "%s: couldn't change directory to %s: %s\n",
+            argv0, dat_chdir, strerror(errno));
+        thdat_state_free(state);
+        exit(1);
+    }
+
     for (size_t i = 0; i < entry_count; i++) {
         int n = util_scan_files(paths[i], &entries[i]);
         if (n == -1) {
@@ -337,7 +348,7 @@ main(
     int opt;
     int ind=0;
     while(argv[util_optind]) {
-        switch(opt = util_getopt(argc, argv, ":c:l:x:Vdg")) {
+        switch(opt = util_getopt(argc, argv, ":c:l:x:VdgC:")) {
         case 'c':
         case 'l':
         case 'x':
@@ -355,6 +366,9 @@ main(
             break;
         case 'g':
             dat_use_glob = 1;
+            break;
+        case 'C':
+            dat_chdir = util_optarg;
             break;
         default:
             util_getopt_default(&ind,argv,opt,print_usage);
@@ -471,6 +485,12 @@ main(
         if (!state) {
             print_error(error);
             thtk_error_free(&error);
+            exit(1);
+        }
+
+        if (dat_chdir && util_chdir(dat_chdir) == -1) {
+            fprintf(stderr, "%s: couldn't change directory to %s: %s\n",
+                argv0, dat_chdir, strerror(errno));
             exit(1);
         }
 

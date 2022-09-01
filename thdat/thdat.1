@@ -24,7 +24,7 @@
 .\" OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 .\" SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
 .\" DAMAGE.
-.Dd August 27, 2022
+.Dd August 31, 2022
 .Dt THDAT 1
 .Os thtk
 .Sh NAME
@@ -33,6 +33,7 @@
 .Sh SYNOPSIS
 .Nm
 .Op Fl Vg
+.Op Fl C Ar dir
 .Op Oo Fl c | l | x Oc Oo Li d | Ar version Oc
 .Op Ar archive Op Ar
 .Sh DESCRIPTION
@@ -41,11 +42,11 @@ The
 utility extracts files from an archive or creates a new archive from a set of files.
 The following commands are available:
 .Bl -tag -width Ds
-.It Nm Fl c Ar version Ar archive Ar file Op Ar
+.It Nm Fl c Ar version Ar archive Oo Fl C Ar dir Oc Ar file Op Ar
 Archives the specified files.
 .It Nm Fl l Oo Li d | Ar version Oc Ar archive
 Lists the contents of the archive.
-.It Nm Oo Fl g Oc Fl x Oo Li d | Ar version Oc Ar archive Op Ar
+.It Nm Oo Fl g Oc Fl x Oo Li d | Ar version Oc Ar archive Oo Fl C Ar dir Oc Op Ar
 Extracts files.
 If no files are specified, all files are extracted.
 .It Nm Fl V
@@ -65,6 +66,13 @@ For example, to extract all ecl files, do the following:
 thdat -gx18 th18.dat "*.ecl"
 .Ed
 Note the use of quotes to escape globing performed by the shell.
+.It Fl C Ar dir
+The
+.Fl C
+option changes the current directory to
+.Ar dir
+after opening the archive.
+It should be specified between the archive name and the file list.
 .El
 .Pp
 The

@@ -82,4 +82,7 @@ void util_xor(
     unsigned char step,
     unsigned char step2);
 
+/* Changes current directory */
+int util_chdir(
+    const char *path);
 #endif

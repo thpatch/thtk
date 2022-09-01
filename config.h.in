@@ -45,6 +45,8 @@ typedef SSIZE_T ssize_t;
 #cmakedefine HAVE_FSTAT
 #cmakedefine HAVE_SCANDIR
 #cmakedefine HAVE_FILENO
+#cmakedefine HAVE_CHDIR
+#cmakedefine HAVE__CHDIR
 
 #cmakedefine HAVE_GETC_UNLOCKED
 #cmakedefine HAVE_FREAD_UNLOCKED
