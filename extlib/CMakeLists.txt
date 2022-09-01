@@ -6,7 +6,6 @@ if (WITH_LIBPNG_SOURCE)
               ${CMAKE_CURRENT_BINARY_DIR}/zlib-ng/zconf.h)
   file(RENAME ${CMAKE_CURRENT_BINARY_DIR}/zlib-ng/zconf-ng.h.in
               ${CMAKE_CURRENT_BINARY_DIR}/zlib-ng/zconf-ng.h)
-  include_directories(${CMAKE_CURRENT_BINARY_DIR}/zlib-ng)
 
   add_library(z STATIC
   zlib-ng/adler32.c
@@ -52,12 +51,12 @@ if (WITH_LIBPNG_SOURCE)
   zlib-ng/zutil.h
 
   zlib-ng/zlib.h)
+  target_include_directories(z PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/zlib-ng)
   if (HAVE_UNISTD_H)
     set(Z_HAVE_UNISTD_H "Z_HAVE_UNISTD_H")
   endif()
   target_compile_definitions(z PRIVATE ZLIB_COMPAT)
-  target_compile_definitions(z
-    PUBLIC ${Z_HAVE_UNISTD_H})
+  target_compile_definitions(z PUBLIC ${Z_HAVE_UNISTD_H})
 
   include(CheckFunctionExists)
   check_function_exists(pow BUILTIN_MATH)
@@ -76,8 +75,6 @@ if (WITH_LIBPNG_SOURCE)
        DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/libpng)
   file(RENAME ${CMAKE_CURRENT_BINARY_DIR}/libpng/pnglibconf.h.prebuilt
               ${CMAKE_CURRENT_BINARY_DIR}/libpng/pnglibconf.h)
-  set(PNG_INCLUDE_DIRS ${CMAKE_CURRENT_BINARY_DIR}/libpng PARENT_SCOPE)
-  include_directories(${CMAKE_CURRENT_BINARY_DIR}/libpng)
   add_library(png STATIC
   libpng/png.c
   libpng/png.h
@@ -85,13 +82,14 @@ if (WITH_LIBPNG_SOURCE)
   libpng/pngerror.c libpng/pngget.c libpng/pngmem.c libpng/pngpread.c libpng/pngread.c
   libpng/pngrio.c libpng/pngrtran.c libpng/pngrutil.c libpng/pngset.c libpng/pngtrans.c
   libpng/pngwio.c libpng/pngwrite.c libpng/pngwtran.c libpng/pngwutil.c)
-  target_link_libraries(png z ${LIBM})
-  set(PNG_LIBRARY png PARENT_SCOPE)
+  target_include_directories(png PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/libpng)
+  target_link_libraries(png PRIVATE z ${LIBM})
+  add_library(PNG::PNG ALIAS png)
+  set(PNG_FOUND 1 PARENT_SCOPE)
 else()
   find_package(PNG 1.6)
   if (PNG_FOUND)
-    set(PNG_INCLUDE_DIRS ${PNG_INCLUDE_DIRS} PARENT_SCOPE)
-    set(PNG_LIBRARY ${PNG_LIBRARIES} PARENT_SCOPE)
+    set_target_properties(PNG::PNG PROPERTIES IMPORTED_GLOBAL ON)
     set(PNG_FOUND ${PNG_FOUND} PARENT_SCOPE)
   endif()
 endif()

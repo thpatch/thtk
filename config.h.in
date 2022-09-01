@@ -23,9 +23,8 @@
 #define PACK_ATTRIBUTE
 #endif
 
-#cmakedefine WITH_LIBPNG_SOURCE
 #cmakedefine PNG_FOUND
-#if defined(WITH_LIBPNG_SOURCE) || defined(PNG_FOUND)
+#ifdef PNG_FOUND
 # define HAVE_LIBPNG
 #endif
 
