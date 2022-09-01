@@ -110,7 +110,7 @@ util_makepath(
             abort();
         }
 #else
-        if (mkdir(name, 0755) == -1
+        if (mkdir(name, 0777) == -1
 #ifdef EEXIST
             && errno != EEXIST
 #endif
