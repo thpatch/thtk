@@ -58,18 +58,6 @@ if (WITH_LIBPNG_SOURCE)
   target_compile_definitions(z PRIVATE ZLIB_COMPAT)
   target_compile_definitions(z PUBLIC ${Z_HAVE_UNISTD_H})
 
-  include(CheckFunctionExists)
-  check_function_exists(pow BUILTIN_MATH)
-  if (NOT BUILTIN_MATH)
-    list(APPEND CMAKE_REQUIRED_LIBRARIES m)
-    check_function_exists(pow LIBM_MATH)
-    if (LIBM_MATH)
-      set(LIBM m)
-    else()
-      message(FATAL_ERROR "No math library found")
-    endif()
-  endif()
-
   # CUSTOM LIBPNG BUILD
   file(COPY libpng/scripts/pnglibconf.h.prebuilt libpng/png.h libpng/pngconf.h
        DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/libpng)
@@ -83,7 +71,7 @@ if (WITH_LIBPNG_SOURCE)
   libpng/pngrio.c libpng/pngrtran.c libpng/pngrutil.c libpng/pngset.c libpng/pngtrans.c
   libpng/pngwio.c libpng/pngwrite.c libpng/pngwtran.c libpng/pngwutil.c)
   target_include_directories(png PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/libpng)
-  target_link_libraries(png PRIVATE z ${LIBM})
+  target_link_libraries(png PRIVATE z math)
   add_library(PNG::PNG ALIAS png)
   set(PNG_FOUND 1 PARENT_SCOPE)
 else()

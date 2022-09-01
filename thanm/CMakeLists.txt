@@ -9,6 +9,6 @@ add_executable(thanm
   thanm.h image.h anmmap.h reg.h expr.h
 )
 target_include_directories(thanm PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR})
-target_link_libraries(thanm PRIVATE util $<$<BOOL:${PNG_FOUND}>:PNG::PNG> setargv thtk_warning)
+target_link_libraries(thanm PRIVATE util $<$<BOOL:${PNG_FOUND}>:PNG::PNG> math setargv thtk_warning)
 install(TARGETS thanm DESTINATION bin)
 install(FILES thanm.1 DESTINATION share/man/man1)
