@@ -985,7 +985,15 @@ anm_read_file(
 
         list_append_new(&archive->entries, entry);
 
-        if(header->rt_textureslot != 0) {
+        /* We use two heuristics here:
+         * 1) th06->rt_textureslot (== 0) overlays th11->zero1 and th11->w (!= 0).
+         * However th143/bestshot.anm has w==0, so this heuristic doesn't work there.
+         * 2) th06->scripts (< 65536) overlays th11->sprites and th11->scripts (!= 0)
+         * The largest value of th06->scripts is 275 in alcostg and th10 bullet.anm
+         * From th11 to th185, only th{11,12,13,14}/staff.anm have 0 scripts.
+         *
+         * Another way to express this is that bytes 6-12 must be zero in th06 format.  */
+        if (header->rt_textureslot != 0 || header->scripts > 65535) {
             header = malloc(sizeof(*header));
             memcpy(header, map, sizeof(*header));
             convert_header_to_old(header);

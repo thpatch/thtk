@@ -10,12 +10,14 @@ What's new in thtk master
 - New thanm spec format. See <https://github.com/thpatch/thtk/pull/86> for more
   details. The old format is not supported anymore. Use thanm.old for it.
 - Support for TH18, TH185 has been added.
+- Support th143/bestshot.anm
 
 #### thanm.old
 - Will be removed in the next release.
 - Support for TH18, TH185 has been added.
 - You can now specify the version for the -l command.
   This is required for correct dumping of TH18, TH185.
+- Support th143/bestshot.anm
 
 #### thecl
 - Fix and/or add the following instruction formats:
