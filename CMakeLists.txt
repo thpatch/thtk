@@ -73,6 +73,10 @@ if(WIN32)
   option(CONTRIB_WCTHDAT "Build total commander plugin" OFF)
 endif()
 
+if(WITH_OPENMP)
+  find_package(OpenMP)
+endif()
+
 if(MSVC)
   # Defining these here rather than in config.h.in also applies them to the
   # zlib-ng and libpng build.
