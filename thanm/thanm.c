@@ -1751,7 +1751,7 @@ anm_write(
         anm_script_t* script;
         long base = file_tell(stream);
         unsigned int namepad = 0;
-        char* padding;
+        static const char padding[16] = "";
         unsigned int j;
         unsigned int spriteoffset;
 
@@ -1772,20 +1772,14 @@ anm_write(
 
         entry->header->nameoffset = file_tell(stream) - base;
         file_write(stream, entry->name, strlen(entry->name));
-
-        padding = calloc(1, namepad);
         file_write(stream, padding, namepad);
-        free(padding);
 
         if (entry->name2 && entry->header->version == 0) {
             namepad = (16 - strlen(entry->name2) % 16);
 
             entry->header->y = file_tell(stream) - base;
             file_write(stream, entry->name2, strlen(entry->name2));
-
-            padding = calloc(1, namepad);
             file_write(stream, padding, namepad);
-            free(padding);
         }
 
         spriteoffset = file_tell(stream) - base;
