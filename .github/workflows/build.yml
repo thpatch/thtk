@@ -35,7 +35,7 @@ jobs:
       uses: actions/checkout@v2
       with:
         submodules: recursive
-    - name: Cahe winflexbison
+    - name: Cache winflexbison
       id: cache-winflexbison
       uses: actions/cache@v2
       with:
