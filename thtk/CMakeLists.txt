@@ -19,6 +19,11 @@ add_library(thtk
 
   util.h thtk.h)
 target_link_libraries(thtk PRIVATE thtk_warning $<$<BOOL:${OPENMP_FOUND}>:OpenMP::OpenMP_C>)
+set_target_properties(thtk PROPERTIES
+  PUBLIC_HEADER "thtk.h;error.h;io.h;dat.h;detect.h;thcrypt.h;thlzss.h"
+  VERSION "1.0.0"
+  SOVERSION 1
+  C_VISIBILITY_PRESET hidden)
 
 find_package(PkgConfig)
 if (PKG_CONFIG_FOUND)
@@ -26,10 +31,8 @@ if (PKG_CONFIG_FOUND)
   install(FILES ${CMAKE_CURRENT_BINARY_DIR}/thtk.pc
     DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/pkgconfig)
 endif()
-set_property(TARGET thtk PROPERTY VERSION "1.0.0")
-set_property(TARGET thtk PROPERTY SOVERSION 1)
-set_property(TARGET thtk PROPERTY C_VISIBILITY_PRESET hidden)
 install(TARGETS thtk
   ARCHIVE DESTINATION lib
-  RUNTIME DESTINATION bin)
-install(FILES thtk.h error.h io.h dat.h detect.h thcrypt.h thlzss.h DESTINATION include/thtk)
+  LIBRARY DESTINATION lib
+  RUNTIME DESTINATION bin
+  PUBLIC_HEADER DESTINATION include/thtk)
