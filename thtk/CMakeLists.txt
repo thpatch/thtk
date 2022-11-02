@@ -1,5 +1,5 @@
 include_directories(${CMAKE_SOURCE_DIR})
-add_library(thtk SHARED
+add_library(thtk
   bits.c error.c io.c
   bits.h error.h io.h
 
@@ -29,5 +29,7 @@ endif()
 set_property(TARGET thtk PROPERTY VERSION "1.0.0")
 set_property(TARGET thtk PROPERTY SOVERSION 1)
 set_property(TARGET thtk PROPERTY C_VISIBILITY_PRESET hidden)
-install(TARGETS thtk DESTINATION lib)
+install(TARGETS thtk
+  ARCHIVE DESTINATION lib
+  RUNTIME DESTINATION bin)
 install(FILES thtk.h error.h io.h dat.h detect.h thcrypt.h thlzss.h DESTINATION include/thtk)
