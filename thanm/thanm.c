@@ -45,6 +45,7 @@
 
 anmmap_t* g_anmmap = NULL;
 unsigned int option_force;
+unsigned int option_print_offsets;
 
 /* SPECIAL FORMATS:
  * 'o' - offset (for labels)
@@ -1101,6 +1102,7 @@ anm_read_file(
                     }
                     thanm_instr_t* thanm_instr = thanm_instr_new_raw(instr, format);
                     thanm_instr->offset = (uint32_t)((ptrdiff_t)instr_ptr - (ptrdiff_t)(map + script->offset->offset));
+                    thanm_instr->address = (ptrdiff_t)instr_ptr - (ptrdiff_t)map_base;
                     list_append_new(&script->instrs, thanm_instr);
 
                     if (header->version == 0)
@@ -1148,6 +1150,9 @@ anm_stringify_instr(
     int32_t scriptn
 ) {
     seqmap_entry_t* ent = seqmap_get(g_anmmap->ins_names, instr->id);
+
+    if (option_print_offsets)
+        fprintf(stream, " /* %5x (+%5x) */ ", instr->address, instr->offset);
 
     if (ent)
         fprintf(stream, "%s(", ent->value);
@@ -1943,6 +1948,7 @@ print_usage(void)
     printf("  -m                    use map file for translating mnemonics\n"
            "  -V                    display version information and exit\n"
            "  -f                    ignore errors when possible\n"
+           "  -o                    add address information for for ANM instructions\n"
            "Report bugs to <" PACKAGE_BUGREPORT ">.\n");
 }
 
@@ -1983,10 +1989,14 @@ main(
     int ind = 0;
     while(argv[util_optind]) {
         switch(opt = util_getopt(argc,argv,commands)) {
+        case 'c':
+            if (option_print_offsets) {
+                fprintf(stderr, "%s: 'x' option can't be used when creating ANM archive\n", argv0);
+                exit(1);
+            }
         case 'l':
         case 'x':
         case 'r':
-        case 'c':
             if(command != -1) {
                 fprintf(stderr,"%s: More than one mode specified\n",argv0);
                 print_usage();
@@ -2015,6 +2025,13 @@ main(
             break;
         case 'f':
             option_force = 1;
+            break;
+        case 'o':
+            if (command == 'c') {
+                fprintf(stderr, "%s: 'x' option can't be used when creating ANM archive\n", argv0);
+                exit(1);
+            }
+            option_print_offsets = 1;
             break;
         default:
             util_getopt_default(&ind,argv,opt,print_usage);
