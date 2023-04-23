@@ -42,7 +42,8 @@ utility performs various actions on sprite archives.
 The following commands are available:
 .Bl -tag -width Ds
 .It Nm Oo Fl f Oc Fl l Oo Ar version Oc Ar archive
-Displays a specification of the archive. The
+Displays a specification of the archive.
+The
 .Ar version
 is necessary to correctly process archives from TH18 and
 newer, but may otherwise be omitted.
@@ -78,7 +79,8 @@ utility exits with 0 on success, 1 on error.
 .Sh SEE ALSO
 .Lk https://github.com/thpatch/thtk "Project homepage"
 .Sh BUGS
-A few files from TH12 and TH13 contain overlapping entries with different formats.
+A few files from TH12 and TH13 contain overlapping entries
+with different formats.
 Dumping and recreating these archives will not result in the same archives.
 The affected pixels seem to all have 0 for alpha though.
 .Pp

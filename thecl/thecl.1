@@ -61,11 +61,13 @@ option can be used to map ins_* to human readable names.
 .It Fl r
 The
 .Fl r
-option suppresses code transformations like parameter detection, or expression decompilation.
+option suppresses code transformations like parameter detection,
+or expression decompilation.
 .It Fl s
 The
 .Fl s
-option enables simple creation mode, which doesn't add any instructions automatically.
+option enables simple creation mode,
+which doesn't add any instructions automatically.
 .It Fl x
 The
 .Fl x
@@ -90,10 +92,12 @@ option, consist of two kinds of lines: control lines (which start with
 .Pp
 The file starts with
 .Ql !eclmap
-control line. The rest of the control lines select the mapping that is being modified:
+control line.
+The rest of the control lines select the mapping that is being modified:
 .Bl -tag -width Ds
 .It Ql !ins_names
-Instruction names. This is the default mapping.
+Instruction names.
+This is the default mapping.
 .br
 Value: identifier
 .It Ql !ins_signatures
@@ -131,7 +135,9 @@ is an integer, and
 is a string without spaces.
 Empty values are allowed.
 .Pp
-When multiple mappings are specified for the same key or value, the most recent one has priority. For example:
+When multiple mappings are specified for the same key or value,
+the most recent one has priority.
+For example:
 .Bd -literal -offset indent
 123 foo
 123 bar
