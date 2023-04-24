@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html>
+<!-- This is an automatically generated file.  Do not edit.
+   Redistribution and use in source and binary forms, with
+   or without modification, are permitted provided that the
+   following conditions are met:
+  
+   1. Redistributions of source code must retain this list
+      of conditions and the following disclaimer.
+   2. Redistributions in binary form must reproduce this
+      list of conditions and the following disclaimer in the
+      documentation and/or other materials provided with the
+      distribution.
+  
+   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND
+   CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
+   WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+   WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+   PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+   COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+   INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+   CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+   PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+   DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+   CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+   CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+   OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
+   DAMAGE.
+ -->
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <link rel="stylesheet" href="../mandoc.css" type="text/css" media="all"/>
+  <title>THDAT(1)</title>
+</head>
+<body>
+<table class="head">
+  <tr>
+    <td class="head-ltitle">THDAT(1)</td>
+    <td class="head-vol">General Commands Manual</td>
+    <td class="head-rtitle">THDAT(1)</td>
+  </tr>
+</table>
+<div class="manual-text">
+<section class="Sh">
+<h1 class="Sh" id="NAME"><a class="permalink" href="#NAME">NAME</a></h1>
+<p class="Pp"><code class="Nm">thdat</code> &#x2014; <span class="Nd">Touhou
+    archive tool</span></p>
+</section>
+<section class="Sh">
+<h1 class="Sh" id="SYNOPSIS"><a class="permalink" href="#SYNOPSIS">SYNOPSIS</a></h1>
+<table class="Nm">
+  <tr>
+    <td><code class="Nm">thdat</code></td>
+    <td>[<code class="Fl">-Vg</code>] [<code class="Fl">-C</code>
+      <var class="Ar">dir</var>] [[<code class="Fl">-c</code> |
+      <code class="Fl">-l</code> | <code class="Fl">-x</code>]
+      [<code class="Li">d</code> | <var class="Ar">version</var>]]
+      [<var class="Ar">archive</var> [<var class="Ar">file ...</var>]]</td>
+  </tr>
+</table>
+</section>
+<section class="Sh">
+<h1 class="Sh" id="DESCRIPTION"><a class="permalink" href="#DESCRIPTION">DESCRIPTION</a></h1>
+<p class="Pp">The <code class="Nm">thdat</code> utility extracts files from an
+    archive or creates a new archive from a set of files. The following commands
+    are available:</p>
+<dl class="Bl-tag">
+  <dt><code class="Nm">thdat</code> <code class="Fl">-c</code>
+    <var class="Ar">version</var> <var class="Ar">archive</var>
+    [<code class="Fl">-C</code> <var class="Ar">dir</var>]
+    <var class="Ar">file</var> [<var class="Ar">file ...</var>]</dt>
+  <dd>Archives the specified files.</dd>
+  <dt><code class="Nm">thdat</code> <code class="Fl">-l</code>
+    [<code class="Li">d</code> | <var class="Ar">version</var>]
+    <var class="Ar">archive</var></dt>
+  <dd>Lists the contents of the archive.</dd>
+  <dt><code class="Nm">thdat</code> [<code class="Fl">-g</code>]
+    <code class="Fl">-x</code> [<code class="Li">d</code> |
+    <var class="Ar">version</var>] <var class="Ar">archive</var>
+    [<code class="Fl">-C</code> <var class="Ar">dir</var>] [<var class="Ar">file
+    ...</var>]</dt>
+  <dd>Extracts files. If no files are specified, all files are extracted.</dd>
+  <dt><code class="Nm">thdat</code> <code class="Fl">-V</code></dt>
+  <dd>Displays the program version.</dd>
+</dl>
+<p class="Pp">These options are accepted:</p>
+<dl class="Bl-tag">
+  <dt id="g"><a class="permalink" href="#g"><code class="Fl">-g</code></a></dt>
+  <dd>The <code class="Fl">-g</code> option enables glob matching for filenames
+      that are to be extracted in <code class="Fl">-x</code> mode. For example,
+      to extract all ecl files, do the following:
+    <div class="Bd Pp Bd-indent Li">
+    <pre>thdat -gx18 th18.dat &quot;*.ecl&quot;</pre>
+    </div>
+    Note the use of quotes to escape globing performed by the shell.</dd>
+  <dt id="C"><a class="permalink" href="#C"><code class="Fl">-C</code></a>
+    <var class="Ar">dir</var></dt>
+  <dd>The <code class="Fl">-C</code> option changes the current directory to
+      <var class="Ar">dir</var> after opening the archive. It should be
+      specified between the archive name and the file list.</dd>
+</dl>
+<p class="Pp">The <var class="Ar">version</var> specifies which archive format
+    to use. Running the program without a command will list the supported
+    formats. <span class="No">If</span> <code class="Li">d is specified instead
+    of</code> <var class="Ar">version</var>, <code class="Nm">thdat</code>
+    automatically detects the file format.</p>
+</section>
+<section class="Sh">
+<h1 class="Sh" id="ENVIRONMENT"><a class="permalink" href="#ENVIRONMENT">ENVIRONMENT</a></h1>
+<dl class="Bl-tag">
+  <dt id="OMP_NUM_THREADS"><a class="permalink" href="#OMP_NUM_THREADS"><code class="Ev">OMP_NUM_THREADS</code></a></dt>
+  <dd>The number of threads to be used for compression and decompression. The
+      default used when <code class="Ev">OMP_NUM_THREADS</code> is not set
+      depends on the OpenMP implementation.</dd>
+</dl>
+</section>
+<section class="Sh">
+<h1 class="Sh" id="EXIT_STATUS"><a class="permalink" href="#EXIT_STATUS">EXIT
+  STATUS</a></h1>
+<p class="Pp">The <code class="Nm">thdat</code> utility exits with 0 on success,
+    1 on error.</p>
+</section>
+<section class="Sh">
+<h1 class="Sh" id="EXAMPLES"><a class="permalink" href="#EXAMPLES">EXAMPLES</a></h1>
+<p class="Pp">Create a new archive from the input files:</p>
+<div class="Bd Pp Bd-indent Li">
+<pre>thdat -c6 output.dat input.anm input.msg input.ecl</pre>
+</div>
+<p class="Pp">Lists the contents of the specified archive:</p>
+<div class="Bd Pp Bd-indent Li">
+<pre>thdat -l128 th128.dat</pre>
+</div>
+<p class="Pp">Extract all files from the archive to the current working
+    directory:</p>
+<div class="Bd Pp Bd-indent Li">
+<pre>thdat -x8 th08.dat</pre>
+</div>
+</section>
+<section class="Sh">
+<h1 class="Sh" id="SEE_ALSO"><a class="permalink" href="#SEE_ALSO">SEE
+  ALSO</a></h1>
+<p class="Pp"><a class="Lk" href="https://github.com/thpatch/thtk">Project
+    homepage</a></p>
+</section>
+<section class="Sh">
+<h1 class="Sh" id="CAVEATS"><a class="permalink" href="#CAVEATS">CAVEATS</a></h1>
+<p class="Pp">BGM archives are not supported by the
+    <code class="Nm">thdat</code> utility.</p>
+</section>
+<section class="Sh">
+<h1 class="Sh" id="BUGS"><a class="permalink" href="#BUGS">BUGS</a></h1>
+<p class="Pp">The format used by TH03-TH05 uses separate encryption keys for
+    each entry in the archives, as well as one key for the entry list. It is not
+    known if these keys are computed from the entries, or if they are randomly
+    assigned. They are currently set to constant values.</p>
+<p class="Pp">Original TH08 and TH09 archives contain a large amount of
+    encrypted zero padding at the end of the entry list. This padding is reduced
+    to four bytes.</p>
+</section>
+<section class="Sh">
+<h1 class="Sh" id="SECURITY_CONSIDERATIONS"><a class="permalink" href="#SECURITY_CONSIDERATIONS">SECURITY
+  CONSIDERATIONS</a></h1>
+<p class="Pp">File names may not be properly sanitized when extracting.
+    Furthermode, invalid data may not be properly handled. Do not extract
+    untrusted archives.</p>
+</section>
+</div>
+<table class="foot">
+  <tr>
+    <td class="foot-date">April 24, 2023</td>
+    <td class="foot-os">thtk</td>
+  </tr>
+</table>
+</body>
+</html>

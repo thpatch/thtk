@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html>
+<!-- This is an automatically generated file.  Do not edit.
+   Redistribution and use in source and binary forms, with
+   or without modification, are permitted provided that the
+   following conditions are met:
+  
+   1. Redistributions of source code must retain this list
+      of conditions and the following disclaimer.
+   2. Redistributions in binary form must reproduce this
+      list of conditions and the following disclaimer in the
+      documentation and/or other materials provided with the
+      distribution.
+  
+   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND
+   CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
+   WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+   WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+   PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+   COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+   INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+   CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+   PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+   DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+   CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+   CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+   OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
+   DAMAGE.
+ -->
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <link rel="stylesheet" href="../mandoc.css" type="text/css" media="all"/>
+  <title>THMSG(1)</title>
+</head>
+<body>
+<table class="head">
+  <tr>
+    <td class="head-ltitle">THMSG(1)</td>
+    <td class="head-vol">General Commands Manual</td>
+    <td class="head-rtitle">THMSG(1)</td>
+  </tr>
+</table>
+<div class="manual-text">
+<section class="Sh">
+<h1 class="Sh" id="NAME"><a class="permalink" href="#NAME">NAME</a></h1>
+<p class="Pp"><code class="Nm">thmsg</code> &#x2014; <span class="Nd">Touhou
+    dialogue tool</span></p>
+</section>
+<section class="Sh">
+<h1 class="Sh" id="SYNOPSIS"><a class="permalink" href="#SYNOPSIS">SYNOPSIS</a></h1>
+<table class="Nm">
+  <tr>
+    <td><code class="Nm">thmsg</code></td>
+    <td>[<code class="Fl">-Ve</code>] [[<code class="Fl">-c</code> |
+      <code class="Fl">-d</code>] <var class="Ar">version</var>]
+      [<var class="Ar">input</var> [<var class="Ar">output</var>]]</td>
+  </tr>
+</table>
+</section>
+<section class="Sh">
+<h1 class="Sh" id="DESCRIPTION"><a class="permalink" href="#DESCRIPTION">DESCRIPTION</a></h1>
+<p class="Pp">The <code class="Nm">thmsg</code> utility converts dialogue files
+    from and to a human-readable format. The following commands are
+  available:</p>
+<dl class="Bl-tag">
+  <dt><code class="Nm">thmsg</code> <code class="Fl">-c</code>
+    <var class="Ar">version</var> [<code class="Fl">-e</code>]
+    [<var class="Ar">input</var> [<var class="Ar">output</var>]]</dt>
+  <dd>Creates a new dialogue file from the input.</dd>
+  <dt><code class="Nm">thmsg</code> <code class="Fl">-d</code>
+    <var class="Ar">version</var> [<code class="Fl">-e</code>]
+    [<var class="Ar">input</var> [<var class="Ar">output</var>]]</dt>
+  <dd>Dumps a dialogue file.</dd>
+  <dt><code class="Nm">thmsg</code> <code class="Fl">-V</code></dt>
+  <dd>Displays the program version.</dd>
+</dl>
+<p class="Pp">The version specifies which dialogue format to use, it is further
+    modified by the presence of the <code class="Fl">-e</code> option. Running
+    the program without a command will list the supported formats.</p>
+<dl class="Bl-tag">
+  <dt id="e"><a class="permalink" href="#e"><code class="Fl">-e</code></a></dt>
+  <dd>The <code class="Fl">-e</code> option is used to process ending dialogue,
+      and for the mission.msg file in TH125.</dd>
+</dl>
+</section>
+<section class="Sh">
+<h1 class="Sh" id="EXIT_STATUS"><a class="permalink" href="#EXIT_STATUS">EXIT
+  STATUS</a></h1>
+<p class="Pp">The <code class="Nm">thmsg</code> utility exits with 0 on success,
+    1 on error.</p>
+</section>
+<section class="Sh">
+<h1 class="Sh" id="EXAMPLES"><a class="permalink" href="#EXAMPLES">EXAMPLES</a></h1>
+<p class="Pp">Create a new dialogue file from the input file:</p>
+<div class="Bd Pp Bd-indent Li">
+<pre>thmsg -c10 input.txt output.msg</pre>
+</div>
+<p class="Pp">Dump the mission descriptions to standard output:</p>
+<div class="Bd Pp Bd-indent Li">
+<pre>thmsg -ed125 mission.msg</pre>
+</div>
+</section>
+<section class="Sh">
+<h1 class="Sh" id="SEE_ALSO"><a class="permalink" href="#SEE_ALSO">SEE
+  ALSO</a></h1>
+<p class="Pp"><a class="Lk" href="https://github.com/thpatch/thtk">Project
+    homepage</a></p>
+</section>
+<section class="Sh">
+<h1 class="Sh" id="SECURITY_CONSIDERATIONS"><a class="permalink" href="#SECURITY_CONSIDERATIONS">SECURITY
+  CONSIDERATIONS</a></h1>
+<p class="Pp">Invalid data may not be properly handled. Do not dump untrusted
+    dialogue files.</p>
+</section>
+</div>
+<table class="foot">
+  <tr>
+    <td class="foot-date">April 24, 2023</td>
+    <td class="foot-os">thtk</td>
+  </tr>
+</table>
+</body>
+</html>

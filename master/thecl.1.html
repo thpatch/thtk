@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html>
+<!-- This is an automatically generated file.  Do not edit.
+   Redistribution and use in source and binary forms, with
+   or without modification, are permitted provided that the
+   following conditions are met:
+  
+   1. Redistributions of source code must retain this list
+      of conditions and the following disclaimer.
+   2. Redistributions in binary form must reproduce this
+      list of conditions and the following disclaimer in the
+      documentation and/or other materials provided with the
+      distribution.
+  
+   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND
+   CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
+   WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+   WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+   PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+   COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+   INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+   CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+   PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+   DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+   CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+   CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+   OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
+   DAMAGE.
+ -->
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <link rel="stylesheet" href="../mandoc.css" type="text/css" media="all"/>
+  <title>THECL(1)</title>
+</head>
+<body>
+<table class="head">
+  <tr>
+    <td class="head-ltitle">THECL(1)</td>
+    <td class="head-vol">General Commands Manual</td>
+    <td class="head-rtitle">THECL(1)</td>
+  </tr>
+</table>
+<div class="manual-text">
+<section class="Sh">
+<h1 class="Sh" id="NAME"><a class="permalink" href="#NAME">NAME</a></h1>
+<p class="Pp"><code class="Nm">thecl</code> &#x2014; <span class="Nd">Touhou
+    enemy control language script tool</span></p>
+</section>
+<section class="Sh">
+<h1 class="Sh" id="SYNOPSIS"><a class="permalink" href="#SYNOPSIS">SYNOPSIS</a></h1>
+<table class="Nm">
+  <tr>
+    <td><code class="Nm">thecl</code></td>
+    <td>[<code class="Fl">-Vrsx</code>] [[<code class="Fl">-c</code> |
+      <code class="Fl">-h</code> | <code class="Fl">-d</code>]
+      <var class="Ar">version</var>] [<code class="Fl">-m</code>
+      <var class="Ar">eclmap</var>]<var class="Ar">...</var>
+      [<var class="Ar">input</var> [<var class="Ar">output</var>]]</td>
+  </tr>
+</table>
+</section>
+<section class="Sh">
+<h1 class="Sh" id="DESCRIPTION"><a class="permalink" href="#DESCRIPTION">DESCRIPTION</a></h1>
+<p class="Pp">The <code class="Nm">thecl</code> utility (de)compiles ecl
+    scripts. The following commands are available:</p>
+<dl class="Bl-tag">
+  <dt><code class="Nm">thecl</code> <code class="Fl">-c</code>
+    <var class="Ar">version</var> [<code class="Fl">-s</code>]
+    [<code class="Fl">-m</code>
+    <var class="Ar">eclmap</var>]<var class="Ar">...</var>
+    [<var class="Ar">input</var> [<var class="Ar">output</var>]]</dt>
+  <dd>Compiles an enemy script.</dd>
+  <dt><code class="Nm">thecl</code> <code class="Fl">-h</code>
+    <var class="Ar">version</var> [<code class="Fl">-m</code>
+    <var class="Ar">eclmap</var>]<var class="Ar">...</var>
+    [<var class="Ar">input</var> [<var class="Ar">output</var>]]</dt>
+  <dd>Creates a header file with forward declarations of all subs in input.</dd>
+  <dt><code class="Nm">thecl</code> <code class="Fl">-d</code>
+    <var class="Ar">version</var> [<code class="Fl">-rx</code>]
+    [<code class="Fl">-m</code>
+    <var class="Ar">eclmap</var>]<var class="Ar">...</var>
+    [<var class="Ar">input</var> [<var class="Ar">output</var>]]</dt>
+  <dd>Dumps an enemy script.</dd>
+  <dt id="V"><a class="permalink" href="#V"><code class="Fl">-V</code></a></dt>
+  <dd>Displays the program version.</dd>
+</dl>
+<p class="Pp">These options are accepted:</p>
+<dl class="Bl-tag">
+  <dt id="m"><a class="permalink" href="#m"><code class="Fl">-m</code></a>
+    <var class="Ar">eclmap</var></dt>
+  <dd>The <code class="Fl">-m</code> option can be used to map ins_* to human
+      readable names.</dd>
+  <dt id="r"><a class="permalink" href="#r"><code class="Fl">-r</code></a></dt>
+  <dd>The <code class="Fl">-r</code> option suppresses code transformations like
+      parameter detection, or expression decompilation.</dd>
+  <dt id="s"><a class="permalink" href="#s"><code class="Fl">-s</code></a></dt>
+  <dd>The <code class="Fl">-s</code> option enables simple creation mode, which
+      doesn't add any instructions automatically.</dd>
+  <dt id="x"><a class="permalink" href="#x"><code class="Fl">-x</code></a></dt>
+  <dd>The <code class="Fl">-x</code> option outputs address information when
+      dumping instructions. Shows both the file offset and the offset relative
+      to the start of the sub.</dd>
+</dl>
+<p class="Pp">Replace the <var class="Ar">version</var> option by the enemy
+    script format version requested. Running the program without a command will
+    list the supported formats.</p>
+</section>
+<section class="Sh">
+<h1 class="Sh" id="EXIT_STATUS"><a class="permalink" href="#EXIT_STATUS">EXIT
+  STATUS</a></h1>
+<p class="Pp">The <code class="Nm">thecl</code> utility exits with 0 on success,
+    1 on error.</p>
+</section>
+<section class="Sh">
+<h1 class="Sh" id="ECLMAP_FILE_FORMAT"><a class="permalink" href="#ECLMAP_FILE_FORMAT">ECLMAP
+  FILE FORMAT</a></h1>
+<p class="Pp">Eclmap files, which are added with the <code class="Fl">-m</code>
+    option, consist of two kinds of lines: control lines (which start with
+    &#x2018;<code class="Li">!</code>&#x2019;), and mapping lines.</p>
+<p class="Pp">The file starts with
+    &#x2018;<code class="Li">!eclmap</code>&#x2019; control line. The rest of
+    the control lines select the mapping that is being modified:</p>
+<dl class="Bl-tag">
+  <dt>&#x2018;<code class="Li">!ins_names</code>&#x2019;</dt>
+  <dd>Instruction names. This is the default mapping.
+    <br/>
+    Value: identifier</dd>
+  <dt>&#x2018;<code class="Li">!ins_signatures</code>&#x2019;</dt>
+  <dd>Instruction signatures.
+    <br/>
+    Value: signature</dd>
+  <dt>&#x2018;<code class="Li">!gvar_names</code>&#x2019;</dt>
+  <dd>Global variable names.
+    <br/>
+    Value: identifier</dd>
+  <dt>&#x2018;<code class="Li">!gvar_types</code>&#x2019;</dt>
+  <dd>Global variable types.
+    <br/>
+    <span class="No">Value: type</span>
+      (&#x2018;<code class="Li">$</code>&#x2019; for integer,
+      &#x2018;<code class="Li">%</code>&#x2019; for float)</dd>
+  <dt>&#x2018;<code class="Li">!timeline_ins_names</code>&#x2019;</dt>
+  <dd>Timeline instruction names.
+    <br/>
+    Value: identifier</dd>
+  <dt>&#x2018;<code class="Li">!timeline_ins_signatures</code>&#x2019;</dt>
+  <dd>Timeline instruction signatures.
+    <br/>
+    Value: signature</dd>
+</dl>
+<p class="Pp">Mapping lines are always of form</p>
+<div class="Bd Bd-indent">[<var class="Ar">key</var>]
+  [<var class="Ar">value</var>]</div>
+where <var class="Ar">key</var> is an integer, and <var class="Ar">value</var>
+  is a string without spaces. Empty values are allowed.
+<p class="Pp">When multiple mappings are specified for the same key or value,
+    the most recent one has priority. For example:</p>
+<div class="Bd Pp Bd-indent Li">
+<pre>123 foo
+123 bar</pre>
+</div>
+<p class="Pp">will map &#x2018;<code class="Li">123</code>&#x2019; to
+    &#x2018;<code class="Li">bar</code>&#x2019;,
+    &#x2018;<code class="Li">bar</code>&#x2019; to
+    &#x2018;<code class="Li">123</code>&#x2019;, and
+    &#x2018;<code class="Li">foo</code>&#x2019; to
+    &#x2018;<code class="Li">123</code>&#x2019;. Note how the first reverse
+    mapping doesn't get removed.</p>
+</section>
+<section class="Sh">
+<h1 class="Sh" id="SEE_ALSO"><a class="permalink" href="#SEE_ALSO">SEE
+  ALSO</a></h1>
+<p class="Pp"><a class="Lk" href="https://github.com/thpatch/thtk">Project
+    homepage</a></p>
+</section>
+<section class="Sh">
+<h1 class="Sh" id="SECURITY_CONSIDERATIONS"><a class="permalink" href="#SECURITY_CONSIDERATIONS">SECURITY
+  CONSIDERATIONS</a></h1>
+<p class="Pp">Invalid data may not be properly handled. Do not operate on
+    untrusted files.</p>
+</section>
+</div>
+<table class="foot">
+  <tr>
+    <td class="foot-date">April 24, 2023</td>
+    <td class="foot-os">thtk</td>
+  </tr>
+</table>
+</body>
+</html>
