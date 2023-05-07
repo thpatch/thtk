@@ -1035,7 +1035,32 @@ static const id_format_pair_t th185_fmts[] = {
     { -1, NULL }
 };
 
-/* NEWHU: 185 */
+static const id_format_pair_t th19_fmts[] = {
+    { 534, "S" },
+    { 539, "" },
+    { 549, "SS" },
+    { 569, "fffff" },
+    { 570, "SSSSSSSSS" },
+    { 571, "fffffffff" },
+    { 619, "Sf" },
+    { 620, "Sff" },
+    { 621, "fS" },
+    { 622, "S" },
+    { 624, "S" },
+    { 1027, "S" },
+    { 1028, "f" },
+    { 1029, "S" },
+    { 1030, "S" },
+    { 1031, "S" },
+    { 1032, "S" },
+    { 1033, "S" },
+    { 1034, "" },
+    { 1035, "" },
+    { 1036, "" },
+    { -1, NULL }
+};
+
+/* NEWHU: 19 */
 
 static const char*
 th10_find_format(
@@ -1052,7 +1077,9 @@ th10_find_format(
     const char* ret = NULL;
 
     switch (version) {
-    /* NEWHU: 185 */
+    /* NEWHU: 19 */
+    case 19:
+        if ((ret = find_format(th19_fmts, id))) break; /* fallthrough */
     case 185:
         if ((ret = find_format(th185_fmts, id))) break; /* fallthrough */
     case 18:

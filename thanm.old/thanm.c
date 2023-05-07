@@ -330,6 +330,7 @@ static const id_format_pair_t formats_v8[] = {
     { 315, "S" },
     { 316, "" },
     { 317, "" },
+    { 318, "S" }, /* th19 */
     { 400, "fff" },
     { 401, "fff" },
     { 402, "ff" },
@@ -374,6 +375,7 @@ static const id_format_pair_t formats_v8[] = {
     { 507, "S" },
     { 508, "S" },
     { 509, "" },
+    { 510, "Sff" }, /* th19 */
     { 600, "S" },
     { 602, "S" },
     { 603, "ff" },
@@ -387,6 +389,12 @@ static const id_format_pair_t formats_v8[] = {
     { 612, "ff" },
     { 614, "ff" },
     { 0xffff, "" },
+    { 615, "ffS" }, /* th19 */
+    { 616, "ffS" }, /* th19 */
+    { 617, "fS" }, /* th19 */
+    { 618, "" }, /* th19 */
+    { 621, "ffS" }, /* th19 */
+    { 622, "ffS" }, /* th19 */
     { 0, NULL }
 };
 
@@ -704,7 +712,8 @@ anm_dump(
             list_for_each(&script->instrs, instr) {
                 const char* format = NULL;
                 switch (version) {
-                /* NEWHU: 185 */
+                /* NEWHU: 19 */
+                case 19:
                 case 185:
                 case 18:
                     if ((format = find_format(th18_patch, instr->type))) break; /* fallthrough */
@@ -1316,8 +1325,8 @@ print_usage(void)
     printf("  -V                    display version information and exit\n"
            "  -f                    ignore errors when possible\n"
            "VERSION can be:\n"
-           "  18 or 185\n"
-           /* NEWHU: 185 */
+           "  18, 185 or 19\n"
+           /* NEWHU: 19 */
            "For older games, VERSION can be omitted.\n"
            "Report bugs to <" PACKAGE_BUGREPORT ">.\n");
 }
@@ -1381,7 +1390,8 @@ main(
         if (argc == 2) {
             version = parse_version(argv[0]);
             switch (version) {
-            /* NEWHU: 185 */
+            /* NEWHU: 19 */
+            case 19:
             case 185:
             case 18:
                 break;

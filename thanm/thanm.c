@@ -465,6 +465,7 @@ static const id_format_pair_t formats_v8[] = {
     { 315, "S" },
     { 316, "" },
     { 317, "" },
+    { 318, "S" }, /* th19 */
     { 400, "fff" },
     { 401, "fff" },
     { 402, "ff" },
@@ -516,6 +517,7 @@ static const id_format_pair_t formats_v8[] = {
     { 507, "S" },
     { 508, "S" },
     { 509, "" },
+    { 510, "Sff" }, /* th19 */
     { 600, "S" },
     { 601, "S" },
     { 602, "S" },
@@ -531,6 +533,12 @@ static const id_format_pair_t formats_v8[] = {
     { 612, "ff" },
     { 613, "ff" },
     { 614, "ff" },
+    { 615, "ffS" }, /* th19 */
+    { 616, "ffS" }, /* th19 */
+    { 617, "fS" }, /* th19 */
+    { 618, "" }, /* th19 */
+    { 621, "ffS" }, /* th19 */
+    { 622, "ffS" }, /* th19 */
     { 0xffff, "" },
     { 0, NULL }
 };

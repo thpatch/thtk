@@ -9,12 +9,12 @@ What's new in thtk master
 #### thanm
 - New thanm spec format. See <https://github.com/thpatch/thtk/pull/86> for more
   details. The old format is not supported anymore. Use thanm.old for it.
-- Support for TH18, TH185 has been added.
+- Support for TH18, TH185, TH19 has been added.
 - Support th143/bestshot.anm
 
 #### thanm.old
 - Will be removed in the next release.
-- Support for TH18, TH185 has been added.
+- Support for TH18, TH185, TH19 has been added.
 - You can now specify the version for the -l command.
   This is required for correct dumping of TH18, TH185.
 - Support th143/bestshot.anm
@@ -37,7 +37,7 @@ What's new in thtk master
   in more places.
 - Added #line directive.
 - Added insdef statement for defining new instructions.
-- Support for TH18, TH185 has been added.
+- Support for TH18, TH185, TH19 has been added.
 - Numerous bug-fixes.
 - Add -x option for outputting address information for instructions.
 - Add -C option for changing the current directory after opening the archive.
@@ -45,7 +45,7 @@ What's new in thtk master
 #### thdat
 - Automatic version detection now supports th165, th17, th18 and th185.
 - Detection works better with renamed files.
-- Support for TH18, TH185 has been added.
+- Support for TH18, TH185, TH19 has been added.
 - Improve extraction speed.
 - Add -g option to enable globing on extracted filenames.
   Example: thdat -gx18 th18.dat "*.ecl"
@@ -54,7 +54,7 @@ What's new in thtk master
 - Support for TH18, TH185 has been added.
 
 #### thstd
-- Support for TH18, TH185 has been added.
+- Support for TH18, TH185, TH19 has been added.
 
 Please submit an issue at GitHub (https://github.com/thpatch/thtk/issues) if
 you find a bug.
