@@ -170,7 +170,18 @@ static const id_format_pair_t th185_msg_fmts[] = {
     { 0, NULL }
 };
 
-/* NEWHU: 185 */
+static const id_format_pair_t th19_msg_fmts[] = {
+    { 42, "S" },
+    { 43, "S" },
+    { 44, "ff" },
+    { 45, "ff" },
+    { 46, "SS" },
+    { 47, "SS" },
+    { 52, "" },
+    { 0, NULL }
+};
+
+/* NEWHU: 19 */
 
 static const id_format_pair_t th10_msg_ed_fmts[] = {
     { 0, "" },
@@ -240,7 +251,8 @@ th06_find_format(unsigned int version, int id)
         case 17:
         case 18:
         case 185:
-        /* NEWHU: 185 */
+        case 19:
+        /* NEWHU: 19 */
             ret = find_format(th10_msg_ed_fmts, id);
             break;
         default:
@@ -249,7 +261,9 @@ th06_find_format(unsigned int version, int id)
         }
     } else {
         switch (version) {
-        /* NEWHU: 185 */
+        /* NEWHU: 19 */
+        case 19:
+            if ((ret = find_format(th19_msg_fmts, id))) break; /* fallthrough */
         case 185:
             if ((ret = find_format(th185_msg_fmts, id))) break; /* fallthrough */
         case 18:
@@ -298,6 +312,7 @@ static int
 th06_read(FILE* in, FILE* out, unsigned int version)
 {
     const size_t entry_offset_mul = version >= 9 ? 2 : 1;
+    const size_t header_extra = version == 19 ? 0x50 : 0;
     long file_size;
     uint16_t time = -1;
     int entry_new = 1;
@@ -315,10 +330,20 @@ th06_read(FILE* in, FILE* out, unsigned int version)
         return 0;
 
     entry_count = *((uint32_t*)map);
-    entry_offsets = (int32_t*)(map + sizeof(uint32_t));
+    entry_offsets = (int32_t*)(map + sizeof(uint32_t) + header_extra);
     msg = (th06_msg_t*)(map +
-                        sizeof(uint32_t) +
+                        sizeof(uint32_t) + header_extra +
                         entry_count * entry_offset_mul * sizeof(int32_t));
+
+    if (header_extra) {
+        int i;
+        const int32_t *extra_values = (int32_t*)(map + sizeof(uint32_t));
+        fprintf(out, "header(");
+        for (i = 0; i < header_extra/4; i++) {
+            fprintf(out, "%s%d", i==0 ? "" : ", ", extra_values[i]);
+        }
+        fprintf(out, ")\n");
+    }
 
     for (;;) {
         const ptrdiff_t offset = (unsigned char*)msg - (unsigned char*)map;
@@ -339,8 +364,12 @@ th06_read(FILE* in, FILE* out, unsigned int version)
                 if (offset == entry_offsets[i * entry_offset_mul]) {
                     entry_id = i;
                     fprintf(out, "entry %u", entry_id);
-                    if (version >= 9)
+                    if (version == 19) {
+                        uint32_t w = entry_offsets[1 + i * entry_offset_mul];
+                        fprintf(out, " (%u, %u, %u, %u)", w&0xff, w>>8 & 0xff, w>>16 & 0xff, w>>24 & 0xff);
+                    } else if (version >= 9) {
                         fprintf(out, " (%u)", entry_offsets[1 + i * entry_offset_mul]);
+                    }
                     fprintf(out, "\n");
                     break;
                 }
@@ -410,10 +439,30 @@ th06_write(FILE* in, FILE* out, unsigned int version)
     th06_msg_t msg;
     char text[256];
     int msg_time, msg_type;
+    int32_t extra_values[20] = {0};
+    char lookahead;
     value_t padding_value;
     padding_value.type = 0;
 
     while (fgets(buffer, 1024, in)) {
+        int pos = 0;
+        if (sscanf(buffer, " header %c%n", &lookahead, &pos) == 1 && lookahead == '(') {
+            int i;
+            char *p = buffer+pos;
+            for (i = 0; i < sizeof(extra_values)/sizeof(extra_values[0]); i++) {
+                if (sscanf(p, "%d %c%n", &extra_values[i], &lookahead, &pos) != 2) {
+                    fprintf(stderr, "%s:%s: no parse: %s\n", argv0, current_input, buffer);
+                    return 0;
+                }
+                if (lookahead == ')')
+                    break;
+                if (lookahead != ',') {
+                    fprintf(stderr, "%s:%s: no parse: %s\n", argv0, current_input, buffer);
+                    return 0;
+                }
+                p += pos;
+            }
+        }
         if (sscanf(buffer, " entry %u", &entry_num) == 1) {
             if (entry_num > entry_count)
                 entry_count = entry_num;
@@ -425,7 +474,7 @@ th06_write(FILE* in, FILE* out, unsigned int version)
     if (!file_seek(in, 0))
         return 0;
 
-    if (!file_seek(out, sizeof(uint32_t) + entry_count * sizeof(uint32_t) * entry_offset_mul))
+    if (!file_seek(out, sizeof(uint32_t) + (version == 19)*sizeof(extra_values) + entry_count * sizeof(uint32_t) * entry_offset_mul))
         return 0;
     entry_offsets = util_malloc(entry_count * sizeof(uint32_t) * entry_offset_mul);
 
@@ -450,14 +499,27 @@ th06_write(FILE* in, FILE* out, unsigned int version)
             }
         }
 
-        if (sscanf(buffer, " entry %u", &entry_num) == 1) {
+        if (sscanf(buffer, " header %c", &lookahead) == 1) {
+            /* do nothing */
+        } else if (sscanf(buffer, " entry %u", &entry_num) == 1) {
             msg.time = 0;
             entry_offsets[entry_num * entry_offset_mul] = file_tell(out);
             if (version >= 9) {
                 unsigned int entry_flags = 0;
-                if (sscanf(buffer, " entry %u (%u)", &entry_num, &entry_flags) != 2) {
-                    fprintf(stderr, "%s:%s: no parse: %s\n", argv0, current_input, buffer);
-                    return 0;
+                if (version == 19) {
+                    unsigned int flags[4];
+                    if (sscanf(buffer, " entry %u (%u, %u, %u, %u)", &entry_num,
+                            &flags[0], &flags[1], &flags[2], &flags[3]) != 5
+                            || flags[0] > 255 || flags[1] > 255 || flags[2] > 255 || flags[3] > 255) {
+                        fprintf(stderr, "%s:%s: no parse: %s\n", argv0, current_input, buffer);
+                        return 0;
+                    }
+                    entry_flags = flags[0] | flags[1]<<8 | flags[2]<<16 | flags[3]<<24;
+                } else {
+                    if (sscanf(buffer, " entry %u (%u)", &entry_num, &entry_flags) != 2) {
+                        fprintf(stderr, "%s:%s: no parse: %s\n", argv0, current_input, buffer);
+                        return 0;
+                    }
                 }
                 entry_offsets[1 + entry_num * entry_offset_mul] = entry_flags;
             }
@@ -566,6 +628,9 @@ th06_write(FILE* in, FILE* out, unsigned int version)
         return 0;
 
     if (!file_write(out, &entry_count, sizeof(uint32_t)))
+        return 0;
+
+    if (version == 19 && !file_write(out, &extra_values, sizeof(extra_values)))
         return 0;
 
     if (!file_write(out, entry_offsets, entry_count * sizeof(uint32_t) * entry_offset_mul))

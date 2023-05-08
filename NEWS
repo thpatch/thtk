@@ -51,7 +51,7 @@ What's new in thtk master
   Example: thdat -gx18 th18.dat "*.ecl"
 
 #### thmsg
-- Support for TH18, TH185 has been added.
+- Support for TH18, TH185, TH19 has been added.
 
 #### thstd
 - Support for TH18, TH185, TH19 has been added.
