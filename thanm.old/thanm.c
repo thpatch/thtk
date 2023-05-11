@@ -360,6 +360,7 @@ static const id_format_pair_t formats_v8[] = {
     { 432, "S" },
     { 433, "SSff" },
     { 434, "ff" },
+    { 435, "SSff" },
     { 436, "ff" },
     { 437, "S" },
     { 438, "S" },
