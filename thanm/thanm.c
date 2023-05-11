@@ -505,7 +505,7 @@ static const id_format_pair_t formats_v8[] = {
     { 436, "ff" },
     { 437, "S" },
     { 438, "S" },
-    { 439, "Sff" },
+    { 439, "S" },
     { 440, "" },
     { 500, "N" },
     { 501, "N" },
@@ -540,6 +540,11 @@ static const id_format_pair_t formats_v8[] = {
     { 621, "ffS" }, /* th19 */
     { 622, "ffS" }, /* th19 */
     { 0xffff, "" },
+    { 0, NULL }
+};
+
+static const id_format_pair_t th18_patch[] = {
+    { 439, "Sff" },
     { 0, NULL }
 };
 
@@ -622,28 +627,46 @@ void var_free(
     free(var);
 }
 
-const id_format_pair_t*
-anm_get_formats(
-    uint32_t version
+const char *
+anm_find_format(
+    unsigned version,
+    unsigned header_version,
+    int id
 ) {
-    switch (version) {
+    const char* format = 0;
+    switch (header_version) {
     case 0:
-        return formats_v0;
+        format = find_format(formats_v0, id);
+        break;
     case 2:
-        return formats_v2;
+        format = find_format(formats_v2, id);
+        break;
     case 3:
-        return formats_v3;
+        format = find_format(formats_v3, id);
+        break;
     case 4:
     case 7:
-        return formats_v4p;
+        format = find_format(formats_v4p, id);
+        break;
     case 8:
-        return formats_v8;
+        switch (version) {
+        /* NEWHU: 19 */
+        case 19:
+        case 185:
+        case 18:
+            if ((format = find_format(th18_patch, id))) break; /* fallthrough */
+        default:
+            format = find_format(formats_v8, id);
+            break;
+        }
+        break;
     default:
         fprintf(stderr,
             "%s:%s: could not find a format description for version %u\n",
-            argv0, current_input, version);
+            argv0, current_input, header_version);
         abort();
     }
+    return format;
 }
 
 static char*
@@ -973,7 +996,8 @@ anm_insert_labels(
 
 static anm_archive_t*
 anm_read_file(
-    FILE* in)
+    FILE* in,
+    unsigned version)
 {
     anm_archive_t* archive = malloc(sizeof(*archive));
     list_init(&archive->names);
@@ -1044,8 +1068,6 @@ anm_read_file(
             }
         }
 
-        const id_format_pair_t* formats = anm_get_formats(header->version);
-
         list_init(&entry->scripts);
         if (header->scripts) {
             anm_offset_t* script_offsets =
@@ -1103,7 +1125,7 @@ anm_read_file(
                         time = instr->time;
                     }
 
-                    const char* format = find_format(formats, instr->type);
+                    const char* format = anm_find_format(version, header->version, instr->type);
                     if (!format) {
                         fprintf(stderr, "id %d was not found in the format table (total parameter size was %d)\n",
                             instr->type, (int)(instr->length - sizeof(anm_instr_t)));
@@ -1595,7 +1617,8 @@ static int anm_is_old_format(
 static anm_archive_t*
 anm_create(
     char* spec,
-    FILE* symbolfp
+    FILE* symbolfp,
+    unsigned version
 ) {
     FILE* in = fopen(spec, "r");
     if (!in) {
@@ -1627,6 +1650,7 @@ anm_create(
     state.current_script = NULL;
     state.symbolfp = symbolfp;
     strcpy(state.symbol_prefix, "");
+    state.version = version;
 
     path_init(&state.path_state, spec, argv0);
 
@@ -1944,20 +1968,23 @@ print_usage(void)
 #else
 #define USAGE_LIBPNGFLAGS ""
 #endif
-    printf("Usage: %s [-Vf] [-l" USAGE_LIBPNGFLAGS "] [-m ANMMAP] [-s SYMBOLS] ARCHIVE ...\n"
+    printf("Usage: %s [-Vf] [[-l" USAGE_LIBPNGFLAGS "] VERSION] [-m ANMMAP] [-s SYMBOLS] ARCHIVE ...\n"
            "Options:\n"
-           "  -l ARCHIVE            list archive\n", argv0);
+           "  -l VERSION ARCHIVE            list archive\n"
 #ifdef HAVE_LIBPNG
-    printf("  -x ARCHIVE [FILE...]  extract entries\n"
-           "  -r ARCHIVE NAME FILE  replace entry in archive\n"
-           "  -c ARCHIVE SPEC       create archive\n"
-           "  -s                    save symbol ids to the given file as globaldefs\n");
+           "  -x VERSION ARCHIVE [FILE...]  extract entries\n"
+           "  -r VERSION ARCHIVE NAME FILE  replace entry in archive\n"
+           "  -c VERSION ARCHIVE SPEC       create archive\n"
+           "  -s                            save symbol ids to the given file as globaldefs\n"
 #endif
-    printf("  -m                    use map file for translating mnemonics\n"
-           "  -V                    display version information and exit\n"
-           "  -f                    ignore errors when possible\n"
-           "  -o                    add address information for for ANM instructions\n"
-           "Report bugs to <" PACKAGE_BUGREPORT ">.\n");
+           "  -m                            use map file for translating mnemonics\n"
+           "  -V                            display version information and exit\n"
+           "  -f                            ignore errors when possible\n"
+           "  -o                            add address information for for ANM instructions\n"
+           "VERSION can be:\n"
+           "  6, 7, 8, 9, 95, 10, 103, 11, 12, 125, 128, 13, 14, 143, 15, 16, 165, 17, 18, 185 or 19\n"
+           /* NEWHU: 19 */
+           "Report bugs to <" PACKAGE_BUGREPORT ">.\n", argv0);
 }
 
 static void
@@ -1973,14 +2000,15 @@ main(
     g_anmmap = anmmap_new();
     atexit(free_globals);
 
-    const char commands[] = ":lom:"
+    const char commands[] = ":l:om:"
 #ifdef HAVE_LIBPNG
-                            "xrcs:"
+                            "x:r:c:s:"
 #endif
                             "Vf";
     int command = -1;
 
     FILE* in;
+    unsigned int version = 0;
 
     anm_archive_t* anm;
 #ifdef HAVE_LIBPNG
@@ -2002,6 +2030,7 @@ main(
                 fprintf(stderr, "%s: 'x' option can't be used when creating ANM archive\n", argv0);
                 exit(1);
             }
+            /* fallthrough */
         case 'l':
         case 'x':
         case 'r':
@@ -2011,6 +2040,7 @@ main(
                 exit(1);
             }
             command = opt;
+            version = parse_version(util_optarg);
             break;
         case 'm': {
             FILE* map_file = NULL;
@@ -2048,6 +2078,38 @@ main(
     argc = ind;
     argv[argc] = NULL;
 
+    switch (version) {
+    case 6:
+    case 7:
+    case 8:
+    case 9:
+    case 95:
+    case 10:
+    case 103:
+    case 11:
+    case 125:
+    case 128:
+    case 12:
+    case 13:
+    case 143:
+    case 14:
+    case 15:
+    case 165:
+    case 16:
+    case 17:
+    case 185:
+    case 18:
+    case 19:
+    /* NEWHU: 19 */
+        break;
+    default:
+        if (version == 0)
+            fprintf(stderr, "%s: version must be specified\n", argv0);
+        else
+            fprintf(stderr, "%s: version %u is unsupported\n", argv0, version);
+        exit(1);
+    }
+
     switch (command) {
     case 'l':
         if (argc != 1) {
@@ -2061,7 +2123,7 @@ main(
             fprintf(stderr, "%s: couldn't open %s for reading\n", argv[0], current_input);
             exit(1);
         }
-        anm = anm_read_file(in);
+        anm = anm_read_file(in, version);
         fclose(in);
         anm_dump(stdout, anm);
 
@@ -2080,7 +2142,7 @@ main(
             fprintf(stderr, "%s: couldn't open %s for reading\n", argv[0], current_input);
             exit(1);
         }
-        anm = anm_read_file(in);
+        anm = anm_read_file(in, version);
         fclose(in);
 
         if (argc == 1) {
@@ -2123,7 +2185,7 @@ extract_next:
             fprintf(stderr, "%s: couldn't open %s for reading\n", argv[0], current_input);
             exit(1);
         }
-        anm = anm_read_file(in);
+        anm = anm_read_file(in, version);
         fclose(in);
 
         anmfp = fopen(argv[0], "rb+");
@@ -2170,7 +2232,7 @@ replace_done:
             exit(1);
         }
         current_input = argv[1];
-        anm = anm_create(argv[1], symbolfp);
+        anm = anm_create(argv[1], symbolfp, version);
 
         if (symbolfp)
             fclose(symbolfp);

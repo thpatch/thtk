@@ -39,7 +39,7 @@
 extern anmmap_t* g_anmmap;
 extern unsigned int option_force;
 
-const id_format_pair_t* anm_get_formats(uint32_t version);
+const char *anm_find_format(unsigned version, unsigned header_version, int id);
 
 typedef struct {
     /* The id in the offset struct may not be the real index. */
@@ -143,6 +143,8 @@ typedef struct parser_state_t {
 
     char symbol_prefix[32];
     FILE* symbolfp;
+
+    int version;
 } parser_state_t;
 
 typedef struct symbol_id_pair_t {

@@ -9,6 +9,7 @@ What's new in thtk master
 #### thanm
 - New thanm spec format. See <https://github.com/thpatch/thtk/pull/86> for more
   details. The old format is not supported anymore. Use thanm.old for it.
+- Game version now must be specified, just as with other tools.
 - Support for TH18, TH185, TH19 has been added.
 - Support th143/bestshot.anm
 

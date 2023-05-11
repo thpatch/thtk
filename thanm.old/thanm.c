@@ -323,6 +323,7 @@ static const id_format_pair_t formats_v8[] = {
     { 306, "S" },
     { 307, "S" },
     { 308, "" },
+    { 310, "S" },
     { 311, "S" },
     { 312, "SS" },
     { 313, "S" },
@@ -400,9 +401,7 @@ static const id_format_pair_t formats_v8[] = {
 };
 
 static const id_format_pair_t th18_patch[] = {
-    { 310, "S"},
-    { 439, "SSS"},
-    { 0xffff, "" },
+    { 439, "Sff" },
     { 0, NULL }
 };
 

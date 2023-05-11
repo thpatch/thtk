@@ -901,8 +901,7 @@ instr_check_types(
         snprintf(opcode_msg, sizeof(opcode_msg), "%d", id);
     }
 
-    const id_format_pair_t* formats = anm_get_formats(state->current_entry->header->version);
-    const char* format = find_format(formats, id);
+    const char* format = anm_find_format(state->version, state->current_entry->header->version, id);
     if (format == NULL) {
         state->was_error = 1;
         yyerror(state, "opcode %s is not known to exist in version %d", opcode_msg, state->current_entry->header->version);

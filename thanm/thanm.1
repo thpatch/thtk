@@ -24,7 +24,7 @@
 .\" OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 .\" SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
 .\" DAMAGE.
-.Dd April 24, 2023
+.Dd May 8, 2023
 .Dt THANM 1
 .Os
 .Sh NAME
@@ -33,7 +33,7 @@
 .Sh SYNOPSIS
 .Nm
 .Op Fl Vf
-.Op Fl l | x | r | c
+.Op Oo Fl l | x | r | c Oc Ar version
 .Op Ar archive Op Ar ...
 .Sh DESCRIPTION
 The
@@ -41,17 +41,17 @@ The
 utility performs various actions on sprite archives.
 The following commands are available:
 .Bl -tag -width Ds
-.It Nm Fl l Oo Fl f Oc Ar archive
+.It Nm Fl l Ar version Oo Fl f Oc Ar archive
 Displays a specification of the archive.
-.It Nm Fl x Oo Fl f Oc Ar archive Op Ar
+.It Nm Fl x Ar version Oo Fl f Oc Ar archive Op Ar
 Extracts image files.
 If no files are specified, all files are extracted.
-.It Nm Fl r Oo Fl f Oc Ar archive Ar name Ar file
+.It Nm Fl r Ar version Oo Fl f Oc Ar archive Ar name Ar file
 Replaces an entry in the archive.
 The name can be obtained by the
 .Fl l
 command.
-.It Nm Fl c Oo Fl f Oc Ar archive Ar input
+.It Nm Fl c Ar version Oo Fl f Oc Ar archive Ar input
 Creates a new archive from a specification obtained by the
 .Fl l
 command.
