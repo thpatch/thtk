@@ -16,6 +16,7 @@ What's new in thtk master
 #### thanm.old
 - Will be removed in the next release.
 - Support for TH18, TH185, TH19 has been added.
+  TH19 creation won't work, though. Use the new thanm instead.
 - You can now specify the version for the -l command.
   This is required for correct dumping of TH18, TH185.
 - Support th143/bestshot.anm
