@@ -1064,7 +1064,7 @@ anm_read_file(
         if (header->sprites) {
             uint32_t* sprite_offsets = (uint32_t*)(map + sizeof(*header));
             for (uint32_t s = 0; s < header->sprites; ++s) {
-                list_append_new(&entry->sprites, (sprite_t*)(map + sprite_offsets[s]));
+                list_append_new(&entry->sprites, (sprite19_t*)(map + sprite_offsets[s]));
             }
         }
 
@@ -1203,7 +1203,8 @@ anm_stringify_instr(
 static void
 anm_dump(
     FILE* stream,
-    const anm_archive_t* anm)
+    const anm_archive_t* anm,
+    unsigned version)
 {
     unsigned int entry_num = 0;
     anm_entry_t* entry;
@@ -1244,20 +1245,27 @@ anm_dump(
 
         fprintf(stream, "    sprites: {\n");
 
-        sprite_t* sprite;
+        sprite19_t* sprite;
         list_for_each(&entry->sprites, sprite) {
-            if (prev_sprite_id + 1 != sprite->id) {
-                fprintf(stream, "        sprite%u: { x: %.f, y: %.f, w: %.f, h: %.f, id: %d }",
-                    sprite->id,
-                    sprite->x, sprite->y,
-                    sprite->w, sprite->h,
-                    sprite->id);
-            } else {
-                fprintf(stream, "        sprite%u: { x: %.f, y: %.f, w: %.f, h: %.f }",
-                    sprite->id,
-                    sprite->x, sprite->y,
-                    sprite->w, sprite->h);
+            fprintf(stream, "        sprite%u: { x: %.f, y: %.f, w: %.f, h: %.f",
+                sprite->id,
+                sprite->x, sprite->y,
+                sprite->w, sprite->h);
+            if (prev_sprite_id + 1 != sprite->id)
+                fprintf(stream, ", id: %d", sprite->id);
+            if (version == 19) {
+                if (sprite->unk0 != 0.f)
+                    fprintf(stream, ", th19_unk0: %.f", sprite->unk0);
+                if (sprite->unk1 != 0.f)
+                    fprintf(stream, ", th19_unk1: %.f", sprite->unk1);
+                if (sprite->unk2 != 1.f)
+                    fprintf(stream, ", th19_unk2: %.f", sprite->unk2);
+                if (sprite->unk3 != 1.f)
+                    fprintf(stream, ", th19_unk3: %.f", sprite->unk3);
+                if (sprite->unk4 != 0.f)
+                    fprintf(stream, ", th19_unk4: %.f", sprite->unk4);
             }
+            fprintf(stream, " }");
             if (!list_is_last_iteration())
                 fprintf(stream, ",");
             fprintf(stream, "\n");
@@ -1771,7 +1779,8 @@ anm_defaults(
 static void
 anm_write(
     anm_archive_t* anm,
-    const char* filename)
+    const char* filename,
+    unsigned version)
 {
     FILE* stream;
 
@@ -1784,7 +1793,7 @@ anm_write(
 
     anm_entry_t* entry;
     list_for_each(&anm->entries, entry) {
-        sprite_t* sprite;
+        sprite19_t* sprite;
         anm_script_t* script;
         long base = file_tell(stream);
         unsigned int namepad = 0;
@@ -1819,10 +1828,11 @@ anm_write(
             file_write(stream, padding, namepad);
         }
 
+        const unsigned spritesize = version == 19 ? sizeof(sprite19_t) : sizeof(sprite_t);
         spriteoffset = file_tell(stream) - base;
 
         list_for_each(&entry->sprites, sprite)
-            file_write(stream, sprite, sizeof(*sprite));
+            file_write(stream, sprite, spritesize);
 
         list_for_each(&entry->scripts, script) {
             script->offset->offset = file_tell(stream) - base;
@@ -1886,7 +1896,7 @@ anm_write(
         }
 
         for (j = 0; j < sprite_count; ++j) {
-            uint32_t ofs = spriteoffset + j * sizeof(sprite_t);
+            uint32_t ofs = spriteoffset + j * spritesize;
             file_write(stream, &ofs, sizeof(uint32_t));
         }
 
@@ -1942,7 +1952,7 @@ anm_free(
             free(entry->name2);
             free(entry->data);
 
-            sprite_t* sprite;
+            sprite19_t* sprite;
             list_for_each(&entry->sprites, sprite)
                 free(sprite);
         } else if (entry->header->version >= 7) {
@@ -2125,7 +2135,7 @@ main(
         }
         anm = anm_read_file(in, version);
         fclose(in);
-        anm_dump(stdout, anm);
+        anm_dump(stdout, anm, version);
 
         anm_free(anm);
         exit(0);
@@ -2255,7 +2265,7 @@ replace_done:
             anm_replace(anm, NULL, name, name);
 
         current_output = argv[0];
-        anm_write(anm, argv[0]);
+        anm_write(anm, argv[0], version);
 
         anm_free(anm);
         exit(0);

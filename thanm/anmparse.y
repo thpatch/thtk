@@ -312,7 +312,7 @@ Entry:
                 list_t* inner_list = prop->value->val.l;
                 char* name = prop->key;
 
-                sprite_t* sprite = (sprite_t*)malloc(sizeof(sprite_t));
+                sprite19_t* sprite = (sprite19_t*)malloc(sizeof(sprite19_t));
 
                 OPTIONAL("id", 'S', inner_list);
                 if (prop) state->sprite_id = prop->value->val.S;
@@ -327,6 +327,22 @@ Entry:
                 REQUIRE("h", 'S', inner_list);
                 sprite->h = (float)prop->value->val.S;
                 list_append_new(&entry->sprites, sprite);
+
+                sprite->unk0 = 0.f;
+                sprite->unk1 = 0.f;
+                sprite->unk2 = 1.f;
+                sprite->unk3 = 1.f;
+                sprite->unk4 = 0.f;
+                OPTIONAL("th19_unk0", 'S', inner_list);
+                if (prop) sprite->unk0 = (float)prop->value->val.S;
+                OPTIONAL("th19_unk1", 'S', inner_list);
+                if (prop) sprite->unk1 = (float)prop->value->val.S;
+                OPTIONAL("th19_unk2", 'S', inner_list);
+                if (prop) sprite->unk2 = (float)prop->value->val.S;
+                OPTIONAL("th19_unk3", 'S', inner_list);
+                if (prop) sprite->unk3 = (float)prop->value->val.S;
+                OPTIONAL("th19_unk4", 'S', inner_list);
+                if (prop) sprite->unk4 = (float)prop->value->val.S;
 
                 symbol_id_pair_t* symbol = (symbol_id_pair_t*)malloc(sizeof(symbol_id_pair_t));
                 symbol->id = sprite->id;
