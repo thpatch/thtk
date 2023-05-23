@@ -124,6 +124,9 @@ typedef struct {
  *
  *  version   |  params  | sub which selects params and runs th_decrypt
  * th08 1.00d | 004C78E0 | 0043E390
+ * th09 0.01a | unknown, but it uses the same params as th08
+ * th09 0.02a | 0048E640 | 00429850
+ * th09 1.00a | 00498E60 | 0042BAF0
  * th09 1.50a | 004A1E60 | 0042C290
  *
  * The order in the original games is MTAJEW-*
