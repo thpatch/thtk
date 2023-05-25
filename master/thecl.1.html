@@ -53,7 +53,7 @@
 <table class="Nm">
   <tr>
     <td><code class="Nm">thecl</code></td>
-    <td>[<code class="Fl">-Vrsx</code>] [[<code class="Fl">-c</code> |
+    <td>[<code class="Fl">-Vrsxj</code>] [[<code class="Fl">-c</code> |
       <code class="Fl">-h</code> | <code class="Fl">-d</code>]
       <var class="Ar">version</var>] [<code class="Fl">-m</code>
       <var class="Ar">eclmap</var>]<var class="Ar">...</var>
@@ -67,7 +67,7 @@
     scripts. The following commands are available:</p>
 <dl class="Bl-tag">
   <dt><code class="Nm">thecl</code> <code class="Fl">-c</code>
-    <var class="Ar">version</var> [<code class="Fl">-s</code>]
+    <var class="Ar">version</var> [<code class="Fl">-sj</code>]
     [<code class="Fl">-m</code>
     <var class="Ar">eclmap</var>]<var class="Ar">...</var>
     [<var class="Ar">input</var> [<var class="Ar">output</var>]]</dt>
@@ -78,7 +78,7 @@
     [<var class="Ar">input</var> [<var class="Ar">output</var>]]</dt>
   <dd>Creates a header file with forward declarations of all subs in input.</dd>
   <dt><code class="Nm">thecl</code> <code class="Fl">-d</code>
-    <var class="Ar">version</var> [<code class="Fl">-rx</code>]
+    <var class="Ar">version</var> [<code class="Fl">-rxj</code>]
     [<code class="Fl">-m</code>
     <var class="Ar">eclmap</var>]<var class="Ar">...</var>
     [<var class="Ar">input</var> [<var class="Ar">output</var>]]</dt>
@@ -102,6 +102,10 @@
   <dd>The <code class="Fl">-x</code> option outputs address information when
       dumping instructions. Shows both the file offset and the offset relative
       to the start of the sub.</dd>
+  <dt id="j"><a class="permalink" href="#j"><code class="Fl">-j</code></a></dt>
+  <dd>The <code class="Fl">-j</code> option enables string conversion between
+      Shift-JIS and UTF-8. Source files are treated as UTF-8, ECL files as
+      Shift-JIS.</dd>
 </dl>
 <p class="Pp">Replace the <var class="Ar">version</var> option by the enemy
     script format version requested. Running the program without a command will
@@ -184,7 +188,7 @@ where <var class="Ar">key</var> is an integer, and <var class="Ar">value</var>
 </div>
 <table class="foot">
   <tr>
-    <td class="foot-date">April 24, 2023</td>
+    <td class="foot-date">May 25, 2023</td>
     <td class="foot-os">thtk</td>
   </tr>
 </table>
