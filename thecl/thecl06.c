@@ -37,6 +37,7 @@
 #include "program.h"
 #include "thecl.h"
 #include "util.h"
+#include "cp932.h"
 
 typedef struct {
 PACK_BEGIN
@@ -154,19 +155,24 @@ th06_param_to_text(
     const thecl_param_t* param)
 {
     if (param->type == 'z' || param->type == 'm') {
-        const size_t zlen = strlen(param->value.val.z);
+        char *zstr = param->value.val.z;
+        if (g_ecl_encode_cp932)
+            zstr = cp932_to_utf8(malloc(cp932_to_utf8_len(zstr) + 1), zstr);
+        const size_t zlen = strlen(zstr);
         char* ret = malloc(4 + zlen * 2);
         char* temp = ret;
         *temp++ = '"';
         for (size_t z = 0; z < zlen; ++z) {
-            if (!param->value.val.z[z])
+            if (!zstr[z])
                 break;
-            if (param->value.val.z[z] == '"' || param->value.val.z[z] == '\\')
+            if (zstr[z] == '"' || zstr[z] == '\\')
                 *temp++ = '\\';
-            *temp++ = param->value.val.z[z];
+            *temp++ = zstr[z];
         }
         *temp++ = '"';
         *temp++ = '\0';
+        if (g_ecl_encode_cp932)
+            free(zstr);
         return ret;
     } else
         return value_to_text(&param->value);
@@ -1319,6 +1325,8 @@ th06_instr_size(
                 ret += sizeof(uint16_t);
             } else if (param->type == 'o' || param->type == 'N')  {
                 ret += sizeof(uint32_t);
+            } else if (param->type == 'z' && g_ecl_encode_cp932) {
+                ret += utf8_to_cp932_len(param->value.val.z);
             } else {
                 value_t v = param->value;
                 v.type = param->type;
@@ -1437,13 +1445,16 @@ th06_instr_serialize(
             memcpy(param_data, &label, sizeof(uint32_t));
             param_data += sizeof(uint32_t);
         } else if (param->value.type == 'z') {
+            char *zstr = param->value.val.z;
+            if (g_ecl_encode_cp932)
+                zstr = utf8_to_cp932(malloc(utf8_to_cp932_len(zstr)+1), zstr);
             if (ecl->version == 6) {
                 memset(param_data, 0, 34);
-                strncpy((char*)param_data, param->value.val.z, 34);
+                strncpy((char*)param_data, zstr, 34);
                 param_data += 34;
             } else if (ecl->version == 7 || ecl->version == 95) {
                 memset(param_data, 0, 48);
-                strncpy((char*)param_data, param->value.val.z, 48);
+                strncpy((char*)param_data, zstr, 48);
                 util_xor(param_data, 48, 0xaa, 0, 0);
                 param_data += 48;
             } else if (ecl->version == 8) {
@@ -1451,19 +1462,21 @@ th06_instr_serialize(
                 case 4:
                 case 5:
                     memset(param_data, 0, 48);
-                    strncpy((char*)param_data, param->value.val.z, 48);
+                    strncpy((char*)param_data, zstr, 48);
                     util_xor(param_data, 48, param_count == 4 ? 0xaa : 0xbb, 0, 0);
                     param_data += 48;
                     break;
                 case 6:
                 case 7:
                     memset(param_data, 0, 64);
-                    strncpy((char*)param_data, param->value.val.z, 64);
+                    strncpy((char*)param_data, zstr, 64);
                     util_xor(param_data, 64, param_count == 6 ? 0xdd : 0xee, 0, 0);
                     param_data += 64;
                     break;
                 }
             }
+            if (g_ecl_encode_cp932)
+                free(zstr);
         } else {
             value_t v = param->value;
             v.type = param->type;

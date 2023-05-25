@@ -266,6 +266,7 @@ extern eclmap_t* g_eclmap;
 extern bool g_ecl_rawoutput;
 extern bool g_ecl_hexdebug;
 extern bool g_ecl_simplecreate;
+extern bool g_ecl_encode_cp932;
 extern bool g_was_error;
 
 #endif

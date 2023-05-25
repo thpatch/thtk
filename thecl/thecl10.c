@@ -38,6 +38,7 @@
 #include "thecl.h"
 #include "util.h"
 #include "value.h"
+#include "cp932.h"
 
 typedef struct {
 PACK_BEGIN
@@ -132,19 +133,24 @@ th10_param_to_text(
     }
     case 'm':
     case 'x': {
-        const size_t zlen = strlen(param->value.val.z);
+        char *zstr = param->value.val.z;
+        if (g_ecl_encode_cp932)
+            zstr = cp932_to_utf8(malloc(cp932_to_utf8_len(zstr) + 1), zstr);
+        const size_t zlen = strlen(zstr);
         char* ret = malloc(4 + zlen * 2);
         char* temp = ret;
         *temp++ = '"';
         for (size_t z = 0; z < zlen; ++z) {
-            if (!param->value.val.z[z])
+            if (!zstr[z])
                 break;
-            if (param->value.val.z[z] == '"' || param->value.val.z[z] == '\\')
+            if (zstr[z] == '"' || zstr[z] == '\\')
                 *temp++ = '\\';
-            *temp++ = param->value.val.z[z];
+            *temp++ = zstr[z];
         }
         *temp++ = '"';
         *temp++ = '\0';
+        if (g_ecl_encode_cp932)
+            free(zstr);
         return ret;
     }
     default:
@@ -1977,7 +1983,7 @@ th10_instr_size(
     list_for_each(&instr->params, param) {
         /* XXX: I think 'z' is what will be passed ... */
         if (param->type == 'm' || param->type == 'x') {
-            size_t zlen = strlen(param->value.val.z);
+            size_t zlen = g_ecl_encode_cp932 ? utf8_to_cp932_len(param->value.val.z) : strlen(param->value.val.z);
             ret += sizeof(uint32_t) + zlen + (4 - (zlen % 4));
         } else if (param->type == 'o' || param->type == 't') {
             ret += sizeof(uint32_t);
@@ -2158,15 +2164,20 @@ th10_instr_serialize(
             memcpy(param_data, &time, sizeof(int32_t));
             param_data += sizeof(int32_t);
         } else if (param->type == 'x' || param->type == 'm') {
-            size_t zlen = strlen(param->value.val.z);
+            char *zstr = param->value.val.z;
+            if (g_ecl_encode_cp932)
+                zstr = utf8_to_cp932(malloc(utf8_to_cp932_len(zstr)+1), zstr);
+            size_t zlen = strlen(zstr);
             uint32_t padded_length = zlen + (4 - (zlen % 4));
             memcpy(param_data, &padded_length, sizeof(padded_length));
             param_data += sizeof(padded_length);
             memset(param_data, 0, padded_length);
-            strncpy((char*)param_data, param->value.val.z, zlen);
+            strncpy((char*)param_data, zstr, zlen);
             if (param->type == 'x')
                 util_xor(param_data, padded_length, 0x77, 7, 16);
             param_data += padded_length;
+            if (g_ecl_encode_cp932)
+                free(zstr);
         } else
             param_data += value_to_data(&param->value, param_data, instr->size - (param_data - (unsigned char*)ret));
 

@@ -43,6 +43,7 @@ eclmap_t *g_eclmap = NULL;
 bool g_ecl_rawoutput = false;
 bool g_ecl_simplecreate = false;
 bool g_ecl_hexdebug = false;
+bool g_ecl_encode_cp932 = false;
 bool g_was_error = false;
 
 thecl_t*
@@ -243,7 +244,7 @@ is_post_th13(unsigned int version) {
 static void
 print_usage(void)
 {
-    printf("Usage: %s [-Vrsx] [[-c | -h | -d] VERSION] [-m ECLMAP]... [INPUT [OUTPUT]]\n"
+    printf("Usage: %s [-Vrsxj] [[-c | -h | -d] VERSION] [-m ECLMAP]... [INPUT [OUTPUT]]\n"
            "Options:\n"
            "  -c  create ECL file\n"
            "  -h  create header file\n"
@@ -253,6 +254,7 @@ print_usage(void)
            "  -r  output raw ECL opcodes, applying minimal transformations\n"
            "  -s  use simple creation, which doesn't add any instructions automatically\n"
            "  -x  add address information for ECL instructions\n"
+           "  -j  convert strings between Shift-JIS and UTF-8\n"
            "VERSION can be:\n"
            "  6, 7, 8, 9, 95, 10, 103 (for Uwabami Breakers), 11, 12, 125, 128, 13, 14, 143, 15, 16, 165, 17, 18, 185 or 19\n"
            /* NEWHU: 19 */
@@ -278,7 +280,7 @@ main(int argc, char* argv[])
     int opt;
     int ind=0;
     while(argv[util_optind]) {
-        switch(opt = util_getopt(argc, argv, ":c:h:d:Vm:rsx")) {
+        switch(opt = util_getopt(argc, argv, ":c:h:d:Vm:rsxj")) {
         case 'c':
         case 'd':
         case 'h':
@@ -310,6 +312,9 @@ main(int argc, char* argv[])
             break;
         case 'x':
             g_ecl_hexdebug = true;
+            break;
+        case 'j':
+            g_ecl_encode_cp932 = true;
             break;
         default:
             util_getopt_default(&ind,argv,opt,print_usage);

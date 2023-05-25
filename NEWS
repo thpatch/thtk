@@ -43,6 +43,7 @@ What's new in thtk master
 - Numerous bug-fixes.
 - Add -x option for outputting address information for instructions.
 - Add -C option for changing the current directory after opening the archive.
+- Add -j option for converting strings between Shift-JIS and UTF-8.
 
 #### thdat
 - Automatic version detection now supports th165, th17, th18 and th185.
