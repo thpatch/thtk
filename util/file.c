@@ -100,8 +100,11 @@ file_write(
         fprintf(stderr, "%s: failed writing %lu bytes: %s\n",
             argv0, (long unsigned int)size, strerror(errno));
         return 0;
-    } else
+    }
+    else {
+        fflush(stream);
         return 1;
+    }
 }
 
 ssize_t
