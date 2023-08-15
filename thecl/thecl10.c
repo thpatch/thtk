@@ -1042,12 +1042,19 @@ static const id_format_pair_t th185_fmts[] = {
 };
 
 static const id_format_pair_t th19_fmts[] = {
+    { 95, "fff" },
+    { 96, "ff" },
+    { 529, "SSSSS" },
+    { 530, "fffff" },
     { 534, "S" },
     { 539, "" },
     { 549, "SS" },
+    { 550, "m*D" },
+    { 557, "S" },
     { 569, "fffff" },
     { 570, "SSSSSSSSS" },
     { 571, "fffffffff" },
+    { 618, "Sff" },
     { 619, "Sf" },
     { 620, "Sff" },
     { 621, "fS" },
@@ -1063,6 +1070,10 @@ static const id_format_pair_t th19_fmts[] = {
     { 1034, "" },
     { 1035, "" },
     { 1036, "" },
+    { 1037, "ff" },
+    { 1038, "S" },
+    { 1039, "S" },
+    { 1040, "S" },
     { -1, NULL }
 };
 
