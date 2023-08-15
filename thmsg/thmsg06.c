@@ -318,7 +318,7 @@ static int
 th06_read(FILE* in, FILE* out, unsigned int version)
 {
     const size_t entry_offset_mul = version >= 9 ? 2 : 1;
-    const size_t header_extra = version == 19 ? 0x50 : 0;
+    const size_t header_extra = version == 19 && !thmsg_opt_end ? 0x50 : 0;
     long file_size;
     uint16_t time = -1;
     int entry_new = 1;
