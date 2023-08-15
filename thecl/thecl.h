@@ -52,7 +52,11 @@ typedef enum {
 #define RANK_EXTRA     (1 << 4)
 #define RANK_OVERDRIVE (1 << 5)
 
-/* Used to describe unused ranks */
+/* Used to describe unused ranks in some games and ranks in general in th185 */
+#define RANK_ID_0      (1 << 0)
+#define RANK_ID_1      (1 << 1)
+#define RANK_ID_2      (1 << 2)
+#define RANK_ID_3      (1 << 3)
 #define RANK_ID_4      (1 << 4)
 #define RANK_ID_5      (1 << 5)
 #define RANK_ID_6      (1 << 6)
@@ -103,6 +107,11 @@ bool is_post_th10(
     unsigned int version);
 
 bool is_post_th13(
+    unsigned int version);
+
+/* Returns the rank value for the '!-' label. */
+int32_t
+get_default_none_rank(
     unsigned int version);
 
 typedef struct thecl_instr_t {
@@ -242,6 +251,7 @@ typedef struct {
     unsigned int version;
     bool uses_numbered_subs;
     bool has_overdrive_difficulty;
+    bool has_numeric_difficulties;
     bool uses_stack_offsets;
     bool is_timeline_sub; /* Variable for escparse.y */
     list_t expressions;

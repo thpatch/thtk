@@ -2134,7 +2134,7 @@ parse_rank(
     const parser_state_t* state,
     const char* value)
 {
-    int rank = state->has_overdrive_difficulty ? 0xC0 : 0xF0;
+    int rank = get_default_none_rank(state->version);
 
     if (check_rank_flag(state, value, '*')) {
         if (strlen(value) != 1) {
@@ -2151,6 +2151,16 @@ parse_rank(
                      "other rank flags.",
                      state->current_sub->name);
         }
+        return rank;
+    } else if (state->has_numeric_difficulties) {
+        if (check_rank_flag(state, value, '0')) rank |= RANK_ID_0;
+        if (check_rank_flag(state, value, '1')) rank |= RANK_ID_1;
+        if (check_rank_flag(state, value, '2')) rank |= RANK_ID_2;
+        if (check_rank_flag(state, value, '3')) rank |= RANK_ID_3;
+        if (check_rank_flag(state, value, '4')) rank |= RANK_ID_4;
+        if (check_rank_flag(state, value, '5')) rank |= RANK_ID_5;
+        if (check_rank_flag(state, value, '6')) rank |= RANK_ID_6;
+        if (check_rank_flag(state, value, '7')) rank |= RANK_ID_7;
         return rank;
     } else {
         if (check_rank_flag(state, value, 'E')) rank |= RANK_EASY;
@@ -2495,8 +2505,7 @@ expression_output(
         instr_add(state->current_sub, instr_new(state, expr->id, ""));
     } else if (expr->type == EXPRESSION_RANK_SWITCH) {
 
-        const int diff_amt = state->has_overdrive_difficulty ? 5 : 4;
-        const char* diffs[5] = {"E", "N", "H", "L", "O"};
+        const int diff_amt = state->has_numeric_difficulties ? 8 : (state->has_overdrive_difficulty ? 5 : 4);
 
         int diff = 0;
         int rank_none = parse_rank(state, "-");
@@ -2506,11 +2515,12 @@ expression_output(
         expression_t* last_expr = NULL;
         list_for_each(&expr->children, iter_expr) {
             if (last_expr != NULL) {
-                state->instr_rank = rank_org & parse_rank(state, diffs[diff++]);
+                state->instr_rank = rank_org & (1 << diff);
+                ++diff;
                 if (state->instr_rank != rank_none) expression_output(state, last_expr, 1);
             }
 
-            if (diff > 4) {
+            if (diff > diff_amt) {
                 yyerror(state, "too many parameters for difficulty switch");
                 exit(2);
             }
@@ -2519,13 +2529,13 @@ expression_output(
         }
 
         /* Set last expr to all remaining difficulties. */
-        char diff_str[5] = "";
+        int last_diff = 0;
         while(diff < diff_amt) {
-            const char* next_diff = diffs[diff++];
-            strcat(diff_str, next_diff);
+            last_diff = last_diff | (1 << diff);
+            ++diff;
         }
 
-        state->instr_rank = rank_org & parse_rank(state, diff_str);
+        state->instr_rank = rank_org & last_diff;
         if (state->instr_rank != rank_none) expression_output(state, last_expr, 1);
 
         state->instr_rank = rank_org;
