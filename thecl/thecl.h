@@ -109,6 +109,9 @@ bool is_post_th10(
 bool is_post_th13(
     unsigned int version);
 
+bool is_numeric_difficulty_version(
+    unsigned int version);
+
 /* Returns the rank value for the '!-' label. */
 int32_t
 get_default_none_rank(

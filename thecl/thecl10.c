@@ -1862,7 +1862,7 @@ th10_dump(
             case THECL_INSTR_RANK:
                 if(instr->rank == 0xFF)
                     instr->string = strdup("!*");
-                else if (ecl->version == 185) {
+                else if (is_numeric_difficulty_version(ecl->version)) {
                     sprintf(temp, "!%s%s%s%s%s%s%s%s",
                             (instr->rank) & RANK_ID_0   ? "0" : "",
                             (instr->rank) & RANK_ID_1   ? "1" : "",
@@ -2031,7 +2031,7 @@ th10_parse(
     state.version = version;
     state.uses_numbered_subs = false;
     state.has_overdrive_difficulty = is_post_th13(version);
-    state.has_numeric_difficulties = version == 185;
+    state.has_numeric_difficulties = is_numeric_difficulty_version(version);
     state.uses_stack_offsets = is_post_th13(version);
     list_init(&state.expressions);
     list_init(&state.block_stack);

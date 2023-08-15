@@ -241,11 +241,16 @@ is_post_th13(unsigned int version) {
     }
 }
 
+bool
+is_numeric_difficulty_version(unsigned int version) {
+    return version == 185 || version == 19;
+}
+
 int32_t
 get_default_none_rank(unsigned int version) {
     if (!is_post_th13(version)) {
         return 0xF0;
-    } else if (version == 185) {
+    } else if (is_numeric_difficulty_version(version)) {
         return 0x00;
     } else {
         return 0xC0;
