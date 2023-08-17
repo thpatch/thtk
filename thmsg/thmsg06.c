@@ -370,7 +370,7 @@ th06_read(FILE* in, FILE* out, unsigned int version)
                 if (offset == entry_offsets[i * entry_offset_mul]) {
                     entry_id = i;
                     fprintf(out, "entry %u", entry_id);
-                    if (version == 19) {
+                    if (version == 19 && !thmsg_opt_end) {
                         uint32_t w = entry_offsets[1 + i * entry_offset_mul];
                         fprintf(out, " (%u, %u, %u, %u)", w&0xff, w>>8 & 0xff, w>>16 & 0xff, w>>24 & 0xff);
                     } else if (version >= 9) {
@@ -480,7 +480,7 @@ th06_write(FILE* in, FILE* out, unsigned int version)
     if (!file_seek(in, 0))
         return 0;
 
-    if (!file_seek(out, sizeof(uint32_t) + (version == 19)*sizeof(extra_values) + entry_count * sizeof(uint32_t) * entry_offset_mul))
+    if (!file_seek(out, sizeof(uint32_t) + (version == 19 && !thmsg_opt_end)*sizeof(extra_values) + entry_count * sizeof(uint32_t) * entry_offset_mul))
         return 0;
     entry_offsets = util_malloc(entry_count * sizeof(uint32_t) * entry_offset_mul);
 
@@ -636,7 +636,7 @@ th06_write(FILE* in, FILE* out, unsigned int version)
     if (!file_write(out, &entry_count, sizeof(uint32_t)))
         return 0;
 
-    if (version == 19 && !file_write(out, &extra_values, sizeof(extra_values)))
+    if (version == 19 && !thmsg_opt_end && !file_write(out, &extra_values, sizeof(extra_values)))
         return 0;
 
     if (!file_write(out, entry_offsets, entry_count * sizeof(uint32_t) * entry_offset_mul))
