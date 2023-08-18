@@ -1538,6 +1538,21 @@ th10_stack_size(
     return ret;
 }
 
+static void
+format_bijective26(
+    char *s,
+    int n)
+{
+    int l = 0;
+    for (int nn = n; nn > 0; nn = (nn-1)/26)
+        l++;
+    s[l] = '\0';
+    while (l) {
+        s[--l] = 'A' + (n-1)%26;
+        n = (n-1)/26;
+    }
+}
+
 /* TODO: Split this into a function that uses p, and one that uses param.
  *       Have the p function wrap the param function. */
 static char*
@@ -1608,14 +1623,16 @@ th10_stringify_param(
             param->stack &&
             param->value.val.S >= 0 &&
             (param->value.val.S % 4) == 0) {
-            sprintf(temp, "$%c", 'A' + param->value.val.S / 4);
+            temp[0] = '$';
+            format_bijective26(&temp[1], param->value.val.S / 4 + 1);
         } else if (
             /* TODO: Also check that it is a multiple of four. */
             !g_ecl_rawoutput &&
             param->value.type == 'f' &&
             param->stack &&
             param->value.val.f >= 0.0f) {
-            sprintf(temp, "%%%c", 'A' + (int)param->value.val.f / 4);
+            temp[0] = '%';
+            format_bijective26(&temp[1], (int)param->value.val.f / 4 + 1);
         } else if (
             param->value.type == 'S' &&
             param->stack &&
@@ -1687,11 +1704,11 @@ th10_stringify_instr(
         if (sub->arity * 4 != sub->stack) {
             /* Don't output empty var declarations. */
             strcat(string, "var");
+            temp[0] = ',';
+            temp[1] = ' ';
             for (p = sub->arity * 4; p < sub->stack; p += 4) {
-                if (p != sub->arity * 4)
-                    strcat(string, ",");
-                sprintf(temp, " %c", (int)('A' + p / 4));
-                strcat(string, temp);
+                format_bijective26(&temp[2], p / 4 + 1);
+                strcat(string, &temp[p != sub->arity * 4 ? 0 : 1]);
             }
         }
     } else if (
@@ -1832,9 +1849,11 @@ th10_dump(
             sub->arity = 0;
         fprintf(out, "\nvoid %s(", sub->name);
         for (p = 0; p < sub->arity; ++p) {
+            char temp[256];
             if (p != 0)
                 fprintf(out, ", ");
-            fprintf(out, "var %c", 'A' + p);
+            format_bijective26(temp, p + 1);
+            fprintf(out, "var %s", temp);
         }
         fprintf(out, ")");
 
