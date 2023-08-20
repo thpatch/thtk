@@ -562,6 +562,18 @@ jfif_identify(jfif_soi_app0_header_t* jfif) {
 }
 
 static inline int
+exif_identify(jfif_soi_app0_header_t* jfif) {
+    if (jfif->SOI_marker[0] == 0xFF && jfif->SOI_marker[1] == 0xD8 &&
+        jfif->APP0_marker[0] == 0xFF && jfif->APP0_marker[1] == 0xE1 &&
+        memcmp(jfif->magic, "Exif", 5) == 0) {
+        return 1;
+    }
+    else {
+        return 0;
+    }
+}
+
+static inline int
 png_identify(uint8_t* png) {
     if(memcmp(png, "\x89PNG\r\n\x1A\n", 8) == 0) {
         return 1;
@@ -1815,8 +1827,10 @@ anm_defaults(
             }
             else {
             anm_defaults_exit:
+                fprintf(stderr, "%s: not a PNG or JPEG/JFIF file. Image files must be encoded in PNG or JPEG/JFIF for Touhou 19\n", entry->name);
+                if(end-img_buf > sizeof(jfif_soi_app0_header_t) && exif_identify((void *)img_buf))
+                    fprintf(stderr, "%s: (your JPEG is Exif, not JFIF)\n", entry->name);
                 free(img_buf);
-                fprintf(stderr, "%s: not a PNG or JFIF file. Image files must be encoded in PNG or JFIF for Touhou 19\n", entry->name);
                 exit(1);
             }
 
