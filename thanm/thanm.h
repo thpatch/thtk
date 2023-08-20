@@ -182,15 +182,6 @@ typedef struct var_t {
 } var_t;
 
 PACK_BEGIN;
-typedef struct jfif_soi_app0_header_t {
-    uint8_t SOI_marker[2];
-    uint8_t APP0_marker[2];
-    uint8_t length[2];
-    uint8_t magic[5]; // = JFIF\0
-} jfif_soi_app0_header_t;
-PACK_END;
-
-PACK_BEGIN;
 typedef struct jpeg_sof_t {
     uint8_t SOF_marker[2];
     uint8_t length[2];

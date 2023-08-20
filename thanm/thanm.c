@@ -550,36 +550,24 @@ static const id_format_pair_t th18_patch[] = {
 };
 
 static inline int
-jfif_identify(jfif_soi_app0_header_t* jfif) {
-    if (jfif->SOI_marker[0] == 0xFF && jfif->SOI_marker[1] == 0xD8 &&
-        jfif->APP0_marker[0] == 0xFF && jfif->APP0_marker[1] == 0xE0 &&
-        memcmp(jfif->magic, "JFIF", 5) == 0) {
-        return 1;
-    }
-    else {
-        return 0;
-    }
+jfif_identify(uint8_t* jfif, uint32_t size) {
+    return size > 11 &&
+        memcmp(jfif, "\xFF\xD8\xFF\xE0", 4) == 0 &&
+        memcmp(jfif+6, "JFIF", 5) == 0;
 }
 
 static inline int
-exif_identify(jfif_soi_app0_header_t* jfif) {
-    if (jfif->SOI_marker[0] == 0xFF && jfif->SOI_marker[1] == 0xD8 &&
-        jfif->APP0_marker[0] == 0xFF && jfif->APP0_marker[1] == 0xE1 &&
-        memcmp(jfif->magic, "Exif", 5) == 0) {
-        return 1;
-    }
-    else {
-        return 0;
-    }
+exif_identify(uint8_t* exif, uint32_t size) {
+    return size > 11 &&
+        memcmp(exif, "\xFF\xD8\xFF\xE1", 4) == 0 &&
+        memcmp(exif+6, "Exif", 5) == 0;
 }
 
 static inline int
-png_identify(uint8_t* png) {
-    if(memcmp(png, "\x89PNG\r\n\x1A\n", 8) == 0) {
-        return 1;
-    } else {
-        return 0;
-    }
+png_identify(uint8_t* png, uint32_t size) {
+    return size > 8+sizeof(png_IHDR_t) &&
+        memcmp(png, "\x89PNG\r\n\x1A\n", 8) == 0 &&
+        memcmp(png+12, "IHDR", 4) == 0;
 }
 
 /* The order and sizes of fields changed for TH11. */
@@ -1792,28 +1780,26 @@ anm_defaults(
                 exit(1);
             }
             fseek(stream, 0, SEEK_END);
-            entry->thtx->size = ftell(stream);
+            uint32_t size = ftell(stream);
             fseek(stream, 0, SEEK_SET);
 
+            entry->thtx->size = size;
+
             uint8_t* img_buf = malloc(entry->thtx->size);
-            uint8_t* end = img_buf + entry->thtx->size;
             fread(img_buf, 1, entry->thtx->size, stream);
 
             fclose(stream);
 
-            if (end-img_buf > 8+sizeof(png_IHDR_t) && png_identify(img_buf)) {
+            if (png_identify(img_buf, size)) {
                 png_IHDR_t* ihdr = (void*)(img_buf + 8);
-
-                if (memcmp(ihdr->magic, "IHDR", 4) != 0)
-                    goto anm_defaults_exit;
-
                 entry->thtx->w = ihdr->width[2] << 8 | ihdr->width[3];
                 entry->thtx->h = ihdr->height[2] << 8 | ihdr->height[3];
-            } else if(end-img_buf > sizeof(jfif_soi_app0_header_t) && jfif_identify((void *)img_buf)) {
+            } else if(jfif_identify(img_buf, size)) {
                 uint8_t* p = img_buf;
+                uint8_t* end = p+size;
                 for (;;) {
                     p = memchr(p, 0xFF, end-p);
-                    if (!p)
+                    if (!p || p+1 == end)
                         goto anm_defaults_exit;
                     if (p[1] == 0xC0 || p[1] == 0xC2)
                         break;
@@ -1828,7 +1814,7 @@ anm_defaults(
             else {
             anm_defaults_exit:
                 fprintf(stderr, "%s: not a PNG or JPEG/JFIF file. Image files must be encoded in PNG or JPEG/JFIF for Touhou 19\n", entry->name);
-                if(end-img_buf > sizeof(jfif_soi_app0_header_t) && exif_identify((void *)img_buf))
+                if(exif_identify(img_buf, size))
                     fprintf(stderr, "%s: (your JPEG is Exif, not JFIF)\n", entry->name);
                 free(img_buf);
                 exit(1);
