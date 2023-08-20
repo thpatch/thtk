@@ -467,6 +467,7 @@ static const id_format_pair_t formats_v8[] = {
     { 316, "" },
     { 317, "" },
     { 318, "S" }, /* th19 */
+    { 319, "SSSS" }, /* th19 */
     { 400, "fff" },
     { 401, "fff" },
     { 402, "ff" },
@@ -540,6 +541,12 @@ static const id_format_pair_t formats_v8[] = {
     { 618, "" }, /* th19 */
     { 621, "ffS" }, /* th19 */
     { 622, "ffS" }, /* th19 */
+    { 623, "fffS" }, /* th19 */
+    { 626, "fffS" }, /* th19 */
+    { 627, "fffS" }, /* th19 */
+    { 628, "fS" }, /* th19 */
+    { 631, "ffS" }, /* th19 */
+    { 632, "ffS" }, /* th19 */
     { 0xffff, "" },
     { 0, NULL }
 };
@@ -1152,6 +1159,11 @@ anm_read_file(
                     if (!format) {
                         fprintf(stderr, "id %d was not found in the format table (total parameter size was %d)\n",
                             instr->type, (int)(instr->length - sizeof(anm_instr_t)));
+#if 0
+                        for (int i = sizeof(anm_instr_t); i < instr->length; i++)
+                            fprintf(stderr, " %02X", instr_ptr[i]);
+                        fprintf(stderr, "\n");
+#endif
                     }
                     thanm_instr_t* thanm_instr = thanm_instr_new_raw(instr, format);
                     thanm_instr->offset = (uint32_t)((ptrdiff_t)instr_ptr - (ptrdiff_t)(map + script->offset->offset));
