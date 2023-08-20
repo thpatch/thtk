@@ -1784,11 +1784,12 @@ anm_defaults(
             fseek(stream, 0, SEEK_SET);
 
             uint8_t* img_buf = malloc(entry->thtx->size);
+            uint8_t* end = img_buf + entry->thtx->size;
             fread(img_buf, 1, entry->thtx->size, stream);
 
             fclose(stream);
 
-            if (png_identify(img_buf)) {
+            if (end-img_buf > 8+sizeof(png_IHDR_t) && png_identify(img_buf)) {
                 png_IHDR_t* ihdr = (void*)(img_buf + 8);
 
                 if (memcmp(ihdr->magic, "IHDR", 4) != 0)
@@ -1796,18 +1797,19 @@ anm_defaults(
 
                 entry->thtx->w = ihdr->width[2] << 8 | ihdr->width[3];
                 entry->thtx->h = ihdr->height[2] << 8 | ihdr->height[3];
-            } else if(jfif_identify((void *)img_buf)) {
+            } else if(end-img_buf > sizeof(jfif_soi_app0_header_t) && jfif_identify((void *)img_buf)) {
                 uint8_t* p = img_buf;
                 for (;;) {
-                    if (p[0] == 0xFF) {
-                        if (p[1] == 0xC0 || p[1] == 0xC2) {
-                            break;
-                        }
-                    }
+                    p = memchr(p, 0xFF, end-p);
+                    if (!p)
+                        goto anm_defaults_exit;
+                    if (p[1] == 0xC0 || p[1] == 0xC2)
+                        break;
                     p++;
                 }
+                if (end-p < sizeof(jpeg_sof_t))
+                    goto anm_defaults_exit;
                 jpeg_sof_t* sof = (void*)p;
-
                 entry->thtx->w = (sof->width[0] << 8) | sof->width[1];
                 entry->thtx->h = (sof->height[0] << 8) | sof->height[1];
             }
