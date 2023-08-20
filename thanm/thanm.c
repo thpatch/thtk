@@ -553,7 +553,7 @@ static inline int
 jfif_identify(jfif_soi_app0_header_t* jfif) {
     if (jfif->SOI_marker[0] == 0xFF && jfif->SOI_marker[1] == 0xD8 &&
         jfif->APP0_marker[0] == 0xFF && jfif->APP0_marker[1] == 0xE0 &&
-        strcmp(jfif->magic, "JFIF") == 0) {
+        memcmp(jfif->magic, "JFIF", 5) == 0) {
         return 1;
     }
     else {
@@ -1069,8 +1069,8 @@ anm_read_file(
         assert(header->rt_textureslot == 0);
         assert(header->zero3 == 0);
 
-        //if(header->version == 8)
-        //    assert(header->lowresscale == 0 || header->lowresscale == 1);
+        if(header->version == 8)
+            assert((header->lowresscale&0xFE) == 0); /* Low byte can only be 0 or 1. High byte is used by TH19 */
 
         /* Lengths, including padding, observed are: 16, 32, 48. */
         entry->name = anm_get_name(archive, (const char*)map + header->nameoffset);
@@ -1175,7 +1175,8 @@ anm_read_file(
                 (thtx_header_t*)(map + header->thtxoffset);
             assert(util_strcmp_ref(thtx->magic, stringref("THTX")) == 0);
             assert(thtx->zero == 0);
-            //assert(thtx->w * thtx->h * format_Bpp(thtx->format) <= thtx->size);
+            /* NEWHU: 19 */
+            assert(version == 19 || thtx->w * thtx->h * format_Bpp(thtx->format) <= thtx->size);
             assert(
                 thtx->format == FORMAT_BGRA8888 ||
                 thtx->format == FORMAT_RGB565 ||
@@ -1478,7 +1479,7 @@ anm_extract(
         /* Then there's nothing to extract. */
         return;
     }
-       
+
     anm_entry_t* entry;
     list_for_each(&anm->entries, entry) {
         if (entry->header->hasdata && entry->name == name) {
@@ -1508,8 +1509,8 @@ anm_extract(
                 }
             }
         }
-    }   
-    
+    }
+
     png_write(name, &image);
     free(image.data);
 }
@@ -1775,7 +1776,7 @@ anm_defaults(
         case 19: {
             FILE* stream = fopen(entry->name, "rb");
             if (!stream) {
-                fprintf(stderr, "%s: could not open for reading\n");
+                fprintf(stderr, "%s: could not open for reading\n", entry->name);
                 exit(1);
             }
             fseek(stream, 0, SEEK_END);
@@ -1788,14 +1789,14 @@ anm_defaults(
             fclose(stream);
 
             if (png_identify(img_buf)) {
-                png_IHDR_t* ihdr = (img_buf + 8);
+                png_IHDR_t* ihdr = (void*)(img_buf + 8);
 
                 if (memcmp(ihdr->magic, "IHDR", 4) != 0)
                     goto anm_defaults_exit;
 
                 entry->thtx->w = ihdr->width[2] << 8 | ihdr->width[3];
                 entry->thtx->h = ihdr->height[2] << 8 | ihdr->height[3];
-            } else if(jfif_identify(img_buf)) {
+            } else if(jfif_identify((void *)img_buf)) {
                 uint8_t* p = img_buf;
                 for (;;) {
                     if (p[0] == 0xFF) {
@@ -1805,7 +1806,7 @@ anm_defaults(
                     }
                     p++;
                 }
-                jpeg_sof_t* sof = p;
+                jpeg_sof_t* sof = (void*)p;
 
                 entry->thtx->w = (sof->width[0] << 8) | sof->width[1];
                 entry->thtx->h = (sof->height[0] << 8) | sof->height[1];
@@ -1815,7 +1816,7 @@ anm_defaults(
                 free(img_buf);
                 fprintf(stderr, "%s: not a PNG or JFIF file. Image files must be encoded in PNG or JFIF for Touhou 19\n", entry->name);
                 exit(1);
-            }          
+            }
 
             entry->data = img_buf;
             continue;
@@ -1978,8 +1979,8 @@ anm_write(
 
             /* NEWHU: 19 */
             if (version == 19) {
-                h->thtx_width = entry->thtx->w;
-                h->thtx_height = entry->thtx->h;
+                h->w_max = entry->thtx->w;
+                h->h_max = entry->thtx->h;
             }
 
             file_write(stream, entry->header, sizeof(anm_header06_t));
@@ -2111,7 +2112,7 @@ main(
     int command = -1;
 
     FILE* in;
-    
+
     anm_archive_t* anm;
 #ifdef HAVE_LIBPNG
     anm_entry_t* entry;
@@ -2336,7 +2337,7 @@ replace_done:
         current_input = argv[1];
         anm = anm_create(argv[1], symbolfp, version);
 
-       
+
 
         if (symbolfp)
             fclose(symbolfp);
