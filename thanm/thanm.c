@@ -46,6 +46,7 @@
 anmmap_t* g_anmmap = NULL;
 unsigned int option_force;
 unsigned int option_print_offsets;
+unsigned int version = 0;
 
 /* SPECIAL FORMATS:
  * 'o' - offset (for labels)
@@ -548,6 +549,27 @@ static const id_format_pair_t th18_patch[] = {
     { 0, NULL }
 };
 
+static inline int
+jfif_identify(jfif_soi_app0_header_t* jfif) {
+    if (jfif->SOI_marker[0] == 0xFF && jfif->SOI_marker[1] == 0xD8 &&
+        jfif->APP0_marker[0] == 0xFF && jfif->APP0_marker[1] == 0xE0 &&
+        strcmp(jfif->magic, "JFIF") == 0) {
+        return 1;
+    }
+    else {
+        return 0;
+    }
+}
+
+static inline int
+png_identify(uint8_t* png) {
+    if(memcmp(png, "\x89PNG\r\n\x1A\n", 8) == 0) {
+        return 1;
+    } else {
+        return 0;
+    }
+}
+
 /* The order and sizes of fields changed for TH11. */
 static void
 convert_header_to_old(
@@ -574,7 +596,7 @@ convert_header_to_old(
 }
 
 #ifdef HAVE_LIBPNG
-static void
+static anm_header11_t*
 convert_header_to_11(
     anm_header06_t* oldheader)
 {
@@ -596,6 +618,7 @@ convert_header_to_11(
     th11->hasdata = header.hasdata;
     th11->lowresscale = header.lowresscale;
     th11->nextoffset = header.nextoffset;
+    return th11;
 }
 #endif
 
@@ -1046,8 +1069,8 @@ anm_read_file(
         assert(header->rt_textureslot == 0);
         assert(header->zero3 == 0);
 
-        if(header->version == 8)
-            assert(header->lowresscale == 0 || header->lowresscale == 1);
+        //if(header->version == 8)
+        //    assert(header->lowresscale == 0 || header->lowresscale == 1);
 
         /* Lengths, including padding, observed are: 16, 32, 48. */
         entry->name = anm_get_name(archive, (const char*)map + header->nameoffset);
@@ -1152,7 +1175,7 @@ anm_read_file(
                 (thtx_header_t*)(map + header->thtxoffset);
             assert(util_strcmp_ref(thtx->magic, stringref("THTX")) == 0);
             assert(thtx->zero == 0);
-            assert(thtx->w * thtx->h * format_Bpp(thtx->format) <= thtx->size);
+            //assert(thtx->w * thtx->h * format_Bpp(thtx->format) <= thtx->size);
             assert(
                 thtx->format == FORMAT_BGRA8888 ||
                 thtx->format == FORMAT_RGB565 ||
@@ -1455,29 +1478,39 @@ anm_extract(
         /* Then there's nothing to extract. */
         return;
     }
+       
+    anm_entry_t* entry;
+    list_for_each(&anm->entries, entry) {
+        if (entry->header->hasdata && entry->name == name) {
+            util_makepath(name);
 
-    image.data = malloc(image.width * image.height * 4);
-    /* XXX: Why 0xff? */
-    memset(image.data, 0xff, image.width * image.height * 4);
-
-    for (f = 0; f < sizeof(formats) / sizeof(formats[0]); ++f) {
-        anm_entry_t* entry;
-        list_for_each(&anm->entries, entry) {
-            if (entry->header->hasdata && entry->name == name && formats[f] == entry->thtx->format) {
-                unsigned char* temp_data = format_to_rgba(entry->data, entry->thtx->w * entry->thtx->h, entry->thtx->format);
-                for (y = entry->header->y; y < entry->header->y + entry->thtx->h; ++y) {
-                    memcpy(image.data + y * image.width * 4 + entry->header->x * 4,
-                           temp_data + (y - entry->header->y) * entry->thtx->w * 4,
-                           entry->thtx->w * 4);
+            if (version == 19) {
+                FILE* stream = fopen(name, "wb");
+                if (stream) {
+                    fwrite(entry->thtx->data, 1, entry->thtx->size, stream);
+                    fclose(stream);
                 }
-                free(temp_data);
+                return;
+            }
+
+            image.data = malloc(image.width * image.height * 4);
+            /* XXX: Why 0xff? */
+            memset(image.data, 0xff, image.width* image.height * 4);
+            for (f = 0; f < sizeof(formats) / sizeof(formats[0]); ++f) {
+                if (formats[f] == entry->thtx->format) {
+                    unsigned char* temp_data = format_to_rgba(entry->data, entry->thtx->w * entry->thtx->h, entry->thtx->format);
+                    for (y = entry->header->y; y < entry->header->y + entry->thtx->h; ++y) {
+                        memcpy(image.data + y * image.width * 4 + entry->header->x * 4,
+                            temp_data + (y - entry->header->y) * entry->thtx->w * 4,
+                            entry->thtx->w * 4);
+                    }
+                    free(temp_data);
+                }
             }
         }
-    }
-
-    util_makepath(name);
+    }   
+    
     png_write(name, &image);
-
     free(image.data);
 }
 
@@ -1737,6 +1770,58 @@ anm_defaults(
         if (!entry->header->hasdata)
             continue;
 
+        /* NEWHU: 19 */
+        switch (version) {
+        case 19: {
+            FILE* stream = fopen(entry->name, "rb");
+            if (!stream) {
+                fprintf(stderr, "%s: could not open for reading\n");
+                exit(1);
+            }
+            fseek(stream, 0, SEEK_END);
+            entry->thtx->size = ftell(stream);
+            fseek(stream, 0, SEEK_SET);
+
+            uint8_t* img_buf = malloc(entry->thtx->size);
+            fread(img_buf, 1, entry->thtx->size, stream);
+
+            fclose(stream);
+
+            if (png_identify(img_buf)) {
+                png_IHDR_t* ihdr = (img_buf + 8);
+
+                if (memcmp(ihdr->magic, "IHDR", 4) != 0)
+                    goto anm_defaults_exit;
+
+                entry->thtx->w = ihdr->width[2] << 8 | ihdr->width[3];
+                entry->thtx->h = ihdr->height[2] << 8 | ihdr->height[3];
+            } else if(jfif_identify(img_buf)) {
+                uint8_t* p = img_buf;
+                for (;;) {
+                    if (p[0] == 0xFF) {
+                        if (p[1] == 0xC0 || p[1] == 0xC2) {
+                            break;
+                        }
+                    }
+                    p++;
+                }
+                jpeg_sof_t* sof = p;
+
+                entry->thtx->w = (sof->width[0] << 8) | sof->width[1];
+                entry->thtx->h = (sof->height[0] << 8) | sof->height[1];
+            }
+            else {
+            anm_defaults_exit:
+                free(img_buf);
+                fprintf(stderr, "%s: not a PNG or JFIF file. Image files must be encoded in PNG or JFIF for Touhou 19\n", entry->name);
+                exit(1);
+            }          
+
+            entry->data = img_buf;
+            continue;
+        }
+        }
+
         image_t* img = png_read(entry->name);
 
         /* header->w/h must be a multiple of 2 */
@@ -1796,6 +1881,7 @@ anm_write(
         sprite19_t* sprite;
         anm_script_t* script;
         long base = file_tell(stream);
+        fflush(stream);
         unsigned int namepad = 0;
         static const char padding[16] = "";
         unsigned int j;
@@ -1888,7 +1974,14 @@ anm_write(
         file_seek(stream, base);
 
         if (entry->header->version >= 7) {
-            convert_header_to_11(entry->header);
+            anm_header11_t* h = convert_header_to_11(entry->header);
+
+            /* NEWHU: 19 */
+            if (version == 19) {
+                h->thtx_width = entry->thtx->w;
+                h->thtx_height = entry->thtx->h;
+            }
+
             file_write(stream, entry->header, sizeof(anm_header06_t));
             convert_header_to_old(entry->header);
         } else {
@@ -2018,8 +2111,7 @@ main(
     int command = -1;
 
     FILE* in;
-    unsigned int version = 0;
-
+    
     anm_archive_t* anm;
 #ifdef HAVE_LIBPNG
     anm_entry_t* entry;
@@ -2244,6 +2336,8 @@ replace_done:
         current_input = argv[1];
         anm = anm_create(argv[1], symbolfp, version);
 
+       
+
         if (symbolfp)
             fclose(symbolfp);
 
@@ -2253,16 +2347,18 @@ replace_done:
         anm_defaults(anm);
 
         /* Allocate enough space for the THTX data. */
-        list_for_each(&anm->entries, entry) {
-            if (entry->header->hasdata) {
-                /* XXX: There are a few entries with a thtx.size greater than
-                 *      w*h*Bpp.  The extra data appears to be all zeroes. */
-                entry->data = calloc(1, entry->thtx->size);
+        /* NEWHU: 19 */
+        if (version != 19) {
+            list_for_each(&anm->entries, entry) {
+                if (entry->header->hasdata) {
+                    /* XXX: There are a few entries with a thtx.size greater than
+                     *      w*h*Bpp.  The extra data appears to be all zeroes. */
+                    entry->data = calloc(1, entry->thtx->size);
+                }
             }
+            list_for_each(&anm->names, name)
+                anm_replace(anm, NULL, name, name);
         }
-
-        list_for_each(&anm->names, name)
-            anm_replace(anm, NULL, name, name);
 
         current_output = argv[0];
         anm_write(anm, argv[0], version);

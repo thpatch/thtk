@@ -181,6 +181,38 @@ typedef struct var_t {
     reg_t* reg;
 } var_t;
 
+PACK_BEGIN;
+typedef struct jfif_soi_app0_header_t {
+    uint8_t SOI_marker[2];
+    uint8_t APP0_marker[2];
+    uint8_t length[2];
+    uint8_t magic[5]; // = JFIF\0
+} jfif_soi_app0_header_t;
+PACK_END;
+
+PACK_BEGIN;
+typedef struct jpeg_sof_t {
+    uint8_t SOF_marker[2];
+    uint8_t length[2];
+    uint8_t precision;
+    uint8_t height[2];
+    uint8_t width[2];
+} jpeg_sof_t;
+PACK_END;
+
+PACK_BEGIN;
+typedef struct png_IHDR_t {
+    uint8_t length[4];
+    uint8_t magic[4];
+    uint8_t width[4];
+    uint8_t height[4];
+    uint8_t color_type;
+    uint8_t compression;
+    uint8_t filter;
+    uint8_t interlace;
+} png_IHDR_t;
+PACK_END;
+
 var_t* var_new(char* name, int type);
 
 void var_free(var_t* var);
