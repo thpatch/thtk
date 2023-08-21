@@ -30,7 +30,7 @@
 #define IMAGE_H_
 
 #include <config.h>
-#include <anm_types.h>
+#include "anm_types.h"
 #include <stdio.h>
 
  /* Internal use only. */

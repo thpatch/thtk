@@ -598,8 +598,10 @@ convert_header_to_old(
     header->thtxoffset = th11.thtxoffset;
     header->hasdata = th11.hasdata;
     header->lowresscale = th11.lowresscale;
+    header->th19_unk = th11.th19_unk;
     header->nextoffset = th11.nextoffset;
-    header->zero3 = 0;
+    header->w_max = th11.w_max;
+    header->h_max = th11.h_max;
 }
 
 #ifdef HAVE_LIBPNG
@@ -624,7 +626,10 @@ convert_header_to_11(
     th11->thtxoffset = header.thtxoffset;
     th11->hasdata = header.hasdata;
     th11->lowresscale = header.lowresscale;
+    th11->th19_unk = header.th19_unk;
     th11->nextoffset = header.nextoffset;
+    th11->w_max = header.w_max;
+    th11->h_max = header.h_max;
     return th11;
 }
 #endif
@@ -1074,10 +1079,13 @@ anm_read_file(
 
         assert(header->hasdata == 0 || header->hasdata == 1);
         assert(header->rt_textureslot == 0);
-        assert(header->zero3 == 0);
+        /* NEWHU: 19 */
+        assert(version != 19 || (header->w_max == 0 && header->h_max == 0));
 
         if(header->version == 8)
-            assert((header->lowresscale&0xFE) == 0); /* Low byte can only be 0 or 1. High byte is used by TH19 */
+            assert(header->lowresscale == 0 || header->lowresscale == 1);
+        /* NEWHU: 19 */
+        assert(version != 19 || header->th19_unk == 0);
 
         /* Lengths, including padding, observed are: 16, 32, 48. */
         entry->name = anm_get_name(archive, (const char*)map + header->nameoffset);
@@ -1263,12 +1271,13 @@ anm_dump(
         if (entry->header->version < 7) {
             fprintf(stream, "    colorKey: 0x%08x,\n", entry->header->colorkey);
         }
-        if (entry->header->zero3 != 0)
-            fprintf(stream, "    zero3: %u,\n", entry->header->zero3);
         if (entry->header->version >= 1)
             fprintf(stream, "    memoryPriority: %u,\n", entry->header->memorypriority);
         if (entry->header->version >= 8)
             fprintf(stream, "    lowResScale: %u,\n", entry->header->lowresscale);
+        /* NEWHU: 19 */
+        if (version == 19)
+            fprintf(stream, "    th19_unk: %u,\n", entry->header->th19_unk);
 
         fprintf(stream, "    hasData: %u,\n", entry->header->hasdata);
         if (entry->header->hasdata) {
@@ -1277,6 +1286,12 @@ anm_dump(
             fprintf(stream, "    THTXWidth: %u,\n", entry->thtx->w);
             fprintf(stream, "    THTXHeight: %u,\n", entry->thtx->h);
             fprintf(stream, "    THTXZero: %u,\n", entry->thtx->zero);
+        }
+
+        /* NEWHU: 19 */
+        if (version == 19) {
+            fprintf(stream, "    w_max: %u,\n", entry->header->w_max);
+            fprintf(stream, "    h_max: %u,\n", entry->header->h_max);
         }
 
         fprintf(stream, "    sprites: {\n");
@@ -1289,6 +1304,7 @@ anm_dump(
                 sprite->w, sprite->h);
             if (prev_sprite_id + 1 != sprite->id)
                 fprintf(stream, ", id: %d", sprite->id);
+            /* NEWHU: 19 */
             if (version == 19) {
                 if (sprite->unk0 != 0.f)
                     fprintf(stream, ", th19_unk0: %.f", sprite->unk0);
@@ -1497,6 +1513,7 @@ anm_extract(
         if (entry->header->hasdata && entry->name == name) {
             util_makepath(name);
 
+            /* NEWHU: 19 */
             if (version == 19) {
                 FILE* stream = fopen(name, "wb");
                 if (stream) {
@@ -1929,6 +1946,7 @@ anm_write(
             file_write(stream, padding, namepad);
         }
 
+        /* NEWHU: 19 */
         const unsigned spritesize = version == 19 ? sizeof(sprite19_t) : sizeof(sprite_t);
         spriteoffset = file_tell(stream) - base;
 
@@ -1989,13 +2007,7 @@ anm_write(
         file_seek(stream, base);
 
         if (entry->header->version >= 7) {
-            anm_header11_t* h = convert_header_to_11(entry->header);
-
-            /* NEWHU: 19 */
-            if (version == 19) {
-                h->w_max = entry->thtx->w;
-                h->h_max = entry->thtx->h;
-            }
+            convert_header_to_11(entry->header);
 
             file_write(stream, entry->header, sizeof(anm_header06_t));
             convert_header_to_old(entry->header);

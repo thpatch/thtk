@@ -285,6 +285,9 @@ Entry:
         OPTIONAL("hasData", 'S', $prop_list);
         entry->header->hasdata = prop ? prop->value->val.S : 1;
 
+        OPTIONAL("th19_unk", 'S', $prop_list);
+        entry->header->th19_unk = prop ? prop->value->val.S : 0;
+
         if (entry->header->hasdata) {
             OPTIONAL("THTXSize", 'S', $prop_list);
             entry->thtx->size = prop ? prop->value->val.S : DEFAULTVAL;
@@ -301,6 +304,11 @@ Entry:
             OPTIONAL("THTXZero", 'S', $prop_list);
             entry->thtx->zero = prop ? prop->value->val.S : 0;
         }
+
+        OPTIONAL("w_max", 'S', $prop_list);
+        entry->header->w_max = prop ? prop->value->val.S : 0;
+        OPTIONAL("h_max", 'S', $prop_list);
+        entry->header->h_max = prop ? prop->value->val.S : 0;
 
         OPTIONAL("sprites", 'l', $prop_list);
         if (prop) {

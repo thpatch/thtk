@@ -41,14 +41,6 @@ extern unsigned int option_force;
 
 const char *anm_find_format(unsigned version, unsigned header_version, int id);
 
-/* FIXME: move this to anm_types.h after figuring out the purpose of the new fields */
-typedef struct {
-    uint32_t id;
-    float x, y, w, h;
-    /* TH19: new fields, usually {0, 0, 1, 1, 0} */
-    float unk0, unk1, unk2, unk3, unk4;
-} sprite19_t;
-
 typedef struct {
     /* The id in the offset struct may not be the real index. */
     int32_t real_index;

@@ -30,7 +30,7 @@
 #define THANM_H_
 
 #include <config.h>
-#include <anm_types.h>
+#include "anm_types.h"
 #include "list.h"
 
 extern unsigned int option_force;
