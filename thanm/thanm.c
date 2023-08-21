@@ -542,8 +542,8 @@ static const id_format_pair_t formats_v8[] = {
     { 621, "ffS" }, /* th19 */
     { 622, "ffS" }, /* th19 */
     { 623, "fffS" }, /* th19 */
-    { 626, "fffS" }, /* th19 */
-    { 627, "fffS" }, /* th19 */
+    { 626, "ffffS" }, /* th19 */
+    { 627, "ffffS" }, /* th19 */
     { 628, "fS" }, /* th19 */
     { 631, "ffS" }, /* th19 */
     { 632, "ffS" }, /* th19 */
