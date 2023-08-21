@@ -1276,7 +1276,7 @@ anm_dump(
         if (entry->header->version >= 8)
             fprintf(stream, "    lowResScale: %u,\n", entry->header->lowresscale);
         /* NEWHU: 19 */
-        if (version == 19)
+        if (version == 19 && entry->header->th19_unk != 0)
             fprintf(stream, "    th19_unk: %u,\n", entry->header->th19_unk);
 
         fprintf(stream, "    hasData: %u,\n", entry->header->hasdata);
