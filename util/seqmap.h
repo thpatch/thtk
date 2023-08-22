@@ -34,7 +34,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
-#include "list.h"
+#include "util.h"
 
 #define SEQMAP_FLAG_ALLOC (1<<0)
 typedef struct seqmap_entry_t {
@@ -43,7 +43,11 @@ typedef struct seqmap_entry_t {
     char *value;
 } seqmap_entry_t;
 
-typedef list_t seqmap_t;
+typedef struct seqmap_t {
+    seqmap_entry_t *ptr;
+    size_t len;
+    size_t cap;
+} seqmap_t;
 
 typedef int (*seqmap_setfunc_t)(
     void *state,
@@ -54,8 +58,13 @@ typedef int (*seqmap_controlfunc_t)(
     int linenum,
     const char *cline);
 
+/* Iterates through the data in the seqmap. */
+#define seqmap_for_each(map, var) \
+    for (size_t node = (map)->len; \
+         (void)((var) = node ? &(map)->ptr[node-1] : NULL), node; \
+         node--)
 /* Allocates and initalizes a new seqmap */
-#define seqmap_new() ((seqmap_t*)list_new())
+seqmap_t *seqmap_new(void);
 /* Frees a seqmap */
 void seqmap_free(seqmap_t *map);
 /* Sets an entry in a seqmap */

@@ -68,6 +68,13 @@ const char* util_printfloat(
 void util_makepath(
     const char* path);
 
+/* Typical amortized O(1) dynamic array resize function */
+int util_vec_ensure(
+    void *data, /* It's actually void **. This is done to avoid casts. */
+    size_t *cap,
+    size_t size,
+    size_t element_size);
+
 /* Scan directories recursively.  After use, result should be freed manually. */
 int util_scan_files(
     const char* dir,

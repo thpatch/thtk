@@ -129,7 +129,7 @@ util_makepath(
 }
 
 /* Typical amortized O(1) dynamic array resize function */
-static int
+int
 util_vec_ensure(
     void *data, /* It's actually void **. This is done to avoid casts. */
     size_t *cap,

@@ -37,39 +37,39 @@
 #include "program.h"
 #include "util.h"
 
+seqmap_t *
+seqmap_new()
+{
+    seqmap_t *map = malloc(sizeof(seqmap_t));
+    memset(map, 0, sizeof(seqmap_t));
+    return map;
+}
+
 void
 seqmap_free(
     seqmap_t *map)
 {
+    if (!map)
+        return;
     seqmap_entry_t *ent;
-
-    if (!map) return;
-
-    list_for_each(map, ent) {
-        if (ent && ent->flags & SEQMAP_FLAG_ALLOC) {
-            if (ent) {
-                free(ent->value);
-            }
-            free(ent);
-        }
-    }
-
-    list_free_nodes(map);
-
+    seqmap_for_each(map, ent)
+        if (ent->flags & SEQMAP_FLAG_ALLOC)
+            free(ent->value);
+    free(map->ptr);
     free(map);
 }
 
-/* Allocates new seqmap entry, prepends it to a seqmap, and returns it */
+/* Allocates new seqmap entry, appends it to a seqmap, and returns it */
 static seqmap_entry_t *
 seqmap_prepend_new(
     seqmap_t *map,
     int key)
 {
-    seqmap_entry_t *ent = malloc(sizeof(seqmap_entry_t));
+    util_vec_ensure(&map->ptr, &map->cap, map->len+1, sizeof(seqmap_entry_t));
+    seqmap_entry_t *ent = &map->ptr[map->len++];
     ent->key = key;
     ent->value = NULL;
     ent->flags = SEQMAP_FLAG_ALLOC;
-    list_prepend_new(map, ent);
     return ent;
 }
 
@@ -89,11 +89,9 @@ seqmap_get(
     int key)
 {
     seqmap_entry_t *ent;
-    list_for_each(map, ent) {
-        if (ent && ent->key == key) {
+    seqmap_for_each(map, ent)
+        if (ent->key == key)
             break;
-        }
-    }
     return ent;
 }
 
@@ -103,11 +101,9 @@ seqmap_find(
     const char *value)
 {
     seqmap_entry_t *ent;
-    list_for_each(map, ent) {
-        if (ent && ent->value && !strcmp(ent->value, value)) {
+    seqmap_for_each(map, ent)
+        if (ent->value && !strcmp(ent->value, value))
             break;
-        }
-    }
     return ent;
 }
 

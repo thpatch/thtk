@@ -236,20 +236,16 @@ eclmap_rebuild(
     eclmap_t *emap)
 {
     char **p;
-    size_t count = 0;
-    seqmap_entry_t *ent;
-    list_for_each(emap->ins_names, ent)
-        ++count;
-    list_for_each(emap->timeline_ins_names, ent)
-        ++count;
+    size_t count = emap->ins_names->len + emap->timeline_ins_names->len;
 
     free(emap->mnem_set);
     emap->mnem_set = p = malloc(count * sizeof(char*));
     emap->mnem_set_len = count;
 
-    list_for_each(emap->ins_names, ent)
+    seqmap_entry_t *ent;
+    seqmap_for_each(emap->ins_names, ent)
         *p++ = ent->value;
-    list_for_each(emap->timeline_ins_names, ent)
+    seqmap_for_each(emap->timeline_ins_names, ent)
         *p++ = ent->value;
 
     qsort(emap->mnem_set, emap->mnem_set_len, sizeof(char*), strcmp_indirect);
