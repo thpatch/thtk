@@ -39,8 +39,8 @@
 #define SEQMAP_FLAG_ALLOC (1<<0)
 typedef struct seqmap_entry_t {
     int key;
-    char *value;
     int flags;
+    char *value;
 } seqmap_entry_t;
 
 typedef list_t seqmap_t;
