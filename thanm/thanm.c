@@ -1823,7 +1823,7 @@ anm_defaults(
                 png_IHDR_t* ihdr = (void*)(img_buf + 8);
                 entry->thtx->w = ihdr->width[2] << 8 | ihdr->width[3];
                 entry->thtx->h = ihdr->height[2] << 8 | ihdr->height[3];
-            } else if(jfif_identify(img_buf, size)) {
+            } else if(jfif_identify(img_buf, size) || exif_identify(img_buf, size)) {
                 uint8_t* p = img_buf;
                 uint8_t* end = p+size;
                 for (;;) {
@@ -1842,9 +1842,7 @@ anm_defaults(
             }
             else {
             anm_defaults_exit:
-                fprintf(stderr, "%s: not a PNG or JPEG/JFIF file. Image files must be encoded in PNG or JPEG/JFIF for Touhou 19\n", entry->name);
-                if(exif_identify(img_buf, size))
-                    fprintf(stderr, "%s: (your JPEG is Exif, not JFIF)\n", entry->name);
+                fprintf(stderr, "%s: not a PNG or JPEG file. Image files must be encoded in PNG or JPEG for Touhou 19\n", entry->name);
                 free(img_buf);
                 exit(1);
             }
