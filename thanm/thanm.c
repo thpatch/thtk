@@ -1080,12 +1080,12 @@ anm_read_file(
         assert(header->hasdata == 0 || header->hasdata == 1);
         assert(header->rt_textureslot == 0);
         /* NEWHU: 19 */
-        assert(version != 19 || (header->w_max == 0 && header->h_max == 0));
+        assert(version == 19 || (header->w_max == 0 && header->h_max == 0));
 
         if(header->version == 8)
             assert(header->lowresscale == 0 || header->lowresscale == 1);
         /* NEWHU: 19 */
-        assert(version != 19 || header->th19_unk == 0);
+        assert(version == 19 || header->th19_unk == 0);
 
         /* Lengths, including padding, observed are: 16, 32, 48. */
         entry->name = anm_get_name(archive, (const char*)map + header->nameoffset);
