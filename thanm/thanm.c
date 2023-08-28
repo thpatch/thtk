@@ -559,21 +559,21 @@ static const id_format_pair_t th18_patch[] = {
 
 static inline int
 jfif_identify(uint8_t* jfif, uint32_t size) {
-    return size > 11 &&
+    return size >= 11 &&
         memcmp(jfif, "\xFF\xD8\xFF\xE0", 4) == 0 &&
         memcmp(jfif+6, "JFIF", 5) == 0;
 }
 
 static inline int
 exif_identify(uint8_t* exif, uint32_t size) {
-    return size > 11 &&
+    return size >= 11 &&
         memcmp(exif, "\xFF\xD8\xFF\xE1", 4) == 0 &&
         memcmp(exif+6, "Exif", 5) == 0;
 }
 
 static inline int
 png_identify(uint8_t* png, uint32_t size) {
-    return size > 8+sizeof(png_IHDR_t) &&
+    return size >= 8+sizeof(png_IHDR_t) &&
         memcmp(png, "\x89PNG\r\n\x1A\n", 8) == 0 &&
         memcmp(png+12, "IHDR", 4) == 0;
 }
@@ -1895,12 +1895,28 @@ anm_defaults(
         }
         }
 
-        image_t* img = png_read(filename);
+        unsigned width, height;
+        {
+            FILE* stream = fopen(filename, "rb");
+            if (!stream) {
+                fprintf(stderr, "%s: could not open for reading\n", filename);
+                exit(1);
+            }
+            uint8_t img_buf[8+sizeof(png_IHDR_t)];
+            if (fread(img_buf, sizeof(img_buf), 1, stream) != 1 || !png_identify(img_buf, sizeof(img_buf))) {
+                fprintf(stderr, "%s: not a PNG file\n", filename);
+                exit(1);
+            }
+            fclose(stream);
+            png_IHDR_t* ihdr = (void*)(img_buf + 8);
+            width = ihdr->width[2] << 8 | ihdr->width[3];
+            height = ihdr->height[2] << 8 | ihdr->height[3];
+        }
 
         /* header->w/h must be a multiple of 2 */
         if (entry->header->w == DEFAULTVAL) {
             unsigned int n = 1;
-            while(img->width > n) {
+            while(width > n) {
                 n *= 2;
             }
             entry->header->w = n;
@@ -1908,7 +1924,7 @@ anm_defaults(
 
         if (entry->header->h == DEFAULTVAL) {
             unsigned int n = 1;
-            while (img->height > n) {
+            while (height > n) {
                 n *= 2;
             }
             entry->header->h = n;
@@ -1920,17 +1936,14 @@ anm_defaults(
             }
 
             if (entry->thtx->w == DEFAULTVAL)
-                entry->thtx->w = img->width;
+                entry->thtx->w = width;
 
             if (entry->thtx->h == DEFAULTVAL)
-                entry->thtx->h = img->height;
+                entry->thtx->h = height;
 
             if (entry->thtx->size == DEFAULTVAL)
                 entry->thtx->size = entry->thtx->w * entry->thtx->h * format_Bpp(entry->thtx->format);
         }
-
-        free(img->data);
-        free(img);
     }
 }
 
