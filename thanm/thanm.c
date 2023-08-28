@@ -2096,16 +2096,16 @@ print_usage(void)
 #else
 #define USAGE_LIBPNGFLAGS ""
 #endif
-    printf("Usage: %s [-Vf] [[-l" USAGE_LIBPNGFLAGS "] VERSION] [-m ANMMAP] [-s SYMBOLS] ARCHIVE ...\n"
+    printf("Usage: %s [-Vf] [[-l" USAGE_LIBPNGFLAGS "] VERSION] [-m ANMMAP]... [-s SYMBOLS] ARCHIVE ...\n"
            "Options:\n"
            "  -l VERSION ARCHIVE            list archive\n"
 #ifdef HAVE_LIBPNG
            "  -x VERSION ARCHIVE [FILE...]  extract entries\n"
            "  -r VERSION ARCHIVE NAME FILE  replace entry in archive\n"
            "  -c VERSION ARCHIVE SPEC       create archive\n"
-           "  -s                            save symbol ids to the given file as globaldefs\n"
+           "  -s SYMBOLS                    save symbol ids to the given file as globaldefs\n"
 #endif
-           "  -m                            use map file for translating mnemonics\n"
+           "  -m ANMMAP                     use map file for translating mnemonics\n"
            "  -V                            display version information and exit\n"
            "  -f                            ignore errors when possible\n"
            "  -o                            add address information for for ANM instructions\n"

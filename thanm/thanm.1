@@ -24,7 +24,7 @@
 .\" OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 .\" SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
 .\" DAMAGE.
-.Dd May 8, 2023
+.Dd August 28, 2023
 .Dt THANM 1
 .Os
 .Sh NAME
@@ -34,6 +34,8 @@
 .Nm
 .Op Fl Vf
 .Op Oo Fl l | x | r | c Oc Ar version
+.Oo Fl m Ar anmmap Oc Ns Ar ...
+.Oo Fl s Ar symbols Oc
 .Op Ar archive Op Ar ...
 .Sh DESCRIPTION
 The
@@ -41,7 +43,7 @@ The
 utility performs various actions on sprite archives.
 The following commands are available:
 .Bl -tag -width Ds
-.It Nm Fl l Ar version Oo Fl f Oc Ar archive
+.It Nm Fl l Ar version Oo Fl f Oc Oo Fl m Ar anmmap Oc Ns Ar ... Ar archive
 Displays a specification of the archive.
 .It Nm Fl x Ar version Oo Fl f Oc Ar archive Op Ar
 Extracts image files.
@@ -51,7 +53,7 @@ Replaces an entry in the archive.
 The name can be obtained by the
 .Fl l
 command.
-.It Nm Fl c Ar version Oo Fl f Oc Ar archive Ar input
+.It Nm Fl c Ar version Oo Fl f Oc Oo Fl m Ar anmmap Oc Ns Ar ... Oo Fl s Ar symbols Oc Ar archive Ar input
 Creates a new archive from a specification obtained by the
 .Fl l
 command.
@@ -66,11 +68,87 @@ These options are accepted:
 The
 .Fl f
 option can be used to ignore certain errors.
+.It Fl m Ar anmmap
+The
+.Fl m
+option can be used to map ins_* to human readable names.
+.It Fl s Ar symbols
+The
+.Fl s
+option saves symbol ids to the
+.Ar symbols
+file.
 .El
 .Sh EXIT STATUS
 The
 .Nm
 utility exits with 0 on success, 1 on error.
+.Sh "ANMMAP FILE FORMAT"
+Anmmap files, which are added with the
+.Fl m
+option, consist of two kinds of lines: control lines (which start with
+.Ql \&! Ns
+), and mapping lines.
+.Pp
+The file starts with
+.Ql !anmmap
+control line.
+The rest of the control lines select the mapping that is being modified:
+.Bl -tag -width Ds
+.It Ql !ins_names
+Instruction names.
+This is the default mapping.
+.br
+Value: identifier
+.It Ql !ins_signatures
+Instruction signatures.
+.br
+Value: signature
+.It Ql !gvar_names
+Global variable names.
+.br
+Value: identifier
+.It Ql !gvar_types
+Global variable types.
+.br
+.No Value: type ( Ns
+.Ql $
+for integer,
+.Ql %
+for float)
+.El
+.Pp
+Mapping lines are always of form
+.D1 Oo Ar key Oc Oo Ar value Oc
+where
+.Ar key
+is an integer, and
+.Ar value
+is a string without spaces.
+Empty values are allowed.
+.Pp
+When multiple mappings are specified for the same key or value,
+the most recent one has priority.
+For example:
+.Bd -literal -offset indent
+123 foo
+123 bar
+.Ed
+.Pp
+will map
+.Ql 123
+to
+.Ql bar Ns
+,
+.Ql bar
+to
+.Ql 123 Ns
+, and
+.Ql foo
+to
+.Ql 123 Ns
+\&.
+Note how the first reverse mapping doesn't get removed.
 .\" TODO: .Sh EXAMPLES
 .Sh SEE ALSO
 .Lk https://github.com/thpatch/thtk "Project homepage"
