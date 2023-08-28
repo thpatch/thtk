@@ -1258,13 +1258,13 @@ anm_make_unique_filename(
 
     /* split path from extension ("dir/file.png" -> "dir/file", ".png") */
     p = util_shortname(name);
-    if (!(p = strchr(p, '.')))
+    if (!(p = strrchr(p, '.')))
         p = name + strlen(name);
     namepfx = p - name;
 
     /* get basename of the anm file ("dir/file.anm" -> "file") */
     anmname = util_shortname(anmname);
-    if (!(p = strchr(anmname, '.')))
+    if (!(p = strrchr(anmname, '.')))
         p = anmname + strlen(anmname);
     anmnamepfx = p - anmname;
 
