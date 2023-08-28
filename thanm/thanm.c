@@ -1268,13 +1268,13 @@ anm_make_unique_filename(
         p = anmname + strlen(anmname);
     anmnamepfx = p - anmname;
 
-    n = snprintf(0, 0, "%.*s#%.*s#%d%s", namepfx, name, anmnamepfx, anmname, num, name+namepfx);
+    n = snprintf(0, 0, "%.*s@%.*s@%d%s", namepfx, name, anmnamepfx, anmname, num, name+namepfx);
     if (n == -1)
         abort();
     rv = malloc(n+1);
     if (!rv)
         abort();
-    snprintf(rv, n+1, "%.*s#%.*s#%d%s", namepfx, name, anmnamepfx, anmname, num, name+namepfx);
+    snprintf(rv, n+1, "%.*s@%.*s@%d%s", namepfx, name, anmnamepfx, anmname, num, name+namepfx);
     return rv;
 }
 
