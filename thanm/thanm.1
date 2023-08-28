@@ -32,7 +32,7 @@
 .Nd Touhou sprite archive tool
 .Sh SYNOPSIS
 .Nm
-.Op Fl Vf
+.Op Fl Vfu
 .Op Oo Fl l | x | r | c Oc Ar version
 .Oo Fl m Ar anmmap Oc Ns Ar ...
 .Oo Fl s Ar symbols Oc
@@ -43,9 +43,9 @@ The
 utility performs various actions on sprite archives.
 The following commands are available:
 .Bl -tag -width Ds
-.It Nm Fl l Ar version Oo Fl f Oc Oo Fl m Ar anmmap Oc Ns Ar ... Ar archive
+.It Nm Fl l Ar version Oo Fl fu Oc Oo Fl m Ar anmmap Oc Ns Ar ... Ar archive
 Displays a specification of the archive.
-.It Nm Fl x Ar version Oo Fl f Oc Ar archive Op Ar
+.It Nm Fl x Ar version Oo Fl fu Oc Ar archive Op Ar
 Extracts image files.
 If no files are specified, all files are extracted.
 .It Nm Fl r Ar version Oo Fl f Oc Ar archive Ar name Ar file
@@ -78,6 +78,10 @@ The
 option saves symbol ids to the
 .Ar symbols
 file.
+.It u
+The
+.Fl u
+option gives unique filenames to extracted images.
 .El
 .Sh EXIT STATUS
 The

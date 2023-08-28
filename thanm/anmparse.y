@@ -219,6 +219,7 @@ Entry:
 
         entry->name = NULL;
         entry->name2 = NULL;
+        entry->filename = NULL;
         list_init(&entry->sprites);
         list_init(&entry->scripts);
         entry->data = NULL;
@@ -256,6 +257,9 @@ Entry:
 
         OPTIONAL("name2", 't', $prop_list);
         if (prop) entry->name2 = strdup(prop->value->val.t);
+
+        OPTIONAL("filename", 't', $prop_list);
+        if (prop) entry->filename = strdup(prop->value->val.t);
 
         OPTIONAL("format", 'S', $prop_list);
         entry->header->format = prop ? prop->value->val.S : 1;

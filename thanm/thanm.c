@@ -44,8 +44,9 @@
 #include "reg.h"
 
 anmmap_t* g_anmmap = NULL;
-unsigned int option_force;
-unsigned int option_print_offsets;
+unsigned int option_force = 0;
+unsigned int option_print_offsets = 0;
+unsigned int option_unique_filenames = 0;
 unsigned int version = 0;
 
 /* SPECIAL FORMATS:
@@ -1093,6 +1094,7 @@ anm_read_file(
             entry->name2 = (char*)map + header->y;
         else
             entry->name2 = NULL;
+        entry->filename = NULL;
 
         assert(
             (header->hasdata == 0 || (entry->name && entry->name[0] == '@')) ==
@@ -1244,11 +1246,44 @@ anm_stringify_instr(
     fprintf(stream, ");\n");
 }
 
+static char *
+anm_make_unique_filename(
+    const char *name,
+    const char *anmname,
+    int num)
+{
+    const char *p;
+    char *rv;
+    int namepfx, anmnamepfx, n;
+
+    /* split path from extension ("dir/file.png" -> "dir/file", ".png") */
+    p = util_shortname(name);
+    if (!(p = strchr(p, '.')))
+        p = name + strlen(name);
+    namepfx = p - name;
+
+    /* get basename of the anm file ("dir/file.anm" -> "file") */
+    anmname = util_shortname(anmname);
+    if (!(p = strchr(anmname, '.')))
+        p = anmname + strlen(anmname);
+    anmnamepfx = p - anmname;
+
+    n = snprintf(0, 0, "%.*s#%.*s#%d%s", namepfx, name, anmnamepfx, anmname, num, name+namepfx);
+    if (n == -1)
+        abort();
+    rv = malloc(n+1);
+    if (!rv)
+        abort();
+    snprintf(rv, n+1, "%.*s#%.*s#%d%s", namepfx, name, anmnamepfx, anmname, num, name+namepfx);
+    return rv;
+}
+
 static void
 anm_dump(
     FILE* stream,
     const anm_archive_t* anm,
-    unsigned version)
+    unsigned version,
+    const char *anmfilename)
 {
     unsigned int entry_num = 0;
     anm_entry_t* entry;
@@ -1259,6 +1294,11 @@ anm_dump(
         fprintf(stream, "entry entry%u {\n", entry_num++);
         fprintf(stream, "    version: %u,\n", entry->header->version);
         fprintf(stream, "    name: \"%s\",\n", entry->name);
+        if (option_unique_filenames) {
+            char *filename = anm_make_unique_filename(entry->name, anmfilename, entry_num-1);
+            fprintf(stream, "    filename: \"%s\",\n", filename);
+            free(filename);
+        }
         if (entry->name2)
             fprintf(stream, "    name2: \"%s\",\n", entry->name2);
         fprintf(stream, "    format: %u,\n", entry->header->format);
@@ -1381,26 +1421,33 @@ anm_dump(
 }
 
 #ifdef HAVE_LIBPNG
+static anm_entry_t *
+util_entry_by_name(
+    const anm_archive_t *anm,
+    const char *name)
+{
+    anm_entry_t *entry, *rv = 0;
+    list_for_each(&anm->entries, entry)
+        if (entry->name == name) {
+            rv = entry;
+            break;
+        }
+    return rv;
+}
 static void
 util_total_entry_size(
-    const anm_archive_t* anm,
-    const char* name,
+    anm_entry_t* entry,
     unsigned int* widthptr,
     unsigned int* heightptr)
 {
     unsigned int width = 0;
     unsigned int height = 0;
 
-    anm_entry_t* entry;
-    list_for_each(&anm->entries, entry) {
-        if (entry->name == name) {
-            if (!entry->header->hasdata)
-                return;
-            if (entry->header->x + entry->thtx->w > width)
-                width = entry->header->x + entry->thtx->w;
-            if (entry->header->y + entry->thtx->h > height)
-                height = entry->header->y + entry->thtx->h;
-        }
+    if (entry && entry->header->hasdata) {
+        if (entry->header->x + entry->thtx->w > width)
+            width = entry->header->x + entry->thtx->w;
+        if (entry->header->y + entry->thtx->h > height)
+            height = entry->header->y + entry->thtx->h;
     }
 
     *widthptr = width;
@@ -1409,9 +1456,9 @@ util_total_entry_size(
 
 static void
 anm_replace(
-    const anm_archive_t* anm,
+    anm_archive_t* anm,
     FILE* anmfp,
-    const char* name,
+    anm_entry_t* entry,
     const char* filename)
 {
     const format_t formats[] = {
@@ -1426,7 +1473,7 @@ anm_replace(
     unsigned int height = 0;
     image_t* image;
 
-    util_total_entry_size(anm, name, &width, &height);
+    util_total_entry_size(entry, &width, &height);
     if (width == 0 || height == 0) {
         /* There's nothing to do. */
         return;
@@ -1437,17 +1484,16 @@ anm_replace(
     if (width != image->width || height != image->height) {
         fprintf(stderr,
             "%s:%s:%s: wrong image dimensions for %s: %u, %u instead of %u, %u\n",
-            argv0, current_input, name, filename, image->width, image->height,
+            argv0, current_input, entry->name, filename, image->width, image->height,
             width, height);
         exit(1);
     }
 
     for (f = 0; f < sizeof(formats) / sizeof(formats[0]); ++f) {
-
         long offset = 0;
-        anm_entry_t* entry;
-        list_for_each(&anm->entries, entry) {
-            if (entry->name == name &&
+        anm_entry_t* entry2;
+        list_for_each(&anm->entries, entry2) {
+            if (entry2 == entry &&
                 entry->thtx->format == formats[f] &&
                 entry->header->hasdata) {
                 unsigned int y;
@@ -1473,7 +1519,7 @@ anm_replace(
                 free(converted_data);
             }
 
-            offset += entry->header->nextoffset;
+            offset += entry2->header->nextoffset;
         }
     }
 
@@ -1483,8 +1529,8 @@ anm_replace(
 
 static void
 anm_extract(
-    const anm_archive_t* anm,
-    const char* name)
+    anm_entry_t* entry,
+    const char* filename)
 {
     const format_t formats[] = {
         FORMAT_GRAY8,
@@ -1501,46 +1547,41 @@ anm_extract(
     image.height = 0;
     image.format = FORMAT_RGBA8888;
 
-    util_total_entry_size(anm, name, &image.width, &image.height);
+    util_total_entry_size(entry, &image.width, &image.height);
 
     if (image.width == 0 || image.height == 0) {
         /* Then there's nothing to extract. */
         return;
     }
 
-    anm_entry_t* entry;
-    list_for_each(&anm->entries, entry) {
-        if (entry->header->hasdata && entry->name == name) {
-            util_makepath(name);
+    util_makepath(filename);
 
-            /* NEWHU: 19 */
-            if (version == 19) {
-                FILE* stream = fopen(name, "wb");
-                if (stream) {
-                    fwrite(entry->thtx->data, 1, entry->thtx->size, stream);
-                    fclose(stream);
-                }
-                return;
-            }
+    /* NEWHU: 19 */
+    if (version == 19) {
+        FILE* stream = fopen(filename, "wb");
+        if (stream) {
+            fwrite(entry->thtx->data, 1, entry->thtx->size, stream);
+            fclose(stream);
+        }
+        return;
+    }
 
-            image.data = malloc(image.width * image.height * 4);
-            /* XXX: Why 0xff? */
-            memset(image.data, 0xff, image.width* image.height * 4);
-            for (f = 0; f < sizeof(formats) / sizeof(formats[0]); ++f) {
-                if (formats[f] == entry->thtx->format) {
-                    unsigned char* temp_data = format_to_rgba(entry->data, entry->thtx->w * entry->thtx->h, entry->thtx->format);
-                    for (y = entry->header->y; y < entry->header->y + entry->thtx->h; ++y) {
-                        memcpy(image.data + y * image.width * 4 + entry->header->x * 4,
-                            temp_data + (y - entry->header->y) * entry->thtx->w * 4,
-                            entry->thtx->w * 4);
-                    }
-                    free(temp_data);
-                }
+    image.data = malloc(image.width * image.height * 4);
+    /* XXX: Why 0xff? */
+    memset(image.data, 0xff, image.width* image.height * 4);
+    for (f = 0; f < sizeof(formats) / sizeof(formats[0]); ++f) {
+        if (formats[f] == entry->thtx->format) {
+            unsigned char* temp_data = format_to_rgba(entry->data, entry->thtx->w * entry->thtx->h, entry->thtx->format);
+            for (y = entry->header->y; y < entry->header->y + entry->thtx->h; ++y) {
+                memcpy(image.data + y * image.width * 4 + entry->header->x * 4,
+                    temp_data + (y - entry->header->y) * entry->thtx->w * 4,
+                    entry->thtx->w * 4);
             }
+            free(temp_data);
         }
     }
 
-    png_write(name, &image);
+    png_write(filename, &image);
     free(image.data);
 }
 
@@ -1800,12 +1841,14 @@ anm_defaults(
         if (!entry->header->hasdata)
             continue;
 
+        const char *filename = entry->filename ? entry->filename : entry->name;
+
         /* NEWHU: 19 */
         switch (version) {
         case 19: {
-            FILE* stream = fopen(entry->name, "rb");
+            FILE* stream = fopen(filename, "rb");
             if (!stream) {
-                fprintf(stderr, "%s: could not open for reading\n", entry->name);
+                fprintf(stderr, "%s: could not open for reading\n", filename);
                 exit(1);
             }
             fseek(stream, 0, SEEK_END);
@@ -1842,7 +1885,7 @@ anm_defaults(
             }
             else {
             anm_defaults_exit:
-                fprintf(stderr, "%s: not a PNG or JPEG file. Image files must be encoded in PNG or JPEG for Touhou 19\n", entry->name);
+                fprintf(stderr, "%s: not a PNG or JPEG file. Image files must be encoded in PNG or JPEG for Touhou 19\n", filename);
                 free(img_buf);
                 exit(1);
             }
@@ -1852,7 +1895,7 @@ anm_defaults(
         }
         }
 
-        image_t* img = png_read(entry->name);
+        image_t* img = png_read(filename);
 
         /* header->w/h must be a multiple of 2 */
         if (entry->header->w == DEFAULTVAL) {
@@ -2078,6 +2121,7 @@ anm_free(
         }
         list_free_nodes(&entry->sprites);
 
+        free(entry->filename);
         free(entry);
     }
     list_free_nodes(&anm->entries);
@@ -2096,7 +2140,7 @@ print_usage(void)
 #else
 #define USAGE_LIBPNGFLAGS ""
 #endif
-    printf("Usage: %s [-Vf] [[-l" USAGE_LIBPNGFLAGS "] VERSION] [-m ANMMAP]... [-s SYMBOLS] ARCHIVE ...\n"
+    printf("Usage: %s [-Vfu] [[-l" USAGE_LIBPNGFLAGS "] VERSION] [-m ANMMAP]... [-s SYMBOLS] ARCHIVE ...\n"
            "Options:\n"
            "  -l VERSION ARCHIVE            list archive\n"
 #ifdef HAVE_LIBPNG
@@ -2108,6 +2152,7 @@ print_usage(void)
            "  -m ANMMAP                     use map file for translating mnemonics\n"
            "  -V                            display version information and exit\n"
            "  -f                            ignore errors when possible\n"
+           "  -u                            give unique filenames to extracted images\n"
            "  -o                            add address information for for ANM instructions\n"
            "VERSION can be:\n"
            "  6, 7, 8, 9, 95, 10, 103, 11, 12, 125, 128, 13, 14, 143, 15, 16, 165, 17, 18, 185 or 19\n"
@@ -2132,7 +2177,7 @@ main(
 #ifdef HAVE_LIBPNG
                             "x:r:c:s:"
 #endif
-                            "Vf";
+                            "Vfu";
     int command = -1;
 
     FILE* in;
@@ -2190,6 +2235,9 @@ main(
             break;
         case 'f':
             option_force = 1;
+            break;
+        case 'u':
+            option_unique_filenames = 1;
             break;
         case 'o':
             if (command == 'c') {
@@ -2252,7 +2300,7 @@ main(
         }
         anm = anm_read_file(in, version);
         fclose(in);
-        anm_dump(stdout, anm, version);
+        anm_dump(stdout, anm, version, argv[0]);
 
         anm_free(anm);
         exit(0);
@@ -2274,26 +2322,36 @@ main(
 
         if (argc == 1) {
             /* Extract all files. */
-            list_for_each(&anm->names, name) {
-                current_output = name;
-                puts(name);
-                anm_extract(anm, name);
+            int j = 0;
+            list_for_each(&anm->entries, entry) {
+                char *filename = 0;
+                current_output = entry->name;
+                fprintf(stderr, "%s\n", entry->name);
+                if (option_unique_filenames)
+                    filename = anm_make_unique_filename(entry->name, argv[0], j);
+                anm_extract(entry, filename ? filename : entry->name);
+                free(filename);
+                j++;
             }
         } else {
             /* Extract all listed files. */
             for (i = 1; i < argc; ++i) {
-                list_for_each(&anm->names, name) {
-                    if (strcmp(argv[i], name) == 0) {
-                        current_output = name;
-                        puts(name);
-                        anm_extract(anm, name);
-                        goto extract_next;
+                int j = 0;
+                list_for_each(&anm->entries, entry) {
+                    if (strcmp(argv[i], entry->name) == 0) {
+                        char *filename = 0;
+                        current_output = entry->name;
+                        fprintf(stderr, "%s\n", entry->name);
+                        if (option_unique_filenames)
+                            filename = anm_make_unique_filename(entry->name, argv[0], j);
+                        anm_extract(entry, filename ? filename : entry->name);
+                        free(filename);
+                        /* unfortunately we can't just skip to next argv, because of possible duplicates */
                     }
+                    j++;
                 }
                 fprintf(stderr, "%s:%s: %s not found in archive\n",
                     argv0, current_input, argv[i]);
-extract_next:
-                ;
             }
         }
 
@@ -2302,6 +2360,12 @@ extract_next:
     case 'r':
         if (argc != 3) {
             print_usage();
+            exit(1);
+        }
+
+        if (version == 19) {
+            /* NEWHU: 19 */ /* FIXME: */
+            fprintf(stderr, "%s: -r doesn't work with th19\n", argv[0]);
             exit(1);
         }
 
@@ -2324,7 +2388,7 @@ extract_next:
 
         list_for_each(&anm->names, name) {
             if (strcmp(argv[1], name) == 0) {
-                anm_replace(anm, anmfp, name, argv[2]);
+                anm_replace(anm, anmfp, util_entry_by_name(anm, name), argv[2]);
                 goto replace_done;
             }
         }
@@ -2380,9 +2444,8 @@ replace_done:
                      *      w*h*Bpp.  The extra data appears to be all zeroes. */
                     entry->data = calloc(1, entry->thtx->size);
                 }
+                anm_replace(anm, NULL, entry, entry->filename ? entry->filename : entry->name);
             }
-            list_for_each(&anm->names, name)
-                anm_replace(anm, NULL, name, name);
         }
 
         current_output = argv[0];

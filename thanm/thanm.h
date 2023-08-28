@@ -68,6 +68,7 @@ typedef struct {
 
     char* name;
     char* name2;
+    char* filename;
 
     /* List of sprite19_t*. */
     list_t sprites;
