@@ -1946,7 +1946,7 @@ th10_dump(
                     sprintf(temp, "%s", expr->display_format);
 
                     for (size_t s = 0; s < stack_count; ++s) {
-                        sprintf(pat, "s%zu", s);
+                        sprintf(pat, "s%hhu", (uint8_t)s);
                         thecl_instr_t* rep = th10_stack_index(node, s);
                         if (rep->op_type != expr->stack_formats[s]) {
                             char rep_str[1024] = { '\0' };
@@ -1972,7 +1972,7 @@ th10_dump(
 
                     for (size_t p = 0; p < param_count; ++p) {
                         size_t removed = 0;
-                        sprintf(pat, "p%zu", p);
+                        sprintf(pat, "p%hhu", (uint8_t)p);
                         char* rep_str = th10_stringify_param(ecl->version, sub, node, p, NULL, &removed, 1);
                         str_replace(temp, pat, rep_str);
                         free(rep_str);
