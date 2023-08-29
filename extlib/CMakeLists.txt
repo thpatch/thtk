@@ -1,36 +1,45 @@
 if (WITH_LIBPNG_SOURCE)
   # CUSTOM ZLIB-NG BUILD
-  file(COPY zlib-ng/zconf.h.in zlib-ng/zconf-ng.h.in zlib-ng/zlib.h zlib-ng/zlib-ng.h
-       DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/zlib-ng)
-  file(RENAME ${CMAKE_CURRENT_BINARY_DIR}/zlib-ng/zconf.h.in
-              ${CMAKE_CURRENT_BINARY_DIR}/zlib-ng/zconf.h)
-  file(RENAME ${CMAKE_CURRENT_BINARY_DIR}/zlib-ng/zconf-ng.h.in
-              ${CMAKE_CURRENT_BINARY_DIR}/zlib-ng/zconf-ng.h)
+  configure_file(${CMAKE_CURRENT_SOURCE_DIR}/zlib-ng/zconf.h.in
+                 ${CMAKE_CURRENT_BINARY_DIR}/zlib-ng/zconf.h COPYONLY)
+  # essentially, sed 's/@ZLIB_SYMBOL_PREFIX@//g' zlib.h.in >zlib.h
+  configure_file(${CMAKE_CURRENT_SOURCE_DIR}/zlib-ng/zlib.h.in
+                 ${CMAKE_CURRENT_BINARY_DIR}/zlib-ng/zlib.h @ONLY)
+  configure_file(${CMAKE_CURRENT_SOURCE_DIR}/zlib-ng/zlib_name_mangling.h.empty
+                 ${CMAKE_CURRENT_BINARY_DIR}/zlib-ng/zlib_name_mangling.h COPYONLY)
 
   add_library(z STATIC
   zlib-ng/adler32.c
+  zlib-ng/adler32_fold.c
   zlib-ng/adler32_p.h
   zlib-ng/chunkset.c
   zlib-ng/chunkset_tpl.h
-  zlib-ng/compare258.c
+  zlib-ng/compare256.c
+  zlib-ng/compare256_rle.h
   zlib-ng/compress.c
-  zlib-ng/crc32.c
-  zlib-ng/crc32_comb.c
-  zlib-ng/crc32_comb_tbl.h
-  zlib-ng/crc32_p.h
-  zlib-ng/crc32_tbl.h
+  zlib-ng/cpu_features.c
+  zlib-ng/cpu_features.h
+  zlib-ng/crc32_braid.c
+  zlib-ng/crc32_braid_comb.c
+  zlib-ng/crc32_braid_comb_p.h
+  zlib-ng/crc32_braid_p.h
+  zlib-ng/crc32_braid_tbl.h
+  zlib-ng/crc32_fold.c
+  zlib-ng/crc32_fold.h
   zlib-ng/deflate.c
   zlib-ng/deflate.h
   zlib-ng/deflate_fast.c
+  zlib-ng/deflate_huff.c
   zlib-ng/deflate_medium.c
   zlib-ng/deflate_p.h
   zlib-ng/deflate_quick.c
+  zlib-ng/deflate_rle.c
   zlib-ng/deflate_slow.c
+  zlib-ng/deflate_stored.c
   zlib-ng/functable.c
   zlib-ng/functable.h
   zlib-ng/infback.c
-  zlib-ng/inffast.c
-  zlib-ng/inffast.h
+  zlib-ng/inffast_tpl.h
   zlib-ng/inffixed_tbl.h
   zlib-ng/inflate.c
   zlib-ng/inflate.h
@@ -38,8 +47,10 @@ if (WITH_LIBPNG_SOURCE)
   zlib-ng/inftrees.c
   zlib-ng/inftrees.h
   zlib-ng/insert_string.c
+  zlib-ng/insert_string_roll.c
   zlib-ng/insert_string_tpl.h
   zlib-ng/match_tpl.h
+  zlib-ng/slide_hash.c
   zlib-ng/trees.c
   zlib-ng/trees.h
   zlib-ng/trees_emit.h
@@ -50,12 +61,14 @@ if (WITH_LIBPNG_SOURCE)
   zlib-ng/zutil.c
   zlib-ng/zutil.h
 
-  zlib-ng/zlib.h)
+  ${CMAKE_CURRENT_BINARY_DIR}/zlib-ng/zconf.h
+  ${CMAKE_CURRENT_BINARY_DIR}/zlib-ng/zlib.h
+  ${CMAKE_CURRENT_BINARY_DIR}/zlib-ng/zlib_name_mangling.h)
   target_include_directories(z PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/zlib-ng)
   if (HAVE_UNISTD_H)
     set(Z_HAVE_UNISTD_H "Z_HAVE_UNISTD_H")
   endif()
-  target_compile_definitions(z PRIVATE ZLIB_COMPAT)
+  target_compile_definitions(z PRIVATE ZLIB_COMPAT;$<$<NOT:$<C_COMPILER_ID:MSVC>>:HAVE_ATTRIBUTE_ALIGNED>)
   target_compile_definitions(z PUBLIC ${Z_HAVE_UNISTD_H})
 
   # CUSTOM LIBPNG BUILD
