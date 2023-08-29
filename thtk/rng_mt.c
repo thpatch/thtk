@@ -36,7 +36,7 @@ static const int32_t M = 397;
 static const uint32_t UPPER_MASK = 0x80000000UL;
 static const uint32_t LOWER_MASK = 0x7FFFFFFFUL;
 
-void
+static void
 rng_mt_internal_init(
     rng_mt* rng,
     uint32_t seed)

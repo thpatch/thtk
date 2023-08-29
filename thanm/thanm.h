@@ -55,7 +55,7 @@ typedef struct {
     list_t vars;
 } anm_script_t;
 
-anm_script_t* anm_script_new();
+anm_script_t* anm_script_new(void);
 
 typedef struct {
     uint16_t type;
@@ -201,7 +201,7 @@ var_t* var_new(char* name, int type);
 
 void var_free(var_t* var);
 
-thanm_instr_t* thanm_instr_new();
+thanm_instr_t* thanm_instr_new(void);
 thanm_instr_t* instr_new(parser_state_t* state, uint16_t id, list_t* params);
 
 #define DEFAULTVAL 0xffff

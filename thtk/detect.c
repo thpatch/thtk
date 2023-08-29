@@ -250,7 +250,8 @@ detect_basename(
     fs = fs ? fs + 1 : path;
     return (bs > fs) ? bs : fs;
 }
-const wchar_t*
+#ifdef _WIN32
+static const wchar_t*
 detect_basename_w(
     const wchar_t* path)
 {
@@ -260,6 +261,7 @@ detect_basename_w(
     fs = fs ? fs + 1 : path;
     return (bs > fs) ? bs : fs;
 }
+#endif
 
 #ifndef _WIN32
 int

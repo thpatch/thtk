@@ -39,7 +39,7 @@ typedef struct anmmap_t {
     seqmap_t* gvar_types;
 } anmmap_t;
 
-anmmap_t* anmmap_new();
+anmmap_t* anmmap_new(void);
 void anmmap_free(anmmap_t* map);
 void anmmap_load(anmmap_t* map, FILE* file, const char* fn);
 

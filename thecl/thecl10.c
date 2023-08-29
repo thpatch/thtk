@@ -1421,7 +1421,7 @@ th10_create_forward_declaraion(
     list_prepend_new(&ecl->subs, sub);
 }
 
-void
+static void
 th10_trans(
     thecl_t* ecl)
 {

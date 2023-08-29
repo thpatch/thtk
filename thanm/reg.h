@@ -56,7 +56,7 @@ struct reg_t {
 reg_t* reg_new(int id, int type);
 
 /* Frees all user-defined registers. */
-void reg_free_user();
+void reg_free_user(void);
 
 /* Unlocks all registers. */
 void reg_reset(int ver);

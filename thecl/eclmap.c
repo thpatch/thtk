@@ -223,7 +223,7 @@ eclmap_load(
     seqmap_load("!eclmap", &state, (seqmap_setfunc_t)set, (seqmap_controlfunc_t)control, f, fn);
 }
 
-int
+static int
 strcmp_indirect(
     const void *lhs,
     const void *rhs)

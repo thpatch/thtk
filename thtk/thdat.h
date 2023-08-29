@@ -86,4 +86,8 @@ struct thdat_module_t {
         (target) = &(array)[(counter) - 1]; \
     } while (0)
 
+/* detect.c */
+const char *detect_basename(const char *path);
+/* match.c */
+int glob_match(const char *p, const char *s);
 #endif

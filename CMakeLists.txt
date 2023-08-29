@@ -121,7 +121,7 @@ if(MSVC)
   )
 else()
   set_target_properties(thtk_warning PROPERTIES
-    INTERFACE_COMPILE_OPTIONS "-Wall;-Wextra;-Wno-parentheses;$<$<C_COMPILER_ID:Clang,AppleClang>:-Wno-pragma-pack>;-Wno-sign-compare"
+    INTERFACE_COMPILE_OPTIONS "-Wall;-Wextra;-Wno-parentheses;$<$<C_COMPILER_ID:Clang,AppleClang>:-Wno-pragma-pack>;-Wno-sign-compare;-Wmissing-prototypes"
   )
 endif()
 

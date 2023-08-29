@@ -48,7 +48,7 @@ typedef struct eclmap_t {
 } eclmap_t;
 
 /* Allocates and initalizes a new eclmap */
-eclmap_t* eclmap_new();
+eclmap_t* eclmap_new(void);
 /* Frees an eclmap */
 void eclmap_free(eclmap_t* map);
 /* Loads entries from eclmap file (thread unsafe) */

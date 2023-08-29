@@ -24,6 +24,8 @@
  * For more information, please refer to <http://unlicense.org/>
  **/
 
+#include "thdat.h"
+
 /* glob matching is just a substring search with extra steps
  * average O(n+m), worst O(nm)
  * for more details see https://research.swtch.com/glob
