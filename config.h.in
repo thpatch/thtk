@@ -1,6 +1,13 @@
 #ifndef THTK_CONFIG_H_
 #define THTK_CONFIG_H_
 
+/* Flex uses stdint.h if the compiler reports itself as C99. MSVC doesn't. */
+#if !defined(__STDC_VERSION__) && defined(_MSC_VER)
+# if _MSC_VER >= 1900
+#  define __STDC_VERSION__ 199901L
+# endif
+#endif
+
 #ifdef _MSC_VER
 # define PRAGMA(x) __pragma(x)
 #else

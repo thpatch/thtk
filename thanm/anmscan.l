@@ -29,7 +29,6 @@
  * DAMAGE.
  */
 #include <config.h>
-#include <stdint.h>
 #define yylval thanm_yylval
 #define yylloc thanm_yylloc
 #define yyerror thanm_yyerror
