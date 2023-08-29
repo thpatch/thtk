@@ -47,7 +47,6 @@ anmmap_t* g_anmmap = NULL;
 unsigned int option_force = 0;
 unsigned int option_print_offsets = 0;
 unsigned int option_unique_filenames = 0;
-unsigned int version = 0;
 
 /* SPECIAL FORMATS:
  * 'o' - offset (for labels)
@@ -1530,7 +1529,8 @@ anm_replace(
 static void
 anm_extract(
     anm_entry_t* entry,
-    const char* filename)
+    const char* filename,
+    unsigned version)
 {
     const format_t formats[] = {
         FORMAT_GRAY8,
@@ -1834,7 +1834,8 @@ anm_create(
 
 static void
 anm_defaults(
-    anm_archive_t* anm
+    anm_archive_t* anm,
+    int version
 ) {
     anm_entry_t* entry;
     list_for_each(&anm->entries, entry) {
@@ -2194,6 +2195,7 @@ main(
     int command = -1;
 
     FILE* in;
+    unsigned version = 0;
 
     anm_archive_t* anm;
 #ifdef HAVE_LIBPNG
@@ -2342,7 +2344,7 @@ main(
                 fprintf(stderr, "%s\n", entry->name);
                 if (option_unique_filenames)
                     filename = anm_make_unique_filename(entry->name, argv[0], j);
-                anm_extract(entry, filename ? filename : entry->name);
+                anm_extract(entry, filename ? filename : entry->name, version);
                 free(filename);
                 j++;
             }
@@ -2357,7 +2359,7 @@ main(
                         fprintf(stderr, "%s\n", entry->name);
                         if (option_unique_filenames)
                             filename = anm_make_unique_filename(entry->name, argv[0], j);
-                        anm_extract(entry, filename ? filename : entry->name);
+                        anm_extract(entry, filename ? filename : entry->name, version);
                         free(filename);
                         /* unfortunately we can't just skip to next argv, because of possible duplicates */
                     }
@@ -2446,7 +2448,7 @@ replace_done:
         if (anm == NULL)
             exit(0);
 
-        anm_defaults(anm);
+        anm_defaults(anm, version);
 
         /* Allocate enough space for the THTX data. */
         /* NEWHU: 19 */
