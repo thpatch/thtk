@@ -563,7 +563,7 @@ thdat_detect_iter(
         uint32_t v = out[i];
         int j=0;
         for(;!(v&1);v>>=1, j++);
-        out[i] &= -1u << (j+1);
+        out[i] &= ~0u << (j+1);
         int entry_num = i*32 + j;
         if(entry_num >= DETECT_ENTRIES) { /* non-existent entry */
             out[0]=out[1]=out[2]=out[3] = 0;
