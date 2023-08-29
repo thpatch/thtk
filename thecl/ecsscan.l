@@ -29,6 +29,7 @@
  * DAMAGE.
  */
 #include <config.h>
+#include <stdint.h>
 #define yylval thecl_yylval
 #define yylloc thecl_yylloc
 #define yyerror thecl_yyerror
