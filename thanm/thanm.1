@@ -24,7 +24,7 @@
 .\" OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 .\" SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
 .\" DAMAGE.
-.Dd August 28, 2023
+.Dd August 30, 2023
 .Dt THANM 1
 .Os
 .Sh NAME
@@ -32,7 +32,7 @@
 .Nd Touhou sprite archive tool
 .Sh SYNOPSIS
 .Nm
-.Op Fl Vfu
+.Op Fl Vfub
 .Op Oo Fl l | x | r | c Oc Ar version
 .Oo Fl m Ar anmmap Oc Ns Ar ...
 .Oo Fl s Ar symbols Oc
@@ -45,15 +45,15 @@ The following commands are available:
 .Bl -tag -width Ds
 .It Nm Fl l Ar version Oo Fl fu Oc Oo Fl m Ar anmmap Oc Ns Ar ... Ar archive
 Displays a specification of the archive.
-.It Nm Fl x Ar version Oo Fl fu Oc Ar archive Op Ar
+.It Nm Fl x Ar version Oo Fl fub Oc Ar archive Op Ar
 Extracts image files.
 If no files are specified, all files are extracted.
-.It Nm Fl r Ar version Oo Fl f Oc Ar archive Ar name Ar file
+.It Nm Fl r Ar version Oo Fl fb Oc Ar archive Ar name Ar file
 Replaces an entry in the archive.
 The name can be obtained by the
 .Fl l
 command.
-.It Nm Fl c Ar version Oo Fl f Oc Oo Fl m Ar anmmap Oc Ns Ar ... Oo Fl s Ar symbols Oc Ar archive Ar input
+.It Nm Fl c Ar version Oo Fl fb Oc Oo Fl m Ar anmmap Oc Ns Ar ... Oo Fl s Ar symbols Oc Ar archive Ar input
 Creates a new archive from a specification obtained by the
 .Fl l
 command.
@@ -82,6 +82,14 @@ file.
 The
 .Fl u
 option gives unique filenames to extracted images.
+.It b
+The
+.Fl b
+option disables adding/removing a border to images with x/y offset.
+For TH19,
+.Nm
+won't recompress the image unless it needs to add a border.
+JPEGs are never recompressed, regardless of the setting.
 .El
 .Sh EXIT STATUS
 The

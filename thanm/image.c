@@ -183,6 +183,62 @@ format_to_rgba(
     return (unsigned char*)out;
 }
 
+void
+png_read_mem(
+    image_t *image,
+    void *data,
+    size_t len)
+{
+    png_image png = {
+        .version = PNG_IMAGE_VERSION,
+        .opaque = NULL
+    };
+    png_image_begin_read_from_memory(&png, data, len);
+    if (PNG_IMAGE_FAILED(png)) {
+        fprintf(stderr, "%s: error decoding png: %s\n", argv0, png.message);
+        exit(1);
+    }
+    png.format = PNG_FORMAT_RGBA;
+
+    image->width = png.width;
+    image->height = png.height;
+    image->format = FORMAT_RGBA8888;
+    image->data = malloc(PNG_IMAGE_SIZE(png));
+
+    png_image_finish_read(&png, 0, image->data, 0, 0);
+    if (PNG_IMAGE_FAILED(png)) {
+        fprintf(stderr, "%s: error decoding png: %s\n", argv0, png.message);
+        exit(1);
+    }
+}
+
+void *
+png_write_mem(
+    image_t *image,
+    size_t *outsize)
+{
+    png_image png;
+    memset(&png, 0, sizeof(png));
+    png.version = PNG_IMAGE_VERSION;
+    png.width = image->width;
+    png.height = image->height;
+    png.format = PNG_FORMAT_RGBA;
+
+    png_image_write_to_memory(&png, 0, outsize, 0, image->data, 0, 0);
+    if (PNG_IMAGE_FAILED(png)) {
+        fprintf(stderr, "%s: error encoding png: %s\n", argv0, png.message);
+        exit(1);
+    }
+    void *out = malloc(*outsize);
+    png_image_write_to_memory(&png, out, outsize, 0, image->data, 0, 0);
+    if (PNG_IMAGE_FAILED(png)) {
+        fprintf(stderr, "%s: error encoding png: %s\n", argv0, png.message);
+        exit(1);
+    }
+
+    return out;
+}
+
 image_t*
 png_read(
     const char* filename)

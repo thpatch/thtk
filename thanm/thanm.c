@@ -47,6 +47,7 @@ anmmap_t* g_anmmap = NULL;
 unsigned int option_force = 0;
 unsigned int option_print_offsets = 0;
 unsigned int option_unique_filenames = 0;
+unsigned int option_dont_add_offset_border = 0;
 
 /* SPECIAL FORMATS:
  * 'o' - offset (for labels)
@@ -1443,10 +1444,12 @@ util_total_entry_size(
     unsigned int height = 0;
 
     if (entry && entry->header->hasdata) {
-        if (entry->header->x + entry->thtx->w > width)
-            width = entry->header->x + entry->thtx->w;
-        if (entry->header->y + entry->thtx->h > height)
-            height = entry->header->y + entry->thtx->h;
+        const uint32_t ox = option_dont_add_offset_border ? 0 : entry->header->x;
+        const uint32_t oy = option_dont_add_offset_border ? 0 : entry->header->y;
+        if (ox + entry->thtx->w > width)
+            width = ox + entry->thtx->w;
+        if (oy + entry->thtx->h > height)
+            height = oy + entry->thtx->h;
     }
 
     *widthptr = width;
@@ -1498,19 +1501,21 @@ anm_replace(
                 unsigned int y;
 
                 unsigned char* converted_data = format_from_rgba((uint32_t*)image->data, width * height, formats[f]);
+                const uint32_t ox = option_dont_add_offset_border ? 0 : entry->header->x;
+                const uint32_t oy = option_dont_add_offset_border ? 0 : entry->header->y;
 
                 if (anmfp) {
-                    for (y = entry->header->y; y < entry->header->y + entry->thtx->h; ++y) {
+                    for (y = oy; y < oy + entry->thtx->h; ++y) {
                         if (!file_seek(anmfp,
-                            offset + entry->header->thtxoffset + sizeof(thtx_header_t) + (y - entry->header->y) * entry->thtx->w * format_Bpp(formats[f])))
+                            offset + entry->header->thtxoffset + sizeof(thtx_header_t) + (y - oy) * entry->thtx->w * format_Bpp(formats[f])))
                             exit(1);
-                        if (!file_write(anmfp, converted_data + y * width * format_Bpp(formats[f]) + entry->header->x * format_Bpp(formats[f]), entry->thtx->w * format_Bpp(formats[f])))
+                        if (!file_write(anmfp, converted_data + y * width * format_Bpp(formats[f]) + ox * format_Bpp(formats[f]), entry->thtx->w * format_Bpp(formats[f])))
                             exit(1);
                     }
                 } else {
-                    for (y = entry->header->y; y < entry->header->y + entry->thtx->h; ++y) {
-                        memcpy(entry->data + (y - entry->header->y) * entry->thtx->w * format_Bpp(formats[f]),
-                               converted_data + y * width * format_Bpp(formats[f]) + entry->header->x * format_Bpp(formats[f]),
+                    for (y = oy; y < oy + entry->thtx->h; ++y) {
+                        memcpy(entry->data + (y - oy) * entry->thtx->w * format_Bpp(formats[f]),
+                               converted_data + y * width * format_Bpp(formats[f]) + ox * format_Bpp(formats[f]),
                                entry->thtx->w * format_Bpp(formats[f]));
                     }
                 }
@@ -1524,6 +1529,20 @@ anm_replace(
 
     free(image->data);
     free(image);
+}
+
+static unsigned char *
+entry_to_rgba(
+    anm_entry_t *entry,
+    int is_png)
+{
+    if (is_png) {
+        image_t image;
+        png_read_mem(&image, entry->data, entry->thtx->size);
+        return image.data;
+    } else {
+        return format_to_rgba(entry->data, entry->thtx->w * entry->thtx->h, entry->thtx->format);
+    }
 }
 
 static void
@@ -1556,14 +1575,22 @@ anm_extract(
 
     util_makepath(filename);
 
+    const uint32_t ox = option_dont_add_offset_border ? 0 : entry->header->x;
+    const uint32_t oy = option_dont_add_offset_border ? 0 : entry->header->y;
+    int is_png = 0;
+
     /* NEWHU: 19 */
     if (version == 19) {
-        FILE* stream = fopen(filename, "wb");
-        if (stream) {
-            fwrite(entry->thtx->data, 1, entry->thtx->size, stream);
-            fclose(stream);
+        if (png_identify(entry->thtx->data, entry->thtx->size) && (ox || oy)) {
+            is_png = 1;
+        } else {
+            FILE* stream = fopen(filename, "wb");
+            if (stream) {
+                fwrite(entry->thtx->data, 1, entry->thtx->size, stream);
+                fclose(stream);
+            }
+            return;
         }
-        return;
     }
 
     image.data = malloc(image.width * image.height * 4);
@@ -1571,10 +1598,10 @@ anm_extract(
     memset(image.data, 0xff, image.width* image.height * 4);
     for (f = 0; f < sizeof(formats) / sizeof(formats[0]); ++f) {
         if (formats[f] == entry->thtx->format) {
-            unsigned char* temp_data = format_to_rgba(entry->data, entry->thtx->w * entry->thtx->h, entry->thtx->format);
-            for (y = entry->header->y; y < entry->header->y + entry->thtx->h; ++y) {
-                memcpy(image.data + y * image.width * 4 + entry->header->x * 4,
-                    temp_data + (y - entry->header->y) * entry->thtx->w * 4,
+            unsigned char* temp_data = entry_to_rgba(entry, is_png);
+            for (y = oy; y < oy + entry->thtx->h; ++y) {
+                memcpy(image.data + y * image.width * 4 + ox * 4,
+                    temp_data + (y - oy) * entry->thtx->w * 4,
                     entry->thtx->w * 4);
             }
             free(temp_data);
@@ -2154,7 +2181,7 @@ print_usage(void)
 #else
 #define USAGE_LIBPNGFLAGS ""
 #endif
-    printf("Usage: %s [-Vfu] [[-l" USAGE_LIBPNGFLAGS "] VERSION] [-m ANMMAP]... [-s SYMBOLS] ARCHIVE ...\n"
+    printf("Usage: %s [-Vfub] [[-l" USAGE_LIBPNGFLAGS "] VERSION] [-m ANMMAP]... [-s SYMBOLS] ARCHIVE ...\n"
            "Options:\n"
            "  -l VERSION ARCHIVE            list archive\n"
 #ifdef HAVE_LIBPNG
@@ -2167,6 +2194,7 @@ print_usage(void)
            "  -V                            display version information and exit\n"
            "  -f                            ignore errors when possible\n"
            "  -u                            give unique filenames to extracted images\n"
+           "  -b                            don't add/remove a border to images with x/y offset\n"
            "  -o                            add address information for for ANM instructions\n"
            "VERSION can be:\n"
            "  6, 7, 8, 9, 95, 10, 103, 11, 12, 125, 128, 13, 14, 143, 15, 16, 165, 17, 18, 185 or 19\n"
@@ -2191,7 +2219,7 @@ main(
 #ifdef HAVE_LIBPNG
                             "x:r:c:s:"
 #endif
-                            "Vfu";
+                            "Vfub";
     int command = -1;
 
     FILE* in;
@@ -2253,6 +2281,9 @@ main(
             break;
         case 'u':
             option_unique_filenames = 1;
+            break;
+        case 'b':
+            option_dont_add_offset_border = 1;
             break;
         case 'o':
             if (command == 'c') {

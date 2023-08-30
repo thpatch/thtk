@@ -13,6 +13,7 @@ What's new in thtk master
 - Support for TH18, TH185, TH19 (full) has been added.
 - Support th143/bestshot.anm
 - The -u flag can now be used to extract anm files with duplicate filenames.
+- Images can now be extracted without adding a border using the -b flag.
 
 #### thanm.old
 - Will be removed in the next release.

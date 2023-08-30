@@ -59,6 +59,17 @@ typedef struct {
     format_t format;
 } image_t;
 
+void
+png_read_mem(
+    image_t *image,
+    void *data,
+    size_t len);
+
+void *
+png_write_mem(
+    image_t *image,
+    size_t *outsize);
+
 image_t*
 png_read(
     const char* filename);
