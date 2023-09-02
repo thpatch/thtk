@@ -24,7 +24,7 @@
 .\" OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 .\" SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
 .\" DAMAGE.
-.Dd August 30, 2023
+.Dd September 3, 2023
 .Dt THANM 1
 .Os
 .Sh NAME
@@ -32,7 +32,7 @@
 .Nd Touhou sprite archive tool
 .Sh SYNOPSIS
 .Nm
-.Op Fl Vfub
+.Op Fl Vfuv
 .Op Oo Fl l | x | r | c Oc Ar version
 .Oo Fl m Ar anmmap Oc Ns Ar ...
 .Oo Fl s Ar symbols Oc
@@ -43,17 +43,17 @@ The
 utility performs various actions on sprite archives.
 The following commands are available:
 .Bl -tag -width Ds
-.It Nm Fl l Ar version Oo Fl fu Oc Oo Fl m Ar anmmap Oc Ns Ar ... Ar archive
+.It Nm Fl l Ar version Oo Fl fuv Oc Oo Fl m Ar anmmap Oc Ns Ar ... Ar archive
 Displays a specification of the archive.
-.It Nm Fl x Ar version Oo Fl fub Oc Ar archive Op Ar
+.It Nm Fl x Ar version Oo Fl fuv Oc Ar archive Op Ar
 Extracts image files.
 If no files are specified, all files are extracted.
-.It Nm Fl r Ar version Oo Fl fb Oc Ar archive Ar name Ar file
+.It Nm Fl r Ar version Oo Fl fuv Oc Ar archive Ar name Ar file
 Replaces an entry in the archive.
 The name can be obtained by the
 .Fl l
 command.
-.It Nm Fl c Ar version Oo Fl fb Oc Oo Fl m Ar anmmap Oc Ns Ar ... Oo Fl s Ar symbols Oc Ar archive Ar input
+.It Nm Fl c Ar version Oo Fl fuv Oc Oo Fl m Ar anmmap Oc Ns Ar ... Oo Fl s Ar symbols Oc Ar archive Ar input
 Creates a new archive from a specification obtained by the
 .Fl l
 command.
@@ -78,23 +78,83 @@ The
 option saves symbol ids to the
 .Ar symbols
 file.
-.It u
+.It Fl u
 The
 .Fl u
-option gives unique filenames to extracted images.
-.It b
+option extracts each texture into a separate file.
+When specified twice, x/y offset is ignored.
+See
+.Sx IMAGE COMPOSITION
+for more information.
+.It Fl v
 The
-.Fl b
-option disables adding/removing a border to images with x/y offset.
-For TH19,
-.Nm
-won't recompress the image unless it needs to add a border.
-JPEGs are never recompressed, regardless of the setting.
+.Fl v
+option increases verbosity of the output.
+It can be specified multiple times.
 .El
 .Sh EXIT STATUS
 The
 .Nm
 utility exits with 0 on success, 1 on error.
+.Sh IMAGE COMPOSITION
+Each texture in an ANM file has an associated source image filename.
+By default
+.Nm
+creates textures by cropping the source image
+according to the following parameters:
+.Va xOffset ,
+.Va yOffset ,
+.Va THTXWidth ,
+.Va THTXHeight .
+When extracting the textures, the process is reversed.
+However, because multiple textures may come from a single source file,
+they have to be composed together during extraction.
+Additionally, in either case, the textures have to be converted to/from
+the appropriate format.
+.Bl -tag -width Ds
+.It Composition when creating Po Fl c Pc or replacing Po Fl r Pc :
+The source image is read from a file, decoded as PNG, cropped,
+and encoded in the texture format.
+.It Composition when extracting Po Fl x Pc :
+Each texture is decoded into RGBA, and placed on a canvas.
+The canvas is encoded as PNG and written to the destination file.
+.El
+.Pp
+Currently there's no way to compose textures from multiple ANM files.
+.Pp
+The
+.Fl u
+option extracts each texture into its own file.
+It's important to also use the
+.Fl u
+option for listing
+.Pq Fl l ,
+because
+.Fl c
+relies on the alternative filenames being specified in the spec file.
+Even with
+.Fl u
+the images are cropped/padded when they have an offset.
+The
+.Fl uu
+option ignores the offset, thereby disabling cropping/padding.
+.Pp
+In TH19, the textures are stored using PNG and JPEG compression.
+.Nm
+tries to avoid recompression when possible,
+so composition is only done when necessary.
+Uncompressed textures (pre-TH19) are always composed,
+even if only to convert them to PNG.
+PNGs are only composed only if there's a nonzero offset,
+or there are multiple textures referencing the same image.
+Otherwise the file is copied directly, without recompression
+.Pq Fl uu No forces this behavior .
+JPEGs are
+.Em never
+composed, but it shouldn't be necessary either.
+If a JPEG has to be composed,
+.Nm
+will issue a warning.
 .Sh "ANMMAP FILE FORMAT"
 Anmmap files, which are added with the
 .Fl m

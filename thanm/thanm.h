@@ -62,13 +62,15 @@ typedef struct {
     const char* format;
 } opcode_fmt_t;
 
-typedef struct {
+typedef struct anm_entry_t {
     anm_header06_t* header;
     thtx_header_t* thtx;
 
     char* name;
     char* name2;
-    char* filename;
+    char* filename; /* filename from which to load the image */
+    struct anm_entry_t *next_by_name; /* next entry with the same name */
+    int processed; /* whether the entry was already processed */
 
     /* List of sprite19_t*. */
     list_t sprites;

@@ -223,6 +223,7 @@ png_write_mem(
     png.width = image->width;
     png.height = image->height;
     png.format = PNG_FORMAT_RGBA;
+    png.flags = PNG_IMAGE_FLAG_FAST;
 
     png_image_write_to_memory(&png, 0, outsize, 0, image->data, 0, 0);
     if (PNG_IMAGE_FAILED(png)) {

@@ -208,7 +208,7 @@ Statement:
 
 Entry:
     "entry" IDENTIFIER[entry_name] "{" Properties[prop_list] "}" {
-        anm_entry_t* entry = (anm_entry_t*)malloc(sizeof(anm_entry_t));
+        anm_entry_t* entry = (anm_entry_t*)calloc(1, sizeof(anm_entry_t));
         entry->header = (anm_header06_t*)calloc(1, sizeof(anm_header06_t));
         entry->thtx = (thtx_header_t*)calloc(1, sizeof(thtx_header_t));
 
@@ -217,12 +217,8 @@ Entry:
         entry->thtx->magic[2] = 'T';
         entry->thtx->magic[3] = 'X';
 
-        entry->name = NULL;
-        entry->name2 = NULL;
-        entry->filename = NULL;
         list_init(&entry->sprites);
         list_init(&entry->scripts);
-        entry->data = NULL;
 
         prop_list_entry_t* prop;
         #define REQUIRE(x, y, l) { \

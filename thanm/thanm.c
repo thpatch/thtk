@@ -48,6 +48,7 @@ unsigned int option_force = 0;
 unsigned int option_print_offsets = 0;
 unsigned int option_unique_filenames = 0;
 unsigned int option_dont_add_offset_border = 0;
+unsigned int option_verbose = 0;
 
 /* SPECIAL FORMATS:
  * 'o' - offset (for labels)
@@ -1049,7 +1050,7 @@ anm_read_file(
 
     int32_t scriptn = 0;
     for (;;) {
-        anm_entry_t* entry = malloc(sizeof(*entry));
+        anm_entry_t* entry = calloc(1, sizeof(*entry));
         anm_header06_t* header = (anm_header06_t*)map;
 
         list_append_new(&archive->entries, entry);
@@ -1092,9 +1093,6 @@ anm_read_file(
         entry->name = anm_get_name(archive, (const char*)map + header->nameoffset);
         if (header->version == 0 && header->y != 0)
             entry->name2 = (char*)map + header->y;
-        else
-            entry->name2 = NULL;
-        entry->filename = NULL;
 
         assert(
             (header->hasdata == 0 || (entry->name && entry->name[0] == '@')) ==
@@ -1435,6 +1433,21 @@ util_entry_by_name(
     return rv;
 }
 static void
+anm_build_name_lists(
+    const anm_archive_t *anm)
+{
+    const char *name;
+    anm_entry_t *entry, *tmp, **nextloc;
+    list_for_each(&anm->names, name) {
+        nextloc = &tmp;
+        list_for_each(&anm->entries, entry)
+            if (entry->name == name) {
+                *nextloc = entry;
+                nextloc = &entry->next_by_name;
+            }
+    }
+}
+static void
 util_total_entry_size(
     anm_entry_t* entry,
     unsigned int* widthptr,
@@ -1443,13 +1456,16 @@ util_total_entry_size(
     unsigned int width = 0;
     unsigned int height = 0;
 
-    if (entry && entry->header->hasdata) {
-        const uint32_t ox = option_dont_add_offset_border ? 0 : entry->header->x;
-        const uint32_t oy = option_dont_add_offset_border ? 0 : entry->header->y;
-        if (ox + entry->thtx->w > width)
-            width = ox + entry->thtx->w;
-        if (oy + entry->thtx->h > height)
-            height = oy + entry->thtx->h;
+    while (entry) {
+        if (entry->header->hasdata) {
+            const uint32_t ox = option_dont_add_offset_border ? 0 : entry->header->x;
+            const uint32_t oy = option_dont_add_offset_border ? 0 : entry->header->y;
+            if (ox + entry->thtx->w > width)
+                width = ox + entry->thtx->w;
+            if (oy + entry->thtx->h > height)
+                height = oy + entry->thtx->h;
+        }
+        entry = entry->next_by_name;
     }
 
     *widthptr = width;
@@ -1460,8 +1476,9 @@ static void
 anm_replace(
     anm_archive_t* anm,
     FILE* anmfp,
-    anm_entry_t* entry,
-    const char* filename)
+    anm_entry_t* entry_first,
+    const char* filename,
+    int version)
 {
     const format_t formats[] = {
         FORMAT_RGBA8888,
@@ -1475,55 +1492,109 @@ anm_replace(
     unsigned int height = 0;
     image_t* image;
 
-    util_total_entry_size(entry, &width, &height);
+    util_total_entry_size(entry_first, &width, &height);
     if (width == 0 || height == 0) {
         /* There's nothing to do. */
         return;
     }
 
-    image = png_read(filename);
+    int is_png = 0;
+    /* NEWHU: 19 */
+    if (version == 19) {
+        anm_entry_t *entry = entry_first;
+        const uint32_t ox = option_dont_add_offset_border ? 0 : entry->header->x;
+        const uint32_t oy = option_dont_add_offset_border ? 0 : entry->header->y;
+        if (!(png_identify(entry->data, entry->thtx->size) && (ox || oy || entry->next_by_name))) {
+            if (option_verbose >= 2)
+                fprintf(stderr, "%s: not composing %s\n", argv0, filename);
+            /* TH19's ability/dummy.png is used twice, but it's the same texture.
+             * Avoid printing a warning in this particular case. */
+            if (ox || oy || entry->next_by_name && (entry->next_by_name->next_by_name ||
+                    entry->thtx->size != entry->next_by_name->thtx->size ||
+                    memcmp(entry->data, entry->next_by_name->data, entry->thtx->size))) {
+                fprintf(stderr, "%s: warning: %s can't be composed because it's a JPEG\n", argv0, filename);
+            }
+            return;
+        }
+        if (option_verbose >= 2)
+            fprintf(stderr, "%s: composing %s\n", argv0, filename);
+        image = malloc(sizeof(image_t));
+        png_read_mem(image, entry->data, entry->thtx->size);
+        is_png = 1;
+    } else {
+        image = png_read(filename);
+    }
 
     if (width != image->width || height != image->height) {
         fprintf(stderr,
             "%s:%s:%s: wrong image dimensions for %s: %u, %u instead of %u, %u\n",
-            argv0, current_input, entry->name, filename, image->width, image->height,
+            argv0, current_input, entry_first->name, filename, image->width, image->height,
             width, height);
         exit(1);
     }
 
     for (f = 0; f < sizeof(formats) / sizeof(formats[0]); ++f) {
         long offset = 0;
-        anm_entry_t* entry2;
-        list_for_each(&anm->entries, entry2) {
-            if (entry2 == entry &&
+        anm_entry_t *entry, *entry_next = entry_first;
+        list_for_each(&anm->entries, entry) {
+            if (entry == entry_next &&
                 entry->thtx->format == formats[f] &&
                 entry->header->hasdata) {
                 unsigned int y;
+                format_t fmt = formats[f];
 
-                unsigned char* converted_data = format_from_rgba((uint32_t*)image->data, width * height, formats[f]);
+                if (is_png) {
+                    if (fmt != FORMAT_BGRA8888) {
+                        fprintf(stderr, "%s: %s is not FORMAT_BGRA8888\n", argv0, entry->name);
+                        exit(1);
+                    }
+                    fmt = FORMAT_RGBA8888;
+                    entry->thtx->size = entry->thtx->w*entry->thtx->h*4;
+                    free(entry->data);
+                    entry->data = malloc(entry->thtx->size);
+                }
+
+                unsigned char* converted_data = format_from_rgba((uint32_t*)image->data, width * height, fmt);
                 const uint32_t ox = option_dont_add_offset_border ? 0 : entry->header->x;
                 const uint32_t oy = option_dont_add_offset_border ? 0 : entry->header->y;
 
                 if (anmfp) {
                     for (y = oy; y < oy + entry->thtx->h; ++y) {
                         if (!file_seek(anmfp,
-                            offset + entry->header->thtxoffset + sizeof(thtx_header_t) + (y - oy) * entry->thtx->w * format_Bpp(formats[f])))
+                            offset + entry->header->thtxoffset + sizeof(thtx_header_t) + (y - oy) * entry->thtx->w * format_Bpp(fmt)))
                             exit(1);
-                        if (!file_write(anmfp, converted_data + y * width * format_Bpp(formats[f]) + ox * format_Bpp(formats[f]), entry->thtx->w * format_Bpp(formats[f])))
+                        if (!file_write(anmfp, converted_data + y * width * format_Bpp(fmt) + ox * format_Bpp(fmt), entry->thtx->w * format_Bpp(fmt)))
                             exit(1);
                     }
                 } else {
                     for (y = oy; y < oy + entry->thtx->h; ++y) {
-                        memcpy(entry->data + (y - oy) * entry->thtx->w * format_Bpp(formats[f]),
-                               converted_data + y * width * format_Bpp(formats[f]) + ox * format_Bpp(formats[f]),
-                               entry->thtx->w * format_Bpp(formats[f]));
+                        memcpy(entry->data + (y - oy) * entry->thtx->w * format_Bpp(fmt),
+                               converted_data + y * width * format_Bpp(fmt) + ox * format_Bpp(fmt),
+                               entry->thtx->w * format_Bpp(fmt));
                     }
                 }
 
                 free(converted_data);
-            }
 
-            offset += entry2->header->nextoffset;
+                if (is_png) {
+                    image_t image2 = {
+                        .data = entry->data,
+                        .width = entry->thtx->w,
+                        .height = entry->thtx->h,
+                        .format = FORMAT_RGBA8888,
+                    };
+                    size_t size;
+                    entry->data = png_write_mem(&image2, &size);
+                    entry->thtx->size = size;
+                    free(image2.data);
+                }
+
+                entry->processed = 1;
+            }
+            if (entry == entry_next)
+                entry_next = entry->next_by_name;
+
+            offset += entry->header->nextoffset;
         }
     }
 
@@ -1575,15 +1646,27 @@ anm_extract(
 
     util_makepath(filename);
 
-    const uint32_t ox = option_dont_add_offset_border ? 0 : entry->header->x;
-    const uint32_t oy = option_dont_add_offset_border ? 0 : entry->header->y;
+    uint32_t ox = option_dont_add_offset_border ? 0 : entry->header->x;
+    uint32_t oy = option_dont_add_offset_border ? 0 : entry->header->y;
     int is_png = 0;
 
     /* NEWHU: 19 */
     if (version == 19) {
-        if (png_identify(entry->thtx->data, entry->thtx->size) && (ox || oy)) {
+        if (png_identify(entry->thtx->data, entry->thtx->size) &&
+                (ox || oy || entry->next_by_name)) {
+            if (option_verbose >= 2)
+                fprintf(stderr, "%s: composing %s\n", argv0, filename);
             is_png = 1;
         } else {
+            if (option_verbose >= 2)
+                fprintf(stderr, "%s: not composing %s\n", argv0, filename);
+            /* TH19's ability/dummy.png is used twice, but it's the same texture.
+             * Avoid printing a warning in this particular case. */
+            if (ox || oy || entry->next_by_name && (entry->next_by_name->next_by_name ||
+                    entry->thtx->size != entry->next_by_name->thtx->size ||
+                    memcmp(entry->thtx->data, entry->next_by_name->thtx->data, entry->thtx->size))) {
+                fprintf(stderr, "%s: warning: %s can't be composed because it's a JPEG\n", argv0, filename);
+            }
             FILE* stream = fopen(filename, "wb");
             if (stream) {
                 fwrite(entry->thtx->data, 1, entry->thtx->size, stream);
@@ -1596,15 +1679,20 @@ anm_extract(
     image.data = malloc(image.width * image.height * 4);
     /* XXX: Why 0xff? */
     memset(image.data, 0xff, image.width* image.height * 4);
-    for (f = 0; f < sizeof(formats) / sizeof(formats[0]); ++f) {
-        if (formats[f] == entry->thtx->format) {
-            unsigned char* temp_data = entry_to_rgba(entry, is_png);
-            for (y = oy; y < oy + entry->thtx->h; ++y) {
-                memcpy(image.data + y * image.width * 4 + ox * 4,
-                    temp_data + (y - oy) * entry->thtx->w * 4,
-                    entry->thtx->w * 4);
+    for (anm_entry_t *entryp = entry; entryp; entryp = entryp->next_by_name) {
+        for (f = 0; f < sizeof(formats) / sizeof(formats[0]); ++f) {
+            if (formats[f] == entryp->thtx->format) {
+                ox = option_dont_add_offset_border ? 0 : entryp->header->x;
+                oy = option_dont_add_offset_border ? 0 : entryp->header->y;
+                unsigned char* temp_data = entry_to_rgba(entryp, is_png);
+                for (y = oy; y < oy + entryp->thtx->h; ++y) {
+                    memcpy(image.data + y * image.width * 4 + ox * 4,
+                        temp_data + (y - oy) * entryp->thtx->w * 4,
+                        entryp->thtx->w * 4);
+                }
+                free(temp_data);
+                entryp->processed = 1;
             }
-            free(temp_data);
         }
     }
 
@@ -1870,6 +1958,7 @@ anm_defaults(
             continue;
 
         const char *filename = entry->filename ? entry->filename : entry->name;
+        unsigned width, height;
 
         /* NEWHU: 19 */
         switch (version) {
@@ -1892,8 +1981,8 @@ anm_defaults(
 
             if (png_identify(img_buf, size)) {
                 png_IHDR_t* ihdr = (void*)(img_buf + 8);
-                entry->thtx->w = ihdr->width[2] << 8 | ihdr->width[3];
-                entry->thtx->h = ihdr->height[2] << 8 | ihdr->height[3];
+                width = ihdr->width[2] << 8 | ihdr->width[3];
+                height = ihdr->height[2] << 8 | ihdr->height[3];
             } else if(jfif_identify(img_buf, size) || exif_identify(img_buf, size)) {
                 uint8_t* p = img_buf;
                 uint8_t* end = p+size;
@@ -1908,8 +1997,8 @@ anm_defaults(
                 if (end-p < sizeof(jpeg_sof_t))
                     goto anm_defaults_exit;
                 jpeg_sof_t* sof = (void*)p;
-                entry->thtx->w = (sof->width[0] << 8) | sof->width[1];
-                entry->thtx->h = (sof->height[0] << 8) | sof->height[1];
+                width = (sof->width[0] << 8) | sof->width[1];
+                height = (sof->height[0] << 8) | sof->height[1];
             }
             else {
             anm_defaults_exit:
@@ -1919,12 +2008,9 @@ anm_defaults(
             }
 
             entry->data = img_buf;
-            continue;
+            break;
         }
-        }
-
-        unsigned width, height;
-        {
+        default: {
             FILE* stream = fopen(filename, "rb");
             if (!stream) {
                 fprintf(stderr, "%s: could not open for reading\n", filename);
@@ -1939,6 +2025,8 @@ anm_defaults(
             png_IHDR_t* ihdr = (void*)(img_buf + 8);
             width = ihdr->width[2] << 8 | ihdr->width[3];
             height = ihdr->height[2] << 8 | ihdr->height[3];
+            break;
+        }
         }
 
         /* header->w/h must be a multiple of 2 */
@@ -2181,7 +2269,7 @@ print_usage(void)
 #else
 #define USAGE_LIBPNGFLAGS ""
 #endif
-    printf("Usage: %s [-Vfub] [[-l" USAGE_LIBPNGFLAGS "] VERSION] [-m ANMMAP]... [-s SYMBOLS] ARCHIVE ...\n"
+    printf("Usage: %s [-Vfuv] [[-l" USAGE_LIBPNGFLAGS "] VERSION] [-m ANMMAP]... [-s SYMBOLS] ARCHIVE ...\n"
            "Options:\n"
            "  -l VERSION ARCHIVE            list archive\n"
 #ifdef HAVE_LIBPNG
@@ -2193,8 +2281,8 @@ print_usage(void)
            "  -m ANMMAP                     use map file for translating mnemonics\n"
            "  -V                            display version information and exit\n"
            "  -f                            ignore errors when possible\n"
-           "  -u                            give unique filenames to extracted images\n"
-           "  -b                            don't add/remove a border to images with x/y offset\n"
+           "  -u                            extract each texture into a separate file\n"
+           "  -uu                           ignore x/y offset\n"
            "  -o                            add address information for for ANM instructions\n"
            "VERSION can be:\n"
            "  6, 7, 8, 9, 95, 10, 103, 11, 12, 125, 128, 13, 14, 143, 15, 16, 165, 17, 18, 185 or 19\n"
@@ -2219,7 +2307,7 @@ main(
 #ifdef HAVE_LIBPNG
                             "x:r:c:s:"
 #endif
-                            "Vfub";
+                            "Vfuv";
     int command = -1;
 
     FILE* in;
@@ -2280,10 +2368,13 @@ main(
             option_force = 1;
             break;
         case 'u':
-            option_unique_filenames = 1;
+            if (option_unique_filenames)
+                option_dont_add_offset_border = 1;
+            else
+                option_unique_filenames = 1;
             break;
-        case 'b':
-            option_dont_add_offset_border = 1;
+        case 'v':
+            option_verbose++;
             break;
         case 'o':
             if (command == 'c') {
@@ -2366,17 +2457,23 @@ main(
         anm = anm_read_file(in, version);
         fclose(in);
 
+        if (!option_unique_filenames)
+            anm_build_name_lists(anm);
+
         if (argc == 1) {
             /* Extract all files. */
             int j = 0;
             list_for_each(&anm->entries, entry) {
-                char *filename = 0;
-                current_output = entry->name;
-                fprintf(stderr, "%s\n", entry->name);
-                if (option_unique_filenames)
-                    filename = anm_make_unique_filename(entry->name, argv[0], j);
-                anm_extract(entry, filename ? filename : entry->name, version);
-                free(filename);
+                if (!entry->processed) {
+                    char *filename = 0;
+                    current_output = entry->name;
+                    if (option_verbose >= 1)
+                        fprintf(stderr, "%s\n", entry->name);
+                    if (option_unique_filenames)
+                        filename = anm_make_unique_filename(entry->name, argv[0], j);
+                    anm_extract(entry, filename ? filename : entry->name, version);
+                    free(filename);
+                }
                 j++;
             }
         } else {
@@ -2384,15 +2481,18 @@ main(
             for (i = 1; i < argc; ++i) {
                 int j = 0;
                 list_for_each(&anm->entries, entry) {
-                    if (strcmp(argv[i], entry->name) == 0) {
-                        char *filename = 0;
-                        current_output = entry->name;
-                        fprintf(stderr, "%s\n", entry->name);
-                        if (option_unique_filenames)
-                            filename = anm_make_unique_filename(entry->name, argv[0], j);
-                        anm_extract(entry, filename ? filename : entry->name, version);
-                        free(filename);
-                        /* unfortunately we can't just skip to next argv, because of possible duplicates */
+                    if (!entry->processed) {
+                        if (strcmp(argv[i], entry->name) == 0) {
+                            char *filename = 0;
+                            current_output = entry->name;
+                            if (option_verbose >= 1)
+                                fprintf(stderr, "%s\n", entry->name);
+                            if (option_unique_filenames)
+                                filename = anm_make_unique_filename(entry->name, argv[0], j);
+                            anm_extract(entry, filename ? filename : entry->name, version);
+                            free(filename);
+                            /* unfortunately we can't just skip to next argv, because of possible duplicates */
+                        }
                     }
                     j++;
                 }
@@ -2432,9 +2532,10 @@ main(
             exit(1);
         }
 
+        anm_build_name_lists(anm);
         list_for_each(&anm->names, name) {
             if (strcmp(argv[1], name) == 0) {
-                anm_replace(anm, anmfp, util_entry_by_name(anm, name), argv[2]);
+                anm_replace(anm, anmfp, util_entry_by_name(anm, name), argv[2], version);
                 goto replace_done;
             }
         }
@@ -2471,8 +2572,6 @@ replace_done:
         current_input = argv[1];
         anm = anm_create(argv[1], symbolfp, version);
 
-
-
         if (symbolfp)
             fclose(symbolfp);
 
@@ -2482,16 +2581,18 @@ replace_done:
         anm_defaults(anm, version);
 
         /* Allocate enough space for the THTX data. */
-        /* NEWHU: 19 */
-        if (version != 19) {
-            list_for_each(&anm->entries, entry) {
-                if (entry->header->hasdata) {
-                    /* XXX: There are a few entries with a thtx.size greater than
-                     *      w*h*Bpp.  The extra data appears to be all zeroes. */
-                    entry->data = calloc(1, entry->thtx->size);
-                }
-                anm_replace(anm, NULL, entry, entry->filename ? entry->filename : entry->name);
+        if (!option_unique_filenames)
+            anm_build_name_lists(anm);
+        list_for_each(&anm->entries, entry) {
+            if (entry->header->hasdata && !entry->data) {
+                /* XXX: There are a few entries with a thtx.size greater than
+                 *      w*h*Bpp.  The extra data appears to be all zeroes. */
+                entry->data = calloc(1, entry->thtx->size);
             }
+        }
+        list_for_each(&anm->entries, entry) {
+            if (!entry->processed)
+                anm_replace(anm, NULL, entry, entry->filename ? entry->filename : entry->name, version);
         }
 
         current_output = argv[0];
