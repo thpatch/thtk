@@ -1319,7 +1319,9 @@ anm_dump(
 
         fprintf(stream, "    hasData: %u,\n", entry->header->hasdata);
         if (entry->header->hasdata) {
-            fprintf(stream, "    THTXSize: %u,\n", entry->thtx->size);
+            /* NEWHU: 19 */
+            if (version != 19)
+                fprintf(stream, "    THTXSize: %u,\n", entry->thtx->size);
             fprintf(stream, "    THTXFormat: %u,\n", entry->thtx->format);
             fprintf(stream, "    THTXWidth: %u,\n", entry->thtx->w);
             fprintf(stream, "    THTXHeight: %u,\n", entry->thtx->h);
