@@ -2271,7 +2271,7 @@ print_usage(void)
 #else
 #define USAGE_LIBPNGFLAGS ""
 #endif
-    printf("Usage: %s [-Vfuv] [[-l" USAGE_LIBPNGFLAGS "] VERSION] [-m ANMMAP]... [-s SYMBOLS] ARCHIVE ...\n"
+    printf("Usage: %s [-Vfouv] [[-l" USAGE_LIBPNGFLAGS "] VERSION] [-m ANMMAP]... [-s SYMBOLS] ARCHIVE ...\n"
            "Options:\n"
            "  -l VERSION ARCHIVE            list archive\n"
 #ifdef HAVE_LIBPNG
@@ -2283,9 +2283,10 @@ print_usage(void)
            "  -m ANMMAP                     use map file for translating mnemonics\n"
            "  -V                            display version information and exit\n"
            "  -f                            ignore errors when possible\n"
+           "  -o                            add address information for ANM instructions\n"
            "  -u                            extract each texture into a separate file\n"
            "  -uu                           ignore x/y offset\n"
-           "  -o                            add address information for for ANM instructions\n"
+           "  -v                            verbose output\n"
            "VERSION can be:\n"
            "  6, 7, 8, 9, 95, 10, 103, 11, 12, 125, 128, 13, 14, 143, 15, 16, 165, 17, 18, 185 or 19\n"
            /* NEWHU: 19 */
@@ -2332,7 +2333,7 @@ main(
         switch(opt = util_getopt(argc,argv,commands)) {
         case 'c':
             if (option_print_offsets) {
-                fprintf(stderr, "%s: 'x' option can't be used when creating ANM archive\n", argv0);
+                fprintf(stderr, "%s: 'o' option can't be used when creating ANM archive\n", argv0);
                 exit(1);
             }
             /* fallthrough */
@@ -2380,7 +2381,7 @@ main(
             break;
         case 'o':
             if (command == 'c') {
-                fprintf(stderr, "%s: 'x' option can't be used when creating ANM archive\n", argv0);
+                fprintf(stderr, "%s: 'o' option can't be used when creating ANM archive\n", argv0);
                 exit(1);
             }
             option_print_offsets = 1;
