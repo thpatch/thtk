@@ -102,6 +102,7 @@
 "offsetof" return OFFSETOF;
 "scriptof" return SCRIPTOF;
 "spriteof" return SPRITEOF;
+"[[no_sentinel]]" return NOSENTINEL;
 
 (-|\+)?[0-9]+(\.([0-9]*f|[0-9]+)|f) {
     yylval.floating = strtof(yytext, NULL);

@@ -155,6 +155,7 @@ static void instr_check_types(parser_state_t* state, int id, list_t* params);
 %token OFFSETOF "offsetof"
 %token SCRIPTOF "scriptof"
 %token SPRITEOF "spriteof"
+%token NOSENTINEL "[[no_sentinel]]"
 
 %token ILLEGAL_TOKEN "invalid token"
 %token END_OF_FILE 0 "end of file"
@@ -162,6 +163,7 @@ static void instr_check_types(parser_state_t* state, int id, list_t* params);
 %type <integer> SomethingOf
 %type <integer> TypeDeclaration
 %type <integer> VariableDeclaration
+%type <integer> ScriptNoSentinel
 %type <string> TextLike
 %type <param> ParameterSimple
 %type <list> Properties
@@ -449,7 +451,7 @@ PropertyListValue:
     }
 
 Script:
-    "script" ScriptOptionalId IDENTIFIER[name] {
+    "script" ScriptNoSentinel[no_sentinel] ScriptOptionalId IDENTIFIER[name] {
         if (state->current_entry == NULL) {
             yyerror(state, "an entry is required before a script");
             return 1;
@@ -459,6 +461,7 @@ Script:
         script->offset = malloc(sizeof(*script->offset));
         script->offset->id = state->script_id++;
         script->real_index = state->script_real_index++;
+        script->no_sentinel = $no_sentinel;
 
         symbol_id_pair_t* symbol = (symbol_id_pair_t*)malloc(sizeof(symbol_id_pair_t));
         symbol->id = script->real_index;
@@ -474,6 +477,10 @@ Script:
     } "{" ScriptStatements "}" {
         state->current_script = NULL;
     }
+
+ScriptNoSentinel:
+    %empty { $$ = 0; }
+    | NOSENTINEL { $$ = 1; }
 
 ScriptOptionalId:
     %empty

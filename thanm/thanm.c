@@ -643,6 +643,7 @@ anm_script_t* anm_script_new() {
     list_init(&script->raw_instrs);
     list_init(&script->vars);
     script->offset = NULL;
+    script->no_sentinel = 0;
     return script;
 }
 
@@ -1134,8 +1135,11 @@ anm_read_file(
                         anm_instr0_t* temp_instr = (anm_instr0_t*)instr_ptr;
 
                         if (instr_ptr + sizeof(anm_instr0_t) > limit ||
-                            (temp_instr->type == 0 && temp_instr->time == 0) ||
-                            instr_ptr + sizeof(anm_instr0_t) + temp_instr->length > limit)
+                                instr_ptr + sizeof(anm_instr0_t) + temp_instr->length > limit) {
+                            script->no_sentinel = 1;
+                            break;
+                        }
+                        if (temp_instr->type == 0 && temp_instr->time == 0)
                             break;
 
                         instr = util_malloc(sizeof(anm_instr_t) + temp_instr->length);
@@ -1150,8 +1154,11 @@ anm_read_file(
                         instr = (anm_instr_t*)instr_ptr;
 
                         if (instr_ptr + sizeof(anm_instr_t) > limit ||
-                            instr->type == 0xffff ||
-                            instr_ptr + instr->length > limit)
+                                instr_ptr + instr->length > limit) {
+                            script->no_sentinel = 1;
+                            break;
+                        }
+                        if (instr->type == 0xffff)
                             break;
 
                         len = instr->length;
@@ -1368,6 +1375,7 @@ anm_dump(
 
         anm_script_t* script;
         list_for_each(&entry->scripts, script) {
+            const char *attrib = script->no_sentinel ? " [[no_sentinel]]" : "";
             /* We need to use the index of the script in file for the name, because that's
              * what instructions that refer to scripts use. I'm unsure what's the actual purpose of the ID field.
              * However! I still don't really know how old versions work, and maybe instructions refer to the
@@ -1376,9 +1384,9 @@ anm_dump(
              * I honestly doubt that this is the case, but I want to leave a note how to change it anyway in case
              * it's needed... */
             if (script->offset->id - 1 != prev_script_id) {
-                fprintf(stream, "script %d script%d {\n", script->offset->id, script->real_index);
+                fprintf(stream, "script%s %d script%d {\n", attrib, script->offset->id, script->real_index);
             } else {
-                fprintf(stream, "script script%d {\n", script->real_index);
+                fprintf(stream, "script%s script%d {\n", attrib, script->real_index);
             }
             prev_script_id = script->offset->id;
 
@@ -2152,12 +2160,14 @@ anm_write(
                 }
             }
 
-            if (entry->header->version == 0) {
-                anm_instr0_t sentinel = { 0, 0, 0 };
-                file_write(stream, &sentinel, sizeof(sentinel));
-            } else {
-                anm_instr_t sentinel = { 0xffff, 0, 0, 0 };
-                file_write(stream, &sentinel, sizeof(sentinel));
+            if (!script->no_sentinel) {
+                if (entry->header->version == 0) {
+                    anm_instr0_t sentinel = { 0, 0, 0 };
+                    file_write(stream, &sentinel, sizeof(sentinel));
+                } else {
+                    anm_instr_t sentinel = { 0xffff, 0, 0, 0 };
+                    file_write(stream, &sentinel, sizeof(sentinel));
+                }
             }
         }
 

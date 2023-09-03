@@ -53,6 +53,9 @@ typedef struct {
     list_t labels;
     /* list of var_t */
     list_t vars;
+    /* TH095 front.anm has no sentinel instruction in script18. This flag
+     * exists just for that special case. */
+    int no_sentinel;
 } anm_script_t;
 
 anm_script_t* anm_script_new(void);
