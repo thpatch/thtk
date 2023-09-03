@@ -5,25 +5,29 @@
 # - regular unpacking to separate dirs
 #   (one dir per anm file)
 # - unpacking with -uu option
+# - unpacking with -X option
 #
 # This doesn't test the most common way to extract ANM (no flags, everything in
 # one dir), because that's clearly the wrong way to do it.
 #
 # Summary of directories being created:
-# -uu |ZUN| separate
-# flag|   | dirs
-# ----|---|----------
-# g   | a |   c     e | packed
-#  \  |/ \|  / \   /
-#   \ /   \ /   \ /
-#    f|   |b     d    | unpacked
+# -X   |-uu |ZUN| separate
+# flag |flag|   | dirs
+# -----|----|---|----------
+# i    |g   | a |   c     e | packed
+#  \   | \  |/|\|  / \   /
+#   \  |  \ / | \ /   \ /
+#    h |   f| | |b     d    | unpacked
+#     \       /
+#      \-----/
 #
 # Comparisions being done:
 # a = c (rebuilding)
 # b = d (consistency)
 # c = e (consistency)
 # a = g (rebuilding)
-# The a = c comparision can't be practically done for th19... at least for now.
+# a = i (rebuilding)
+# The a = c and a = i comparisions can't be practically done for th19... at least for now.
 script_dir=$(cd "$(dirname "$0")" || exit 1; pwd) || exit 1
 : "${THDAT:=$script_dir/../build/thdat/thdat}"
 : "${THANM:=$script_dir/../build/thanm/thanm}"
@@ -59,7 +63,7 @@ do
     else
         datfiles="$datfile"
     fi
-    mkdir -p "$ANMTEMP/a" "$ANMTEMP/b" "$ANMTEMP/c" "$ANMTEMP/d" "$ANMTEMP/e" "$ANMTEMP/f" "$ANMTEMP/g"
+    mkdir -p "$ANMTEMP/a" "$ANMTEMP/b" "$ANMTEMP/c" "$ANMTEMP/d" "$ANMTEMP/e" "$ANMTEMP/f" "$ANMTEMP/g" "$ANMTEMP/h" "$ANMTEMP/i"
     anmfiles=$(cd "$ANMTEMP/a" || exit 1; for i in $datfiles; do "$THDAT" -gx"$version" "$DATDIR/$i" "*anm" >/dev/null; done; ls) || exit 1
     for i in $anmfiles; do
         mkdir -p "$ANMTEMP/b/$i"
@@ -84,8 +88,16 @@ do
     for i in $anmfiles; do
         (cd "$ANMTEMP/f" || exit 1; "$THANM" $THANMFLAGS -uuc"$version" "$ANMTEMP/g/$i" "$ANMTEMP/f/$i.txt") || exit 1
     done
+    for i in $anmfiles; do
+        "$THANM" $THANMFLAGS -l"$version" "$ANMTEMP/a/$i" >"$ANMTEMP/h/$i.txt"
+    done
+    (cd "$ANMTEMP/h" || exit 1; "$THANM" $THANMFLAGS -X"$version" "$ANMTEMP/a/"*.anm) || exit 1
+    for i in $anmfiles; do
+        (cd "$ANMTEMP/h" || exit 1; "$THANM" $THANMFLAGS -c"$version" "$ANMTEMP/i/$i" "$ANMTEMP/h/$i.txt") || exit 1
+    done
     diff -rq "$ANMTEMP/a" "$ANMTEMP/c"
     diff -rq "$ANMTEMP/b" "$ANMTEMP/d"
     diff -rq "$ANMTEMP/c" "$ANMTEMP/e"
     diff -rq "$ANMTEMP/a" "$ANMTEMP/g"
+    diff -rq "$ANMTEMP/a" "$ANMTEMP/i"
 done

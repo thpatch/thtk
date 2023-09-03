@@ -33,7 +33,7 @@
 .Sh SYNOPSIS
 .Nm
 .Op Fl Vfouv
-.Op Oo Fl l | x | r | c Oc Ar version
+.Op Oo Fl l | x | X | r | c Oc Ar version
 .Oo Fl m Ar anmmap Oc Ns Ar ...
 .Oo Fl s Ar symbols Oc
 .Op Ar archive Op Ar ...
@@ -48,6 +48,8 @@ Displays a specification of the archive.
 .It Nm Fl x Ar version Oo Fl fouv Oc Ar archive Op Ar
 Extracts image files.
 If no files are specified, all files are extracted.
+.It Nm Fl X Ar version Oo Fl fouv Oc Ar archives Ns Ar ...
+Extracts all image files from multiple archives.
 .It Nm Fl r Ar version Oo Fl fouv Oc Ar archive Ar name Ar file
 Replaces an entry in the archive.
 The name can be obtained by the
@@ -119,12 +121,10 @@ the appropriate format.
 .It Composition when creating Po Fl c Pc or replacing Po Fl r Pc :
 The source image is read from a file, decoded as PNG, cropped,
 and encoded in the texture format.
-.It Composition when extracting Po Fl x Pc :
+.It Composition when extracting Po Fl x No and Fl X Pc :
 Each texture is decoded into RGBA, and placed on a canvas.
 The canvas is encoded as PNG and written to the destination file.
 .El
-.Pp
-Currently there's no way to compose textures from multiple ANM files.
 .Pp
 The
 .Fl u

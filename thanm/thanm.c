@@ -1442,6 +1442,7 @@ util_entry_by_name(
         }
     return rv;
 }
+
 static void
 anm_build_name_lists(
     const anm_archive_t *anm)
@@ -1457,6 +1458,30 @@ anm_build_name_lists(
             }
     }
 }
+
+static void
+anm_build_name_lists_multiple(
+    list_t *anms)
+{
+    const anm_archive_t *anm, *anm2;
+    const char *name;
+    anm_entry_t *entry, *tmp, **nextloc;
+    list_for_each(anms, anm)
+        list_for_each(&anm->names, name) {
+            nextloc = &tmp;
+            list_for_each(anms, anm2)
+                list_for_each(&anm2->entries, entry)
+                    if (entry->name == name || !strcmp(name, entry->name)) {
+                        name = entry->name;
+                        if (entry->next_by_name)
+                            goto next_name; /* we already did this name */
+                        *nextloc = entry;
+                        nextloc = &entry->next_by_name;
+                    }
+            next_name:;
+        }
+}
+
 static void
 util_total_entry_size(
     anm_entry_t* entry,
@@ -1535,7 +1560,7 @@ anm_replace(
         image = png_read(filename);
     }
 
-    if (width != image->width || height != image->height) {
+    if (width > image->width || height > image->height) {
         fprintf(stderr,
             "%s:%s:%s: wrong image dimensions for %s: %u, %u instead of %u, %u\n",
             argv0, current_input, entry_first->name, filename, image->width, image->height,
@@ -2286,6 +2311,7 @@ print_usage(void)
            "  -l VERSION ARCHIVE            list archive\n"
 #ifdef HAVE_LIBPNG
            "  -x VERSION ARCHIVE [FILE...]  extract entries\n"
+           "  -X VERSION ARCHIVE...         extract all entries from multiple archives\n"
            "  -r VERSION ARCHIVE NAME FILE  replace entry in archive\n"
            "  -c VERSION ARCHIVE SPEC       create archive\n"
            "  -s SYMBOLS                    save symbol ids to the given file as globaldefs\n"
@@ -2318,7 +2344,7 @@ main(
 
     const char commands[] = ":l:om:"
 #ifdef HAVE_LIBPNG
-                            "x:r:c:s:"
+                            "x:X:r:c:s:"
 #endif
                             "Vfuv";
     int command = -1;
@@ -2349,6 +2375,7 @@ main(
             /* fallthrough */
         case 'l':
         case 'x':
+        case 'X':
         case 'r':
             if(command != -1) {
                 fprintf(stderr,"%s: More than one mode specified\n",argv0);
@@ -2445,7 +2472,7 @@ main(
         current_input = argv[0];
         in = fopen(argv[0], "rb");
         if (!in) {
-            fprintf(stderr, "%s: couldn't open %s for reading\n", argv[0], current_input);
+            fprintf(stderr, "%s: couldn't open %s for reading\n", argv0, current_input);
             exit(1);
         }
         anm = anm_read_file(in, version);
@@ -2464,7 +2491,7 @@ main(
         current_input = argv[0];
         in = fopen(argv[0], "rb");
         if (!in) {
-            fprintf(stderr, "%s: couldn't open %s for reading\n", argv[0], current_input);
+            fprintf(stderr, "%s: couldn't open %s for reading\n", argv0, current_input);
             exit(1);
         }
         anm = anm_read_file(in, version);
@@ -2516,6 +2543,53 @@ main(
 
         anm_free(anm);
         exit(0);
+    case 'X': {
+        list_t anms;
+        list_init(&anms);
+
+        if (argc < 1) {
+            print_usage();
+            exit(1);
+        }
+
+        for (i = 0; i < argc; ++i) {
+            current_input = argv[i];
+            in = fopen(argv[i], "rb");
+            if (!in) {
+                fprintf(stderr, "%s: couldn't open %s for reading\n", argv0, current_input);
+                exit(1);
+            }
+            anm = anm_read_file(in, version);
+            list_append_new(&anms, anm);
+            fclose(in);
+        }
+
+        anm_build_name_lists_multiple(&anms);
+
+        i = 0;
+        list_for_each(&anms, anm) {
+            int j = 0;
+            list_for_each(&anm->entries, entry) {
+                if (!entry->processed) {
+                    char *filename = 0;
+                    current_output = entry->name;
+                    if (option_verbose >= 1)
+                        fprintf(stderr, "%s\n", entry->name);
+                    if (option_unique_filenames)
+                        filename = anm_make_unique_filename(entry->name, argv[i], j);
+                    anm_extract(entry, filename ? filename : entry->name, version);
+                    free(filename);
+                }
+                j++;
+            }
+            i++;
+        }
+
+        list_for_each(&anms, anm)
+            anm_free(anm);
+        list_free_nodes(&anms);
+        exit(0);
+    }
     case 'r':
         if (argc != 3) {
             print_usage();
@@ -2524,7 +2598,7 @@ main(
 
         if (version == 19) {
             /* NEWHU: 19 */ /* FIXME: */
-            fprintf(stderr, "%s: -r doesn't work with th19\n", argv[0]);
+            fprintf(stderr, "%s: -r doesn't work with th19\n", argv0);
             exit(1);
         }
 
@@ -2532,7 +2606,7 @@ main(
         current_input = argv[0];
         in = fopen(argv[0], "rb");
         if (!in) {
-            fprintf(stderr, "%s: couldn't open %s for reading\n", argv[0], current_input);
+            fprintf(stderr, "%s: couldn't open %s for reading\n", argv0, current_input);
             exit(1);
         }
         anm = anm_read_file(in, version);

@@ -14,6 +14,7 @@ What's new in thtk master
 - Support th143/bestshot.anm
 - Two new options (-u and -uu) were added to help with rebuilding TH19 files
   bit-perfectly. See documentation for more details.
+- A new option (-X) to extract images from multiple ANM files at once.
 
 #### thanm.old
 - Will be removed in the next release.
