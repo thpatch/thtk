@@ -53,10 +53,10 @@
 <table class="Nm">
   <tr>
     <td><code class="Nm">thanm</code></td>
-    <td>[<code class="Fl">-Vfu</code>] [[<code class="Fl">-l</code> |
-      <code class="Fl">-x</code> | <code class="Fl">-r</code> |
-      <code class="Fl">-c</code>] <var class="Ar">version</var>]
-      [<code class="Fl">-m</code>
+    <td>[<code class="Fl">-Vfouv</code>] [[<code class="Fl">-l</code> |
+      <code class="Fl">-x</code> | <code class="Fl">-X</code> |
+      <code class="Fl">-r</code> | <code class="Fl">-c</code>]
+      <var class="Ar">version</var>] [<code class="Fl">-m</code>
       <var class="Ar">anmmap</var>]<var class="Ar">...</var>
       [<code class="Fl">-s</code> <var class="Ar">symbols</var>]
       [<var class="Ar">archive</var> [<var class="Ar">...</var>]]</td>
@@ -69,24 +69,28 @@
     on sprite archives. The following commands are available:</p>
 <dl class="Bl-tag">
   <dt><code class="Nm">thanm</code> <code class="Fl">-l</code>
-    <var class="Ar">version</var> [<code class="Fl">-fu</code>]
+    <var class="Ar">version</var> [<code class="Fl">-fouv</code>]
     [<code class="Fl">-m</code>
     <var class="Ar">anmmap</var>]<var class="Ar">...</var>
     <var class="Ar">archive</var></dt>
   <dd>Displays a specification of the archive.</dd>
   <dt><code class="Nm">thanm</code> <code class="Fl">-x</code>
-    <var class="Ar">version</var> [<code class="Fl">-fu</code>]
+    <var class="Ar">version</var> [<code class="Fl">-fouv</code>]
     <var class="Ar">archive</var> [<var class="Ar">file ...</var>]</dt>
   <dd>Extracts image files. If no files are specified, all files are
     extracted.</dd>
+  <dt><code class="Nm">thanm</code> <code class="Fl">-X</code>
+    <var class="Ar">version</var> [<code class="Fl">-fouv</code>]
+    <var class="Ar">archives</var><var class="Ar">...</var></dt>
+  <dd>Extracts all image files from multiple archives.</dd>
   <dt><code class="Nm">thanm</code> <code class="Fl">-r</code>
-    <var class="Ar">version</var> [<code class="Fl">-f</code>]
+    <var class="Ar">version</var> [<code class="Fl">-fouv</code>]
     <var class="Ar">archive</var> <var class="Ar">name</var>
     <var class="Ar">file</var></dt>
   <dd>Replaces an entry in the archive. The name can be obtained by the
       <code class="Fl">-l</code> command.</dd>
   <dt><code class="Nm">thanm</code> <code class="Fl">-c</code>
-    <var class="Ar">version</var> [<code class="Fl">-f</code>]
+    <var class="Ar">version</var> [<code class="Fl">-fuv</code>]
     [<code class="Fl">-m</code>
     <var class="Ar">anmmap</var>]<var class="Ar">...</var>
     [<code class="Fl">-s</code> <var class="Ar">symbols</var>]
@@ -110,9 +114,17 @@
     <var class="Ar">symbols</var></dt>
   <dd>The <code class="Fl">-s</code> option saves symbol ids to the
       <var class="Ar">symbols</var> file.</dd>
-  <dt>u</dt>
-  <dd>The <code class="Fl">-u</code> option gives unique filenames to extracted
-      images.</dd>
+  <dt id="o"><a class="permalink" href="#o"><code class="Fl">-o</code></a></dt>
+  <dd>The <code class="Fl">-o</code> option adds address information for ANM
+      instructions.</dd>
+  <dt id="u"><a class="permalink" href="#u"><code class="Fl">-u</code></a></dt>
+  <dd>The <code class="Fl">-u</code> option extracts each texture into a
+      separate file. When specified twice, x/y offset is ignored. See
+      <a class="Sx" href="#IMAGE_COMPOSITION">IMAGE COMPOSITION</a> for more
+      information.</dd>
+  <dt id="v"><a class="permalink" href="#v"><code class="Fl">-v</code></a></dt>
+  <dd>The <code class="Fl">-v</code> option increases verbosity of the output.
+      It can be specified multiple times.</dd>
 </dl>
 </section>
 <section class="Sh">
@@ -120,6 +132,47 @@
   STATUS</a></h1>
 <p class="Pp">The <code class="Nm">thanm</code> utility exits with 0 on success,
     1 on error.</p>
+</section>
+<section class="Sh">
+<h1 class="Sh" id="IMAGE_COMPOSITION"><a class="permalink" href="#IMAGE_COMPOSITION">IMAGE
+  COMPOSITION</a></h1>
+<p class="Pp">Each texture in an ANM file has an associated source image
+    filename. By default <code class="Nm">thanm</code> creates textures by
+    cropping the source image according to the following parameters:
+    <var class="Va">xOffset</var>, <var class="Va">yOffset</var>,
+    <var class="Va">THTXWidth</var>, <var class="Va">THTXHeight</var>. When
+    extracting the textures, the process is reversed. However, because multiple
+    textures may come from a single source file, they have to be composed
+    together during extraction. Additionally, in either case, the textures have
+    to be converted to/from the appropriate format.</p>
+<dl class="Bl-tag">
+  <dt>Composition when creating (<code class="Fl">-c</code>) or replacing
+    (<code class="Fl">-r</code>):</dt>
+  <dd>The source image is read from a file, decoded as PNG, cropped, and encoded
+      in the texture format.</dd>
+  <dt>Composition when extracting (<code class="Fl">-x</code>
+    <span class="No">and</span> <code class="Fl">-X</code>):</dt>
+  <dd>Each texture is decoded into RGBA, and placed on a canvas. The canvas is
+      encoded as PNG and written to the destination file.</dd>
+</dl>
+<p class="Pp">The <code class="Fl">-u</code> option extracts each texture into
+    its own file. It's important to also use the <code class="Fl">-u</code>
+    option for listing (<code class="Fl">-l</code>), because
+    <code class="Fl">-c</code> relies on the alternative filenames being
+    specified in the spec file. Even with <code class="Fl">-u</code> the images
+    are cropped/padded when they have an offset. The <code class="Fl">-uu</code>
+    option ignores the offset, thereby disabling cropping/padding.</p>
+<p class="Pp" id="never">In TH19, the textures are stored using PNG and JPEG
+    compression. <code class="Nm">thanm</code> tries to avoid recompression when
+    possible, so composition is only done when necessary. Uncompressed textures
+    (pre-TH19) are always composed, even if only to convert them to PNG. PNGs
+    are only composed only if there's a nonzero offset, or there are multiple
+    textures referencing the same image. Otherwise the file is copied directly,
+    without recompression (<code class="Fl">-uu</code> <span class="No">forces
+    this behavior</span>). JPEGs are
+    <a class="permalink" href="#never"><i class="Em">never</i></a> composed, but
+    it shouldn't be necessary either. If a JPEG has to be composed,
+    <code class="Nm">thanm</code> will issue a warning.</p>
 </section>
 <section class="Sh">
 <h1 class="Sh" id="ANMMAP_FILE_FORMAT"><a class="permalink" href="#ANMMAP_FILE_FORMAT">ANMMAP
@@ -181,21 +234,18 @@ where <var class="Ar">key</var> is an integer, and <var class="Ar">value</var>
     different formats. Dumping and recreating these archives will not result in
     the same archives. The affected pixels seem to all have 0 for alpha
   though.</p>
-<p class="Pp">One of the scripts in TH95's front.anm lack a sentinel
-    instruction. Dumping and recreating this archive will add a sentinel
-    instruction.</p>
 </section>
 <section class="Sh">
 <h1 class="Sh" id="SECURITY_CONSIDERATIONS"><a class="permalink" href="#SECURITY_CONSIDERATIONS">SECURITY
   CONSIDERATIONS</a></h1>
 <p class="Pp">File names may not be properly sanitized when extracting.
-    Furthermode, invalid data may not be properly handled. Do not operate on
+    Furthermore, invalid data may not be properly handled. Do not operate on
     untrusted files.</p>
 </section>
 </div>
 <table class="foot">
   <tr>
-    <td class="foot-date">August 28, 2023</td>
+    <td class="foot-date">September 3, 2023</td>
     <td class="foot-os">thtk</td>
   </tr>
 </table>
