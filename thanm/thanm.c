@@ -600,7 +600,7 @@ convert_header_to_old(
     header->thtxoffset = th11.thtxoffset;
     header->hasdata = th11.hasdata;
     header->lowresscale = th11.lowresscale;
-    header->th19_unk = th11.th19_unk;
+    header->jpeg_quality = th11.jpeg_quality;
     header->nextoffset = th11.nextoffset;
     header->w_max = th11.w_max;
     header->h_max = th11.h_max;
@@ -628,7 +628,7 @@ convert_header_to_11(
     th11->thtxoffset = header.thtxoffset;
     th11->hasdata = header.hasdata;
     th11->lowresscale = header.lowresscale;
-    th11->th19_unk = header.th19_unk;
+    th11->jpeg_quality = header.jpeg_quality;
     th11->nextoffset = header.nextoffset;
     th11->w_max = header.w_max;
     th11->h_max = header.h_max;
@@ -1088,7 +1088,7 @@ anm_read_file(
         if(header->version == 8)
             assert(header->lowresscale == 0 || header->lowresscale == 1);
         /* NEWHU: 19 */
-        assert(version == 19 || header->th19_unk == 0);
+        assert(version == 19 || header->jpeg_quality == 0);
 
         /* Lengths, including padding, observed are: 16, 32, 48. */
         entry->name = anm_get_name(archive, (const char*)map + header->nameoffset);
@@ -1321,8 +1321,8 @@ anm_dump(
         if (entry->header->version >= 8)
             fprintf(stream, "    lowResScale: %u,\n", entry->header->lowresscale);
         /* NEWHU: 19 */
-        if (version == 19 && entry->header->th19_unk != 0)
-            fprintf(stream, "    th19_unk: %u,\n", entry->header->th19_unk);
+        if (version == 19 && entry->header->jpeg_quality != 0)
+            fprintf(stream, "    jpeg_quality: %u,\n", entry->header->jpeg_quality);
 
         fprintf(stream, "    hasData: %u,\n", entry->header->hasdata);
         if (entry->header->hasdata) {

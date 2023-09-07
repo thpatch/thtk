@@ -287,8 +287,8 @@ Entry:
         OPTIONAL("hasData", 'S', $prop_list);
         entry->header->hasdata = prop ? prop->value->val.S : 1;
 
-        OPTIONAL("th19_unk", 'S', $prop_list);
-        entry->header->th19_unk = prop ? prop->value->val.S : 0;
+        OPTIONAL("jpeg_quality", 'S', $prop_list);
+        entry->header->jpeg_quality = prop ? prop->value->val.S : 0;
 
         if (entry->header->hasdata) {
             OPTIONAL("THTXSize", 'S', $prop_list);
