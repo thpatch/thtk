@@ -51,7 +51,7 @@ print_usage(
            "  -g  enable glob matching for -x filenames\n"
            "  -C  change directory after opening the archive\n"
            "VERSION can be:\n"
-           "  1, 2, 3, 4, 5, 6, 7, 8, 9, 95, 10, 103 (for Uwabami Breakers), 105, 11, 12, 123, 125, 128, 13, 14, 143, 15, 16, 165, 17, 18, 185 or 19\n"
+           "  1, 2, 3, 4, 5, 6, 7, 75, 8, 9, 95, 10, 103 (for Uwabami Breakers), 105, 11, 12, 123, 125, 128, 13, 14, 143, 15, 16, 165, 17, 18, 185 or 19\n"
            /* NEWHU: 19 */
        "Specify 'd' as VERSION to automatically detect archive format. (-l and -x only)\n\n"
            "Report bugs to <" PACKAGE_BUGREPORT ">.\n", argv0);
@@ -176,6 +176,8 @@ thdat_list(
             entries[e].name = thdat_entry_get_name(state->thdat, e, &error);
             entries[e].size = thdat_entry_get_size(state->thdat, e, &error);
             entries[e].zsize = thdat_entry_get_zsize(state->thdat, e, &error);
+            if (version == 75 || version == 7575 || version == 105105 || version == 105 || version == 123)
+                entries[e].zsize = entries[e].size;
             if (!entries[e].name || entries[e].size == -1 || entries[e].zsize == -1) {
                 print_error(error);
                 thtk_error_free(&error);
@@ -189,12 +191,12 @@ thdat_list(
     }
 
     // th105: Stored = Size
-    if (version == 105 || version == 123)
+    if (version == 75 || version == 7575 || version == 105105 || version == 105 || version == 123)
         printf("%-*s  %7s\n", name_width, "Name", "Size");
     else
         printf("%-*s  %7s  %7s\n", name_width, "Name", "Size", "Stored");
     for (e = 0; e < entry_count; ++e) {
-        if (version == 105 || version == 123)
+        if (version == 75 || version == 7575 || version == 105105 || version == 105 || version == 123)
             printf("%-*s  %7zd\n", name_width, entries[e].name, entries[e].size);
         else
             printf("%-*s  %7zd  %7zd\n", name_width, entries[e].name, entries[e].size, entries[e].zsize);
@@ -271,7 +273,7 @@ thdat_create_wrapper(
     free(entries_count);
     // ...and then module->create, if this is th105 archive.
     // This is because the list of entries comes first in th105 archives.
-    if (version == 105 || version == 123) {
+    if (version == 105105 || version == 105 || version == 123) {
         if (!thdat_init(state->thdat, error))
         {
             thdat_state_free(state);

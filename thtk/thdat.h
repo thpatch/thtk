@@ -35,7 +35,7 @@
 #include <thtk/thtk.h>
 
 typedef struct {
-    char name[256];
+    char name[260];
     /* Format-specific data. */
     uint32_t extra;
     /* These fields are -1 before being filled out. */

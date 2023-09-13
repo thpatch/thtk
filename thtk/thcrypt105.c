@@ -35,6 +35,19 @@
 
 /* These function can be used for encrypting and decrypting. */
 void
+th_crypt75_list(
+    unsigned char *data,
+    unsigned int size)
+{
+    unsigned char a = 100, b = 100;
+    while (size-- > 0) {
+        *data++ ^= a;
+        a += b;
+        b += 77;
+    }
+}
+
+void
 th_crypt105_list(
     unsigned char* data,
     unsigned int size,
@@ -56,9 +69,10 @@ void
 th_crypt105_file(
     unsigned char* data,
     unsigned int size,
-    unsigned int offset)
+    unsigned int offset,
+    unsigned char or_key)
 {
-    unsigned char key = ((offset>>1) | 0x23) & 0xff;
+    unsigned char key = ((offset>>1) | or_key) & 0xff;
     unsigned int i;
     for (i = 0; i < size; i++) {
         data[i] ^= key;

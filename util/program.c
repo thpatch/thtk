@@ -98,7 +98,7 @@ util_getopt_default(
 unsigned int parse_version(char *str) {
     struct version_abbr {
         unsigned int version;
-        char name[6];
+        char name[28];
     };
     static const struct version_abbr vers[] = {
         {1, "hrtp"},
@@ -108,25 +108,21 @@ unsigned int parse_version(char *str) {
         {5, "ms"},
         {6, "eosd"},
         {7, "pcb"},
-        {75, "iamp"},
         {8, "in"},
         {9, "pofv"},
         {95, "stb"},
         {10, "mof"},
         {103, "alco"},
-        {105, "swr"},
         {11, "sa"},
         {12, "ufo"},
-        {123, "soku"},
         {125, "ds"},
         {128, "fw"},
+        {128, "gfw"},
+        /* TODO: satisfy the heathens who insist on abbreviating TD as 10D */
         {13, "td"},
-        {135, "hm"},
         {14, "ddc"},
         {143, "isc"},
-        {145, "ulil"},
         {15, "lolk"},
-        {155, "aocf"},
         {16, "hsifs"},
         {165, "vd"},
         {17, "wbawc"},
@@ -134,6 +130,19 @@ unsigned int parse_version(char *str) {
         {185, "bm"},
         {19, "udoalg"},
         /* NEWHU: 19 */
+        {75, "iamp"},
+        {75, "sml"},
+        {7575, "megamari"},
+        {7575, "daybreak"},
+        {105105, "patchcon"},
+        {105, "swr"},
+        {123, "hisoutensoku"},
+        {123, "soku"},
+        {135, "hm"},
+        {145, "ulil"},
+        {155, "aocf"},
+        {175, "gouyokuibun"},
+        {175, "sfw"},
         {0}
     };
     const struct version_abbr *vp = vers;

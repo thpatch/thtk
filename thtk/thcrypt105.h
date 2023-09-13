@@ -32,6 +32,11 @@
 #include <config.h>
 
 void
+th_crypt75_list(
+    unsigned char *data,
+    unsigned int size);
+
+void
 th_crypt105_list(
     unsigned char* data,
     unsigned int size,
@@ -43,6 +48,9 @@ void
 th_crypt105_file(
     unsigned char* data,
     unsigned int size,
-    unsigned int offset);
+    unsigned int offset,
+    unsigned char or_key);
+#define THCRYPT_MEGAMARI_KEY 0x08
+#define THCRYPT_PATCHCON_KEY 0x23
 
 #endif

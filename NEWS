@@ -55,6 +55,8 @@ What's new in thtk master
 - Improve extraction speed.
 - Add -g option to enable globing on extracted filenames.
   Example: thdat -gx18 th18.dat "*.ecl"
+- Support for older Tasogare Frontier games added:
+  IaMP, Super Marisa Land, MegaMari, Higurashi Daybreak, PatchCon
 
 #### thmsg
 - Support for TH18, TH185, TH19 has been added.

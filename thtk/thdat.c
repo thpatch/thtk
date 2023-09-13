@@ -36,6 +36,7 @@
 
 extern const thdat_module_t archive_th02;
 extern const thdat_module_t archive_th06;
+extern const thdat_module_t archive_th75;
 extern const thdat_module_t archive_th08;
 extern const thdat_module_t archive_th95;
 extern const thdat_module_t archive_th105;
@@ -77,8 +78,12 @@ thdat_version_to_module(
     case 19:
     /* NEWHU: 19 */
         return &archive_th95;
-    case 105:
-    case 123:
+    case 75: /* IaMP, Super Marisa Land */
+    case 7575: /* MegaMari, Higurashi Daybreak */
+        return &archive_th75;
+    case 105105: /* PatchCon */
+    case 105: /* SWR */
+    case 123: /* Hisoutensoku */
         return &archive_th105;
     }
 
@@ -173,7 +178,7 @@ thdat_create(
         return NULL;
     thdat->entry_count = entry_count;
     thdat->entries = calloc(entry_count, sizeof(thdat_entry_t));
-    if (version != 105 && version != 123) {
+    if (version != 105105 && version != 105 && version != 123) {
         if (!thdat_init(thdat, error))
             return NULL;
     }
