@@ -6,7 +6,7 @@ add_library(thtk
   thcrypt.c thcrypt105.c rng_mt.c
   thcrypt.h thcrypt105.h rng_mt.h
 
-  thdat.c thdat02.c thdat06.c thdat75.c thdat08.c thdat95.c thdat105.c
+  thdat.c thdat02.c thdat06.c thdat08.c thdat95.c thdat105.c
   thdat.h dattypes.h
 
   thlzss.c thrle.c

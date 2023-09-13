@@ -33,10 +33,63 @@
 #include "thdat.h"
 #include "util.h"
 
-typedef struct {
+#define th75_name_len_from_thdat(thdat) ((thdat)->version == 75 ? 100 : 260)
+
+static void
+th75_path_normalize(
+    char *s,
+    char find,
+    char rep)
+{
+    for (; *s; s++)
+        if (*s == find)
+            *s = rep;
+}
+
+typedef struct th105_archive_header_t {
     uint16_t entry_count;
     uint32_t size;
 } th105_archive_header_t;
+
+static int
+th75_open(
+    thdat_t* thdat,
+    thtk_error_t** error)
+{
+    const int name_len = th75_name_len_from_thdat(thdat);
+    uint16_t entry_count;
+
+    if (thtk_io_read(thdat->stream, &entry_count, 2, error) != 2)
+        return 0;
+
+    size_t header_size = (8+name_len)*entry_count;
+    uint8_t *header_buf = malloc(header_size);
+    if (thtk_io_read(thdat->stream, header_buf, header_size, error) !=
+            header_size)
+        return 0;
+    th_crypt75_list(header_buf, header_size, 0x64, 0x64, 0x4d);
+
+    thdat->entry_count = entry_count;
+    thdat->entries = calloc(entry_count, sizeof(thdat_entry_t));
+
+    uint8_t *ptr = header_buf;
+    for (uint16_t i = 0; i < entry_count; i++) {
+        thdat_entry_t *entry = &thdat->entries[i];
+        thdat_entry_init(entry);
+
+        strncpy(entry->name, (char *)ptr, name_len);
+        entry->name[name_len-1] = 0;
+        th75_path_normalize((char *)entry->name, '\\', '/');
+        ptr += name_len;
+        entry->size = *((uint32_t *)ptr);
+        ptr += 4;
+        entry->offset = *((uint32_t *)ptr);
+        ptr += 4;
+    }
+    free(header_buf);
+
+    return 1;
+}
 
 static int
 th105_open(
@@ -90,6 +143,27 @@ th105_open(
     return 1;
 }
 
+static void
+th105_data_crypt(
+    thdat_t *thdat,
+    thdat_entry_t *entry,
+    uint8_t *data)
+{
+    switch (thdat->version) {
+    case 75:
+        break;
+    case 7575:
+        th_crypt105_file(data, entry->size, entry->offset, THCRYPT_MEGAMARI_KEY);
+        break;
+    case 105105:
+    case 105:
+    case 123:
+    default:
+        th_crypt105_file(data, entry->size, entry->offset, THCRYPT_PATCHCON_KEY);
+        break;
+    }
+}
+
 static ssize_t
 th105_read(
     thdat_t* thdat,
@@ -97,8 +171,8 @@ th105_read(
     thtk_io_t* output,
     thtk_error_t** error)
 {
-    thdat_entry_t* entry = thdat->entries + entry_index;
-    unsigned char* data = malloc(entry->size);
+    thdat_entry_t *entry = &thdat->entries[entry_index];
+    uint8_t *data = malloc(entry->size);
 
     int failed = 0;
 #pragma omp critical
@@ -110,12 +184,24 @@ th105_read(
     if (failed)
         return -1;
 
-    th_crypt105_file(data, entry->size, entry->offset, THCRYPT_PATCHCON_KEY);
+    th105_data_crypt(thdat, entry, data);
 
     if (thtk_io_write(output, data, entry->size, error) == -1)
         return -1;
 
     free(data);
+    return 1;
+}
+
+static int
+th75_create(
+    thdat_t* thdat,
+    thtk_error_t** error)
+{
+    const int name_len = th75_name_len_from_thdat(thdat);
+    thdat->offset = 2 + (8+name_len)*thdat->entry_count;
+    if (thtk_io_seek(thdat->stream, thdat->offset, SEEK_SET, error) == -1)
+        return 0;
     return 1;
 }
 
@@ -147,11 +233,11 @@ th105_write(
     size_t input_length,
     thtk_error_t** error)
 {
-    thdat_entry_t* entry = thdat->entries + entry_index;
-    unsigned char* data;
+    thdat_entry_t *entry = &thdat->entries[entry_index];
 
     entry->size = input_length;
-    data = malloc(entry->size);
+    uint8_t *data = malloc(entry->size);
+
     if (thtk_io_seek(input, 0, SEEK_SET, error) == -1)
         return -1;
     int ret = thtk_io_read(input, data, entry->size, error);
@@ -164,7 +250,7 @@ th105_write(
         thdat->offset += entry->size;
     }
 
-    th_crypt105_file(data, entry->size, entry->offset, THCRYPT_PATCHCON_KEY);
+    th105_data_crypt(thdat, entry, data);
 
     int failed = 0;
 #pragma omp critical
@@ -178,6 +264,45 @@ th105_write(
         return -1;
 
     return entry->size;
+}
+
+static int
+th75_close(
+    thdat_t* thdat,
+    thtk_error_t** error)
+{
+    const int name_len = th75_name_len_from_thdat(thdat);
+    uint16_t entry_count = thdat->entry_count;
+
+    size_t header_size = (8+name_len)*entry_count;
+    uint8_t *header_buf = calloc(1, header_size);
+
+    uint8_t *ptr = header_buf;
+    for (uint16_t i = 0; i < entry_count; i++) {
+        thdat_entry_t *entry = &thdat->entries[i];
+        strncpy((char *)ptr, entry->name, name_len);
+        ptr[name_len-1] = 0;
+        th75_path_normalize((char *)ptr, '/', '\\');
+        ptr += name_len;
+        *(uint32_t *)ptr = entry->size;
+        ptr += 4;
+        *(uint32_t *)ptr = entry->offset;
+        ptr += 4;
+    }
+    th_crypt75_list(header_buf, header_size, 0x64, 0x64, 0x4d);
+
+    if (thtk_io_seek(thdat->stream, 0, SEEK_SET, error) == -1)
+        return 0;
+
+    if (thtk_io_write(thdat->stream, &entry_count, 2, error) != 2)
+        return 0;
+    if (thtk_io_write(thdat->stream, header_buf, header_size, error) !=
+            header_size)
+        return 0;
+
+    free(header_buf);
+
+    return 1;
 }
 
 static int
@@ -232,6 +357,15 @@ th105_close(
 
     return 1;
 }
+
+const thdat_module_t archive_th75 = {
+    0,
+    th75_open,
+    th75_create,
+    th75_close,
+    th105_read,
+    th105_write
+};
 
 const thdat_module_t archive_th105 = {
     0,
