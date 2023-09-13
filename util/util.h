@@ -80,13 +80,13 @@ int util_scan_files(
     const char* dir,
     char*** result);
 
-/* XOR each byte by key.  Key is incremented by step, which is in turn
+/* XOR each byte by key.  Key is incremented by step1, which is in turn
  * incremented by step2. */
 void util_xor(
     unsigned char* data,
-    size_t data_length,
+    size_t size,
     unsigned char key,
-    unsigned char step,
+    unsigned char step1,
     unsigned char step2);
 
 /* Changes current directory */

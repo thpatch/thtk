@@ -62,7 +62,7 @@ th75_open(
     if (thtk_io_read(thdat->stream, header_buf, header_size, error) !=
             header_size)
         return 0;
-    th_crypt75_list(header_buf, header_size);
+    th_crypt75_list(header_buf, header_size, 0x64, 0x64, 0x4d);
 
     thdat->entry_count = entry_count;
     thdat->entries = calloc(entry_count, sizeof(thdat_entry_t));
@@ -193,7 +193,7 @@ th75_close(
         *(uint32_t *)ptr = entry->offset;
         ptr += 4;
     }
-    th_crypt75_list(header_buf, header_size);
+    th_crypt75_list(header_buf, header_size, 0x64, 0x64, 0x4d);
 
     if (thtk_io_seek(thdat->stream, 0, SEEK_SET, error) == -1)
         return 0;

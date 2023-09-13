@@ -34,7 +34,10 @@
 void
 th_crypt75_list(
     unsigned char *data,
-    unsigned int size);
+    unsigned int size,
+    unsigned char key,
+    unsigned char step1,
+    unsigned char step2);
 
 void
 th_crypt105_list(

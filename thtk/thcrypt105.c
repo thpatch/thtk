@@ -37,13 +37,15 @@
 void
 th_crypt75_list(
     unsigned char *data,
-    unsigned int size)
+    unsigned int size,
+    unsigned char key,
+    unsigned char step1,
+    unsigned char step2)
 {
-    unsigned char a = 100, b = 100;
     while (size-- > 0) {
-        *data++ ^= a;
-        a += b;
-        b += 77;
+        *data++ ^= key;
+        key += step1;
+        step1 += step2;
     }
 }
 
@@ -55,12 +57,11 @@ th_crypt105_list(
     unsigned char step1,
     unsigned char step2)
 {
-    unsigned int i;
     rng_mt* rng = rng_mt_init(6+size);
-    for (i = 0; i < size; i++) {
-        int ti = i-1;
-        data[i] ^= (key + i*step1 + (ti*ti+ti)/2 * step2);
-        data[i] ^= (rng_mt_nextint(rng) & 0xff);
+    while (size-- > 0) {
+        *data++ ^= (rng_mt_nextint(rng) & 0xff) ^ key;
+        key += step1;
+        step1 += step2;
     }
     rng_mt_free(rng);
 }

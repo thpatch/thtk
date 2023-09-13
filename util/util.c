@@ -312,16 +312,15 @@ err:
 void
 util_xor(
     unsigned char* data,
-    size_t data_length,
+    size_t size,
     unsigned char key,
-    unsigned char step,
+    unsigned char step1,
     unsigned char step2)
 {
-    size_t i;
-
-    for (i = 0; i < data_length; ++i) {
-        const int ip = i - 1;
-        data[i] ^= key + i * step + (ip * ip + ip) / 2 * step2;
+    while (size-- > 0) {
+        *data++ ^= key;
+        key += step1;
+        step1 += step2;
     }
 }
 
