@@ -158,17 +158,18 @@ th105_write(
     if (ret != entry->size)
         return -1;
 
-    /* FIXME: race condition on thdat->offset */
-    th_crypt105_file(data, entry->size, thdat->offset, THCRYPT_PATCHCON_KEY);
+#pragma omp critical
+    {
+        entry->offset = thdat->offset;
+        thdat->offset += entry->size;
+    }
+
+    th_crypt105_file(data, entry->size, entry->offset, THCRYPT_PATCHCON_KEY);
 
     int failed = 0;
 #pragma omp critical
     {
         failed = (thtk_io_write(thdat->stream, data, entry->size, error) != entry->size);
-        if (!failed) {
-            entry->offset = thdat->offset;
-            thdat->offset += entry->size;
-        }
     }
 
     free(data);
