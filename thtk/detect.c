@@ -72,8 +72,11 @@
     x(25, 14,19, "th19.dat") \
     /* NEWHU: 19 */ \
     /* thdat105 */ \
-    x(25, 105,105, NULL) \
-    x(26, 123,123, NULL)
+    x(26, 75,75, NULL) \
+    x(27, 7575,7575, NULL) \
+    x(28, 105105,105105, NULL) \
+    x(29, 105,105, NULL) \
+    x(30, 123,123, NULL)
 
 static const thdat_detect_entry_t detect_table[] = {
 #define x(idx, var, alias, filename) {var,alias,filename},
@@ -227,9 +230,35 @@ thdat_detect_filename_fn(
         {6, FN("th06e_MD.DAT")},
         {6, FN("th06e_ST.DAT")},
         {6, FN("th06e_TL.DAT")},
+        /* Tasofro filenames which don't nescessarily need Unicode handling */
+        {75, FN("th075.dat")},
+        {75, FN("th075b.dat")},
+        {75, FN("th075bgm.dat")},
+        {75, FN("sml.dat")},
+        {75, FN("sml2.dat")},
+        {75, FN("smlbgm.dat")},
+        {7575, FN("megamari.dat")},
+        {7575, FN("megamaribgm.dat")},
+        {7575, FN("megamari_e.dat")},
+        {7575, FN("daybreak00.dat")},
+        {7575, FN("daybreak01.dat")},
+        {7575, FN("daybreak02.dat")},
+        {7575, FN("daybreak03.dat")},
+        {7575, FN("daybreak04.dat")},
+        {7575, FN("daybreak05.dat")},
+        {7575, FN("daybreak06.dat")},
+        {7575, FN("daybreak07.dat")},
+        {105105, FN("td00.dat")},
+        {105105, FN("td01.dat")},
+        {105, FN("th105a.dat")},
+        {105, FN("th105b.dat")},
+        {105, FN("th105c.dat")},
+        {123, FN("th123a.dat")},
+        {123, FN("th123b.dat")},
+        {123, FN("th123c.dat")},
         {0},
     };
-    static const struct multi_filenames2 *mp2 = multi2;
+    const struct multi_filenames2 *mp2 = multi2;
     while(mp2->alias) {
         if(!fnscmp(filename,mp2->filename)) {
             return mp2->alias;
@@ -431,7 +460,7 @@ notth02:
             goto notth03;
         }
     }
-    if (memcmp(&head3[entry_count-1], &emptyhead3, sizeof(emptyhead3))) {
+    if (memcmp(&head3[ahead.count-1], &emptyhead3, sizeof(emptyhead3))) {
         goto notth03;
     }
     SET_OUT(3);
