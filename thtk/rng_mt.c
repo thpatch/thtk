@@ -31,17 +31,17 @@
 #include <stdlib.h>
 #include "rng_mt.h"
 
-static const int32_t N = 624;
-static const int32_t M = 397;
-static const uint32_t UPPER_MASK = 0x80000000UL;
-static const uint32_t LOWER_MASK = 0x7FFFFFFFUL;
+#define N 624
+#define M 397
+#define UPPER_MASK 0x80000000U
+#define LOWER_MASK 0x7FFFFFFFU
 
-static void
-rng_mt_internal_init(
-    rng_mt* rng,
+void
+rng_mt_init(
+    struct rng_mt *rng,
     uint32_t seed)
 {
-    uint32_t* mt = rng->mt;
+    uint32_t *mt = rng->mt;
 
     mt[0] = seed;
     for (int32_t i = 1; i < N; ++i) {
@@ -50,37 +50,16 @@ rng_mt_internal_init(
     rng->mti = N;
 }
 
-rng_mt*
-rng_mt_init(
-    uint32_t seed)
-{
-    rng_mt* ret = malloc(sizeof(rng_mt));
-    ret->mt = calloc(N, sizeof(uint32_t));
-    rng_mt_internal_init(ret, seed);
-    return ret;
-}
-
-int
-rng_mt_free(
-    rng_mt* rng)
-{
-    free(rng->mt);
-    free(rng);
-    return 1;
-}
-
 uint32_t
 rng_mt_nextint(
-    rng_mt* rng)
+    struct rng_mt *rng)
 {
-    uint32_t* mt = rng->mt;
+    uint32_t *mt = rng->mt;
     uint32_t ret;
     static uint32_t mag01[2] = {0x0UL, 0x9908b0dfUL};
     if (rng->mti >= N) {
         int i;
         uint32_t t;
-        if (rng->mti == N+1)
-            rng_mt_init(5489);
 
         for (i = 0; i < N-M; ++i) {
             t = (mt[i]&UPPER_MASK) | (mt[i+1]&LOWER_MASK);

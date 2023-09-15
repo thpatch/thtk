@@ -57,13 +57,13 @@ th_crypt105_list(
     unsigned char step1,
     unsigned char step2)
 {
-    rng_mt* rng = rng_mt_init(6+size);
+    struct rng_mt rng;
+    rng_mt_init(&rng, 6+size);
     while (size-- > 0) {
-        *data++ ^= (rng_mt_nextint(rng) & 0xff) ^ key;
+        *data++ ^= (rng_mt_nextint(&rng) & 0xff) ^ key;
         key += step1;
         step1 += step2;
     }
-    rng_mt_free(rng);
 }
 
 void

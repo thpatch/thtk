@@ -32,21 +32,18 @@
 
 #include <inttypes.h>
 
-typedef struct {
-    uint32_t* mt;
+struct rng_mt {
+    uint32_t mt[624];
     int32_t mti;
-} rng_mt;
+};
 
-rng_mt*
+void
 rng_mt_init(
+    struct rng_mt *rng,
     uint32_t seed);
 
-int
-rng_mt_free(
-    rng_mt* rng);
-    
 uint32_t
 rng_mt_nextint(
-    rng_mt* rng);
+    struct rng_mt *rng);
 
 #endif
