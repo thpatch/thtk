@@ -2430,6 +2430,11 @@ main(
     argc = ind;
     argv[argc] = NULL;
 
+    if (command == -1) {
+        print_usage();
+        exit(1);
+    }
+
     switch (version) {
     case 6:
     case 7:
