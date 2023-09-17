@@ -359,7 +359,7 @@ th105_close(
 }
 
 const thdat_module_t archive_th75 = {
-    0,
+    THDAT_NO_COMPRESSION,
     th75_open,
     th75_create,
     th75_close,
@@ -368,7 +368,7 @@ const thdat_module_t archive_th75 = {
 };
 
 const thdat_module_t archive_th105 = {
-    0,
+    THDAT_NO_COMPRESSION,
     th105_open,
     th105_create,
     th105_close,

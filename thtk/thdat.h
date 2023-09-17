@@ -66,6 +66,8 @@ struct thdat_t {
 #define THDAT_UPPERCASE 2
 /* Check filenames for 8.3 format. */
 #define THDAT_8_3 4
+/* No compression (zsize is not used). */
+#define THDAT_NO_COMPRESSION 8
 
 struct thdat_module_t {
     /* THDAT_ flags. */

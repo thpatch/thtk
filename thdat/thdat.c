@@ -160,6 +160,7 @@ thdat_list(
     }* entries;
     ssize_t e;
     int name_width = 4;
+    int all_uncompressed = 1;
 
     if ((entry_count = thdat_entry_count(state->thdat, error)) == -1) {
         thdat_state_free(state);
@@ -176,8 +177,6 @@ thdat_list(
             entries[e].name = thdat_entry_get_name(state->thdat, e, &error);
             entries[e].size = thdat_entry_get_size(state->thdat, e, &error);
             entries[e].zsize = thdat_entry_get_zsize(state->thdat, e, &error);
-            if (version == 75 || version == 7575 || version == 105105 || version == 105 || version == 123)
-                entries[e].zsize = entries[e].size;
             if (!entries[e].name || entries[e].size == -1 || entries[e].zsize == -1) {
                 print_error(error);
                 thtk_error_free(&error);
@@ -185,20 +184,22 @@ thdat_list(
             }
             int entry_name_width = strlen(entries[e].name);
 #pragma omp critical
-            if (entry_name_width > name_width)
-                name_width = entry_name_width;
+            {
+                if (entry_name_width > name_width)
+                    name_width = entry_name_width;
+                all_uncompressed &= entries[e].size == entries[e].zsize;
+            }
         }
     }
 
     // th105: Stored = Size
-    if (version == 75 || version == 7575 || version == 105105 || version == 105 || version == 123)
+    if (all_uncompressed) {
         printf("%-*s  %7s\n", name_width, "Name", "Size");
-    else
-        printf("%-*s  %7s  %7s\n", name_width, "Name", "Size", "Stored");
-    for (e = 0; e < entry_count; ++e) {
-        if (version == 75 || version == 7575 || version == 105105 || version == 105 || version == 123)
+        for (e = 0; e < entry_count; ++e)
             printf("%-*s  %7zd\n", name_width, entries[e].name, entries[e].size);
-        else
+    } else {
+        printf("%-*s  %7s  %7s\n", name_width, "Name", "Size", "Stored");
+        for (e = 0; e < entry_count; ++e)
             printf("%-*s  %7zd  %7zd\n", name_width, entries[e].name, entries[e].size, entries[e].zsize);
     }
 

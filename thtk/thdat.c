@@ -344,7 +344,8 @@ thdat_entry_get_zsize(
         thtk_error_new(error, "invalid parameter passed");
         return -1;
     }
-    return thdat->entries[entry_index].zsize;
+    thdat_entry_t *ent = &thdat->entries[entry_index];
+    return thdat->module->flags & THDAT_NO_COMPRESSION ? ent->size : ent->zsize;
 }
 
 ssize_t
