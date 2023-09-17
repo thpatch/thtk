@@ -274,12 +274,9 @@ thdat_create_wrapper(
     free(entries_count);
     // ...and then module->create, if this is th105 archive.
     // This is because the list of entries comes first in th105 archives.
-    if (version == 105105 || version == 105 || version == 123) {
-        if (!thdat_init(state->thdat, error))
-        {
-            thdat_state_free(state);
-            exit(1);
-        }
+    if (!thdat_init(state->thdat, error)) {
+        thdat_state_free(state);
+        exit(1);
     }
 
     k = 0;

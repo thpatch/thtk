@@ -366,7 +366,7 @@ const thdat_module_t archive_th75 = {
 };
 
 const thdat_module_t archive_th105 = {
-    THDAT_NO_COMPRESSION,
+    THDAT_NO_COMPRESSION|THDAT_LATE_INIT,
     th105_open,
     th105_create,
     th105_close,

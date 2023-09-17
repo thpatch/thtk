@@ -123,6 +123,7 @@ thdat_new(
     thdat->entry_count = 0;
     thdat->entries = NULL;
     thdat->offset = 0;
+    thdat->inited = 0;
     return thdat;
 }
 
@@ -153,10 +154,13 @@ thdat_init(
     thdat_t* thdat,
     thtk_error_t** error)
 {
+    if (thdat->inited)
+        return 1;
     if (!thdat->module->create(thdat, error)) {
         thdat_free(thdat);
         return 0;
     }
+    thdat->inited = 1;
     return 1;
 }
 
@@ -178,10 +182,9 @@ thdat_create(
         return NULL;
     thdat->entry_count = entry_count;
     thdat->entries = calloc(entry_count, sizeof(thdat_entry_t));
-    if (version != 105105 && version != 105 && version != 123) {
+    if (!(thdat->module->flags & THDAT_LATE_INIT))
         if (!thdat_init(thdat, error))
             return NULL;
-    }
     return thdat;
 }
 

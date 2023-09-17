@@ -58,6 +58,7 @@ struct thdat_t {
     size_t entry_count;
     thdat_entry_t* entries;
     uint32_t offset;
+    int inited;
 };
 
 /* Strip path names. */
@@ -68,6 +69,8 @@ struct thdat_t {
 #define THDAT_8_3 4
 /* No compression (zsize is not used). */
 #define THDAT_NO_COMPRESSION 8
+/* thdat_init must be called _after_ setting the filenames. */
+#define THDAT_LATE_INIT 16
 
 struct thdat_module_t {
     /* THDAT_ flags. */
