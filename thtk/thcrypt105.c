@@ -53,17 +53,12 @@ void
 th_crypt105_list(
     unsigned char* data,
     unsigned int size,
-    unsigned char key,
-    unsigned char step1,
-    unsigned char step2)
+    unsigned int key)
 {
     struct rng_mt rng;
-    rng_mt_init(&rng, 6+size);
-    while (size-- > 0) {
-        *data++ ^= (rng_mt_nextint(&rng) & 0xff) ^ key;
-        key += step1;
-        step1 += step2;
-    }
+    rng_mt_init(&rng, key);
+    while (size-- > 0)
+        *data++ ^= rng_mt_nextint(&rng) & 0xff;
 }
 
 void

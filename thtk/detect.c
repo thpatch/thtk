@@ -32,6 +32,7 @@
 #include <stdio.h> /* for SEEK_SET */
 #include <stdlib.h> /* for strtoul */
 #include "thcrypt.h"
+#include "thcrypt105.h"
 #include "thlzss.h"
 #include "dattypes.h"
 #include "thdat.h"
@@ -473,7 +474,7 @@ notth03:
     }
 
     /* read magic for TSA 06+ */
-    char magic[sizeof(th95_archive_header_t)];
+    uint8_t magic[sizeof(th95_archive_header_t)];
     if(-1 == thtk_io_read(input, magic, sizeof(magic), error)) {
         return -1;
     }
@@ -494,8 +495,8 @@ notth03:
         }
     }
     /* th095+ */
-    th_decrypt((unsigned char*)magic,sizeof(th95_archive_header_t),0x1b,0x37,sizeof(th95_archive_header_t),sizeof(th95_archive_header_t));
-    if(!memcmp(magic,"THA1",4)) {
+    th_decrypt(magic,sizeof(th95_archive_header_t),0x1b,0x37,sizeof(th95_archive_header_t),sizeof(th95_archive_header_t));
+    if (!memcmp(magic, "THA1", 4)) {
         int ver = thdat_detect_08_95(input, 1);
         if (ver == 0) {
             SET_OUT(95);
@@ -518,6 +519,37 @@ notth03:
             /* NEWHU: 19 */
         } else if (ver > 0) {
             SET_OUT(ver);
+        }
+    }
+    /* th105/th123 */
+    {
+        uint8_t th105head[10];
+        if (thtk_io_seek(input, 0, SEEK_SET, error) == -1)
+            return -1;
+        if (thtk_io_read(input, th105head, sizeof(th105head), error) != -1) {
+            uint32_t header_size = 6+*(uint32_t *)(th105head+2);
+            th_crypt105_list(th105head+6, 4, header_size);
+            if (header_size == *(uint32_t *)(th105head+6))
+                SET_OUT(105105);
+            th_crypt75_list(th105head+6, 4, 0xc5, 0x83, 0x53);
+            if (header_size == *(uint32_t *)(th105head+6)) {
+                SET_OUT(105);
+                SET_OUT(123);
+            }
+        }
+    }
+    /* th75 */
+    {
+        uint8_t th75head[2+268];
+        if (thtk_io_seek(input, 0, SEEK_SET, error) == -1)
+            return -1;
+        if (thtk_io_read(input, th75head, sizeof(th75head), error) != -1) {
+            th_crypt75_list(th75head+2, sizeof(th75head)-2, 0x64, 0x64, 0x4d);
+            uint16_t entries = *(uint16_t *)th75head;
+            if (2+entries*268 == *(uint32_t *)&th75head[2+268-4])
+                SET_OUT(7575);
+            if (2+entries*108 == *(uint32_t *)&th75head[2+108-4])
+                SET_OUT(75);
         }
     }
 

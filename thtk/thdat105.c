@@ -113,10 +113,9 @@ th105_open(
     if (thtk_io_read(thdat->stream, header_buf, header_size, error) !=
             header_size)
         return 0;
+    th_crypt105_list(header_buf, header_size, 6+header_size);
     if (thdat->version != 105105)
-        th_crypt105_list(header_buf, header_size, 0xc5, 0x83, 0x53);
-    else
-        th_crypt105_list(header_buf, header_size, 0x00, 0x00, 0x00);
+        th_crypt75_list(header_buf, header_size, 0xc5, 0x83, 0x53);
 
     thdat->entry_count = entry_count;
     thdat->entries = calloc(entry_count, sizeof(thdat_entry_t));
@@ -338,10 +337,9 @@ th105_close(
         buffer_ptr = MEMPCPY(buffer_ptr, entry->name, namelen);
     }
 
+    th_crypt105_list(buffer, header_size, 6+header_size);
     if (thdat->version != 105105)
-        th_crypt105_list(buffer, header_size, 0xc5, 0x83, 0x53);
-    else
-        th_crypt105_list(buffer, header_size, 0x00, 0x00, 0x00);
+        th_crypt75_list(buffer, header_size, 0xc5, 0x83, 0x53);
 
     if (thtk_io_seek(thdat->stream, 0, SEEK_SET, error) == -1)
         return 0;
