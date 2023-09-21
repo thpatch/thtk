@@ -1353,6 +1353,7 @@ th06_parse(
     state.uses_numbered_subs = true;
     state.has_overdrive_difficulty = false;
     state.uses_stack_offsets = false;
+    state.has_numeric_difficulties = false;
     list_init(&state.expressions);
     list_init(&state.block_stack);
     list_init(&state.global_definitions);
