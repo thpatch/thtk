@@ -359,7 +359,7 @@ main(
                 exit(1);
             }
             mode = opt;
-            if((opt == 'x' || mode == 'l') && *util_optarg == 'd') {
+            if((opt == 'x' || mode == 'l') && !strcmp(util_optarg, "d")) {
                 version = ~0;
             }
             else if(opt != 'd') version = parse_version(util_optarg);
