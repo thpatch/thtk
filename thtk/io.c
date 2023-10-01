@@ -34,15 +34,17 @@
 #include <stddef.h>
 #include <thtk/io.h>
 
-struct thtk_io_t {
-    void* private;
+struct thtk_io_vtable {
+    ssize_t (*read)(thtk_io_t *io, void *buf, size_t count, thtk_error_t **error);
+    ssize_t (*write)(thtk_io_t *io, const void *buf, size_t count, thtk_error_t **error);
+    off_t (*seek)(thtk_io_t *io, off_t offset, int whence, thtk_error_t **error);
+    unsigned char *(*map)(thtk_io_t *io, off_t offset, size_t count, thtk_error_t **error);
+    void (*unmap)(thtk_io_t *io, unsigned char *map);
+    int (*close)(thtk_io_t *io);
+};
 
-    ssize_t (*read)(thtk_io_t* io, void* buf, size_t count, thtk_error_t** error);
-    ssize_t (*write)(thtk_io_t* io, const void* buf, size_t count, thtk_error_t** error);
-    off_t (*seek)(thtk_io_t* io, off_t offset, int whence, thtk_error_t** error);
-    unsigned char* (*map)(thtk_io_t* io, off_t offset, size_t count, thtk_error_t** error);
-    void (*unmap)(thtk_io_t* io, unsigned char* map);
-    int (*close)(thtk_io_t* io);
+struct thtk_io_t {
+    const struct thtk_io_vtable *v;
 };
 
 ssize_t
@@ -57,7 +59,7 @@ thtk_io_read(
         thtk_error_new(error, "invalid parameter passed");
         return -1;
     }
-    ret = io->read(io, buf, count, error);
+    ret = io->v->read(io, buf, count, error);
     if (ret != (ssize_t)count) {
         thtk_error_new(error, "short read");
         return -1;
@@ -77,7 +79,7 @@ thtk_io_write(
         thtk_error_new(error, "invalid parameter passed");
         return -1;
     }
-    ret = io->write(io, buf, count, error);
+    ret = io->v->write(io, buf, count, error);
     if (ret != (ssize_t)count) {
         thtk_error_new(error, "short write");
         return -1;
@@ -96,7 +98,7 @@ thtk_io_seek(
         thtk_error_new(error, "invalid parameter passed");
         return (off_t)-1;
     }
-    return io->seek(io, offset, whence, error);
+    return io->v->seek(io, offset, whence, error);
 }
 
 unsigned char*
@@ -110,7 +112,7 @@ thtk_io_map(
         thtk_error_new(error, "invalid parameter passed");
         return NULL;
     }
-    return io->map(io, offset, count, error);
+    return io->v->map(io, offset, count, error);
 }
 
 void
@@ -121,7 +123,7 @@ thtk_io_unmap(
     if (!io || !map) {
         return;
     }
-    io->unmap(io, map);
+    io->v->unmap(io, map);
 }
 
 int
@@ -132,10 +134,15 @@ thtk_io_close(
     if (!io) {
         return 0;
     }
-    ret = io->close(io);
+    ret = io->v->close(io);
     free(io);
     return ret;
 }
+
+struct thtk_io_file {
+    thtk_io_t io;
+    FILE *stream;
+};
 
 static ssize_t
 thtk_io_file_read(
@@ -144,8 +151,9 @@ thtk_io_file_read(
     size_t count,
     thtk_error_t** error)
 {
-    size_t ret = fread(buf, 1, count, (FILE*)io->private);
-    if (ferror((FILE*)io->private)) {
+    struct thtk_io_file *private = (void *)io;
+    size_t ret = fread(buf, 1, count, private->stream);
+    if (ferror(private->stream)) {
         thtk_error_new(error, "error while reading: %s", strerror(errno));
         return -1;
     }
@@ -159,8 +167,9 @@ thtk_io_file_write(
     size_t count,
     thtk_error_t** error)
 {
-    size_t ret = fwrite(buf, 1, count, (FILE*)io->private);
-    if (ferror((FILE*)io->private)) {
+    struct thtk_io_file *private = (void *)io;
+    size_t ret = fwrite(buf, 1, count, private->stream);
+    if (ferror(private->stream)) {
         thtk_error_new(error, "error while writing: %s", strerror(errno));
         return -1;
     }
@@ -174,12 +183,14 @@ thtk_io_file_seek(
     int whence,
     thtk_error_t** error)
 {
-    if (fseek(io->private, (long)offset, whence) == -1) {
+    struct thtk_io_file *private = (void *)io;
+    /* TODO: use fseeko on Unix, _fseeki64 on Windows */
+    if (fseek(private->stream, (long)offset, whence) == -1) {
         thtk_error_new(error, "error while seeking: %s", strerror(errno));
         return (off_t)-1;
     }
 
-    return ftell(io->private);
+    return ftell(private->stream);
 }
 
 static unsigned char*
@@ -212,12 +223,12 @@ static int
 thtk_io_file_close(
     thtk_io_t* io)
 {
-    return fclose(io->private) == 0;
+    struct thtk_io_file *private = (void *)io;
+    return fclose(private->stream) == 0;
 }
 
-static const thtk_io_t
-thtk_io_file_template = {
-    NULL,
+static const struct thtk_io_vtable
+thtk_io_file_vtable = {
     thtk_io_file_read,
     thtk_io_file_write,
     thtk_io_file_seek,
@@ -232,17 +243,17 @@ thtk_io_open_file(
     const char* mode,
     thtk_error_t** error)
 {
-    thtk_io_t* io = malloc(sizeof(*io));
-    *io = thtk_io_file_template;
-    io->private = fopen(path, mode);
+    struct thtk_io_file *private = malloc(sizeof(*private));
+    private->io.v = &thtk_io_file_vtable;
+    private->stream = fopen(path, mode);
 
-    if (!io->private) {
+    if (!private->stream) {
         thtk_error_new(error, "error while opening file `%s': %s", path, strerror(errno));
-        free(io);
+        free(private);
         return NULL;
     }
 
-    return io;
+    return &private->io;
 }
 
 #ifdef _WIN32
@@ -252,24 +263,25 @@ thtk_io_open_file_w(
     const wchar_t* mode,
     thtk_error_t** error)
 {
-    thtk_io_t* io = malloc(sizeof(*io));
-    *io = thtk_io_file_template;
-    io->private = _wfopen(path, mode);
+    struct thtk_io_file *private = malloc(sizeof(*private));
+    private->io.v = &thtk_io_file_vtable;
+    private->stream = _wfopen(path, mode);
 
-    if (!io->private) {
+    if (!private->stream) {
         thtk_error_new(error, "error while opening file `%S': %s", path, strerror(errno));
-        free(io);
+        free(private);
         return NULL;
     }
 
-    return io;
+    return &private->io;
 }
 #endif
 
 struct thtk_io_memory {
+    thtk_io_t io;
     off_t offset;
     ssize_t size;
-    void* memory;
+    void *memory;
 };
 
 static ssize_t
@@ -280,7 +292,7 @@ thtk_io_memory_read(
     thtk_error_t** error)
 {
     (void)error;
-    struct thtk_io_memory *private = io->private;
+    struct thtk_io_memory *private = (void *)io;
     if (private->offset + (ssize_t)count >= private->size)
         count = private->size - private->offset;
     memcpy(buf, (unsigned char*)private->memory + private->offset, count);
@@ -296,7 +308,7 @@ thtk_io_memory_write(
     thtk_error_t** error)
 {
     (void)error;
-    struct thtk_io_memory *private = io->private;
+    struct thtk_io_memory *private = (void *)io;
     if (private->offset + (ssize_t)count >= private->size)
         count = private->size - private->offset;
     memcpy((unsigned char*)private->memory + private->offset, buf, count);
@@ -311,7 +323,7 @@ thtk_io_memory_seek(
     int whence,
     thtk_error_t** error)
 {
-    struct thtk_io_memory *private = io->private;
+    struct thtk_io_memory *private = (void *)io;
     switch (whence) {
     case SEEK_SET:
         if (offset > private->size ||
@@ -354,7 +366,7 @@ thtk_io_memory_map(
 {
     (void)count;
     (void)error;
-    struct thtk_io_memory *private = io->private;
+    struct thtk_io_memory *private = (void *)io;
     return (unsigned char*)private->memory + offset;
 }
 
@@ -371,14 +383,13 @@ static int
 thtk_io_memory_close(
     thtk_io_t* io)
 {
-    struct thtk_io_memory *private = io->private;
+    struct thtk_io_memory *private = (void *)io;
     free(private->memory);
     return 1;
 }
 
-static const thtk_io_t
-thtk_io_memory_template = {
-    NULL,
+static const struct thtk_io_vtable
+thtk_io_memory_vtable = {
     thtk_io_memory_read,
     thtk_io_memory_write,
     thtk_io_memory_seek,
@@ -394,26 +405,21 @@ thtk_io_open_memory(
     thtk_error_t** error)
 {
     (void)error;
-    struct io_and_memory {
-        thtk_io_t io;
-        struct thtk_io_memory private;
-    } *iop = malloc(sizeof(*iop));
-    thtk_io_t *io = &iop->io;
-    struct thtk_io_memory *private = &iop->private;
-    *io = thtk_io_memory_template;
+    struct thtk_io_memory *private = malloc(sizeof(*private));
+    private->io.v = &thtk_io_memory_vtable;
     private->offset = 0;
     private->size = size;
     private->memory = buf;
-    io->private = private;
 
-    return io;
+    return &private->io;
 }
 
 struct thtk_io_growing_memory {
+    thtk_io_t io;
     off_t offset;
     ssize_t size;
     ssize_t memory_size;
-    void* memory;
+    void *memory;
 };
 
 static ssize_t
@@ -424,7 +430,7 @@ thtk_io_growing_memory_read(
     thtk_error_t** error)
 {
     (void)error;
-    struct thtk_io_growing_memory *private = io->private;
+    struct thtk_io_growing_memory *private = (void *)io;
     if (private->offset + (ssize_t)count >= private->size)
         count = private->size - private->offset;
     memcpy(buf, (unsigned char*)private->memory + private->offset, count);
@@ -440,7 +446,7 @@ thtk_io_growing_memory_write(
     thtk_error_t** error)
 {
     (void)error;
-    struct thtk_io_growing_memory *private = io->private;
+    struct thtk_io_growing_memory *private = (void *)io;
     if (private->offset + (ssize_t)count >= private->size) {
         private->size = private->offset + (ssize_t)count;
         if (private->size >= private->memory_size) {
@@ -466,7 +472,7 @@ thtk_io_growing_memory_seek(
     int whence,
     thtk_error_t** error)
 {
-    struct thtk_io_growing_memory *private = io->private;
+    struct thtk_io_growing_memory *private = (void *)io;
     switch (whence) {
     case SEEK_SET:
         if (offset > private->size ||
@@ -509,7 +515,7 @@ thtk_io_growing_memory_map(
 {
     (void)count;
     (void)error;
-    struct thtk_io_growing_memory *private = io->private;
+    struct thtk_io_growing_memory *private = (void *)io;
     return (unsigned char*)private->memory + offset;
 }
 
@@ -517,14 +523,13 @@ static int
 thtk_io_growing_memory_close(
     thtk_io_t* io)
 {
-    struct thtk_io_growing_memory *private = io->private;
+    struct thtk_io_growing_memory *private = (void *)io;
     free(private->memory);
     return 1;
 }
 
-static const thtk_io_t
-thtk_io_growing_memory_template = {
-    NULL,
+static const struct thtk_io_vtable
+thtk_io_growing_memory_vtable = {
     thtk_io_growing_memory_read,
     thtk_io_growing_memory_write,
     thtk_io_growing_memory_seek,
@@ -538,18 +543,12 @@ thtk_io_open_growing_memory(
     thtk_error_t** error)
 {
     (void)error;
-    struct thtk_io_and_growing_memory {
-        thtk_io_t io;
-        struct thtk_io_growing_memory private;
-    } *iop = malloc(sizeof(*iop));
-    thtk_io_t *io = &iop->io;
-    struct thtk_io_growing_memory *private = &iop->private;
-    *io = thtk_io_growing_memory_template;
+    struct thtk_io_growing_memory *private = malloc(sizeof(*private));
+    private->io.v = &thtk_io_growing_memory_vtable;
     private->offset = 0;
     private->size = 0;
     private->memory_size = 0;
     private->memory = NULL;
-    io->private = private;
 
-    return io;
+    return &private->io;
 }
