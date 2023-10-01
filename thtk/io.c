@@ -373,7 +373,6 @@ thtk_io_memory_close(
 {
     struct thtk_io_memory *private = io->private;
     free(private->memory);
-    free(io->private);
     return 1;
 }
 
@@ -395,9 +394,13 @@ thtk_io_open_memory(
     thtk_error_t** error)
 {
     (void)error;
-    thtk_io_t* io = malloc(sizeof(*io));
+    struct io_and_memory {
+        thtk_io_t io;
+        struct thtk_io_memory private;
+    } *iop = malloc(sizeof(*iop));
+    thtk_io_t *io = &iop->io;
+    struct thtk_io_memory *private = &iop->private;
     *io = thtk_io_memory_template;
-    struct thtk_io_memory *private = malloc(sizeof(*private));
     private->offset = 0;
     private->size = size;
     private->memory = buf;
@@ -516,7 +519,6 @@ thtk_io_growing_memory_close(
 {
     struct thtk_io_growing_memory *private = io->private;
     free(private->memory);
-    free(io->private);
     return 1;
 }
 
@@ -536,9 +538,13 @@ thtk_io_open_growing_memory(
     thtk_error_t** error)
 {
     (void)error;
-    thtk_io_t* io = malloc(sizeof(*io));
+    struct thtk_io_and_growing_memory {
+        thtk_io_t io;
+        struct thtk_io_growing_memory private;
+    } *iop = malloc(sizeof(*iop));
+    thtk_io_t *io = &iop->io;
+    struct thtk_io_growing_memory *private = &iop->private;
     *io = thtk_io_growing_memory_template;
-    struct thtk_io_growing_memory *private = malloc(sizeof(*private));
     private->offset = 0;
     private->size = 0;
     private->memory_size = 0;
