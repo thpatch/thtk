@@ -266,11 +266,11 @@ thtk_io_open_file_w(
 }
 #endif
 
-typedef struct {
+struct thtk_io_memory {
     off_t offset;
     ssize_t size;
     void* memory;
-} thtk_io_memory_t;
+};
 
 static ssize_t
 thtk_io_memory_read(
@@ -280,7 +280,7 @@ thtk_io_memory_read(
     thtk_error_t** error)
 {
     (void)error;
-    thtk_io_memory_t* private = io->private;
+    struct thtk_io_memory *private = io->private;
     if (private->offset + (ssize_t)count >= private->size)
         count = private->size - private->offset;
     memcpy(buf, (unsigned char*)private->memory + private->offset, count);
@@ -296,7 +296,7 @@ thtk_io_memory_write(
     thtk_error_t** error)
 {
     (void)error;
-    thtk_io_memory_t* private = io->private;
+    struct thtk_io_memory *private = io->private;
     if (private->offset + (ssize_t)count >= private->size)
         count = private->size - private->offset;
     memcpy((unsigned char*)private->memory + private->offset, buf, count);
@@ -311,7 +311,7 @@ thtk_io_memory_seek(
     int whence,
     thtk_error_t** error)
 {
-    thtk_io_memory_t* private = io->private;
+    struct thtk_io_memory *private = io->private;
     switch (whence) {
     case SEEK_SET:
         if (offset > private->size ||
@@ -354,7 +354,7 @@ thtk_io_memory_map(
 {
     (void)count;
     (void)error;
-    thtk_io_memory_t* private = io->private;
+    struct thtk_io_memory *private = io->private;
     return (unsigned char*)private->memory + offset;
 }
 
@@ -371,7 +371,7 @@ static int
 thtk_io_memory_close(
     thtk_io_t* io)
 {
-    thtk_io_memory_t* private = io->private;
+    struct thtk_io_memory *private = io->private;
     free(private->memory);
     free(io->private);
     return 1;
@@ -397,7 +397,7 @@ thtk_io_open_memory(
     (void)error;
     thtk_io_t* io = malloc(sizeof(*io));
     *io = thtk_io_memory_template;
-    thtk_io_memory_t* private = malloc(sizeof(*private));
+    struct thtk_io_memory *private = malloc(sizeof(*private));
     private->offset = 0;
     private->size = size;
     private->memory = buf;
@@ -406,12 +406,12 @@ thtk_io_open_memory(
     return io;
 }
 
-typedef struct {
+struct thtk_io_growing_memory {
     off_t offset;
     ssize_t size;
     ssize_t memory_size;
     void* memory;
-} thtk_io_growing_memory_t;
+};
 
 static ssize_t
 thtk_io_growing_memory_read(
@@ -421,7 +421,7 @@ thtk_io_growing_memory_read(
     thtk_error_t** error)
 {
     (void)error;
-    thtk_io_growing_memory_t* private = io->private;
+    struct thtk_io_growing_memory *private = io->private;
     if (private->offset + (ssize_t)count >= private->size)
         count = private->size - private->offset;
     memcpy(buf, (unsigned char*)private->memory + private->offset, count);
@@ -437,7 +437,7 @@ thtk_io_growing_memory_write(
     thtk_error_t** error)
 {
     (void)error;
-    thtk_io_growing_memory_t* private = io->private;
+    struct thtk_io_growing_memory *private = io->private;
     if (private->offset + (ssize_t)count >= private->size) {
         private->size = private->offset + (ssize_t)count;
         if (private->size >= private->memory_size) {
@@ -463,7 +463,7 @@ thtk_io_growing_memory_seek(
     int whence,
     thtk_error_t** error)
 {
-    thtk_io_growing_memory_t* private = io->private;
+    struct thtk_io_growing_memory *private = io->private;
     switch (whence) {
     case SEEK_SET:
         if (offset > private->size ||
@@ -506,7 +506,7 @@ thtk_io_growing_memory_map(
 {
     (void)count;
     (void)error;
-    thtk_io_growing_memory_t* private = io->private;
+    struct thtk_io_growing_memory *private = io->private;
     return (unsigned char*)private->memory + offset;
 }
 
@@ -514,7 +514,7 @@ static int
 thtk_io_growing_memory_close(
     thtk_io_t* io)
 {
-    thtk_io_growing_memory_t* private = io->private;
+    struct thtk_io_growing_memory *private = io->private;
     free(private->memory);
     free(io->private);
     return 1;
@@ -538,7 +538,7 @@ thtk_io_open_growing_memory(
     (void)error;
     thtk_io_t* io = malloc(sizeof(*io));
     *io = thtk_io_growing_memory_template;
-    thtk_io_growing_memory_t* private = malloc(sizeof(*private));
+    struct thtk_io_growing_memory *private = malloc(sizeof(*private));
     private->offset = 0;
     private->size = 0;
     private->memory_size = 0;
