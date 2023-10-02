@@ -324,7 +324,7 @@ thtk_io_file_pread(
     thtk_error_t **error)
 {
     struct thtk_io_file *private = (void *)io;
-    ssize_t ret = pread(fileno(private->stream), buf, count, offset);
+    ssize_t ret = pread(fileno_unlocked(private->stream), buf, count, offset);
     if (ret == -1) {
         thtk_error_new(error, "error while reading: %s", strerror(errno));
         return -1;
@@ -341,7 +341,7 @@ thtk_io_file_pwrite(
     thtk_error_t **error)
 {
     struct thtk_io_file *private = (void *)io;
-    ssize_t ret = pwrite(fileno(private->stream), buf, count, offset);
+    ssize_t ret = pwrite(fileno_unlocked(private->stream), buf, count, offset);
     if (ret == -1) {
         thtk_error_new(error, "error while writing: %s", strerror(errno));
         return -1;
@@ -362,7 +362,7 @@ thtk_io_file_pread(
     memset(&ovl, 0, sizeof(ovl));
     ovl.Offset = offset; /* TODO: OffsetHigh */
     DWORD nread;
-    BOOL ret = ReadFile((HANDLE)_get_osfhandle(fileno(private->stream)), buf, count, &nread, &ovl);
+    BOOL ret = ReadFile((HANDLE)_get_osfhandle(fileno_unlocked(private->stream)), buf, count, &nread, &ovl);
     if (!ret) {
         char *buf;
         FormatMessageA(
@@ -388,7 +388,7 @@ thtk_io_file_pwrite(
     memset(&ovl, 0, sizeof(ovl));
     ovl.Offset = offset; /* TODO: OffsetHigh */
     DWORD nwritten;
-    BOOL ret = WriteFile((HANDLE)_get_osfhandle(fileno(private->stream)), buf, count, &nwritten, &ovl);
+    BOOL ret = WriteFile((HANDLE)_get_osfhandle(fileno_unlocked(private->stream)), buf, count, &nwritten, &ovl);
     if (!ret) {
         char *buf;
         FormatMessageA(
