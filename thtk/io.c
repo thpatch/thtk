@@ -135,7 +135,8 @@ thtk_io_unmap(
     if (!io || !map) {
         return;
     }
-    io->v->unmap(io, map);
+    if (io->v->unmap)
+        io->v->unmap(io, map);
 }
 
 int
@@ -548,15 +549,6 @@ thtk_io_memory_map(
     return (unsigned char*)private->memory + offset;
 }
 
-static void
-thtk_io_noop_unmap(
-    thtk_io_t* io,
-    unsigned char* map)
-{
-    (void)io;
-    (void)map;
-}
-
 static int
 thtk_io_memory_close(
     thtk_io_t* io)
@@ -572,7 +564,6 @@ thtk_io_memory_vtable = {
     .write  = thtk_io_memory_write,
     .seek   = thtk_io_memory_seek,
     .map    = thtk_io_memory_map,
-    .unmap  = thtk_io_noop_unmap,
     .close  = thtk_io_memory_close,
 };
 
@@ -712,7 +703,6 @@ thtk_io_growing_memory_vtable = {
     .write  = thtk_io_growing_memory_write,
     .seek   = thtk_io_growing_memory_seek,
     .map    = thtk_io_growing_memory_map,
-    .unmap  = thtk_io_noop_unmap,
     .close  = thtk_io_growing_memory_close,
 };
 
