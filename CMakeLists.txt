@@ -47,6 +47,7 @@ check_symbol_exists("chdir" "unistd.h" HAVE_CHDIR)
 if(NOT HAVE_CHDIR)
   check_symbol_exists("_chdir" "direct.h" HAVE__CHDIR)
 endif()
+check_symbol_exists("pread" "unistd.h" HAVE_PREAD)
 
 check_symbol_exists("getc_unlocked" "stdio.h" HAVE_GETC_UNLOCKED)
 if(HAVE_GETC_UNLOCKED)

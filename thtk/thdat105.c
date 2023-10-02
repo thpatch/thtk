@@ -173,20 +173,17 @@ th105_read(
     thdat_entry_t *entry = &thdat->entries[entry_index];
     uint8_t *data = malloc(entry->size);
 
-    int failed = 0;
-#pragma omp critical
-    {
-        failed = (thtk_io_seek(thdat->stream, entry->offset, SEEK_SET, error) == -1) ||
-                 (thtk_io_read(thdat->stream, data, entry->size, error) != entry->size);
-    }
-
-    if (failed)
+    if (thtk_io_pread(thdat->stream, data, entry->size, entry->offset, error) == -1) {
+        free(data);
         return -1;
+    }
 
     th105_data_crypt(thdat, entry, data);
 
-    if (thtk_io_write(output, data, entry->size, error) == -1)
+    if (thtk_io_write(output, data, entry->size, error) == -1) {
+        free(data);
         return -1;
+    }
 
     free(data);
     return 1;
@@ -237,11 +234,15 @@ th105_write(
     entry->size = input_length;
     uint8_t *data = malloc(entry->size);
 
-    if (thtk_io_seek(input, 0, SEEK_SET, error) == -1)
+    if (thtk_io_seek(input, 0, SEEK_SET, error) == -1) {
+        free(data);
         return -1;
+    }
     int ret = thtk_io_read(input, data, entry->size, error);
-    if (ret != entry->size)
+    if (ret != entry->size) {
+        free(data);
         return -1;
+    }
 
 #pragma omp critical
     {
@@ -251,17 +252,12 @@ th105_write(
 
     th105_data_crypt(thdat, entry, data);
 
-    int failed = 0;
-#pragma omp critical
-    {
-        failed = (thtk_io_write(thdat->stream, data, entry->size, error) != entry->size);
+    if (thtk_io_pwrite(thdat->stream, data, entry->size, entry->offset, error) == -1) {
+        free(data);
+        return -1;
     }
 
     free(data);
-
-    if (failed)
-        return -1;
-
     return entry->size;
 }
 

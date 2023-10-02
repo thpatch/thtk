@@ -33,6 +33,12 @@
 #include <string.h>
 #include <stddef.h>
 #include <thtk/io.h>
+#ifdef HAVE_UNISTD_H
+#include <unistd.h>
+#endif
+#ifdef _WIN32
+#include <windows.h>
+#endif
 
 struct thtk_io_vtable {
     ssize_t (*read)(thtk_io_t *io, void *buf, size_t count, thtk_error_t **error);
@@ -41,6 +47,8 @@ struct thtk_io_vtable {
     unsigned char *(*map)(thtk_io_t *io, off_t offset, size_t count, thtk_error_t **error);
     void (*unmap)(thtk_io_t *io, unsigned char *map);
     int (*close)(thtk_io_t *io);
+    ssize_t (*pread)(thtk_io_t *io, void *buf, size_t count, off_t offset, thtk_error_t **error);
+    ssize_t (*pwrite)(thtk_io_t *io, const void *buf, size_t count, off_t offset, thtk_error_t **error);
 };
 
 struct thtk_io_t {
@@ -60,6 +68,8 @@ thtk_io_read(
         return -1;
     }
     ret = io->v->read(io, buf, count, error);
+    if (ret == -1)
+        return -1;
     if (ret != (ssize_t)count) {
         thtk_error_new(error, "short read");
         return -1;
@@ -80,6 +90,8 @@ thtk_io_write(
         return -1;
     }
     ret = io->v->write(io, buf, count, error);
+    if (ret == -1)
+        return -1;
     if (ret != (ssize_t)count) {
         thtk_error_new(error, "short write");
         return -1;
@@ -136,6 +148,80 @@ thtk_io_close(
     }
     ret = io->v->close(io);
     free(io);
+    return ret;
+}
+
+ssize_t
+thtk_io_pread(
+    thtk_io_t *io,
+    void *buf,
+    size_t count,
+    off_t offset,
+    thtk_error_t **error)
+{
+    ssize_t ret;
+    if (!io || !buf || !count) {
+        thtk_error_new(error, "invalid parameter passed");
+        return -1;
+    }
+    if (io->v->pread) {
+        ret = io->v->pread(io, buf, count, offset, error);
+    } else {
+#pragma omp critical
+        {
+            off_t old;
+            ret = -1;
+            if ((old = thtk_io_seek(io, 0, SEEK_CUR, error)) != -1)
+                if (thtk_io_seek(io, offset, SEEK_SET, error) != -1) {
+                    ret = thtk_io_read(io, buf, count, error);
+                    if (thtk_io_seek(io, old, SEEK_SET, error) == -1)
+                        ret = -1;
+                }
+        }
+    }
+    if (ret == -1)
+        return -1;
+    if (ret != (ssize_t)count) {
+        thtk_error_new(error, "short read");
+        return -1;
+    }
+    return ret;
+}
+
+ssize_t
+thtk_io_pwrite(
+    thtk_io_t *io,
+    const void *buf,
+    size_t count,
+    off_t offset,
+    thtk_error_t **error)
+{
+    ssize_t ret;
+    if (!io || !buf || !count) {
+        thtk_error_new(error, "invalid parameter passed");
+        return -1;
+    }
+    if (io->v->pwrite) {
+        ret = io->v->pwrite(io, buf, count, offset, error);
+    } else {
+#pragma omp critical
+        {
+            off_t old;
+            ret = -1;
+            if ((old = thtk_io_seek(io, 0, SEEK_CUR, error)) != -1)
+                if (thtk_io_seek(io, offset, SEEK_SET, error) != -1) {
+                    ret = thtk_io_write(io, buf, count, error);
+                    if (thtk_io_seek(io, old, SEEK_SET, error) == -1)
+                        ret = -1;
+                }
+        }
+    }
+    if (ret == -1)
+        return -1;
+    if (ret != (ssize_t)count) {
+        thtk_error_new(error, "short write");
+        return -1;
+    }
     return ret;
 }
 
@@ -227,14 +313,106 @@ thtk_io_file_close(
     return fclose(private->stream) == 0;
 }
 
+#if defined(HAVE_PREAD)
+static ssize_t
+thtk_io_file_pread(
+    thtk_io_t *io,
+    void *buf,
+    size_t count,
+    off_t offset,
+    thtk_error_t **error)
+{
+    struct thtk_io_file *private = (void *)io;
+    ssize_t ret = pread(fileno(private->stream), buf, count, offset);
+    if (ret == -1) {
+        thtk_error_new(error, "error while reading: %s", strerror(errno));
+        return -1;
+    }
+    return ret;
+}
+
+static ssize_t
+thtk_io_file_pwrite(
+    thtk_io_t *io,
+    const void *buf,
+    size_t count,
+    off_t offset,
+    thtk_error_t **error)
+{
+    struct thtk_io_file *private = (void *)io;
+    ssize_t ret = pwrite(fileno(private->stream), buf, count, offset);
+    if (ret == -1) {
+        thtk_error_new(error, "error while writing: %s", strerror(errno));
+        return -1;
+    }
+    return ret;
+}
+#elif defined(_WIN32)
+static ssize_t
+thtk_io_file_pread(
+    thtk_io_t *io,
+    void *buf,
+    size_t count,
+    off_t offset,
+    thtk_error_t **error)
+{
+    struct thtk_io_file *private = (void *)io;
+    OVERLAPPED ovl;
+    memset(&ovl, 0, sizeof(ovl));
+    ovl.Offset = offset; /* TODO: OffsetHigh */
+    DWORD nread;
+    BOOL ret = ReadFile((HANDLE)_get_osfhandle(fileno(private->stream)), buf, count, &nread, &ovl);
+    if (!ret) {
+        char *buf;
+        FormatMessageA(
+            FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+            NULL, GetLastError(), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPSTR)&buf, 0, NULL);
+        thtk_error_new(error, "error while reading: %s", buf ? buf : "(null)");
+        LocalFree(buf);
+        return -1;
+    }
+    return nread;
+}
+
+static ssize_t
+thtk_io_file_pwrite(
+    thtk_io_t *io,
+    const void *buf,
+    size_t count,
+    off_t offset,
+    thtk_error_t **error)
+{
+    struct thtk_io_file *private = (void *)io;
+    OVERLAPPED ovl;
+    memset(&ovl, 0, sizeof(ovl));
+    ovl.Offset = offset; /* TODO: OffsetHigh */
+    DWORD nwritten;
+    BOOL ret = WriteFile((HANDLE)_get_osfhandle(fileno(private->stream)), buf, count, &nwritten, &ovl);
+    if (!ret) {
+        char *buf;
+        FormatMessageA(
+            FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+            NULL, GetLastError(), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPSTR)&buf, 0, NULL);
+        thtk_error_new(error, "error while writing: %s", buf ? buf : "(null)");
+        LocalFree(buf);
+        return -1;
+    }
+    return nwritten;
+}
+#endif
+
 static const struct thtk_io_vtable
 thtk_io_file_vtable = {
-    thtk_io_file_read,
-    thtk_io_file_write,
-    thtk_io_file_seek,
-    thtk_io_file_map,
-    thtk_io_file_unmap,
-    thtk_io_file_close,
+    .read   = thtk_io_file_read,
+    .write  = thtk_io_file_write,
+    .seek   = thtk_io_file_seek,
+    .map    = thtk_io_file_map,
+    .unmap  = thtk_io_file_unmap,
+    .close  = thtk_io_file_close,
+#if defined(HAVE_PREAD) || defined(_WIN32)
+    .pread  = thtk_io_file_pread,
+    .pwrite = thtk_io_file_pwrite,
+#endif
 };
 
 thtk_io_t*
@@ -390,12 +568,12 @@ thtk_io_memory_close(
 
 static const struct thtk_io_vtable
 thtk_io_memory_vtable = {
-    thtk_io_memory_read,
-    thtk_io_memory_write,
-    thtk_io_memory_seek,
-    thtk_io_memory_map,
-    thtk_io_noop_unmap,
-    thtk_io_memory_close,
+    .read   = thtk_io_memory_read,
+    .write  = thtk_io_memory_write,
+    .seek   = thtk_io_memory_seek,
+    .map    = thtk_io_memory_map,
+    .unmap  = thtk_io_noop_unmap,
+    .close  = thtk_io_memory_close,
 };
 
 thtk_io_t*
@@ -530,12 +708,12 @@ thtk_io_growing_memory_close(
 
 static const struct thtk_io_vtable
 thtk_io_growing_memory_vtable = {
-    thtk_io_growing_memory_read,
-    thtk_io_growing_memory_write,
-    thtk_io_growing_memory_seek,
-    thtk_io_growing_memory_map,
-    thtk_io_noop_unmap,
-    thtk_io_growing_memory_close,
+    .read   = thtk_io_growing_memory_read,
+    .write  = thtk_io_growing_memory_write,
+    .seek   = thtk_io_growing_memory_seek,
+    .map    = thtk_io_growing_memory_map,
+    .unmap  = thtk_io_noop_unmap,
+    .close  = thtk_io_growing_memory_close,
 };
 
 thtk_io_t*

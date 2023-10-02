@@ -56,6 +56,12 @@ THTK_EXPORT unsigned char* thtk_io_map(thtk_io_t* io, off_t offset, size_t count
 THTK_EXPORT void thtk_io_unmap(thtk_io_t* io, unsigned char* map);
 /* Closes and frees the IO object.  Returns 0 on error, otherwise 1. */
 THTK_EXPORT int thtk_io_close(thtk_io_t* io);
+/* See the documentation for pread(2).  Returns the number of bytes read, or -1
+ * on error. */
+THTK_EXPORT ssize_t thtk_io_pread(thtk_io_t* io, void* buf, size_t count, off_t offset, thtk_error_t** error);
+/* See the documentation for pwrite(2).  Returns the number of bytes written, or
+ * -1 on error. */
+THTK_EXPORT ssize_t thtk_io_pwrite(thtk_io_t* io, const void* buf, size_t count, off_t offset, thtk_error_t** error);
 
 /* Opens a file in the mode specified, the mode works as it does for fopen. */
 THTK_EXPORT thtk_io_t* thtk_io_open_file(const char* path, const char* mode, thtk_error_t** error);
