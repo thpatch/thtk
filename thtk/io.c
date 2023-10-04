@@ -393,10 +393,8 @@ thtk_io_file_map(
     size_t count,
     thtk_error_t** error)
 {
-    if (thtk_io_file_seek(io, offset, SEEK_SET, error) == -1)
-        return NULL;
     unsigned char* map = malloc(count);
-    if (thtk_io_file_read(io, map, count, error) != (ssize_t)count) {
+    if (thtk_io_pread(io, map, count, offset, error) != (ssize_t)count) {
         free(map);
         return NULL;
     }
