@@ -37,6 +37,9 @@
 #ifdef HAVE_FSTAT
 #include <sys/stat.h>
 #endif
+#ifdef _WIN32
+#include <windows.h>
+#endif
 #include "file.h"
 #include "program.h"
 
@@ -178,13 +181,39 @@ file_mmap(
     FILE* stream,
     size_t length)
 {
-#ifdef HAVE_MMAP
+#if defined(HAVE_MMAP)
     void* map = mmap(NULL, length, PROT_READ, MAP_PRIVATE, fileno_unlocked(stream), 0);
     if (map == MAP_FAILED) {
         fprintf(stderr, "%s: mmap failed: %s\n", argv0, strerror(errno));
         return NULL;
     }
     return map;
+#elif defined(_WIN32)
+    LARGE_INTEGER li;
+    li.QuadPart = length;
+    HANDLE map = CreateFileMappingW(
+        (HANDLE)_get_osfhandle(fileno_unlocked(stream)),
+        NULL, PAGE_READONLY, li.HighPart, li.LowPart, NULL);
+    if (!map) {
+        char *buf;
+        FormatMessageA(
+            FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+            NULL, GetLastError(), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPSTR)&buf, 0, NULL);
+        fprintf(stderr, "%s: CreateFileMappingW failed: %s\n", argv0, buf);
+        LocalFree(buf);
+        return NULL;
+    }
+    void *view = MapViewOfFile(map, FILE_MAP_READ, 0, 0, length);
+    if (!view) {
+        char *buf;
+        FormatMessageA(
+            FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+            NULL, GetLastError(), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPSTR)&buf, 0, NULL);
+        fprintf(stderr, "%s: MapViewOfFile failed: %s\n", argv0, buf);
+        LocalFree(buf);
+    }
+    CloseHandle(map);
+    return view;
 #else
     void* buffer = malloc(length);
     if (buffer && !file_read(stream, buffer, length)) {
@@ -200,9 +229,21 @@ file_munmap(
     void* map,
     size_t length)
 {
-#ifdef HAVE_MMAP
+#if defined(HAVE_MMAP)
     if (munmap(map, length) == -1) {
         fprintf(stderr, "%s: munmap failed: %s\n", argv0, strerror(errno));
+        return 0;
+    }
+    return 1;
+#elif defined(_WIN32)
+    (void)length;
+    if (!UnmapViewOfFile(map)) {
+        char *buf;
+        FormatMessageA(
+            FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+            NULL, GetLastError(), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPSTR)&buf, 0, NULL);
+        fprintf(stderr, "%s: UnmapViewOfFile failed: %s\n", argv0, buf);
+        LocalFree(buf);
         return 0;
     }
     return 1;
