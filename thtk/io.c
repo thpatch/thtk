@@ -36,6 +36,9 @@
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
 #endif
+#ifdef HAVE_MMAP
+#include <sys/mman.h>
+#endif
 #ifdef _WIN32
 #include <windows.h>
 #endif
@@ -280,6 +283,109 @@ thtk_io_file_seek(
     return ftell(private->stream);
 }
 
+#if defined(HAVE_MMAP) && (defined(MAP_ANON) || defined(MAP_ANONYMOUS))
+static unsigned char*
+thtk_io_file_map(
+    thtk_io_t* io,
+    off_t offset,
+    size_t count,
+    thtk_error_t** error)
+{
+    struct thtk_io_file *private = (void *)io;
+    int ps = sysconf(_SC_PAGE_SIZE)-1;
+    off_t voffset = offset & ~(off_t)ps;
+    size_t vcount = count + (offset & ps);
+    vcount = (vcount + ps) & ~(size_t)ps;
+    /* We need an extra page to store the mapping size. Ugly */
+#ifndef MAP_ANON
+#define MAP_ANON MAP_ANONYMOUS
+#endif
+#ifndef MAP_NORESERVE
+#define MAP_NORESERVE 0
+#endif
+    unsigned char *map = mmap(NULL, vcount + ps, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANON|MAP_NORESERVE, -1, 0);
+    if (map == MAP_FAILED) {
+        thtk_error_new(error, "mmap failed: %s", strerror(errno));
+        return NULL;
+    }
+    if (mmap(map+ps, vcount, PROT_READ, MAP_PRIVATE|MAP_FIXED, fileno_unlocked(private->stream), voffset) == MAP_FAILED) {
+        munmap(map, vcount + ps);
+        thtk_error_new(error, "mmap failed: %s", strerror(errno));
+        return NULL;
+    }
+    /* Due to MAP_NORESERVE this might segfault... but so can any allocation, thanks to overcommit */
+    *(size_t *)map = vcount + ps;
+    return map + ps + (offset & ps);
+}
+
+static void
+thtk_io_file_unmap(
+    thtk_io_t* io,
+    unsigned char* map)
+{
+    (void)io;
+    int ps = sysconf(_SC_PAGE_SIZE)-1;
+    map -= ((intptr_t)map & ps) + ps;
+    munmap(map, *(size_t *)map);
+}
+#elif defined(_WIN32)
+static unsigned char*
+thtk_io_file_map(
+    thtk_io_t* io,
+    off_t offset,
+    size_t count,
+    thtk_error_t** error)
+{
+    struct thtk_io_file *private = (void *)io;
+    SYSTEM_INFO si;
+    GetSystemInfo(&si);
+    int ps = si.dwPageSize-1;
+    off_t voffset = offset & ~(off_t)ps;
+    size_t vcount = count + (offset & ps);
+    vcount = (vcount + ps) & ~(size_t)ps;
+    LARGE_INTEGER li;
+    li.QuadPart = voffset;
+    li.QuadPart += vcount;
+    HANDLE map = CreateFileMappingW(
+        (HANDLE)_get_osfhandle(fileno_unlocked(private->stream)),
+        NULL, PAGE_READONLY, li.HighPart, li.LowPart, NULL);
+    if (!map) {
+        char *buf;
+        FormatMessageA(
+            FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+            NULL, GetLastError(), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPSTR)&buf, 0, NULL);
+        thtk_error_new(error, "CreateFileMappingW error: %s", buf ? buf : "(null)");
+        LocalFree(buf);
+        return NULL;
+    }
+    li.QuadPart = voffset;
+    unsigned char *view = MapViewOfFile(map, FILE_MAP_READ, li.HighPart, li.LowPart, vcount);
+    if (!view) {
+        char *buf;
+        FormatMessageA(
+            FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+            NULL, GetLastError(), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPSTR)&buf, 0, NULL);
+        thtk_error_new(error, "MapViewOfFile error: %s", buf ? buf : "(null)");
+        LocalFree(buf);
+        CloseHandle(map);
+        return NULL;
+    }
+    CloseHandle(map);
+    return view + (offset & ps);
+}
+
+static void
+thtk_io_file_unmap(
+    thtk_io_t* io,
+    unsigned char* map)
+{
+    (void)io;
+    SYSTEM_INFO si;
+    GetSystemInfo(&si);
+    int ps = si.dwPageSize-1;
+    UnmapViewOfFile(map - ((intptr_t)map & ps));
+}
+#else
 static unsigned char*
 thtk_io_file_map(
     thtk_io_t* io,
@@ -305,6 +411,7 @@ thtk_io_file_unmap(
     (void)io;
     free(map);
 }
+#endif
 
 static int
 thtk_io_file_close(
