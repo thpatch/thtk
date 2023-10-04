@@ -127,7 +127,16 @@ thtk_io_map(
         thtk_error_new(error, "invalid parameter passed");
         return NULL;
     }
-    return io->v->map(io, offset, count, error);
+    if (io->v->map) {
+        return io->v->map(io, offset, count, error);
+    } else {
+        unsigned char* map = malloc(count);
+        if (thtk_io_pread(io, map, count, offset, error) != (ssize_t)count) {
+            free(map);
+            return NULL;
+        }
+        return map;
+    }
 }
 
 void
@@ -138,8 +147,12 @@ thtk_io_unmap(
     if (!io || !map) {
         return;
     }
-    if (io->v->unmap)
-        io->v->unmap(io, map);
+    if (io->v->map) {
+        if (io->v->unmap)
+            io->v->unmap(io, map);
+    } else {
+        free(map);
+    }
 }
 
 int
@@ -385,30 +398,6 @@ thtk_io_file_unmap(
     int ps = si.dwPageSize-1;
     UnmapViewOfFile(map - ((intptr_t)map & ps));
 }
-#else
-static unsigned char*
-thtk_io_file_map(
-    thtk_io_t* io,
-    off_t offset,
-    size_t count,
-    thtk_error_t** error)
-{
-    unsigned char* map = malloc(count);
-    if (thtk_io_pread(io, map, count, offset, error) != (ssize_t)count) {
-        free(map);
-        return NULL;
-    }
-    return map;
-}
-
-static void
-thtk_io_file_unmap(
-    thtk_io_t* io,
-    unsigned char* map)
-{
-    (void)io;
-    free(map);
-}
 #endif
 
 static int
@@ -512,8 +501,10 @@ thtk_io_file_vtable = {
     .read   = thtk_io_file_read,
     .write  = thtk_io_file_write,
     .seek   = thtk_io_file_seek,
+#if defined(HAVE_MMAP) && (defined(MAP_ANON) || defined(MAP_ANONYMOUS)) || defined(_WIN32)
     .map    = thtk_io_file_map,
     .unmap  = thtk_io_file_unmap,
+#endif
     .close  = thtk_io_file_close,
 #if defined(HAVE_PREAD) || defined(_WIN32)
     .pread  = thtk_io_file_pread,
