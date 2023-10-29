@@ -10,8 +10,7 @@ function(__check_struct_packing_impl what preamble var)
   configure_file(${__check_struct_packing_dir}/CheckStructPacking.c.in ${src} @ONLY)
   try_compile(${var} ${CMAKE_BINARY_DIR} ${src}
     COMPILE_DEFINITIONS ${CMAKE_REQUIRED_DEFINITIONS}
-    # CMake 3.14
-    #LINK_OPTIONS ${CMAKE_REQUIRED_LINK_OPTIONS}
+    LINK_OPTIONS ${CMAKE_REQUIRED_LINK_OPTIONS}
     LINK_LIBRARIES ${CMAKE_REQUIRED_LIBRARIES}
     CMAKE_FLAGS
       "-DCOMPILE_DEFINITIONS:STRING=${CMAKE_REQUIRED_FLAGS}"
