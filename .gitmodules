@@ -1,9 +1,9 @@
 [submodule "thanm/libpng"]
 	path = extlib/libpng
-	url = https://github.com/glennrp/libpng.git
+	url = https://github.com/pnggroup/libpng.git
 [submodule "thanm/zlib-ng"]
 	path = extlib/zlib-ng
 	url = https://github.com/zlib-ng/zlib-ng.git
 [submodule "thtypes"]
 	path = extlib/thtypes
-	url = https://github.com/thpatch/thtypes
+	url = https://github.com/thpatch/thtypes.git
