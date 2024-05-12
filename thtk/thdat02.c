@@ -202,14 +202,18 @@ th02_write(
         output = input;
     }
 
-    unsigned char* data = thtk_io_map(output, 0, entry->zsize, error);
-    if (!data)
+    unsigned char* data = malloc(entry->zsize);
+    ssize_t ret = thtk_io_pread(output, data, entry->zsize, 0, error);
+    if (ret != entry->zsize) {
+        free(data);
+        if (output != input)
+            thtk_io_close(output);
         return -1;
+    }
 
     for (ssize_t i = 0; i < entry->zsize; ++i)
         data[i] ^= thdat->version <= 2 ? th02_keys[thdat->version - 1] : entry_key;
 
-    ssize_t ret = -1;
 
 #pragma omp critical
     {
@@ -222,7 +226,7 @@ th02_write(
             thdat->offset += ret;
     }
 
-    thtk_io_unmap(output, data);
+    free(data);
 
     if (output != input)
         thtk_io_close(output);
