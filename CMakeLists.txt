@@ -1,5 +1,4 @@
 cmake_minimum_required(VERSION 3.14)
-set(CMP0048 NEW)
 
 project("Touhou Toolkit"
   VERSION 12)
