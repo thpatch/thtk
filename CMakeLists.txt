@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.14)
 
 project("Touhou Toolkit"
   VERSION 12)
-set(PROJECT_URL "https://github.com/thpatch/thtk")
+set(PROJECT_URL "https://thtk.thpatch.net/")
 set(PROJECT_BUGREPORT "https://github.com/thpatch/thtk/issues")
 
 include(cmake/CheckStructPacking.cmake)
