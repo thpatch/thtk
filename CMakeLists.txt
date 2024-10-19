@@ -11,6 +11,7 @@ include(CheckIncludeFile)
 include(CheckSymbolExists)
 include(CMakePushCheckState)
 include(GenerateExportHeader)
+include(GNUInstallDirs)
 
 cmake_push_check_state(RESET)
 
@@ -78,7 +79,7 @@ if(HAVE_MATH_LIBM)
   set_target_properties(math PROPERTIES INTERFACE_LINK_LIBRARIES m)
 endif()
 
-set(CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_PREFIX}/lib)
+set(CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_LIBDIR})
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
 option(BUILD_SHARED_LIBS "Prefer to build shared lib" ON)

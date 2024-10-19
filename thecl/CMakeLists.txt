@@ -9,5 +9,5 @@ add_executable(thecl
   expr.c thecl.c eclmap.c thecl06.c thecl10.c
   expr.h thecl.h eclmap.h)
 target_link_libraries(thecl PRIVATE util math setargv thtk_warning)
-install(TARGETS thecl DESTINATION bin)
-install(FILES thecl.1 DESTINATION share/man/man1)
+install(TARGETS thecl DESTINATION ${CMAKE_INSTALL_BINDIR})
+install(FILES thecl.1 DESTINATION ${CMAKE_INSTALL_MANDIR}/man1)

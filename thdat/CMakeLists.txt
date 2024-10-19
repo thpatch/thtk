@@ -1,5 +1,5 @@
 include_directories(${CMAKE_SOURCE_DIR})
 add_executable(thdat thdat.c)
 target_link_libraries(thdat PRIVATE thtk util setargv thtk_warning $<$<BOOL:${OPENMP_FOUND}>:OpenMP::OpenMP_C>)
-install(TARGETS thdat DESTINATION bin)
-install(FILES thdat.1 DESTINATION share/man/man1)
+install(TARGETS thdat DESTINATION ${CMAKE_INSTALL_BINDIR})
+install(FILES thdat.1 DESTINATION ${CMAKE_INSTALL_MANDIR}/man1)
