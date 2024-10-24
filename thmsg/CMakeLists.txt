@@ -3,5 +3,5 @@ add_executable(thmsg
   thmsg.h
 )
 target_link_libraries(thmsg PRIVATE util setargv thtk_warning)
-install(TARGETS thmsg DESTINATION ${CMAKE_INSTALL_BINDIR})
+install(TARGETS thmsg)
 install(FILES thmsg.1 DESTINATION ${CMAKE_INSTALL_MANDIR}/man1)
