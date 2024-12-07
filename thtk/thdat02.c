@@ -138,7 +138,13 @@ th02_read(
         ret = thtk_io_write(output, data, entry->zsize, error);
         thtk_io_unmap(thdat->stream, data);
     } else {
-        thtk_io_t* data_stream = thtk_io_open_memory(data, entry->zsize, error);
+        /* FIXME: ouch, an unnecessary copy, due to thtk_io_open_memory taking ownership */
+        void *data2 = malloc(entry->zsize);
+        if (!data2)
+            return -1;
+        memcpy(data2, data, entry->zsize);
+
+        thtk_io_t* data_stream = thtk_io_open_memory(data2, entry->zsize, error);
         if (!data_stream)
             return -1;
         ret = thtk_unrle(data_stream, entry->zsize, output, error);
