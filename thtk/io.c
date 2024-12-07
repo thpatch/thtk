@@ -305,10 +305,11 @@ thtk_io_file_map(
     thtk_error_t** error)
 {
     struct thtk_io_file *private = (void *)io;
-    int ps = sysconf(_SC_PAGE_SIZE)-1;
-    off_t voffset = offset & ~(off_t)ps;
-    size_t vcount = count + (offset & ps);
-    vcount = (vcount + ps) & ~(size_t)ps;
+    int pagesize = sysconf(_SC_PAGE_SIZE);
+    int pagemask = pagesize-1;
+    off_t voffset = offset & ~(off_t)pagemask;
+    size_t vcount = count + (offset & pagemask);
+    vcount = (vcount + pagemask) & ~(size_t)pagemask;
     /* We need an extra page to store the mapping size. Ugly */
 #ifndef MAP_ANON
 #define MAP_ANON MAP_ANONYMOUS
@@ -316,19 +317,19 @@ thtk_io_file_map(
 #ifndef MAP_NORESERVE
 #define MAP_NORESERVE 0
 #endif
-    unsigned char *map = mmap(NULL, vcount + ps, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANON|MAP_NORESERVE, -1, 0);
+    unsigned char *map = mmap(NULL, pagesize+vcount, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANON|MAP_NORESERVE, -1, 0);
     if (map == MAP_FAILED) {
         thtk_error_new(error, "mmap failed: %s", strerror(errno));
         return NULL;
     }
-    if (mmap(map+ps, vcount, PROT_READ, MAP_PRIVATE|MAP_FIXED, fileno_unlocked(private->stream), voffset) == MAP_FAILED) {
-        munmap(map, vcount + ps);
+    if (mmap(map+pagesize, vcount, PROT_READ, MAP_PRIVATE|MAP_FIXED, fileno_unlocked(private->stream), voffset) == MAP_FAILED) {
+        munmap(map, pagesize+vcount);
         thtk_error_new(error, "mmap failed: %s", strerror(errno));
         return NULL;
     }
     /* Due to MAP_NORESERVE this might segfault... but so can any allocation, thanks to overcommit */
-    *(size_t *)map = vcount + ps;
-    return map + ps + (offset & ps);
+    *(size_t *)map = vcount + pagesize;
+    return map + pagesize + (offset & pagemask);
 }
 
 static void
@@ -337,8 +338,9 @@ thtk_io_file_unmap(
     unsigned char* map)
 {
     (void)io;
-    int ps = sysconf(_SC_PAGE_SIZE)-1;
-    map -= ((intptr_t)map & ps) + ps;
+    int pagesize = sysconf(_SC_PAGE_SIZE);
+    int pagemask = pagesize-1;
+    map -= ((intptr_t)map & pagemask) + pagesize;
     munmap(map, *(size_t *)map);
 }
 #elif defined(_WIN32)
@@ -352,10 +354,10 @@ thtk_io_file_map(
     struct thtk_io_file *private = (void *)io;
     SYSTEM_INFO si;
     GetSystemInfo(&si);
-    int ps = si.dwPageSize-1;
-    off_t voffset = offset & ~(off_t)ps;
-    size_t vcount = count + (offset & ps);
-    vcount = (vcount + ps) & ~(size_t)ps;
+    int pagemask = si.dwPageSize-1;
+    off_t voffset = offset & ~(off_t)pagemask;
+    size_t vcount = count + (offset & pagemask);
+    vcount = (vcount + pagemask) & ~(size_t)pagemask;
     LARGE_INTEGER li;
     li.QuadPart = voffset;
     li.QuadPart += vcount;
@@ -384,7 +386,7 @@ thtk_io_file_map(
         return NULL;
     }
     CloseHandle(map);
-    return view + (offset & ps);
+    return view + (offset & pagemask);
 }
 
 static void
@@ -395,8 +397,8 @@ thtk_io_file_unmap(
     (void)io;
     SYSTEM_INFO si;
     GetSystemInfo(&si);
-    int ps = si.dwPageSize-1;
-    UnmapViewOfFile(map - ((intptr_t)map & ps));
+    int pagemask = si.dwPageSize-1;
+    UnmapViewOfFile(map - ((intptr_t)map & pagemask));
 }
 #endif
 
