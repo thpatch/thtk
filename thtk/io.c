@@ -322,7 +322,7 @@ thtk_io_file_map(
         thtk_error_new(error, "mmap failed: %s", strerror(errno));
         return NULL;
     }
-    if (mmap(map+pagesize, vcount, PROT_READ, MAP_PRIVATE|MAP_FIXED, fileno_unlocked(private->stream), voffset) == MAP_FAILED) {
+    if (mmap(map+pagesize, vcount, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED, fileno_unlocked(private->stream), voffset) == MAP_FAILED) {
         munmap(map, pagesize+vcount);
         thtk_error_new(error, "mmap failed: %s", strerror(errno));
         return NULL;
@@ -363,7 +363,7 @@ thtk_io_file_map(
     li.QuadPart += vcount;
     HANDLE map = CreateFileMappingW(
         (HANDLE)_get_osfhandle(fileno_unlocked(private->stream)),
-        NULL, PAGE_READONLY, li.HighPart, li.LowPart, NULL);
+        NULL, PAGE_WRITECOPY, li.HighPart, li.LowPart, NULL);
     if (!map) {
         char *buf;
         FormatMessageA(
@@ -374,7 +374,7 @@ thtk_io_file_map(
         return NULL;
     }
     li.QuadPart = voffset;
-    unsigned char *view = MapViewOfFile(map, FILE_MAP_READ, li.HighPart, li.LowPart, vcount);
+    unsigned char *view = MapViewOfFile(map, FILE_MAP_COPY, li.HighPart, li.LowPart, vcount);
     if (!view) {
         char *buf;
         FormatMessageA(
