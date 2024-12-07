@@ -9,23 +9,24 @@ if (WITH_LIBPNG_SOURCE)
                  ${CMAKE_CURRENT_BINARY_DIR}/zlib-ng/zlib_name_mangling.h COPYONLY)
 
   add_library(z STATIC
+  zlib-ng/arch/generic/adler32_c.c
+  zlib-ng/arch/generic/adler32_fold_c.c
+  zlib-ng/arch/generic/chunkset_c.c
+  zlib-ng/arch/generic/compare256_c.c
+  zlib-ng/arch/generic/crc32_braid_c.c
+  zlib-ng/arch/generic/crc32_fold_c.c
+  zlib-ng/arch/generic/slide_hash_c.c
   zlib-ng/adler32.c
-  zlib-ng/adler32_fold.c
   zlib-ng/adler32_p.h
-  zlib-ng/chunkset.c
   zlib-ng/chunkset_tpl.h
-  zlib-ng/compare256.c
   zlib-ng/compare256_rle.h
   zlib-ng/compress.c
-  zlib-ng/cpu_features.c
-  zlib-ng/cpu_features.h
-  zlib-ng/crc32_braid.c
+  zlib-ng/arch_functions.h
+  zlib-ng/crc32.c
   zlib-ng/crc32_braid_comb.c
   zlib-ng/crc32_braid_comb_p.h
   zlib-ng/crc32_braid_p.h
   zlib-ng/crc32_braid_tbl.h
-  zlib-ng/crc32_fold.c
-  zlib-ng/crc32_fold.h
   zlib-ng/deflate.c
   zlib-ng/deflate.h
   zlib-ng/deflate_fast.c
@@ -50,7 +51,6 @@ if (WITH_LIBPNG_SOURCE)
   zlib-ng/insert_string_roll.c
   zlib-ng/insert_string_tpl.h
   zlib-ng/match_tpl.h
-  zlib-ng/slide_hash.c
   zlib-ng/trees.c
   zlib-ng/trees.h
   zlib-ng/trees_emit.h
@@ -64,11 +64,11 @@ if (WITH_LIBPNG_SOURCE)
   ${CMAKE_CURRENT_BINARY_DIR}/zlib-ng/zconf.h
   ${CMAKE_CURRENT_BINARY_DIR}/zlib-ng/zlib.h
   ${CMAKE_CURRENT_BINARY_DIR}/zlib-ng/zlib_name_mangling.h)
-  target_include_directories(z PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/zlib-ng)
+  target_include_directories(z PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/zlib-ng ${CMAKE_CURRENT_SOURCE_DIR}/zlib-ng)
   if (HAVE_UNISTD_H)
     set(Z_HAVE_UNISTD_H "Z_HAVE_UNISTD_H")
   endif()
-  target_compile_definitions(z PRIVATE ZLIB_COMPAT;$<$<NOT:$<C_COMPILER_ID:MSVC>>:HAVE_ATTRIBUTE_ALIGNED>)
+  target_compile_definitions(z PRIVATE ZLIB_COMPAT;DISABLE_RUNTIME_CPU_DETECTION;$<$<NOT:$<C_COMPILER_ID:MSVC>>:HAVE_ATTRIBUTE_ALIGNED>)
   target_compile_definitions(z PUBLIC ${Z_HAVE_UNISTD_H})
 
   # CUSTOM LIBPNG BUILD
