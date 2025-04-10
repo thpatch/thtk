@@ -14,7 +14,7 @@ jobs:
         compiler: [gcc, clang]
     steps:
     - name: Checkout
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         submodules: recursive
     - name: Configure CMake
@@ -32,12 +32,12 @@ jobs:
         arch: [x64, x86]
     steps:
     - name: Checkout
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         submodules: recursive
     - name: Cache winflexbison
       id: cache-winflexbison
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: win_flex_bison-${{env.FLEXBISON_VER}}.zip
         key: winflexbison-${{env.FLEXBISON_VER}}
@@ -61,12 +61,12 @@ jobs:
         call C:\shells\msys2bash.cmd -c "pacman -S --noconfirm --needed --noprogressbar groff dos2unix zip"
         call C:\shells\msys2bash.cmd -c "./make-release.sh ci"
     - name: Upload Artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: thtk-win32-${{matrix.arch}}
         path: thtk-bin-ci/**/*
     - name: Upload Artifact PDBs
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: thtk-win32-${{matrix.arch}}-pdbs
         path: thtk-bin-ci-pdbs/**/*
