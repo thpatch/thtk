@@ -97,8 +97,8 @@ jobs:
         kosuzu.thpatch.net,167.99.154.22,2604:a880:400:d1::755:f001 ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBCzlGDhCYxkT3q0REJyMYTs2uFfTXSjPgK4/6ue/RKofzIP/9FJOi6y41G4UiofZWYvIQiJ8vfLXZMnYj80pDD0=
         '@ | Set-Content -Encoding utf8 ~\.ssh\known_hosts
 
-        echo $env:GITHUB_REF_NAME | Out-File -encoding ASCII params.txt
-        echo $env:arch | Add-Content -encoding ASCII params.txt
+        echo $env:GITHUB_REF_NAME | Out-File -encoding utf8NoBOM params.txt
+        echo $env:arch | Add-Content -encoding utf8NoBOM params.txt
         Get-Content params.txt,thtk-bin-ci.zip | ssh -T thcrap-dev-deploy@kosuzu.thpatch.net -i .\id_ed25519
         Remove-Item .\id_ed25519
         Remove-Item .\params.txt
