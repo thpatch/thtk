@@ -72,12 +72,14 @@
     x(24, 14,185, "th185.dat") \
     x(25, 14,19, "th19.dat") \
     /* NEWHU: 19 */ \
+    x(26, 14,20, "th20.dat") \
+    /* NEWHU: 20 */ \
     /* thdat105 */ \
-    x(26, 75,75, NULL) \
-    x(27, 7575,7575, NULL) \
-    x(28, 105105,105105, NULL) \
-    x(29, 105,105, NULL) \
-    x(30, 123,123, NULL)
+    x(27, 75,75, NULL) \
+    x(28, 7575,7575, NULL) \
+    x(29, 105105,105105, NULL) \
+    x(30, 105,105, NULL) \
+    x(31, 123,123, NULL)
 
 static const thdat_detect_entry_t detect_table[] = {
 #define x(idx, var, alias, filename) {var,alias,filename},
@@ -350,6 +352,7 @@ thdat_detect_08_95(
                         case 125: case 128: case 13: case 14:
                         case 143: case 15: case 16: case 165:
                         case 17: case 18: case 185: case 19: /* NEWHU: 19 */
+                        case 20: /* NEWHU: 20 */
                             if (is95)
                                 return n;
                             break;
@@ -517,6 +520,8 @@ notth03:
             SET_OUT(185);
             SET_OUT(19);
             /* NEWHU: 19 */
+            SET_OUT(20);
+            /* NEWHU: 20 */
         } else if (ver > 0) {
             SET_OUT(ver);
         }

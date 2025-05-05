@@ -77,6 +77,8 @@ thdat_version_to_module(
     case 185:
     case 19:
     /* NEWHU: 19 */
+    case 20:
+    /* NEWHU: 20 */
         return &archive_th95;
     case 75: /* IaMP, Super Marisa Land */
     case 7575: /* MegaMari, Higurashi Daybreak */

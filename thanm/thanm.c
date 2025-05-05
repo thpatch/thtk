@@ -43,6 +43,8 @@
 #include "mygetopt.h"
 #include "reg.h"
 
+#define TH19_OR_NEWER(version) (version >= 19 && (version < 100 || version >= 200))
+
 anmmap_t* g_anmmap = NULL;
 unsigned int option_force = 0;
 unsigned int option_print_offsets = 0;
@@ -511,6 +513,7 @@ static const id_format_pair_t formats_v8[] = {
     { 438, "S" },
     { 439, "S" },
     { 440, "" },
+    { 441, "fff" }, /* th20 */
     { 500, "N" },
     { 501, "N" },
     { 502, "N" },
@@ -549,6 +552,8 @@ static const id_format_pair_t formats_v8[] = {
     { 628, "fS" }, /* th19 */
     { 631, "ffS" }, /* th19 */
     { 632, "ffS" }, /* th19 */
+    { 633, "S" }, /* th20 */
+    { 634, "f" }, /* th20 */
     { 0xffff, "" },
     { 0, NULL }
 };
@@ -688,6 +693,8 @@ anm_find_format(
         break;
     case 8:
         switch (version) {
+        /* NEWHU: 20 */
+        case 20:
         /* NEWHU: 19 */
         case 19:
         case 185:
@@ -1083,12 +1090,12 @@ anm_read_file(
         assert(header->hasdata == 0 || header->hasdata == 1);
         assert(header->rt_textureslot == 0);
         /* NEWHU: 19 */
-        assert(version == 19 || (header->w_max == 0 && header->h_max == 0));
+        assert(TH19_OR_NEWER(version) || (header->w_max == 0 && header->h_max == 0));
 
         if(header->version == 8)
             assert(header->lowresscale == 0 || header->lowresscale == 1);
         /* NEWHU: 19 */
-        assert(version == 19 || header->jpeg_quality == 0);
+        assert(TH19_OR_NEWER(version) || header->jpeg_quality == 0);
 
         /* Lengths, including padding, observed are: 16, 32, 48. */
         entry->name = anm_get_name(archive, (const char*)map + header->nameoffset);
@@ -1203,7 +1210,7 @@ anm_read_file(
             assert(util_strcmp_ref(thtx->magic, stringref("THTX")) == 0);
             assert(thtx->zero == 0);
             /* NEWHU: 19 */
-            assert(version == 19 || thtx->w * thtx->h * format_Bpp(thtx->format) <= thtx->size);
+            assert(TH19_OR_NEWER(version) || thtx->w * thtx->h * format_Bpp(thtx->format) <= thtx->size);
             assert(
                 thtx->format == FORMAT_BGRA8888 ||
                 thtx->format == FORMAT_RGB565 ||
@@ -1321,13 +1328,13 @@ anm_dump(
         if (entry->header->version >= 8)
             fprintf(stream, "    lowResScale: %u,\n", entry->header->lowresscale);
         /* NEWHU: 19 */
-        if (version == 19 && entry->header->jpeg_quality != 0)
+        if (TH19_OR_NEWER(version) && entry->header->jpeg_quality != 0)
             fprintf(stream, "    jpeg_quality: %u,\n", entry->header->jpeg_quality);
 
         fprintf(stream, "    hasData: %u,\n", entry->header->hasdata);
         if (entry->header->hasdata) {
             /* NEWHU: 19 */
-            if (version != 19)
+            if (!TH19_OR_NEWER(version))
                 fprintf(stream, "    THTXSize: %u,\n", entry->thtx->size);
             fprintf(stream, "    THTXFormat: %u,\n", entry->thtx->format);
             fprintf(stream, "    THTXWidth: %u,\n", entry->thtx->w);
@@ -1336,7 +1343,7 @@ anm_dump(
         }
 
         /* NEWHU: 19 */
-        if (version == 19) {
+        if (TH19_OR_NEWER(version)) {
             fprintf(stream, "    w_max: %u,\n", entry->header->w_max);
             fprintf(stream, "    h_max: %u,\n", entry->header->h_max);
         }
@@ -1352,7 +1359,7 @@ anm_dump(
             if (prev_sprite_id + 1 != sprite->id)
                 fprintf(stream, ", id: %d", sprite->id);
             /* NEWHU: 19 */
-            if (version == 19) {
+            if (TH19_OR_NEWER(version)) {
                 if (sprite->unk0 != 0.f)
                     fprintf(stream, ", th19_unk0: %.f", sprite->unk0);
                 if (sprite->unk1 != 0.f)
@@ -1535,7 +1542,7 @@ anm_replace(
 
     int is_png = 0;
     /* NEWHU: 19 */
-    if (version == 19) {
+    if (TH19_OR_NEWER(version)) {
         anm_entry_t *entry = entry_first;
         const uint32_t ox = option_dont_add_offset_border ? 0 : entry->header->x;
         const uint32_t oy = option_dont_add_offset_border ? 0 : entry->header->y;
@@ -1686,7 +1693,7 @@ anm_extract(
     int is_png = 0;
 
     /* NEWHU: 19 */
-    if (version == 19) {
+    if (TH19_OR_NEWER(version)) {
         if (png_identify(entry->thtx->data, entry->thtx->size) &&
                 (ox || oy || entry->next_by_name)) {
             if (option_verbose >= 2)
@@ -1997,6 +2004,7 @@ anm_defaults(
 
         /* NEWHU: 19 */
         switch (version) {
+        case 20:
         case 19: {
             FILE* stream = fopen(filename, "rb");
             if (!stream) {
@@ -2152,7 +2160,7 @@ anm_write(
         }
 
         /* NEWHU: 19 */
-        const unsigned spritesize = version == 19 ? sizeof(sprite19_t) : sizeof(sprite_t);
+        const unsigned spritesize = TH19_OR_NEWER(version) ? sizeof(sprite19_t) : sizeof(sprite_t);
         spriteoffset = file_tell(stream) - base;
 
         list_for_each(&entry->sprites, sprite)
@@ -2324,7 +2332,7 @@ print_usage(void)
            "  -uu                           ignore x/y offset\n"
            "  -v                            verbose output\n"
            "VERSION can be:\n"
-           "  6, 7, 8, 9, 95, 10, 103, 11, 12, 125, 128, 13, 14, 143, 15, 16, 165, 17, 18, 185 or 19\n"
+           "  6, 7, 8, 9, 95, 10, 103, 11, 12, 125, 128, 13, 14, 143, 15, 16, 165, 17, 18, 185, 19, or 20\n"
            /* NEWHU: 19 */
            "Report bugs to <" PACKAGE_BUGREPORT ">.\n", argv0);
 }
@@ -2458,6 +2466,8 @@ main(
     case 18:
     case 19:
     /* NEWHU: 19 */
+    case 20:
+    /* NEWHU: 20 */
         break;
     default:
         if (version == 0)
@@ -2601,9 +2611,9 @@ main(
             exit(1);
         }
 
-        if (version == 19) {
+        if (TH19_OR_NEWER(version)) {
             /* NEWHU: 19 */ /* FIXME: */
-            fprintf(stderr, "%s: -r doesn't work with th19\n", argv0);
+            fprintf(stderr, "%s: -r doesn't work with th19+\n", argv0);
             exit(1);
         }
 
