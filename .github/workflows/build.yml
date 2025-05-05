@@ -77,7 +77,7 @@ jobs:
       shell: powershell
       run: |
         echo a
-        echo $env:id_ed25519_secret > .\id_ed25519
+        echo $env:id_ed25519_secret | Out-File -encoding ASCII .\id_ed25519
         echo $env:id_ed25519_secret
         echo aa
         # TODO remove
