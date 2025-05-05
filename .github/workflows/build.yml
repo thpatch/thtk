@@ -72,19 +72,11 @@ jobs:
         path: thtk-bin-ci-pdbs/**/*
     - name: Upload Artifact to thpatch.net
       env:
-        id_ed25519_secret: ${{ secrets.ID_ED25519_SECRET_FAKE }}
+        id_ed25519_secret: ${{ secrets.ID_ED25519_SECRET }}
         arch: ${{matrix.arch}}
       shell: powershell
       run: |
-        echo a
         echo $env:id_ed25519_secret | Out-File -encoding ASCII .\id_ed25519
-        echo $env:id_ed25519_secret
-        echo aa
-        # TODO remove
-        echo '=============='
-        Get-Content .\id_ed25519
-        echo '=============='
-        Get-Item .\id_ed25519
 
         $acl = Get-Acl .\id_ed25519
         $AccessRule =
@@ -105,10 +97,6 @@ jobs:
         kosuzu.thpatch.net,167.99.154.22,2604:a880:400:d1::755:f001 ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBCzlGDhCYxkT3q0REJyMYTs2uFfTXSjPgK4/6ue/RKofzIP/9FJOi6y41G4UiofZWYvIQiJ8vfLXZMnYj80pDD0=
         '@ | Set-Content -Encoding utf8 ~\.ssh\known_hosts
 
-        echo b
-        Get-Content thtk-bin-ci.zip | Out-Null
-        echo c
         # Get-Content thtk-bin-ci.zip | ssh -vvv -T thcrap-dev-deploy@kosuzu.thpatch.net -i .\id_ed25519 $GITHUB_REF_NAME $arch
         ssh -v -T thcrap-dev-deploy@kosuzu.thpatch.net -i .\id_ed25519
-        echo d
         Remove-Item .\id_ed25519
