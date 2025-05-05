@@ -78,8 +78,8 @@ jobs:
       run: |
         echo a
         echo $id_ed25519_secret > .\id_ed25519
-		# TODO remove
-		Get-Content .\id_ed25519
+        # TODO remove
+        Get-Content .\id_ed25519
 
         $acl = Get-Acl .\id_ed25519
         $AccessRule =
