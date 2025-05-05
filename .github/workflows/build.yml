@@ -77,8 +77,8 @@ jobs:
       shell: powershell
       run: |
         echo a
-        echo $id_ed25519_secret > .\id_ed25519
-        echo $id_ed25519_secret
+        echo $env:id_ed25519_secret > .\id_ed25519
+        echo $env:id_ed25519_secret
         echo aa
         # TODO remove
         echo '=============='
