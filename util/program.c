@@ -130,6 +130,8 @@ unsigned int parse_version(char *str) {
         {185, "bm"},
         {19, "udoalg"},
         /* NEWHU: 19 */
+        {20, "fw"},
+        /* NEWHU: 20 */
         {75, "iamp"},
         {75, "sml"},
         {7575, "megamari"},

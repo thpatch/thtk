@@ -259,6 +259,8 @@ th06_find_format(unsigned int version, int id)
         case 185:
         case 19:
         /* NEWHU: 19 */
+        case 20:
+        /* NEWHU: 20 */
             ret = find_format(th10_msg_ed_fmts, id);
             break;
         default:
@@ -267,6 +269,8 @@ th06_find_format(unsigned int version, int id)
         }
     } else {
         switch (version) {
+        /* NEWHU: 20 */
+        case 20:
         /* NEWHU: 19 */
         case 19:
             if ((ret = find_format(th19_msg_fmts, id))) break; /* fallthrough */
