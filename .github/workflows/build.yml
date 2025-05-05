@@ -70,3 +70,35 @@ jobs:
       with:
         name: thtk-win32-${{matrix.arch}}-pdbs
         path: thtk-bin-ci-pdbs/**/*
+    - name: Upload Artifact to thpatch.net
+      env:
+        id_ed25519_secret: ${{ secrets.ID_ED25519_SECRET }}
+        arch: ${{matrix.arch}}
+      shell: powershell
+      run: |
+        echo $env:id_ed25519_secret | Out-File -encoding ASCII .\id_ed25519
+
+        $acl = Get-Acl .\id_ed25519
+        $AccessRule =
+          New-Object `
+          System.Security.AccessControl.FileSystemAccessRule(
+          [System.Security.Principal.WindowsIdentity]::GetCurrent().Name,
+          [System.Security.AccessControl.FileSystemRights]::Read,
+          [System.Security.AccessControl.AccessControlType]::Allow)
+        $acl.AddAccessRule($AccessRule)
+        $acl.SetAccessRuleProtection($true, # Enable protection (disable inheritance)
+          $false) # Don't keep previously inherited rules
+        Set-Acl -AclObject $acl -Path .\id_ed25519
+
+        New-Item -ItemType Directory -Path ~\.ssh
+        echo @'
+        kosuzu.thpatch.net,167.99.154.22,2604:a880:400:d1::755:f001 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFn0EAmYnHylCYuaLMslQlDj8k/FHim/gRwP+L1eHQMw
+        kosuzu.thpatch.net,167.99.154.22,2604:a880:400:d1::755:f001 ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDbkY7C2SRL81klpa4iSYfbthJ4c82JiV8tx6vD63QJybp5/6WFDJY6/ow80g1hkszFU2pGUXX5mgjEFU80zgxSi/uFhLPD0FsXVdKUXe9pBquVXig+T8ApmrbORpq+IqJ2FGpz4zmEDHST8LX3ug60zfrChc7EXAyW5gbFh4fqryhgMdboNyo/gn608BN4P2AQGFgC7cOri0in+OhfAcKfrpBlMQ/ii+hFnS1ip3aP/npFhu9iCwmWPN1aBeQpwANUzf4kxOrJzLzLemfqpEW+AxtH2qNzWbe5tN9tEZCN2OtttW6ks6hzcYPiD+lfWcfDI4HEgpvGF7gdbRarKiyH
+        kosuzu.thpatch.net,167.99.154.22,2604:a880:400:d1::755:f001 ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBCzlGDhCYxkT3q0REJyMYTs2uFfTXSjPgK4/6ue/RKofzIP/9FJOi6y41G4UiofZWYvIQiJ8vfLXZMnYj80pDD0=
+        '@ | Set-Content -Encoding utf8 ~\.ssh\known_hosts
+
+        echo $env:GITHUB_REF_NAME | Out-File -encoding ASCII params.txt
+        echo $env:arch | Add-Content -encoding ASCII params.txt
+        Get-Content params.txt,thtk-bin-ci.zip | ssh -T thcrap-dev-deploy@kosuzu.thpatch.net -i .\id_ed25519
+        Remove-Item .\id_ed25519
+        Remove-Item .\params.txt
