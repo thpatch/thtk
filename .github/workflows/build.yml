@@ -93,10 +93,10 @@ jobs:
 
         Remove-Item ~\.ssh\known_hosts
         echo @'
-kosuzu.thpatch.net,167.99.154.22,2604:a880:400:d1::755:f001 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFn0EAmYnHylCYuaLMslQlDj8k/FHim/gRwP+L1eHQMw
-kosuzu.thpatch.net,167.99.154.22,2604:a880:400:d1::755:f001 ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDbkY7C2SRL81klpa4iSYfbthJ4c82JiV8tx6vD63QJybp5/6WFDJY6/ow80g1hkszFU2pGUXX5mgjEFU80zgxSi/uFhLPD0FsXVdKUXe9pBquVXig+T8ApmrbORpq+IqJ2FGpz4zmEDHST8LX3ug60zfrChc7EXAyW5gbFh4fqryhgMdboNyo/gn608BN4P2AQGFgC7cOri0in+OhfAcKfrpBlMQ/ii+hFnS1ip3aP/npFhu9iCwmWPN1aBeQpwANUzf4kxOrJzLzLemfqpEW+AxtH2qNzWbe5tN9tEZCN2OtttW6ks6hzcYPiD+lfWcfDI4HEgpvGF7gdbRarKiyH
-kosuzu.thpatch.net,167.99.154.22,2604:a880:400:d1::755:f001 ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBCzlGDhCYxkT3q0REJyMYTs2uFfTXSjPgK4/6ue/RKofzIP/9FJOi6y41G4UiofZWYvIQiJ8vfLXZMnYj80pDD0=
-'@ | Set-Content -Encoding utf8 ~\.ssh\known_hosts
+        kosuzu.thpatch.net,167.99.154.22,2604:a880:400:d1::755:f001 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFn0EAmYnHylCYuaLMslQlDj8k/FHim/gRwP+L1eHQMw
+        kosuzu.thpatch.net,167.99.154.22,2604:a880:400:d1::755:f001 ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDbkY7C2SRL81klpa4iSYfbthJ4c82JiV8tx6vD63QJybp5/6WFDJY6/ow80g1hkszFU2pGUXX5mgjEFU80zgxSi/uFhLPD0FsXVdKUXe9pBquVXig+T8ApmrbORpq+IqJ2FGpz4zmEDHST8LX3ug60zfrChc7EXAyW5gbFh4fqryhgMdboNyo/gn608BN4P2AQGFgC7cOri0in+OhfAcKfrpBlMQ/ii+hFnS1ip3aP/npFhu9iCwmWPN1aBeQpwANUzf4kxOrJzLzLemfqpEW+AxtH2qNzWbe5tN9tEZCN2OtttW6ks6hzcYPiD+lfWcfDI4HEgpvGF7gdbRarKiyH
+        kosuzu.thpatch.net,167.99.154.22,2604:a880:400:d1::755:f001 ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBCzlGDhCYxkT3q0REJyMYTs2uFfTXSjPgK4/6ue/RKofzIP/9FJOi6y41G4UiofZWYvIQiJ8vfLXZMnYj80pDD0=
+        '@ | Set-Content -Encoding utf8 ~\.ssh\known_hosts
 
         echo b
         Get-Content thtk-bin-ci.zip | Out-Null
