@@ -92,6 +92,8 @@ jobs:
         Set-Acl -AclObject $acl -Path .\id_ed25519
 
         echo b
-        Get-Content thtk-bin-ci.zip | ssh -T thcrap-dev-deploy@kosuzu.thpatch.net -i .\id_ed25519 $GITHUB_REF_NAME $arch
+        Get-Content thtk-bin-ci.zip > nul
         echo c
+        Get-Content thtk-bin-ci.zip | ssh -vvv -T thcrap-dev-deploy@kosuzu.thpatch.net -i .\id_ed25519 $GITHUB_REF_NAME $arch
+        echo d
         Remove-Item .\id_ed25519
