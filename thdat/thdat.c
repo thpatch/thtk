@@ -52,7 +52,7 @@ print_usage(
            "  -C  change directory after opening the archive\n"
            "VERSION can be:\n"
            "  1, 2, 3, 4, 5, 6, 7, 75, 8, 9, 95, 10, 103 (for Uwabami Breakers), 105, 11, 12, 123, 125, 128, 13, 14, 143, 15, 16, 165, 17, 18, 185, 19, or 20\n"
-           /* NEWHU: 19 */
+           /* NEWHU: 20 */
        "Specify 'd' as VERSION to automatically detect archive format. (-l and -x only)\n\n"
            "Report bugs to <" PACKAGE_BUGREPORT ">.\n", argv0);
 }

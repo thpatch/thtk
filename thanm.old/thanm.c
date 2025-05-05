@@ -714,7 +714,6 @@ anm_dump(
                 switch (version) {
                 /* NEWHU: 20 */
                 case 20:
-                /* NEWHU: 19 */
                 case 19:
                 case 185:
                 case 18:
@@ -1328,7 +1327,7 @@ print_usage(void)
            "  -f                    ignore errors when possible\n"
            "VERSION can be:\n"
            "  18, 185, 19, or 20\n"
-           /* NEWHU: 19 */
+           /* NEWHU: 20 */
            "For older games, VERSION can be omitted.\n"
            "Report bugs to <" PACKAGE_BUGREPORT ">.\n");
 }
@@ -1394,7 +1393,6 @@ main(
             switch (version) {
             /* NEWHU: 20 */
             case 20:
-            /* NEWHU: 19 */
             case 19:
             case 185:
             case 18:

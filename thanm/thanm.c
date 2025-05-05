@@ -695,7 +695,6 @@ anm_find_format(
         switch (version) {
         /* NEWHU: 20 */
         case 20:
-        /* NEWHU: 19 */
         case 19:
         case 185:
         case 18:
@@ -1089,12 +1088,10 @@ anm_read_file(
 
         assert(header->hasdata == 0 || header->hasdata == 1);
         assert(header->rt_textureslot == 0);
-        /* NEWHU: 19 */
         assert(TH19_OR_NEWER(version) || (header->w_max == 0 && header->h_max == 0));
 
         if(header->version == 8)
             assert(header->lowresscale == 0 || header->lowresscale == 1);
-        /* NEWHU: 19 */
         assert(TH19_OR_NEWER(version) || header->jpeg_quality == 0);
 
         /* Lengths, including padding, observed are: 16, 32, 48. */
@@ -1209,7 +1206,6 @@ anm_read_file(
                 (thtx_header_t*)(map + header->thtxoffset);
             assert(util_strcmp_ref(thtx->magic, stringref("THTX")) == 0);
             assert(thtx->zero == 0);
-            /* NEWHU: 19 */
             assert(TH19_OR_NEWER(version) || thtx->w * thtx->h * format_Bpp(thtx->format) <= thtx->size);
             assert(
                 thtx->format == FORMAT_BGRA8888 ||
@@ -1327,13 +1323,11 @@ anm_dump(
             fprintf(stream, "    memoryPriority: %u,\n", entry->header->memorypriority);
         if (entry->header->version >= 8)
             fprintf(stream, "    lowResScale: %u,\n", entry->header->lowresscale);
-        /* NEWHU: 19 */
         if (TH19_OR_NEWER(version) && entry->header->jpeg_quality != 0)
             fprintf(stream, "    jpeg_quality: %u,\n", entry->header->jpeg_quality);
 
         fprintf(stream, "    hasData: %u,\n", entry->header->hasdata);
         if (entry->header->hasdata) {
-            /* NEWHU: 19 */
             if (!TH19_OR_NEWER(version))
                 fprintf(stream, "    THTXSize: %u,\n", entry->thtx->size);
             fprintf(stream, "    THTXFormat: %u,\n", entry->thtx->format);
@@ -1342,7 +1336,6 @@ anm_dump(
             fprintf(stream, "    THTXZero: %u,\n", entry->thtx->zero);
         }
 
-        /* NEWHU: 19 */
         if (TH19_OR_NEWER(version)) {
             fprintf(stream, "    w_max: %u,\n", entry->header->w_max);
             fprintf(stream, "    h_max: %u,\n", entry->header->h_max);
@@ -1358,7 +1351,6 @@ anm_dump(
                 sprite->w, sprite->h);
             if (prev_sprite_id + 1 != sprite->id)
                 fprintf(stream, ", id: %d", sprite->id);
-            /* NEWHU: 19 */
             if (TH19_OR_NEWER(version)) {
                 if (sprite->unk0 != 0.f)
                     fprintf(stream, ", th19_unk0: %.f", sprite->unk0);
@@ -1541,7 +1533,6 @@ anm_replace(
     }
 
     int is_png = 0;
-    /* NEWHU: 19 */
     if (TH19_OR_NEWER(version)) {
         anm_entry_t *entry = entry_first;
         const uint32_t ox = option_dont_add_offset_border ? 0 : entry->header->x;
@@ -1692,7 +1683,6 @@ anm_extract(
     uint32_t oy = option_dont_add_offset_border ? 0 : entry->header->y;
     int is_png = 0;
 
-    /* NEWHU: 19 */
     if (TH19_OR_NEWER(version)) {
         if (png_identify(entry->thtx->data, entry->thtx->size) &&
                 (ox || oy || entry->next_by_name)) {
@@ -2002,7 +1992,7 @@ anm_defaults(
         const char *filename = entry->filename ? entry->filename : entry->name;
         unsigned width, height;
 
-        /* NEWHU: 19 */
+        /* NEWHU: 20 */
         switch (version) {
         case 20:
         case 19: {
@@ -2159,7 +2149,6 @@ anm_write(
             file_write(stream, padding, namepad);
         }
 
-        /* NEWHU: 19 */
         const unsigned spritesize = TH19_OR_NEWER(version) ? sizeof(sprite19_t) : sizeof(sprite_t);
         spriteoffset = file_tell(stream) - base;
 
@@ -2333,7 +2322,7 @@ print_usage(void)
            "  -v                            verbose output\n"
            "VERSION can be:\n"
            "  6, 7, 8, 9, 95, 10, 103, 11, 12, 125, 128, 13, 14, 143, 15, 16, 165, 17, 18, 185, 19, or 20\n"
-           /* NEWHU: 19 */
+           /* NEWHU: 20 */
            "Report bugs to <" PACKAGE_BUGREPORT ">.\n", argv0);
 }
 
@@ -2465,7 +2454,6 @@ main(
     case 185:
     case 18:
     case 19:
-    /* NEWHU: 19 */
     case 20:
     /* NEWHU: 20 */
         break;
@@ -2612,7 +2600,7 @@ main(
         }
 
         if (TH19_OR_NEWER(version)) {
-            /* NEWHU: 19 */ /* FIXME: */
+            /* NEWHU: 20 */ /* FIXME: */
             fprintf(stderr, "%s: -r doesn't work with th19+\n", argv0);
             exit(1);
         }

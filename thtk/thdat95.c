@@ -71,7 +71,6 @@ th95_get_crypt_param(
         case 18:
         case 185:
         case 19:
-        /* NEWHU: 19 */
         case 20:
         /* NEWHU: 20 */
         default:

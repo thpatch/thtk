@@ -187,7 +187,7 @@ static const id_format_pair_t th19_msg_fmts[] = {
     { 0, NULL }
 };
 
-/* NEWHU: 19 */
+/* NEWHU: 20 */
 
 static const id_format_pair_t th10_msg_ed_fmts[] = {
     { 0, "" },
@@ -258,7 +258,6 @@ th06_find_format(unsigned int version, int id)
         case 18:
         case 185:
         case 19:
-        /* NEWHU: 19 */
         case 20:
         /* NEWHU: 20 */
             ret = find_format(th10_msg_ed_fmts, id);
@@ -271,7 +270,6 @@ th06_find_format(unsigned int version, int id)
         switch (version) {
         /* NEWHU: 20 */
         case 20:
-        /* NEWHU: 19 */
         case 19:
             if ((ret = find_format(th19_msg_fmts, id))) break; /* fallthrough */
         case 185:

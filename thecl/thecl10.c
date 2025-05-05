@@ -1079,8 +1079,6 @@ static const id_format_pair_t th19_fmts[] = {
     { -1, NULL }
 };
 
-/* NEWHU: 19 */
-
 static const id_format_pair_t th20_fmts[] = {
     { 341, "" },
     { 342, "" },
@@ -1118,7 +1116,6 @@ th10_find_format(
     /* NEWHU: 20 */
     case 20:
         if ((ret = find_format(th20_fmts, id))) break; /* fallthrough */
-    /* NEWHU: 19 */
     case 19:
         if ((ret = find_format(th19_fmts, id))) break; /* fallthrough */
     case 185:
