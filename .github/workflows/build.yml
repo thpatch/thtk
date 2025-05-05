@@ -72,12 +72,14 @@ jobs:
         path: thtk-bin-ci-pdbs/**/*
     - name: Upload Artifact to thpatch.net
       env:
-        id_ed25519_secret: ${{ secrets.ID_ED25519_SECRET }}
+        id_ed25519_secret: ${{ secrets.ID_ED25519_SECRET_FAKE }}
         arch: ${{matrix.arch}}
       shell: powershell
       run: |
         echo a
         echo $id_ed25519_secret > .\id_ed25519
+		# TODO remove
+		Get-Content .\id_ed25519
 
         $acl = Get-Acl .\id_ed25519
         $AccessRule =
