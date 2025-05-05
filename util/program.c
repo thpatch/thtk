@@ -116,7 +116,7 @@ unsigned int parse_version(char *str) {
         {11, "sa"},
         {12, "ufo"},
         {125, "ds"},
-        {128, "fw"},
+        /* {128, "fw"}, */ /* taken by th20 */
         {128, "gfw"},
         /* TODO: satisfy the heathens who insist on abbreviating TD as 10D */
         {13, "td"},
