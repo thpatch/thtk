@@ -30,6 +30,7 @@
 #include "mygetopt.h"
 
 /* Supported extensions:
+ * resetting the state by optind=0 (GNU) or optreset=1 (BSD)
  * "::" in optstring for optional arguments
  */
 
@@ -129,7 +130,7 @@ static void getopt_parse_optstring(struct getopt_state *s, const char *optstring
 }
 
 char *optarg = NULL;
-int opterr = 1, optind = 1, optopt = 0;
+int opterr = 1, optind = 1, optopt = 0, optreset = 0;
 static struct getopt_state getopt_g_state = {0};
 int getopt(int argc, char *const argv[], const char *optstring)
 {
@@ -140,11 +141,15 @@ int getopt(int argc, char *const argv[], const char *optstring)
     s->ind = optind;
     s->argc = argc;
     s->argv = argv;
-    if (s->string != optstring || !optind)
-        getopt_parse_optstring(s, optstring);
     if (!optind) {
         s->ind = 1;
+        optreset = 1;
+    }
+    if (s->string != optstring || optreset)
+        getopt_parse_optstring(s, optstring);
+    if (optreset) {
         s->next = 0;
+        optreset = 0;
     }
     rv = getopt_internal(s);
     optarg = s->arg;

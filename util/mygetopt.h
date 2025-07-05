@@ -31,6 +31,6 @@
 #define util_optopt optopt
 #define util_getopt getopt
 extern char *optarg;
-extern int opterr, optind, optopt;
+extern int opterr, optind, optopt, optreset;
 int getopt(int argc, char *const argv[], const char *optstring);
 #endif
