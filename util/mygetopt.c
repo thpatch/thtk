@@ -29,6 +29,10 @@
 #include <string.h> /* for strchr */
 #include "mygetopt.h"
 
+/* Supported extensions:
+ * "::" in optstring for optional arguments
+ */
+
 struct getopt_state {
     char *arg;
     int err, ind, opt;
@@ -71,9 +75,9 @@ static int getopt_internal(struct getopt_state *s)
     if (isalnum(s->opt) && (p = strchr(s->shortopts, s->opt))) {
         rv = s->opt;
         if (p[1] == ':') {
-            if (*s->next) {
+            if (*s->next || p[2] == ':') {
                 /* argument of form -ffilename */
-                s->arg = s->next;
+                s->arg = *s->next ? s->next : 0;
                 s->next = NULL;
                 s->ind++;
             } else {
