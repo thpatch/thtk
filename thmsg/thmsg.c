@@ -71,7 +71,7 @@ main(int argc, char* argv[])
     int opt;
     int ind=0;
     while(argv[util_optind]) {
-        switch(opt = util_getopt(argc, argv, ":c:d:Ve")) {
+        switch(opt = util_getopt(argc, argv, "+:c:d:Ve")) {
         case 'c':
         case 'd':
             if(mode != -1) {

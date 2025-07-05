@@ -348,7 +348,7 @@ main(
     int opt;
     int ind=0;
     while(argv[util_optind]) {
-        switch(opt = util_getopt(argc, argv, ":c:l:x:VdgC:")) {
+        switch(opt = util_getopt(argc, argv, "+:c:l:x:VdgC:")) {
         case 'c':
         case 'l':
         case 'x':

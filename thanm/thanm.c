@@ -2339,7 +2339,7 @@ main(
     g_anmmap = anmmap_new();
     atexit(free_globals);
 
-    const char commands[] = ":l:om:"
+    const char commands[] = "+:l:om:"
 #ifdef HAVE_LIBPNG
                             "x:X:r:c:s:"
 #endif

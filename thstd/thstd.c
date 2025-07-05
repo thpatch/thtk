@@ -793,7 +793,7 @@ main(
      int argc,
      char* argv[])
 {
-    const char commands[] = "c:d:V";
+    const char commands[] = "+:c:d:V";
     int command = -1;
 
     FILE* in;

@@ -1337,7 +1337,7 @@ main(
     int argc,
     char* argv[])
 {
-    const char commands[] = ":l"
+    const char commands[] = "+:l"
 #ifdef HAVE_LIBPNG
                             "xrc"
 #endif

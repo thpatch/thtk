@@ -24,57 +24,127 @@
  * For more information, please refer to <http://unlicense.org/>
  **/
 #include <stdio.h> /* for fprintf, stderr, NULL */
+#include <stdlib.h> /* for getenv */
 #include <ctype.h> /* for isalnum */
 #include <string.h> /* for strchr */
 #include "mygetopt.h"
 
-char *optarg = NULL;
-int opterr = 1, optind = 1, optopt = 0;
-int getopt(int argc, char *const argv[], const char *optstring) {
-    static char* arg = NULL;
-    char*p;
+struct getopt_state {
+    char *arg;
+    int err, ind, opt;
+
+    int argc;
+    char *const *argv;
+    const char *string;
+
+    const char *shortopts;
+
+    unsigned want_permute :1; /* not implemented */
+    unsigned want_mixed :1; /* not implemented */
+    unsigned want_err_colon :1;
+
+    char *next;
+};
+
+static int getopt_internal(struct getopt_state *s)
+{
+    char *p;
     int rv;
-    if(optind >= argc || !argv || !optstring) return -1;
-    if(arg == NULL) {
-        char *temp = argv[optind];
-        if(temp == NULL) return -1;
-        if(temp[0] != '-') return -1;
-        if(temp[1] == '\0') return -1;
-        if(temp[1] == '-' && temp[2] == '\0') { optind++; return -1; }
-        arg = temp+1;
+    if (s->ind >= s->argc || !s->argv || !s->shortopts)
+        return -1;
+    if (s->next == NULL) {
+        char *temp = s->argv[s->ind];
+        if (temp == NULL)
+            return -1;
+        if (temp[0] != '-')
+            return -1;
+        if (temp[1] == '\0')
+            return -1;
+        if (temp[1] == '-' && temp[2] == '\0') {
+            s->ind++;
+            return -1;
+        }
+        s->next = temp+1;
     }
 
-    optopt = *arg++;
-    if(isalnum(optopt) && (p=strchr(optstring,optopt))) {
-        rv = optopt;
-        if(p[1] == ':') {
-            if(*arg) {
+    s->opt = *s->next++;
+    if (isalnum(s->opt) && (p = strchr(s->shortopts, s->opt))) {
+        rv = s->opt;
+        if (p[1] == ':') {
+            if (*s->next) {
                 /* argument of form -ffilename */
-                optarg = arg;
-                arg = NULL;
-                optind++;
-            }
-            else {
+                s->arg = s->next;
+                s->next = NULL;
+                s->ind++;
+            } else {
                 /* argument of form -f filename */
-                optarg = argv[++optind]; /* optind will be increased second time later */
-                if(!optarg) {
-                    if(opterr && optstring[0] != ':')
-                        fprintf(stderr, "%s: Option -%c requires an operand\n", argv[0], optopt);
-                    rv = optstring[0] == ':' ? ':' : '?';
+                s->arg = s->argv[++s->ind]; /* optind will be increased second time later */
+                if (!s->arg) {
+                    if (s->err && !s->want_err_colon)
+                        fprintf(stderr, "%s: Option -%c requires an operand\n", s->argv[0], s->opt);
+                    rv = s->want_err_colon ? ':' : '?';
                 }
             }
         }
-    }
-    else {
-        if(opterr && optstring[0] != ':')
-            fprintf(stderr, "%s: Unrecognized option: '-%c'\n", argv[0], optopt);
+    } else {
+        if (s->err && !s->want_err_colon)
+            fprintf(stderr, "%s: Unrecognized option: '-%c'\n", s->argv[0], s->opt);
         rv = '?';
     }
 
-    if(arg && *arg == '\0') {
-        arg = NULL;
-        optind++;
+    if (s->next && *s->next == '\0') {
+        s->next = NULL;
+        s->ind++;
     }
 
+    return rv;
+}
+
+static void getopt_parse_optstring(struct getopt_state *s, const char *optstring)
+{
+    s->string = optstring;
+    s->want_permute = 0;
+    s->want_mixed = 0;
+    s->want_err_colon = 0;
+    if (optstring) {
+        if (*optstring == '-') {
+            s->want_mixed = 1;
+            optstring++;
+        } else if (*optstring == '+') {
+            optstring++;
+        } else if (!getenv("POSIXLY_CORRECT")) {
+            s->want_permute = 1;
+        }
+
+        if (*optstring == ':') {
+            s->want_err_colon = 1;
+            optstring++;
+        }
+    }
+    s->shortopts = optstring;
+}
+
+char *optarg = NULL;
+int opterr = 1, optind = 1, optopt = 0;
+static struct getopt_state getopt_g_state = {0};
+int getopt(int argc, char *const argv[], const char *optstring)
+{
+    struct getopt_state *s = &getopt_g_state;
+    int rv;
+
+    s->err = opterr;
+    s->ind = optind;
+    s->argc = argc;
+    s->argv = argv;
+    if (s->string != optstring || !optind)
+        getopt_parse_optstring(s, optstring);
+    if (!optind) {
+        s->ind = 1;
+        s->next = 0;
+    }
+    rv = getopt_internal(s);
+    optarg = s->arg;
+    optind = s->ind;
+    optopt = s->opt;
     return rv;
 }

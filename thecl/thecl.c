@@ -296,7 +296,7 @@ main(int argc, char* argv[])
     int opt;
     int ind=0;
     while(argv[util_optind]) {
-        switch(opt = util_getopt(argc, argv, ":c:h:d:Vm:rsxj")) {
+        switch(opt = util_getopt(argc, argv, "+:c:h:d:Vm:rsxj")) {
         case 'c':
         case 'd':
         case 'h':
