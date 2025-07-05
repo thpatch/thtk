@@ -25,22 +25,12 @@
  **/
 #ifndef MYGETOPT_H_
 #define MYGETOPT_H_
-#define MYGETOPT_PREFIX(x) util_##x
-#ifdef MYGETOPT_PREFIX
-#  define optarg MYGETOPT_PREFIX(optarg)
-#  define opterr MYGETOPT_PREFIX(opterr)
-#  define optind MYGETOPT_PREFIX(optind)
-#  define optopt MYGETOPT_PREFIX(optopt)
-#  define getopt MYGETOPT_PREFIX(getopt)
-#endif
+#define util_optarg optarg
+#define util_opterr opterr
+#define util_optind optind
+#define util_optopt optopt
+#define util_getopt getopt
 extern char *optarg;
 extern int opterr, optind, optopt;
 int getopt(int argc, char *const argv[], const char *optstring);
-#if defined(MYGETOPT_PREFIX) && !defined(MYGETOPT_KEEPDEFINES)
-#  undef optarg
-#  undef opterr
-#  undef optind
-#  undef optopt
-#  undef getopt
-#endif
 #endif

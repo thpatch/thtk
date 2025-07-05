@@ -26,7 +26,6 @@
 #include <stdio.h> /* for fprintf, stderr, NULL */
 #include <ctype.h> /* for isalnum */
 #include <string.h> /* for strchr */
-#define MYGETOPT_KEEPDEFINES
 #include "mygetopt.h"
 
 char *optarg = NULL;
@@ -44,7 +43,7 @@ int getopt(int argc, char *const argv[], const char *optstring) {
         if(temp[1] == '-' && temp[2] == '\0') { optind++; return -1; }
         arg = temp+1;
     }
-    
+
     optopt = *arg++;
     if(isalnum(optopt) && (p=strchr(optstring,optopt))) {
         rv = optopt;
