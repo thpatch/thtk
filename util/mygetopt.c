@@ -72,7 +72,7 @@ static int getopt_internal(struct getopt_state *s)
     }
 
     s->opt = *s->next++;
-    if (isalnum(s->opt) && (p = strchr(s->shortopts, s->opt))) {
+    if (s->opt != ':' && s->opt != ';' && (p = strchr(s->shortopts, s->opt))) {
         rv = s->opt;
         if (p[1] == ':') {
             if (*s->next || p[2] == ':') {
