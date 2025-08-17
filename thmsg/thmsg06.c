@@ -207,6 +207,13 @@ static const id_format_pair_t th10_msg_ed_fmts[] = {
     { 0, NULL }
 };
 
+static const id_format_pair_t th20_msg_ed_fmts[] = {
+    { 9, "SS" },
+    { 0, NULL }
+};
+
+/* NEWHU: 20 */
+
 static ssize_t
 thmsg_value_to_data(
     const value_t* value,
@@ -246,6 +253,9 @@ th06_find_format(unsigned int version, int id)
 
     if (thmsg_opt_end) {
         switch (version) {
+        /* NEWHU: 20 */
+        case 20:
+            if ((ret = find_format(th20_msg_ed_fmts, id))) break; /* fallthrough */
         case 10:
         case 11:
         case 12:
@@ -258,8 +268,6 @@ th06_find_format(unsigned int version, int id)
         case 18:
         case 185:
         case 19:
-        case 20:
-        /* NEWHU: 20 */
             ret = find_format(th10_msg_ed_fmts, id);
             break;
         default:
