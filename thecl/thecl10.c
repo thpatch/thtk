@@ -1081,7 +1081,7 @@ static const id_format_pair_t th19_fmts[] = {
 
 static const id_format_pair_t th20_fmts[] = {
     { 46, "SSSSSSSSS" },
-    { 47, "Sffffffff" },
+    { 47, "fSfffffff" },
     { 341, "" },
     { 342, "" },
     { 343, "S" },
