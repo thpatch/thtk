@@ -1509,6 +1509,7 @@ instr_set_types(
             new_type = *format;
 
         if (new_type != param->type &&
+            !(param->type == 'D' && new_type == 'H') &&
             !(param->type == 'z' && (new_type == 'm' || new_type == 'x' || new_type == 'N' || new_type == 'n')) &&
             !(param->type == 'S' && (new_type == 's' || new_type == 'U' || new_type == 't'))
         ) {
@@ -1890,7 +1891,7 @@ static void instr_create_inline_call(
             /* Still reusing the same param variable as earlier. */
             param = (thecl_param_t*)param_node->data;
             if (param->stack) {
-                if (param->type == 'D') {
+                if (param->type == 'D' || param->type == 'H') {
                     thecl_sub_param_t* D = (thecl_sub_param_t*)param->value.val.m.data;
                     if (D->from == 'i') {
                         if (D->val.S < sub->arity*4 && D->val.S >= 0) {

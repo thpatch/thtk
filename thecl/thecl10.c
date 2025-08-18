@@ -98,6 +98,7 @@ th10_value_from_data(
 {
     switch (type) {
     case 'D':
+    case 'H':
         return value_from_data(data, sizeof(thecl_sub_param_t), 'm', value);
     case 'o':
     case 't':
@@ -1080,8 +1081,8 @@ static const id_format_pair_t th19_fmts[] = {
 };
 
 static const id_format_pair_t th20_fmts[] = {
-    { 46, "SSSSSSSSS" },
-    { 47, "fSfffffff" },
+    { 46, "SSS*H" },
+    { 47, "fSf*H" },
     { 341, "" },
     { 342, "" },
     { 343, "S" },
@@ -1377,6 +1378,8 @@ th10_open(
                         f = format[p];
                     }
                     thecl_param_t* param = param_new(f);
+                    if (f == 'H')
+                        param_mask >>= 1;
                     param->stack = param_mask & 1;
                     param_mask >>= 1;
                     param->value = *value_iter;
@@ -1609,7 +1612,7 @@ th10_stringify_param(
         sprintf(temp, "%s_%d", sub->name, instr->offset + param->value.val.S);
         return strdup(temp);
     }
-    case 'D': {
+    case 'D': case 'H': {
         value_t new_value;
         thecl_sub_param_t* D = (thecl_sub_param_t*)param->value.val.m.data;
 
@@ -2153,6 +2156,7 @@ th10_instr_serialize(
 
     unsigned char* param_data = ret->data;
     int param_count = 0;
+    int param_mask_shift = 0;
 
     seqmap_entry_t* ent = seqmap_get(g_eclmap->ins_names, instr->id);
     char buf[128];
@@ -2219,8 +2223,11 @@ th10_instr_serialize(
     }
 
     list_for_each(&instr->params, param) {
+        if (param->type == 'H')
+            ++param_mask_shift;
         if (param->stack)
-            ret->param_mask |= 1 << param_count;
+            ret->param_mask |= 1 << param_mask_shift;
+        ++param_mask_shift;
         ++param_count;
         if (param->type == 'o') {
             /* This calculates the relative offset from the current instruction. */
@@ -2261,7 +2268,7 @@ th10_instr_serialize(
                 ++ret->zero;
             } else if (param->type == 'S' && param->value.val.S == -(ret->zero + 1)) {
                 ++ret->zero;
-            } else if (param->type == 'D') {
+            } else if (param->type == 'D' || param->type == 'H') {
                 thecl_sub_param_t *temp = (thecl_sub_param_t*)param->value.val.m.data;
 
                 if (temp->from == 'f' && temp->val.f == -(ret->zero + 1.0f))
