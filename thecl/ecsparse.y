@@ -1508,6 +1508,24 @@ instr_set_types(
         else
             new_type = *format;
 
+        // automatically add sigils to S and f for format H
+        if (new_type == 'H' && (param->type == 'S' || param->type == 'f')) {
+            value_t new_value;
+            new_value.type = 'm';
+            new_value.val.m.length = sizeof(thecl_sub_param_t);
+            new_value.val.m.data = malloc(sizeof(thecl_sub_param_t));
+            thecl_sub_param_t* D = (thecl_sub_param_t*)new_value.val.m.data;
+            D->zero = 0;
+            D->from = D->to = param->type == 'f' ? 'f' : 'i';
+            if (param->type == 'f') {
+                D->val.f = param->value.val.f;
+            } else {
+                D->val.S = param->value.val.S;
+            }
+            param->type = new_type;
+            param->value = new_value;
+        }
+
         if (new_type != param->type &&
             !(param->type == 'D' && new_type == 'H') &&
             !(param->type == 'z' && (new_type == 'm' || new_type == 'x' || new_type == 'N' || new_type == 'n')) &&

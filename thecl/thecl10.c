@@ -1623,19 +1623,19 @@ th10_stringify_param(
 
         if (D->from == 'f' && D->to == 'f') {
             new_value.val.f = D->val.f;
-            sprintf(temp, "_ff");
+            sprintf(temp, "_ff ");
             new_value.type = 'f';
         } else if (D->from == 'i' && D->to == 'f') {
             new_value.val.f = D->val.f;
-            sprintf(temp, "_fS");
+            sprintf(temp, "_fS ");
             new_value.type = 'S';
         } else if (D->from == 'f' && D->to == 'i') {
             new_value.val.S = D->val.S;
-            sprintf(temp, "_Sf");
+            sprintf(temp, "_Sf ");
             new_value.type = 'f';
         } else if (D->from == 'i' && D->to == 'i') {
             new_value.val.S = D->val.S;
-            sprintf(temp, "_SS");
+            sprintf(temp, "_SS ");
             new_value.type = 'S';
         } else {
             fprintf(stderr, "%s: bad ECL file - invalid types in 'D' param\n", argv0);
@@ -1645,8 +1645,9 @@ th10_stringify_param(
         thecl_param_t temp_param = *param;
         temp_param.type = new_value.type;
         temp_param.value = new_value;
-        strcat(temp, " ");
         char* str_temp = th10_stringify_param(version, sub, node, 0, &temp_param, removed, 0);
+        if (param->type == 'H') /* no sigil for H */
+            return str_temp;
         strcat(temp, str_temp);
         free(str_temp);
 
