@@ -168,7 +168,7 @@ validate_type(
     int linenum,
     const char *ptr)
 {
-    if (ptr[0] != '$' && ptr[0] != '%' || ptr[0] && ptr[1]) {
+    if (ptr[0] != '$' && ptr[0] != '%' && ptr[0] != '?' || ptr[0] && ptr[1]) {
         fprintf(stderr, "%s:%s:%u: unknown type '%s'\n", argv0, state->fn, linenum, ptr);
         return 1;
     }

@@ -3072,8 +3072,11 @@ var_type(
     seqmap_entry_t* ent = seqmap_find(g_eclmap->gvar_names, name);
     if (ent) {
         ent = seqmap_get(g_eclmap->gvar_types, ent->key);
-        if (ent)
-            return ent->value[0] == '$' ? 'S' : 'f';
+        if (ent) {
+            if (ent->value[0] == '$') return 'S';
+            else if (ent->value[0] == '%') return 'f';
+            else return '?';
+        }
     }
 
     thecl_variable_t* var = var_get(state, sub, name);
