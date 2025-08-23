@@ -106,7 +106,24 @@ void param_free(
 bool is_post_th10(
     unsigned int version);
 
+bool is_post_alcostg(
+    unsigned int version);
+
+bool is_post_th125(
+    unsigned int version);
+
 bool is_post_th13(
+    unsigned int version);
+
+typedef enum {
+    VER_PRE_TH10,
+    VER_POST_TH10,
+    VER_POST_ALCOSTG,
+    VER_POST_TH125,
+    VER_POST_TH13
+} thecl_engine_version;
+
+thecl_engine_version engine_version(
     unsigned int version);
 
 bool is_numeric_difficulty_version(

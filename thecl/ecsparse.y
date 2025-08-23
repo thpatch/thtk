@@ -1330,22 +1330,23 @@ ExpressionSubsetNoUnaryPlus:
     | Expression '&'   Expression { $$ = EXPR_12(B_AND,                $1, $3); }
     | Expression '?' Expression ':' Expression  %prec '?'
                                   { $$ = expression_ternary_new(state, $1, $3, $5); }
-    | '!' Expression              { $$ = EXPR_11(NOT,                  $2); }
+    | '!' Expression              { $$ = EXPR_21(NOTI,      NOTF,      $2); }
     | Address "--"                      {
                                             $$ = EXPR_1A(DEC, $1);
                                             if ($1->value.val.S >= 0) /* Stack variables only. This is also verrfied to be int by expression creation. */
                                             state->current_sub->vars[$1->value.val.S / 4]->is_written = true;
                                         }
     | '-' Expression  %prec T_NEG       {
-                                            if (is_post_th13(state->version)) {
+                                            if (is_post_th125(state->version)) {
                                                 $$ = EXPR_21(NEGI, NEGF, $2);
                                             } else {
                                                 thecl_param_t* p = param_new($2->result_type);
-                                                if (p->value.type == 'f')
+                                                if (p->value.type == 'f') {
                                                     p->value.val.f = 0;
-                                                else
-                                                    p->value.val.S = 0;
-                                                $$ = EXPR_22(SUBTRACTI, SUBTRACTF, expression_load_new(state, p), $2);
+                                                    $$ = EXPR_12(SUBTRACTF, expression_load_new(state, p), $2);
+                                                } else {
+                                                    $$ = EXPR_11(NEGI, $2);
+                                                }
                                             }
                                         }
     ;
@@ -2637,8 +2638,11 @@ expression_optimize(
             case NEGF:
                 param->value.val.f = -val1f;
                 break;
-            case NOT:
+            case NOTI:
                 param->value.val.S = !val1S;
+                break;
+            case NOTF:
+                param->value.val.S = !val1f;
                 break;
             case SIN:
                 param->value.val.f = sinf(val1f);

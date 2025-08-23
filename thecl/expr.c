@@ -67,18 +67,19 @@ th06_expressions[] = {
     { GTF,       -21, 'S', NULL, 2, "ff", "s1 > s0", 0 },
     { GTEQI,     -22, 'S', NULL, 2, "SS", "s1 >= s0", 0 },
     { GTEQF,     -23, 'S', NULL, 2, "ff", "s1 >= s0", 0 },
-    { NOT,       -24, 'S', NULL, 1,  "S", "!s0", 0 },
-    { OR,        -25, 'S', NULL, 2, "SS", "s1 || s0", 0 },
-    { AND,       -26, 'S', NULL, 2, "SS", "s1 && s0", 0 },
-    { XOR,       -27, 'S', NULL, 2, "SS", "s1 ^ s0", 0 },
-    { B_OR,      -28, 'S', NULL, 2, "SS", "s1 | s0", 0 },
-    { B_AND,     -29, 'S', NULL, 2, "SS", "s1 & s0", 0 },
-    { DEC,       -30, 'S', NULL, 0, NULL, "p0--", 0 },
-    { SIN,       -31, 'f', NULL, 1,  "f", "sin(s0)", 1 },
-    { COS,       -32, 'f', NULL, 1,  "f", "cos(s0)", 1 },
-    { NEGI,      -33, 'S', NULL, 1,  "S", "-s0", 0 },
-    { NEGF,      -34, 'f', NULL, 1,  "f", "-s0", 0 },
-    { SQRT,      -35, 'f', NULL, 1,  "f", "sqrt(s0)", 1 },
+    { NOTI,      -24, 'S', NULL, 1,  "S", "!s0", 0 },
+    { NOTF,      -25, 'S', NULL, 1,  "f", "!s0", 0 },
+    { OR,        -26, 'S', NULL, 2, "SS", "s1 || s0", 0 },
+    { AND,       -27, 'S', NULL, 2, "SS", "s1 && s0", 0 },
+    { XOR,       -28, 'S', NULL, 2, "SS", "s1 ^ s0", 0 },
+    { B_OR,      -29, 'S', NULL, 2, "SS", "s1 | s0", 0 },
+    { B_AND,     -30, 'S', NULL, 2, "SS", "s1 & s0", 0 },
+    { DEC,       -31, 'S', NULL, 0, NULL, "p0--", 0 },
+    { SIN,       -32, 'f', NULL, 1,  "f", "sin(s0)", 1 },
+    { COS,       -33, 'f', NULL, 1,  "f", "cos(s0)", 1 },
+    { NEGI,      -34, 'S', NULL, 1,  "S", "-s0", 0 },
+    { NEGF,      -35, 'f', NULL, 1,  "f", "-s0", 0 },
+    { SQRT,      -36, 'f', NULL, 1,  "f", "sqrt(s0)", 1 },
     { 0,           0,   0, NULL, 0, NULL, NULL, 0 }
 };
 
@@ -122,17 +123,34 @@ th10_expressions[] = {
     { GTF,        68, 'S', NULL, 2, "ff", "s1 > s0", 0 },
     { GTEQI,      69, 'S', NULL, 2, "SS", "s1 >= s0", 0 },
     { GTEQF,      70, 'S', NULL, 2, "ff", "s1 >= s0", 0 },
-    { NOT,        71, 'S', NULL, 1,  "S", "!s0", 0 },
-/*  { XXX,        72,   0, NULL, 0, NULL, NULL },*/
+    { NOTI,       71, 'S', NULL, 1,  "S", "!s0", 0 },
+    { NOTF,       72, 'S', NULL, 1,  "f", "!s0", 0 },
     { OR,         73, 'S', NULL, 2, "SS", "s1 || s0", 0 },
     { AND,        74, 'S', NULL, 2, "SS", "s1 && s0", 0 },
     { XOR,        75, 'S', NULL, 2, "SS", "s1 ^ s0", 0 },
     { B_OR,       76, 'S', NULL, 2, "SS", "s1 | s0", 0 },
     { B_AND,      77, 'S', NULL, 2, "SS", "s1 & s0", 0 },
     { DEC,        78, 'S',  "S", 0, NULL, "p0--", 0 },
-    { SIN,        79, 'f', NULL, 1, "f", "sin(s0)", 1 },
-    { COS,        80, 'f', NULL, 1, "f", "cos(s0)", 1 },
-    { SQRT,       88, 'f', NULL, 1, "f", "sqrt(s0)", 1 },
+    { SIN,        79, 'f', NULL, 1,  "f", "sin(s0)", 1 },
+    { COS,        80, 'f', NULL, 1,  "f", "cos(s0)", 1 },
+    { NEGI,       84, 'S', NULL, 1,  "S", "-s0", 0 },
+    // NEGF existed since MoF but had a broken implementation until DS
+    { NEGF,       -1, 'f', NULL, 1,  "f", "-s0", 0 },
+    { SQRT,       -2, 'f', NULL, 1,  "f", "sqrt(s0)", 1 },
+    { 0,           0,   0, NULL, 0, NULL, NULL, 0 }
+};
+
+static const expr_t
+alcostg_expressions[] = {
+    /*SYM         ID  RET     P  A    S   DISP */
+    { SQRT,       88, 'f', NULL, 1,  "f", "sqrt(s0)", 1 },
+    { 0,           0,   0, NULL, 0, NULL, NULL, 0 }
+};
+
+static const expr_t
+th125_expressions[] = {
+    /*SYM         ID  RET     P  A    S   DISP */
+    { NEGF,       85, 'f', NULL, 1,  "f", "-s0", 0 },
     { 0,           0,   0, NULL, 0, NULL, NULL, 0 }
 };
 
@@ -165,9 +183,23 @@ expr_get_by_symbol(
 {
     const expr_t* ret = NULL;
 
-    if (!ret && is_post_th13(version)) ret = expr_get_by_symbol_from_table(th13_expressions, symbol);
-    if (!ret && is_post_th10(version)) ret = expr_get_by_symbol_from_table(th10_expressions, symbol);
-    if (!ret && !is_post_th10(version)) ret = expr_get_by_symbol_from_table(th06_expressions, symbol);
+    switch (engine_version(version)) {
+        default:
+        case VER_POST_TH13:
+            ret = expr_get_by_symbol_from_table(th13_expressions, symbol);
+            if (ret) break;
+        case VER_POST_TH125:
+            ret = expr_get_by_symbol_from_table(th125_expressions, symbol);
+            if (ret) break;
+        case VER_POST_ALCOSTG:
+            ret = expr_get_by_symbol_from_table(alcostg_expressions, symbol);
+            if (ret) break;
+        case VER_POST_TH10:
+            ret = expr_get_by_symbol_from_table(th10_expressions, symbol);
+            break;
+        case VER_PRE_TH10:
+            ret = expr_get_by_symbol_from_table(th06_expressions, symbol);
+    }
 
     return ret;
 }
@@ -193,9 +225,23 @@ expr_get_by_id(
 {
     const expr_t* ret = NULL;
 
-    if (!ret && is_post_th13(version)) ret = expr_get_by_id_from_table(th13_expressions, id);
-    if (!ret && is_post_th10(version)) ret = expr_get_by_id_from_table(th10_expressions, id);
-    if (!ret && !is_post_th10(version)) ret = expr_get_by_id_from_table(th06_expressions, id);
+    switch (engine_version(version)) {
+        default:
+        case VER_POST_TH13:
+            ret = expr_get_by_id_from_table(th13_expressions, id);
+            if (ret) break;
+        case VER_POST_TH125:
+            ret = expr_get_by_id_from_table(th125_expressions, id);
+            if (ret) break;
+        case VER_POST_ALCOSTG:
+            ret = expr_get_by_id_from_table(alcostg_expressions, id);
+            if (ret) break;
+        case VER_POST_TH10:
+            ret = expr_get_by_id_from_table(th10_expressions, id);
+            break;
+        case VER_PRE_TH10:
+            ret = expr_get_by_id_from_table(th06_expressions, id);
+    }
 
     return ret;
 }
