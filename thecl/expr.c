@@ -198,6 +198,7 @@ expr_get_by_symbol(
             ret = expr_get_by_symbol_from_table(th10_expressions, symbol);
             break;
         case VER_PRE_TH10:
+        case VER_PRE_TH8:
             ret = expr_get_by_symbol_from_table(th06_expressions, symbol);
     }
 
@@ -240,6 +241,7 @@ expr_get_by_id(
             ret = expr_get_by_id_from_table(th10_expressions, id);
             break;
         case VER_PRE_TH10:
+        case VER_PRE_TH8:
             ret = expr_get_by_id_from_table(th06_expressions, id);
     }
 

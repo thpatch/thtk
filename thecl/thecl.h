@@ -103,6 +103,9 @@ thecl_param_t* param_copy(
 void param_free(
     thecl_param_t* param);
 
+bool is_pre_th8(
+    unsigned int version);
+
 bool is_post_th10(
     unsigned int version);
 
@@ -116,11 +119,12 @@ bool is_post_th13(
     unsigned int version);
 
 typedef enum {
-    VER_PRE_TH10,
-    VER_POST_TH10,
-    VER_POST_ALCOSTG,
-    VER_POST_TH125,
-    VER_POST_TH13
+    VER_PRE_TH8, /* Timeline instructions don't support rank and include arg0 */
+    VER_PRE_TH10, /* Timeline instructions support rank and time is 32 bit with no arg0 */
+    VER_POST_TH10, /* New engine */
+    VER_POST_ALCOSTG, /* SQRT exists */
+    VER_POST_TH125, /* NEGF is no longer broken */
+    VER_POST_TH13 /* NEGI/NEGF change indices */
 } thecl_engine_version;
 
 thecl_engine_version engine_version(

@@ -601,6 +601,7 @@ ArgumentDeclaration:
 Instructions:
     %empty
     | Instructions INTEGER ':' { set_time(state, $2); }
+    | Instructions '-' INTEGER ':' { set_time(state, -$3); }
     | Instructions '+' INTEGER ':' { set_time(state, state->instr_time + $3); }
     | Instructions IDENTIFIER ':' { label_create(state, $2); free($2); }
     | Instructions Instruction ';'
@@ -1307,6 +1308,19 @@ ExpressionCall:
 ExpressionSubset:
       ExpressionSubsetNoUnaryPlus
     | '+' Expression  %prec T_NEG { $$ = $2; }
+    | '-' Expression  %prec T_NEG       {
+                                            if (is_post_th125(state->version)) {
+                                                $$ = EXPR_21(NEGI, NEGF, $2);
+                                            } else {
+                                                thecl_param_t* p = param_new($2->result_type);
+                                                if (p->value.type == 'f') {
+                                                    p->value.val.f = 0;
+                                                    $$ = EXPR_12(SUBTRACTF, expression_load_new(state, p), $2);
+                                                } else {
+                                                    $$ = EXPR_11(NEGI, $2);
+                                                }
+                                            }
+                                        }
     ;
 
 ExpressionSubsetNoUnaryPlus:
@@ -1335,19 +1349,6 @@ ExpressionSubsetNoUnaryPlus:
                                             $$ = EXPR_1A(DEC, $1);
                                             if ($1->value.val.S >= 0) /* Stack variables only. This is also verrfied to be int by expression creation. */
                                             state->current_sub->vars[$1->value.val.S / 4]->is_written = true;
-                                        }
-    | '-' Expression  %prec T_NEG       {
-                                            if (is_post_th125(state->version)) {
-                                                $$ = EXPR_21(NEGI, NEGF, $2);
-                                            } else {
-                                                thecl_param_t* p = param_new($2->result_type);
-                                                if (p->value.type == 'f') {
-                                                    p->value.val.f = 0;
-                                                    $$ = EXPR_12(SUBTRACTF, expression_load_new(state, p), $2);
-                                                } else {
-                                                    $$ = EXPR_11(NEGI, $2);
-                                                }
-                                            }
                                         }
     ;
 
@@ -1529,8 +1530,8 @@ instr_set_types(
 
         if (new_type != param->type &&
             !(param->type == 'D' && new_type == 'H') &&
-            !(param->type == 'z' && (new_type == 'm' || new_type == 'x' || new_type == 'N' || new_type == 'n')) &&
-            !(param->type == 'S' && (new_type == 's' || new_type == 'U' || new_type == 't'))
+            !(param->type == 'z' && (new_type == 'm' || new_type == 'x' || new_type == 'N' || new_type == 'n' || new_type == 'T')) &&
+            !(param->type == 'S' && (new_type == 's' || new_type == 'U' || new_type == 'u' || new_type == 't' || new_type == 'C' || new_type == 'N' || new_type == 'n'))
         ) {
             seqmap_entry_t* ent = seqmap_get(g_eclmap->ins_names, instr->id);
             char buf[128];

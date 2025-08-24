@@ -223,11 +223,18 @@ free_globals(void)
 }
 
 bool
-is_post_th10(
-    unsigned int version)
-{
+is_pre_th8(unsigned int version) {
+    switch (version) {
+        case 6: case 7: return true;
+        default: return false;
+    }
+}
+
+bool
+is_post_th10(unsigned int version) {
     switch(version) {
-        case 6: case 7: case 8: case 9: case 95: return false;
+        case 6: case 7:
+        case 8: case 9: case 95: return false;
         default: return true;
     }
 }
@@ -235,7 +242,8 @@ is_post_th10(
 bool
 is_post_alcostg(unsigned int version) {
     switch (version) {
-        case 6: case 7: case 8: case 9: case 95:
+        case 6: case 7:
+        case 8: case 9: case 95:
         case 10: return false;
         default: return true;
     }
@@ -244,7 +252,8 @@ is_post_alcostg(unsigned int version) {
 bool
 is_post_th125(unsigned int version) {
     switch (version) {
-        case 6: case 7: case 8: case 9: case 95:
+        case 6: case 7:
+        case 8: case 9: case 95:
         case 10:
         case 103: case 11: case 12: return false;
         default: return true;
@@ -254,7 +263,8 @@ is_post_th125(unsigned int version) {
 bool
 is_post_th13(unsigned int version) {
     switch(version) {
-        case 6: case 7: case 8: case 9: case 95:
+        case 6: case 7:
+        case 8: case 9: case 95:
         case 10:
         case 103: case 11: case 12:
         case 125: case 128: return false;
@@ -273,8 +283,10 @@ engine_version(unsigned int version) {
             return VER_POST_ALCOSTG;
         case 10:
             return VER_POST_TH10;
-        case 6: case 7: case 8: case 9: case 95:
+        case 8: case 9: case 95:
             return VER_PRE_TH10;
+        case 6: case 7:
+            return VER_PRE_TH8;
     }
 }
 
