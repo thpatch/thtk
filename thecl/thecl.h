@@ -191,6 +191,7 @@ typedef struct {
     int scope;
     bool is_written;
     bool is_unused;
+    bool is_punned;
 } thecl_variable_t;
 
 void thecl_variable_free(

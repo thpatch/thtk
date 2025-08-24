@@ -147,7 +147,7 @@ static bool var_accessible(parser_state_t* state, thecl_variable_t* var);
 /* Returns variable of the given name in the specified sub, or NULL if the variable doesn't exist/is out of scope */
 static thecl_variable_t* var_get(parser_state_t* state, thecl_sub_t* sub, const char* name);
 /* Returns the stack offset of a specified variable in the specified sub. */
-static int var_stack(parser_state_t* state, thecl_sub_t* sub, const char* name);
+static int var_stack(parser_state_t* state, thecl_sub_t* sub, const char* name, int use_type);
 /* Returns the type of a specified variable in the specified sub. */
 static int var_type(parser_state_t* state, thecl_sub_t* sub, const char* name);
 /* Returns 1 if a variable of a given name exists, and 0 if it doesn't. */
@@ -1148,7 +1148,12 @@ Assignment:
         } else {
             if ($1->value.val.f >= 0.0f) var = state->current_sub->vars[(int)$1->value.val.f / 4];
         }
-        if (var != NULL) var->is_written = true;
+        if (var != NULL) {
+            var->is_written = true;
+            if ($1->value.type != var->type) {
+                var->is_punned = true;
+            }
+        }
       }
     | Address "+=" ExpressionAny { var_shorthand_assign(state, $1, $3, ADDI, ADDF); }
     | Address "-=" ExpressionAny { var_shorthand_assign(state, $1, $3, SUBTRACTI, SUBTRACTF); }
@@ -1360,13 +1365,13 @@ Address:
     | '$' IDENTIFIER {
         $$ = param_new('S');
         $$->stack = 1;
-        $$->value.val.S = var_stack(state, state->current_sub, $2);
+        $$->value.val.S = var_stack(state, state->current_sub, $2, 'S');
         free($2);
       }
     | '%' IDENTIFIER {
         $$ = param_new('f');
         $$->stack = 1;
-        $$->value.val.f = var_stack(state, state->current_sub, $2);
+        $$->value.val.f = var_stack(state, state->current_sub, $2, 'f');
         free($2);
       }
     | IDENTIFIER {
@@ -1379,9 +1384,9 @@ Address:
             $$ = param_new(type);
             $$->stack = 1;
             if (type == 'S') {
-                $$->value.val.S = var_stack(state, state->current_sub, $1);
+                $$->value.val.S = var_stack(state, state->current_sub, $1, 'S');
             } else {
-                $$->value.val.f = var_stack(state, state->current_sub, $1);
+                $$->value.val.f = var_stack(state, state->current_sub, $1, 'f');
             }
         } else {
             global_definition_t *def = global_get(state, $1);
@@ -1761,7 +1766,7 @@ static void instr_create_inline_call(
                 param_free(param);
             return;
         }
-        if (sub->format[i] != param->type) {
+        if (sub->format[i] != '?' && sub->format[i] != param->type) {
             yyerror(state, "wrong parameter %i when calling inline sub \"%s\", expected type: %c\n", i + 1, sub->name, sub->format[i]);
             list_for_each(params, param)
                 param_free(param);
@@ -1793,9 +1798,9 @@ static void instr_create_inline_call(
 
     list_for_each(params, param) { /* It has alredy been verified that param amount is correct. */
         var = sub->vars[i];
-        if (var->is_written || param->is_expression_param || param_is_system_var(state, param)) {
+        if (var->is_written || var->is_punned || param->is_expression_param || param_is_system_var(state, param)) {
 
-            if (param->is_expression_param && !var->is_written) {
+            if (param->is_expression_param && !var->is_written && !var->is_punned) {
                 /* Check if the passed expression can be simplified to a literal value. */
                 list_node_t* node = state->expressions.tail;
                 expression_t* expr = (expression_t*)node->data;
@@ -1933,7 +1938,12 @@ static void instr_create_inline_call(
                 } else if (param->value.type == 'S') {
                     if (param->value.val.S < sub->arity*4 && param->value.val.S >= 0) {
                         /* Parameter. */
-                        param_node->data = param_copy(param_replace[param->value.val.S / 4]);
+                        thecl_param_t* replacement = param_copy(param_replace[param->value.val.S / 4]);
+                        if (replacement->type == 'f') {
+                            replacement->value.type = 'S';
+                            replacement->value.val.S = (int)replacement->value.val.f;
+                        }
+                        param_node->data = replacement;
                         param_free(param);
                     } else if (param->value.val.S > 0) {
                         /* Regular stack variable, needs adjusting the offset. */
@@ -1941,9 +1951,16 @@ static void instr_create_inline_call(
                     }
                 } else if (param->value.type == 'f') {
                     if (param->value.val.f < (float)(sub->arity*4) && param->value.val.f >= 0.0f) {
-                        param_node->data = param_copy(param_replace[(int)param->value.val.f / 4]);
+                        /* Parameter. */
+                        thecl_param_t* replacement = param_copy(param_replace[(int)param->value.val.f / 4]);
+                        if (replacement->type == 'S') {
+                            replacement->value.type = 'f';
+                            replacement->value.val.f = (float)replacement->value.val.S;
+                        }
+                        param_node->data = replacement;
                         param_free(param);
                     } else if (param->value.val.f > 0.0f) {
+                        /* Regular stack variable, needs adjusting the offset. */
                         param->value.val.f = (float)stack_replace[(int)param->value.val.f / 4 - sub->arity]->stack;
                     }
                 }
@@ -2978,6 +2995,7 @@ var_create(
     var->stack = var_get_new_stack(state, sub);
     var->is_written = false;
     var->is_unused = false;
+    var->is_punned = false;
     var->scope = state->scope_stack[state->scope_cnt - 1];
 
     ++sub->var_count;
@@ -3055,14 +3073,19 @@ static int
 var_stack(
     parser_state_t* state,
     thecl_sub_t* sub,
-    const char* name)
+    const char* name,
+    int use_type)
 {
     seqmap_entry_t* ent = seqmap_find(g_eclmap->gvar_names, name);
     if (ent) return ent->key;
 
     thecl_variable_t* var = var_get(state, sub, name);
-    if (var != NULL)
+    if (var != NULL) {
+        if (var->type != use_type) {
+            var->is_punned = true;
+        }
         return var->stack;
+    }
 
     yyerror(state, "variable not found: %s", name);
     return 0;
@@ -3133,7 +3156,12 @@ var_shorthand_assign(
     } else {
         if (param->value.val.f >= 0.0f) var = state->current_sub->vars[(int)param->value.val.f / 4];
     }
-    if (var != NULL) var->is_written = true;
+    if (var != NULL) {
+        var->is_written = true;
+        if (param->value.type != var->type) {
+            var->is_punned = true;
+        }
+    }
 }
 
 static void
