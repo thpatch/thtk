@@ -167,6 +167,11 @@ ins_[0-9]+ {
     yylval.integer = strtoul(yytext+2, NULL, 2);
     return INTEGER;
 }
+#[0-9a-fA-F]{8} {
+    uint32_t color_integer = strtoul(yytext+1, NULL, 16);
+    yylval.integer = _byteswap_ulong(color_integer);
+    return INTEGER;
+}
 "false" {
     /* boolean "false" */
     yylval.integer = 0;
