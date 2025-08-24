@@ -1715,6 +1715,7 @@ th06_timeline_instr_serialize(
                 // All types that fit within arg0
                 case 'n': case 's': case 'u':
                     th06_serialize_data(ecl, timeline, instr, param, (unsigned char*)&ret->arg0, 0, sizeof(uint16_t), true);
+                    continue;
                 case 'b': case 'c':
                     th06_serialize_data(ecl, timeline, instr, param, (unsigned char*)&ret->arg0, 0, sizeof(uint8_t), true);
                     continue;
