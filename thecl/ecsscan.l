@@ -168,8 +168,8 @@ ins_[0-9]+ {
     return INTEGER;
 }
 #[0-9a-fA-F]{8} {
-    uint32_t color_integer = strtoul(yytext+1, NULL, 16);
-    yylval.integer = _byteswap_ulong(color_integer);
+    uint32_t color_int = strtoul(yytext+1, NULL, 16);
+    yylval.integer = (color_int & 0xFF000000) >> 24 | (color_int & 0xFF0000) >> 8 | (color_int & 0xFF00) << 8 | (color_int & 0xFF) << 24;
     return INTEGER;
 }
 "false" {
