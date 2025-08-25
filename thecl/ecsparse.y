@@ -1793,8 +1793,10 @@ static void instr_create_inline_call(
      * gets written to, or the passed parameter is an expression.
      * We will use a param_replace array to replace all argument variable references from the code of copied inline sub. */
     thecl_param_t** param_replace = calloc(sub->arity, sizeof(thecl_param_t*));
+    thecl_variable_t** param_replace_vars = malloc(sub->arity * sizeof(thecl_variable_t*));
     thecl_variable_t* var;
     i = 0;
+    size_t replaced_params = 0;
 
     list_for_each(params, param) { /* It has alredy been verified that param amount is correct. */
         var = sub->vars[i];
@@ -1818,6 +1820,7 @@ static void instr_create_inline_call(
             strcpy(buf, name);
             strcat(buf, var->name);
             thecl_variable_t* var = var_create(state, state->current_sub, buf, param->type);
+            param_replace_vars[replaced_params++] = var;
             thecl_param_t* new_param = param_new(param->type);
             new_param->stack = 1;
             if (new_param->type == 'S')
@@ -1859,6 +1862,7 @@ static void instr_create_inline_call(
         thecl_variable_t* var_new = var_create(state, state->current_sub, buf, var->type);
         stack_replace[i - sub->arity] = var_new;
     }
+    size_t stack_replace_count = (sub->stack / 4) - sub->arity;
 
     /* Temprary label list that modifications will be apply to when needed.
      * Content of this list will be later copied into the sub that created the inline call. */
@@ -1997,10 +2001,12 @@ static void instr_create_inline_call(
 
     scope_finish(state);
 
-    /* We have to mark variables that were marked as unused in the inline sub
-     * as unused in the current sub as well. */
-    for (size_t v=sub->arity; v<sub->var_count; ++v) {
-        stack_replace[v - sub->arity]->is_unused = sub->vars[v]->is_unused;
+    /* Allow next created vars to reuse stack offsets. */
+    for (size_t v=0; v<stack_replace_count; ++v) {
+        stack_replace[v]->is_unused = true;
+    }
+    for (size_t v=0; v<replaced_params; ++v) {
+        param_replace_vars[v]->is_unused = true;
     }
 
     /* Free stuff. */
@@ -2015,6 +2021,7 @@ static void instr_create_inline_call(
     if (params_org == NULL)
         free(params);
     free(param_replace);
+    free(param_replace_vars);
     free(stack_replace);
 }
 
