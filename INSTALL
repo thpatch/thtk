@@ -2,6 +2,7 @@ Build requirements:
   cmake >=3.14
   flex >=2.5.31
   bison >=3.6.4
+  libjpeg >= 8.0
   (optional) pkg-config
   (optional) zlib
   (optional) libpng

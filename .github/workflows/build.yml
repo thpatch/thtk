@@ -49,8 +49,12 @@ jobs:
         mkdir bison
         cd bison
         7z x ../win_flex_bison-${{env.FLEXBISON_VER}}.zip
+    - name: Integrate vcpkg
+      run: vcpkg integrate install
+    - name: Install libjpeg
+      run: vcpkg install libjpeg-turbo:${{matrix.arch}}-windows-static
     - name: Configure CMake
-      run: cmake -B build -A ${{matrix.arch == 'x86' && 'Win32' || matrix.arch}} -DBISON_EXECUTABLE=${{github.workspace}}/bison/win_bison.exe -DFLEX_EXECUTABLE=${{github.workspace}}/bison/win_flex.exe -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
+      run: cmake -B build -A ${{matrix.arch == 'x86' && 'Win32' || matrix.arch}} -DBISON_EXECUTABLE=${{github.workspace}}/bison/win_bison.exe -DFLEX_EXECUTABLE=${{github.workspace}}/bison/win_flex.exe -DJPEG_INCLUDE_DIR=C:/vcpkg/packages/libjpeg-turbo_${{matrix.arch}}-windows-static/include/ -DJPEG_LIBRARY_RELEASE=C:/vcpkg/packages/libjpeg-turbo_${{matrix.arch}}-windows-static/lib/jpeg.lib -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
     - name: Build
       run: cmake --build build --config ${{env.BUILD_TYPE}}
     - name: Prepare Dist
