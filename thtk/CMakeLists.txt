@@ -27,7 +27,7 @@ set_target_properties(thtk PROPERTIES
 
 find_package(PkgConfig)
 if (PKG_CONFIG_FOUND)
-  configure_file(thtk.pc.in ${CMAKE_CURRENT_BINARY_DIR}/thtk.pc)
+  configure_file(thtk.pc.in ${CMAKE_CURRENT_BINARY_DIR}/thtk.pc @ONLY)
   install(FILES ${CMAKE_CURRENT_BINARY_DIR}/thtk.pc
     DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
 endif()
