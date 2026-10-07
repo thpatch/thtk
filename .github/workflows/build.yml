@@ -8,13 +8,13 @@ env:
 
 jobs:
   build-linux:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-26.04
     strategy:
       matrix:
         compiler: [gcc, clang]
     steps:
     - name: Checkout
-      uses: actions/checkout@v4
+      uses: actions/checkout@v7
       with:
         submodules: recursive
     - name: Configure CMake
@@ -26,18 +26,18 @@ jobs:
       run: cmake --build build --config ${{env.BUILD_TYPE}}
 
   build-win32:
-    runs-on: windows-2022
+    runs-on: windows-2025
     strategy:
       matrix:
         arch: [x64, x86]
     steps:
     - name: Checkout
-      uses: actions/checkout@v4
+      uses: actions/checkout@v7
       with:
         submodules: recursive
     - name: Cache winflexbison
       id: cache-winflexbison
-      uses: actions/cache@v4
+      uses: actions/cache@v6
       with:
         path: win_flex_bison-${{env.FLEXBISON_VER}}.zip
         key: winflexbison-${{env.FLEXBISON_VER}}
@@ -61,12 +61,12 @@ jobs:
         call C:\shells\msys2bash.cmd -c "pacman -S --noconfirm --needed --noprogressbar groff dos2unix zip"
         call C:\shells\msys2bash.cmd -c "./make-release.sh ci"
     - name: Upload Artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: thtk-win32-${{matrix.arch}}
         path: thtk-bin-ci/**/*
     - name: Upload Artifact PDBs
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: thtk-win32-${{matrix.arch}}-pdbs
         path: thtk-bin-ci-pdbs/**/*
