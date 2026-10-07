@@ -71,6 +71,7 @@ jobs:
         name: thtk-win32-${{matrix.arch}}-pdbs
         path: thtk-bin-ci-pdbs/**/*
     - name: Upload Artifact to thpatch.net
+      if: ${{ env.id_ed25519_secret != '' }}
       env:
         id_ed25519_secret: ${{ secrets.ID_ED25519_SECRET }}
         arch: ${{matrix.arch}}
