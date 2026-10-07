@@ -1592,7 +1592,7 @@ th06_serialize_data(
         case 'o':
             if (data_size < sizeof(int32_t))
                 return -1;
-            *(int32_t*)param_data = label_offset(sub, param->value.val.z);
+            *(int32_t*)param_data = label_offset(sub, param->value.val.z) - instr->offset;
             return sizeof(int32_t);
         case 't':
             if (data_size < sizeof(int32_t))
