@@ -101,7 +101,7 @@ if(MSVC)
   # Defining these here rather than in config.h.in also applies them to the
   # zlib-ng and libpng build.
   # Character set options were introduced in Visual Studio 2015 Update 2
-  add_compile_options(-D_CRT_SECURE_NO_DEPRECATE -D_CRT_NONSTDC_NO_DEPRECATE /source-charset:utf-8 /execution-charset:utf-8)
+  add_compile_options(-D_CRT_SECURE_NO_DEPRECATE -D_CRT_NONSTDC_NO_DEPRECATE /utf-8)
 else()
   add_compile_options(-D_GNU_SOURCE -std=c99 -finput-charset=utf-8 -fexec-charset=utf-8)
 endif()
