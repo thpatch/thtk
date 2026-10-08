@@ -6,6 +6,7 @@ if (WITH_LIBPNG_SOURCE)
     set(WITH_GTEST OFF)
 
     set(ZLIB_COMPAT ON)
+    set(BUILD_SHARED_LIBS OFF)
     add_subdirectory(zlib-ng EXCLUDE_FROM_ALL)
     if (NOT TARGET ZLIB::ZLIB)
       add_library(ZLIB::ZLIB ALIAS zlib-ng)
