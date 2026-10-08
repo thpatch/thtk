@@ -8,12 +8,12 @@ if (WITH_LIBPNG_SOURCE)
     set(ZLIB_COMPAT ON)
     set(BUILD_SHARED_LIBS OFF)
     add_subdirectory(zlib-ng EXCLUDE_FROM_ALL)
-    if (NOT TARGET ZLIB::ZLIB)
-      add_library(ZLIB::ZLIB ALIAS zlib-ng)
-    endif()
-  else()
-    find_package(ZLIB REQUIRED)
+
+    add_library(ZLIB::ZLIB ALIAS zlib-ng)
+    set(ZLIB_INCLUDE_DIR "${CMAKE_CURRENT_BINARY_DIR}/zlib-ng")
+    set(ZLIB_LIBRARY ZLIB::ZLIB)
   endif()
+  find_package(ZLIB REQUIRED)
 
   # CUSTOM LIBPNG BUILD
   file(COPY libpng/scripts/pnglibconf.h.prebuilt libpng/png.h libpng/pngconf.h
