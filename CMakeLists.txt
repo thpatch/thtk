@@ -84,6 +84,7 @@ set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
 option(BUILD_SHARED_LIBS "Prefer to build shared lib" ON)
 option(WITH_LIBPNG_SOURCE "Compile libpng from source" ON)
+option(WITH_ZLIB_SOURCE "Compile zlib-ng from source" ON)
 option(WITH_OPENMP "Compile with OpenMP" ON)
 if(UNIX)
   option(CONTRIB_UTHDAT "Build midnight commander plugin" OFF)
